@@ -1,0 +1,14 @@
+build
+artifacts
+cache
+
+node_modules
+
+coverage
+coverage.json
+.coverage_contracts
+.coverage_artifacts
+
+.idea
+
+.env
