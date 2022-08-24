@@ -2,9 +2,9 @@
 # yarn lockfile v1
 
 
-"@1inch/limit-order-protocol@1inch/limit-order-protocol":
+"@1inch/limit-order-protocol@https://github.com/1inch/limit-order-protocol":
   version "0.0.2"
-  resolved "https://codeload.github.com/1inch/limit-order-protocol/tar.gz/9ccf756d66a258a7150cc78e2a3d733eb40b390b"
+  resolved "https://github.com/1inch/limit-order-protocol#9ccf756d66a258a7150cc78e2a3d733eb40b390b"
   dependencies:
     "@chainlink/contracts" "0.4.1"
     "@openzeppelin/contracts" "4.7.0"
@@ -1023,9 +1023,9 @@
   integrity sha512-Klz949h02Gz2uZCMGwDUSDS1YBlTdDDgbWHi+81l29tQALUtvz4rAYi5uoVhE5Lagoq6DeqAUlbrHvW/mXDgdQ==
 
 "@types/node@*":
-  version "18.7.11"
-  resolved "https://registry.yarnpkg.com/@types/node/-/node-18.7.11.tgz#486e72cfccde88da24e1f23ff1b7d8bfb64e6250"
-  integrity sha512-KZhFpSLlmK/sdocfSAjqPETTMd0ug6HIMIAwkwUpU79olnZdQtMxpQP+G1wDzCH7na+FltSIhbaZuKdwZ8RDrw==
+  version "18.7.12"
+  resolved "https://registry.yarnpkg.com/@types/node/-/node-18.7.12.tgz#18caab95fbcd03573661d1d0e709093ba8cb7682"
+  integrity sha512-caqFX7GwvZ4KLnhpI9CfiMkgHKp6kvFAIgpkha0cjO7bAQvB6dWe+q3fTHmm7fQvv59pd4tPj77nriq2M6U2dw==
 
 "@types/node@^10.0.3":
   version "10.17.60"

@@ -42,8 +42,9 @@ const ABIOrder = {
 const name = '1inch Limit Order Protocol';
 const version = '3';
 
-function buildOrder (
+const buildOrder = (
     {
+        salt,
         makerAsset,
         takerAsset,
         makingAmount,
@@ -62,7 +63,7 @@ function buildOrder (
         preInteraction = '0x',
         postInteraction = '0x',
     } = {},
-) {
+) => {
     if (getMakingAmount === '') {
         getMakingAmount = '0x78'; // "x"
     }
@@ -91,7 +92,7 @@ function buildOrder (
         .reduce((acc, a, i) => acc.add(toBN(a).shln(32 * i)), toBN('0'));
 
     return {
-        salt: '1',
+        salt,
         makerAsset,
         takerAsset,
         maker,
@@ -102,9 +103,9 @@ function buildOrder (
         offsets: offsets.toString(),
         interactions,
     };
-}
+};
 
-function buildOrderRFQ (
+const buildOrderRFQ = (
     info,
     makerAsset,
     takerAsset,
@@ -112,7 +113,7 @@ function buildOrderRFQ (
     takingAmount,
     from,
     allowedSender = constants.ZERO_ADDRESS,
-) {
+) => {
     return {
         info,
         makerAsset,
@@ -122,37 +123,50 @@ function buildOrderRFQ (
         makingAmount,
         takingAmount,
     };
-}
+};
 
-function buildOrderData (chainId, verifyingContract, order) {
+const buildSalt = (
+    orderStartTime,
+    initialStartRate = 1000, // 10000 = 100%
+    duration = 180, // seconds
+    salt = '1', // less than uint176
+) => (
+    (toBN(orderStartTime).shln(224).add(
+        toBN(duration).shln(192)).add(
+        toBN(initialStartRate).shln(176)).add(
+        toBN(salt),
+    )).toString()
+);
+
+const buildOrderData = (chainId, verifyingContract, order) => {
     return {
         primaryType: 'Order',
         types: { EIP712Domain, Order },
         domain: { name, version, chainId, verifyingContract },
         message: order,
     };
-}
+};
 
-function buildOrderRFQData (chainId, verifyingContract, order) {
+const buildOrderRFQData = (chainId, verifyingContract, order) => {
     return {
         primaryType: 'OrderRFQ',
         types: { EIP712Domain, OrderRFQ },
         domain: { name, version, chainId, verifyingContract },
         message: order,
     };
-}
+};
 
-function signOrder (order, chainId, target, privateKey) {
+const signOrder = (order, chainId, target, privateKey) => {
     const data = buildOrderData(chainId, target, order);
     return signTypedData({ privateKey, data, version: TypedDataVersion });
-}
+};
 
-function signOrderRFQ (order, chainId, target, privateKey) {
+const signOrderRFQ = (order, chainId, target, privateKey) => {
     const data = buildOrderRFQData(chainId, target, order);
     return signTypedData({ privateKey, data, version: TypedDataVersion });
-}
+};
 
-function compactSignature (signature) {
+const compactSignature = (signature) => {
     const r = toBN(signature.substring(2, 66), 'hex');
     const s = toBN(signature.substring(66, 130), 'hex');
     const v = toBN(signature.substring(130, 132), 'hex');
@@ -160,19 +174,19 @@ function compactSignature (signature) {
         r: '0x' + r.toString('hex').padStart(64, '0'),
         vs: '0x' + v.subn(27).shln(255).add(s).toString('hex').padStart(64, '0'),
     };
-}
+};
 
-function unwrapWeth (amount) {
+const unwrapWeth = (amount) => {
     return toBN(amount).setn(252, 1).toString();
-}
+};
 
-function makingAmount (amount) {
+const makingAmount = (amount) => {
     return toBN(amount).setn(255, 1).toString();
-}
+};
 
-function takingAmount (amount) {
+const takingAmount = (amount) => {
     return toBN(amount).toString();
-}
+};
 
 module.exports = {
     ABIOrderRFQ,
@@ -181,6 +195,7 @@ module.exports = {
     buildOrderRFQ,
     buildOrderData,
     buildOrderRFQData,
+    buildSalt,
     signOrder,
     signOrderRFQ,
     compactSignature,

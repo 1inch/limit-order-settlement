@@ -1,3 +1,4 @@
+const { time } = require('@openzeppelin/test-helpers');
 const { expect, ether } = require('@1inch/solidity-utils');
 const { addr0Wallet, addr1Wallet } = require('./helpers/utils');
 
@@ -5,8 +6,9 @@ const TokenMock = artifacts.require('TokenMock');
 const WrappedTokenMock = artifacts.require('WrappedTokenMock');
 const LimitOrderProtocol = artifacts.require('LimitOrderProtocol');
 const Settlement = artifacts.require('Settlement');
+const FeeCollector = artifacts.require('FeeCollector');
 
-const { buildOrder, signOrder } = require('./helpers/orderUtils');
+const { buildOrder, signOrder, buildSalt } = require('./helpers/orderUtils');
 
 describe('Settlement', async () => {
     const [addr0, addr1] = [addr0Wallet.getAddressString(), addr1Wallet.getAddressString()];
@@ -31,7 +33,8 @@ describe('Settlement', async () => {
         await this.weth.approve(this.swap.address, ether('1'));
         await this.weth.approve(this.swap.address, ether('1'), { from: addr1 });
 
-        this.matcher = await Settlement.new();
+        const feeCollector = await FeeCollector.new();
+        this.matcher = await Settlement.new(feeCollector.address);
     });
 
     it('opposite direction recursive swap', async () => {
@@ -41,6 +44,7 @@ describe('Settlement', async () => {
                 takerAsset: this.weth.address,
                 makingAmount: ether('100'),
                 takingAmount: ether('0.1'),
+                salt: buildSalt(await time.latest()),
                 from: addr0,
             },
             {
@@ -54,6 +58,7 @@ describe('Settlement', async () => {
                 takerAsset: this.dai.address,
                 makingAmount: ether('0.1'),
                 takingAmount: ether('100'),
+                salt: buildSalt(await time.latest()),
                 from: addr1,
             },
             {
@@ -107,6 +112,7 @@ describe('Settlement', async () => {
                 takerAsset: this.weth.address,
                 makingAmount: ether('10'),
                 takingAmount: ether('0.01'),
+                salt: buildSalt(await time.latest()),
                 from: addr1,
             },
             {
@@ -120,6 +126,7 @@ describe('Settlement', async () => {
                 takerAsset: this.weth.address,
                 makingAmount: ether('15'),
                 takingAmount: ether('0.015'),
+                salt: buildSalt(await time.latest()),
                 from: addr1,
             },
             {
@@ -176,6 +183,7 @@ describe('Settlement', async () => {
                 takerAsset: this.weth.address,
                 makingAmount: ether('10'),
                 takingAmount: ether('0.01'),
+                salt: buildSalt(await time.latest()),
                 from: addr1,
             },
             {
@@ -189,6 +197,7 @@ describe('Settlement', async () => {
                 takerAsset: this.weth.address,
                 makingAmount: ether('15'),
                 takingAmount: ether('0.015'),
+                salt: buildSalt(await time.latest()),
                 from: addr1,
             },
             {
@@ -202,6 +211,7 @@ describe('Settlement', async () => {
                 takerAsset: this.dai.address,
                 makingAmount: ether('0.025'),
                 takingAmount: ether('25'),
+                salt: buildSalt(await time.latest()),
                 from: addr0,
             },
             {

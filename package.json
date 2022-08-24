@@ -21,7 +21,7 @@
     "lint:fix": "yarn run lint:js:fix && yarn run lint:sol:fix"
   },
   "dependencies": {
-    "@1inch/limit-order-protocol": "1inch/limit-order-protocol",
+    "@1inch/limit-order-protocol": "https://github.com/1inch/limit-order-protocol",
     "@openzeppelin/contracts": "4.7.3"
   },
   "devDependencies": {
@@ -30,6 +30,7 @@
     "@nomiclabs/hardhat-etherscan": "3.1.0",
     "@nomiclabs/hardhat-truffle5": "2.0.6",
     "@nomiclabs/hardhat-web3": "2.0.0",
+    "@openzeppelin/test-helpers": "0.5.15",
     "chai": "4.3.6",
     "dotenv": "16.0.1",
     "eslint": "8.22.0",
