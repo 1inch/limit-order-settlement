@@ -5,12 +5,17 @@ pragma solidity 0.8.15;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@1inch/limit-order-protocol/contracts/interfaces/NotificationReceiver.sol";
 import "@1inch/limit-order-protocol/contracts/interfaces/IOrderMixin.sol";
+import "./helpers/WhitelistChecker.sol";
+import "./interfaces/IWhitelistRegistry.sol";
 
-contract Settlement is InteractionNotificationReceiver {
+contract Settlement is InteractionNotificationReceiver, WhitelistChecker {
     bytes1 private constant _FINALIZE_INTERACTION = 0x01;
 
     error IncorrectCalldataParams();
     error FailedExternalCall();
+
+    // solhint-disable-next-line no-empty-blocks
+    constructor(IWhitelistRegistry whitelist, address limitOrderProtocol) WhitelistChecker(whitelist, limitOrderProtocol) {}
 
     function matchOrders(
         IOrderMixin orderMixin,
@@ -20,7 +25,10 @@ contract Settlement is InteractionNotificationReceiver {
         uint256 makingAmount,
         uint256 takingAmount,
         uint256 thresholdAmount
-    ) external {
+    )
+        external
+        onlyWhitelisted(msg.sender)
+    {
         orderMixin.fillOrder(
             order,
             signature,
@@ -36,7 +44,11 @@ contract Settlement is InteractionNotificationReceiver {
         uint256 /* makingAmount */,
         uint256 /* takingAmount */,
         bytes calldata interactiveData
-    ) external returns(uint256) {
+    )
+        external
+        onlyWhitelisted(msg.sender)
+        returns(uint256)
+    {
         if(interactiveData[0] == _FINALIZE_INTERACTION) {
             (
                 address[] memory targets,

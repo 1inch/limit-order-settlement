@@ -1,12 +1,18 @@
-const { expect, ether } = require('@1inch/solidity-utils');
+const { expect, ether, toBN } = require('@1inch/solidity-utils');
 const { addr0Wallet, addr1Wallet } = require('./helpers/utils');
 
 const TokenMock = artifacts.require('TokenMock');
 const WrappedTokenMock = artifacts.require('WrappedTokenMock');
 const LimitOrderProtocol = artifacts.require('LimitOrderProtocol');
+const WhitelistRegistrySimple = artifacts.require('WhitelistRegistrySimple');
 const Settlement = artifacts.require('Settlement');
 
 const { buildOrder, signOrder } = require('./helpers/orderUtils');
+
+const Status = Object.freeze({
+    Unverified: toBN('0'),
+    Verified: toBN('1'),
+});
 
 describe('Settlement', async () => {
     const [addr0, addr1] = [addr0Wallet.getAddressString(), addr1Wallet.getAddressString()];
@@ -31,7 +37,10 @@ describe('Settlement', async () => {
         await this.weth.approve(this.swap.address, ether('1'));
         await this.weth.approve(this.swap.address, ether('1'), { from: addr1 });
 
-        this.matcher = await Settlement.new();
+        this.whitelistRegistrySimple = await WhitelistRegistrySimple.new();
+        this.matcher = await Settlement.new(this.whitelistRegistrySimple.address, this.swap.address);
+
+        await this.whitelistRegistrySimple.setStatus(addr0, Status.Verified);
     });
 
     it('opposite direction recursive swap', async () => {
@@ -256,5 +265,26 @@ describe('Settlement', async () => {
         expect(await this.weth.balanceOf(addr1)).to.be.bignumber.equal(addr1weth.add(ether('0.025')));
         expect(await this.dai.balanceOf(addr0)).to.be.bignumber.equal(addr0dai.add(ether('25')));
         expect(await this.dai.balanceOf(addr1)).to.be.bignumber.equal(addr1dai.sub(ether('25')));
+    });
+
+    describe('WhitelistChecker', async () => {
+        beforeEach(async () => {
+            await this.whitelistRegistrySimple.setStatus(addr0, Status.Unverified);
+        });
+
+        afterEach(async () => {
+            await this.whitelistRegistrySimple.setStatus(addr0, Status.Verified);
+        });
+
+        it('matchOrders should not work with non-whitelisted address', async () => {
+            const order1 = buildOrder({makerAsset: this.dai.address, takerAsset: this.weth.address, makingAmount: ether('10'), takingAmount: ether('0.01'), from: addr1});
+            await expect(this.matcher.matchOrders(this.swap.address, order1, '0x', '0x', ether('10'), 0, ether('0.01')))
+                .to.eventually.be.rejectedWith('AccessDenied()');
+        });
+
+        it('fillOrderInteraction should not work with non-whitelisted address', async () => {
+            await expect(this.matcher.fillOrderInteraction(this.swap.address, 0, 0, '0x'))
+                .to.eventually.be.rejectedWith('AccessDenied()');
+        });
     });
 });
