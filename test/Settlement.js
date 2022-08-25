@@ -277,7 +277,7 @@ describe('Settlement', async () => {
         });
 
         it('matchOrders should not work with non-whitelisted address', async () => {
-            const order1 = buildOrder({makerAsset: this.dai.address, takerAsset: this.weth.address, makingAmount: ether('10'), takingAmount: ether('0.01'), from: addr1});
+            const order1 = buildOrder({ makerAsset: this.dai.address, takerAsset: this.weth.address, makingAmount: ether('10'), takingAmount: ether('0.01'), from: addr1 });
             await expect(this.matcher.matchOrders(this.swap.address, order1, '0x', '0x', ether('10'), 0, ether('0.01')))
                 .to.eventually.be.rejectedWith('AccessDenied()');
         });
