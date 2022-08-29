@@ -87,7 +87,7 @@ describe('WhitelistChecker', async () => {
                 ['address[]', 'bytes[]'],
                 [
                     [this.matcher.address],
-                    ["0x"],
+                    ['0x'],
                 ],
             ).substring(2);
             await expect(this.swap.fillOrder(order, signature, interaction, ether('10'), 0, ether('0.01')))

@@ -21,8 +21,7 @@ contract WhitelistChecker {
     }
 
     modifier onlyWhitelistedEOA() {
-        // solhint-disable-next-line avoid-tx-origin
-        _enforceWhitelist(tx.origin);
+        _enforceWhitelist(tx.origin);  // solhint-disable-line avoid-tx-origin
         _;
     }
 
@@ -39,7 +38,7 @@ contract WhitelistChecker {
 
     modifier onlyLimitOrderProtocol() {
         if (msg.sender != _limitOrderProtocol) revert AccessDenied();
-        if (_checked == _NOT_CHECKED && !_isWhitelisted(tx.origin)) revert AccessDenied();
+        if (_checked == _NOT_CHECKED && !_isWhitelisted(tx.origin)) revert AccessDenied();  // solhint-disable-line avoid-tx-origin
         _;
     }
 
