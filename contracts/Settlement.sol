@@ -49,7 +49,7 @@ contract Settlement is InteractionNotificationReceiver, WhitelistChecker {
         uint256 thresholdAmount
     )
         external
-        onlyWhitelistedEOA(tx.origin) // solhint-disable-line avoid-tx-origin
+        onlyWhitelistedEOA()
     {
         orderMixin.fillOrder(
             order,
@@ -69,6 +69,7 @@ contract Settlement is InteractionNotificationReceiver, WhitelistChecker {
     )
         external
         onlyLimitOrderProtocol()
+        onlyWhitelisted(msg.sender)
         returns(uint256)
     {
         if(interactiveData[0] == _FINALIZE_INTERACTION) {

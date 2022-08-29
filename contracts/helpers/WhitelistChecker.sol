@@ -8,32 +8,39 @@ import "../interfaces/IWhitelistRegistry.sol";
 contract WhitelistChecker {
     error AccessDenied();
 
+    uint256 private constant _NOT_CHECKED = 1;
+    uint256 private constant _CHECKED = 2;
+
     IWhitelistRegistry private immutable _whitelist;
     address private _limitOrderProtocol;
-    bool private _requiredChecksSuccessed = false;
+    uint256 private _checked = _NOT_CHECKED;
 
     constructor(IWhitelistRegistry whitelist, address limitOrderProtocol) {
         _whitelist = whitelist;
         _limitOrderProtocol = limitOrderProtocol;
     }
 
-    modifier onlyWhitelistedEOA(address account) {
-        _verifiedAccount(account);
+    modifier onlyWhitelistedEOA() {
+        // solhint-disable-next-line avoid-tx-origin
+        _enforceWhitelist(tx.origin);
         _;
     }
 
     modifier onlyWhitelisted(address account) {
         if (account == _limitOrderProtocol) {
-            if (_requiredChecksSuccessed) {
-                _;
-            } else {
-                revert AccessDenied();
-            }
-        } else {
-            _verifiedAccount(account);
-            _requiredChecksSuccessed = true;
+            // in a callback we check storage first and then tx.origin
+            // solhint-disable-next-line avoid-tx-origin
+            if (_checked == _NOT_CHECKED && !_isWhitelisted(tx.origin)) revert AccessDenied();
             _;
-            _requiredChecksSuccessed = false;
+        } else {
+            _enforceWhitelist(account);
+            if (_checked == _NOT_CHECKED) {
+                _checked = _CHECKED;
+                _;
+                _checked = _NOT_CHECKED;
+            } else {
+                _;
+            }
         }
     }
 
@@ -42,7 +49,11 @@ contract WhitelistChecker {
         _;
     }
 
-    function _verifiedAccount(address account) private view {
-        if (_whitelist.status(account) != uint256(IWhitelistRegistry.Status.Verified)) revert AccessDenied();
+    function _enforceWhitelist(address account) private view {
+        if (!_isWhitelisted(account)) revert AccessDenied();
+    }
+
+    function _isWhitelisted(address account) private view returns(bool) {
+        return _whitelist.status(account) == uint256(IWhitelistRegistry.Status.Verified);
     }
 }
