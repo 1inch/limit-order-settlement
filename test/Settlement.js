@@ -6,6 +6,7 @@ const WrappedTokenMock = artifacts.require('WrappedTokenMock');
 const LimitOrderProtocol = artifacts.require('LimitOrderProtocol');
 const WhitelistRegistrySimple = artifacts.require('WhitelistRegistrySimple');
 const Settlement = artifacts.require('Settlement');
+const FeeBank = artifacts.require('FeeBank');
 
 const { buildOrder, signOrder } = require('./helpers/orderUtils');
 
@@ -26,11 +27,13 @@ describe('Settlement', async () => {
     beforeEach(async () => {
         this.dai = await TokenMock.new('DAI', 'DAI');
         this.weth = await WrappedTokenMock.new('WETH', 'WETH');
+        this.inch = await TokenMock.new('1INCH', '1INCH');
 
         this.swap = await LimitOrderProtocol.new(this.weth.address);
 
         await this.dai.mint(addr0, ether('100'));
         await this.dai.mint(addr1, ether('100'));
+        await this.inch.mint(addr0, ether('100'));
         await this.weth.deposit({ from: addr0, value: ether('1') });
         await this.weth.deposit({ from: addr1, value: ether('1') });
 
@@ -40,6 +43,11 @@ describe('Settlement', async () => {
         await this.weth.approve(this.swap.address, ether('1'), { from: addr1 });
 
         this.matcher = await Settlement.new(this.whitelistRegistrySimple.address, this.swap.address);
+        this.feeBank = await FeeBank.new(this.matcher.address, this.inch.address);
+        await this.matcher.setFeeBank(this.feeBank.address);
+
+        await this.inch.approve(this.feeBank.address, ether('100'));
+        await this.feeBank.deposit(ether('100'));
     });
 
     it('opposite direction recursive swap', async () => {
@@ -264,5 +272,54 @@ describe('Settlement', async () => {
         expect(await this.weth.balanceOf(addr1)).to.be.bignumber.equal(addr1weth.add(ether('0.025')));
         expect(await this.dai.balanceOf(addr0)).to.be.bignumber.equal(addr0dai.add(ether('25')));
         expect(await this.dai.balanceOf(addr1)).to.be.bignumber.equal(addr1dai.sub(ether('25')));
+    });
+
+    describe('setFeeBank', async () => {
+        it('should change feeBank', async () => {
+            expect(await this.matcher.feeBank()).to.be.not.equals(addr1);
+            await this.matcher.setFeeBank(addr1);
+            expect((await this.matcher.feeBank()).toLowerCase()).to.be.equals(addr1.toLowerCase());
+        });
+
+        it('should not change feeBank by non-owner', async () => {
+            await expect(this.matcher.setFeeBank(addr1, { from: addr1 }))
+                .to.eventually.be.rejectedWith('Ownable: caller is not the owner');
+        });
+    });
+
+    describe('addCreditAllowance', async () => {
+        it('should increase credit', async () => {
+            const amount = ether('100');
+            expect(await this.matcher.creditAllowance(addr1)).to.be.bignumber.equals('0');
+            await this.matcher.setFeeBank(addr0);
+            await this.matcher.addCreditAllowance(addr1, amount);
+            expect(await this.matcher.creditAllowance(addr1)).to.be.bignumber.equals(amount);
+        });
+
+        it('should not increase credit by non-feeBank address', async () => {
+            await expect(this.matcher.addCreditAllowance(addr1, ether('100')))
+                .to.eventually.be.rejectedWith('OnlyFeeBankAccess()');
+        });
+    });
+
+    describe('subCreditAllowance', async () => {
+        beforeEach(async () => {
+            this.creditAmount = ether('100');
+            await this.matcher.setFeeBank(addr0);
+            await this.matcher.addCreditAllowance(addr1, this.creditAmount);
+        });
+
+        it('should decrease credit', async () => {
+            const amount = ether('10');
+            expect(await this.matcher.creditAllowance(addr1)).to.be.bignumber.equals(this.creditAmount);
+            await this.matcher.subCreditAllowance(addr1, amount);
+            expect(await this.matcher.creditAllowance(addr1)).to.be.bignumber.equals(this.creditAmount.sub(amount));
+        });
+
+        it('should not deccrease credit by non-feeBank address', async () => {
+            await this.matcher.setFeeBank(this.feeBank.address);
+            await expect(this.matcher.subCreditAllowance(addr1, ether('10')))
+                .to.eventually.be.rejectedWith('OnlyFeeBankAccess()');
+        });
     });
 });
