@@ -1,18 +1,26 @@
-const { expect, ether } = require('@1inch/solidity-utils');
+const { expect, ether, toBN } = require('@1inch/solidity-utils');
 const { addr0Wallet, addr1Wallet } = require('./helpers/utils');
 
 const TokenMock = artifacts.require('TokenMock');
 const WrappedTokenMock = artifacts.require('WrappedTokenMock');
 const LimitOrderProtocol = artifacts.require('LimitOrderProtocol');
+const WhitelistRegistrySimple = artifacts.require('WhitelistRegistrySimple');
 const Settlement = artifacts.require('Settlement');
 
 const { buildOrder, signOrder } = require('./helpers/orderUtils');
+
+const Status = Object.freeze({
+    Unverified: toBN('0'),
+    Verified: toBN('1'),
+});
 
 describe('Settlement', async () => {
     const [addr0, addr1] = [addr0Wallet.getAddressString(), addr1Wallet.getAddressString()];
 
     before(async () => {
         this.chainId = await web3.eth.getChainId();
+        this.whitelistRegistrySimple = await WhitelistRegistrySimple.new();
+        await this.whitelistRegistrySimple.setStatus(addr0, Status.Verified);
     });
 
     beforeEach(async () => {
@@ -31,7 +39,7 @@ describe('Settlement', async () => {
         await this.weth.approve(this.swap.address, ether('1'));
         await this.weth.approve(this.swap.address, ether('1'), { from: addr1 });
 
-        this.matcher = await Settlement.new();
+        this.matcher = await Settlement.new(this.whitelistRegistrySimple.address, this.swap.address);
     });
 
     it('opposite direction recursive swap', async () => {
