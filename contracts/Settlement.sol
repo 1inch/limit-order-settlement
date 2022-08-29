@@ -39,6 +39,28 @@ contract Settlement is InteractionNotificationReceiver, WhitelistChecker {
         );
     }
 
+    function matchOrdersEOA(
+        IOrderMixin orderMixin,
+        OrderLib.Order calldata order,
+        bytes calldata signature,
+        bytes calldata interaction,
+        uint256 makingAmount,
+        uint256 takingAmount,
+        uint256 thresholdAmount
+    )
+        external
+        onlyWhitelistedEOA(tx.origin) // solhint-disable-line avoid-tx-origin
+    {
+        orderMixin.fillOrder(
+            order,
+            signature,
+            interaction,
+            makingAmount,
+            takingAmount,
+            thresholdAmount
+        );
+    }
+
     function fillOrderInteraction(
         address /* taker */,
         uint256 /* makingAmount */,
@@ -46,7 +68,7 @@ contract Settlement is InteractionNotificationReceiver, WhitelistChecker {
         bytes calldata interactiveData
     )
         external
-        onlyWhitelisted(msg.sender)
+        onlyLimitOrderProtocol()
         returns(uint256)
     {
         if(interactiveData[0] == _FINALIZE_INTERACTION) {
