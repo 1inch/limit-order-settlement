@@ -69,7 +69,6 @@ contract Settlement is InteractionNotificationReceiver, WhitelistChecker {
     )
         external
         onlyLimitOrderProtocol()
-        onlyWhitelisted(msg.sender)
         returns(uint256)
     {
         if(interactiveData[0] == _FINALIZE_INTERACTION) {

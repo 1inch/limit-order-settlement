@@ -27,25 +27,19 @@ contract WhitelistChecker {
     }
 
     modifier onlyWhitelisted(address account) {
-        if (account == _limitOrderProtocol) {
-            // in a callback we check storage first and then tx.origin
-            // solhint-disable-next-line avoid-tx-origin
-            if (_checked == _NOT_CHECKED && !_isWhitelisted(tx.origin)) revert AccessDenied();
+        _enforceWhitelist(account);
+        if (_checked == _NOT_CHECKED) {
+            _checked = _CHECKED;
             _;
+            _checked = _NOT_CHECKED;
         } else {
-            _enforceWhitelist(account);
-            if (_checked == _NOT_CHECKED) {
-                _checked = _CHECKED;
-                _;
-                _checked = _NOT_CHECKED;
-            } else {
-                _;
-            }
+            _;
         }
     }
 
     modifier onlyLimitOrderProtocol() {
         if (msg.sender != _limitOrderProtocol) revert AccessDenied();
+        if (_checked == _NOT_CHECKED && !_isWhitelisted(tx.origin)) revert AccessDenied();
         _;
     }
 
