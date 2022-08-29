@@ -37,10 +37,23 @@ contract FeeBank {
         return _depositFor(account, amount);
     }
 
-    function _depositFor(address account, uint256 amount) internal returns(uint256 totalDeposit) {
+    function withdraw(uint256 amount) external returns(uint256) {
+        return _withdrawTo(msg.sender, amount);
+    }
+
+    function withdrawTo(address account, uint256 amount) external returns(uint256) {
+        return _withdrawTo(account, amount);
+    }
+
+    function _depositFor(address account, uint256 amount) internal returns(uint256 totalCreditAllowance) {
         _token.safeTransferFrom(msg.sender, address(this), amount);
         accountDeposits[account] += amount;
-        _settlement.addCreditAllowance(account, amount);
-        return accountDeposits[account];
+        totalCreditAllowance = _settlement.addCreditAllowance(account, amount);
+    }
+
+    function _withdrawTo(address account, uint256 amount) internal returns(uint256 totalCreditAllowance) {
+        totalCreditAllowance = _settlement.subCreditAllowance(msg.sender, amount);
+        accountDeposits[msg.sender] -= amount;
+        _token.safeTransfer(account, amount);
     }
 }
