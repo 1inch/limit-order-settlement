@@ -128,7 +128,7 @@ contract Settlement is Ownable, InteractionNotificationReceiver, WhitelistChecke
         uint256 takingAmount,
         uint256 thresholdAmount
     ) private {
-        uint256 orderFee = (order.salt << 80) >> 80 >> 112;
+        uint256 orderFee = (order.salt << 80) >> 80 >> (256 - 80 - 72);
         if (creditAllowance[tx.origin] < orderFee) revert NotEnoughCredit(); // solhint-disable-line avoid-tx-origin
         creditAllowance[tx.origin] -= orderFee; // solhint-disable-line avoid-tx-origin
         orderMixin.fillOrder(

@@ -275,7 +275,38 @@ describe('Settlement', async () => {
     });
 
     it('should change creditAllowance with non-zero fee', async () => {
-        // TODO: test with order's fee > 0, check that creditAllowance changing correct
+        const orderFee = 100;
+        const backOrderFee = 125;
+        const order = buildOrder(
+            { makerAsset: this.dai.address, takerAsset: this.weth.address, makingAmount: ether('100'), takingAmount: ether('0.1'), from: addr0 },
+            { salt: toBN('1').or(toBN(orderFee).shln(104)).add(toBN(2).pow(toBN(255))).toString() },
+        );
+        const backOrder = buildOrder(
+            { makerAsset: this.weth.address, takerAsset: this.dai.address, makingAmount: ether('0.1'), takingAmount: ether('100'), from: addr1 },
+            { salt: toBN('1').or(toBN(backOrderFee).shln(104)).add(toBN(2).pow(toBN(255))).toString() },
+        );
+
+        const signature = signOrder(order, this.chainId, this.swap.address, addr0Wallet.getPrivateKey());
+        const signatureBackOrder = signOrder(backOrder, this.chainId, this.swap.address, addr1Wallet.getPrivateKey());
+        const matchingParams = this.matcher.address + '01' + web3.eth.abi.encodeParameters(
+            ['address[]', 'bytes[]'],
+            [
+                [
+                    this.weth.address,
+                    this.dai.address,
+                ],
+                [
+                    this.weth.contract.methods.approve(this.swap.address, ether('0.1')).encodeABI(),
+                    this.dai.contract.methods.approve(this.swap.address, ether('100')).encodeABI(),
+                ],
+            ],
+        ).substring(2);
+        const interaction = this.matcher.address + '00' +
+            this.swap.contract.methods.fillOrder(backOrder, signatureBackOrder, matchingParams, ether('0.1'), 0, ether('100')).encodeABI().substring(10);
+
+        const creditAllowanceBefore = await this.matcher.creditAllowance(addr0);
+        await this.matcher.matchOrdersEOA(this.swap.address, order, signature, interaction, ether('100'), 0, ether('0.1'));
+        expect(await this.matcher.creditAllowance(addr0)).to.be.bignumber.eq(creditAllowanceBefore.subn(orderFee).subn(backOrderFee));
     });
 
     describe('setFeeBank', async () => {
@@ -294,10 +325,10 @@ describe('Settlement', async () => {
     describe('addCreditAllowance', async () => {
         it('should increase credit', async () => {
             const amount = ether('100');
-            expect(await this.matcher.creditAllowance(addr1)).to.be.bignumber.equals('0');
+            expect(await this.matcher.creditAllowance(addr1)).to.be.bignumber.eq('0');
             await this.matcher.setFeeBank(addr0);
             await this.matcher.addCreditAllowance(addr1, amount);
-            expect(await this.matcher.creditAllowance(addr1)).to.be.bignumber.equals(amount);
+            expect(await this.matcher.creditAllowance(addr1)).to.be.bignumber.eq(amount);
         });
 
         it('should not increase credit by non-feeBank address', async () => {
@@ -315,9 +346,9 @@ describe('Settlement', async () => {
 
         it('should decrease credit', async () => {
             const amount = ether('10');
-            expect(await this.matcher.creditAllowance(addr1)).to.be.bignumber.equals(this.creditAmount);
+            expect(await this.matcher.creditAllowance(addr1)).to.be.bignumber.eq(this.creditAmount);
             await this.matcher.subCreditAllowance(addr1, amount);
-            expect(await this.matcher.creditAllowance(addr1)).to.be.bignumber.equals(this.creditAmount.sub(amount));
+            expect(await this.matcher.creditAllowance(addr1)).to.be.bignumber.eq(this.creditAmount.sub(amount));
         });
 
         it('should not deccrease credit by non-feeBank address', async () => {

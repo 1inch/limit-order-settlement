@@ -82,7 +82,7 @@ describe('WhitelistRegistrySimple', async () => {
 
         beforeEach(async () => {
             await this.token.transfer(this.whitelistRegistrySimple.address, ether('1'));
-            expect(await this.token.balanceOf(this.whitelistRegistrySimple.address)).to.be.bignumber.equals(ether('1'));
+            expect(await this.token.balanceOf(this.whitelistRegistrySimple.address)).to.be.bignumber.eq(ether('1'));
         });
 
         it('should rescue funds', async () => {
