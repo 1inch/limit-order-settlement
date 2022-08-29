@@ -4,7 +4,7 @@ const { addr0Wallet, addr1Wallet } = require('./helpers/utils');
 const { getPermit } = require('@1inch/solidity-utils');
 
 const FeeBank = artifacts.require('FeeBank');
-const TokenMock = artifacts.require('ERC20PermitMock');
+const TokenPermitMock = artifacts.require('ERC20PermitMock');
 const WrappedTokenMock = artifacts.require('WrappedTokenMock');
 const LimitOrderProtocol = artifacts.require('LimitOrderProtocol');
 const WhitelistRegistrySimple = artifacts.require('WhitelistRegistrySimple');
@@ -19,8 +19,7 @@ describe('FeeBank', async () => {
     });
 
     beforeEach(async () => {
-        // this.inch = await TokenMock.new('1INCH', '1INCH');
-        this.inch = await TokenMock.new('1INCH', '1INCH', addr0, ether('200'));
+        this.inch = await TokenPermitMock.new('1INCH', '1INCH', addr0, ether('200'));
         this.weth = await WrappedTokenMock.new('WETH', 'WETH');
 
         this.swap = await LimitOrderProtocol.new(this.weth.address);
@@ -28,8 +27,6 @@ describe('FeeBank', async () => {
         this.feeBank = await FeeBank.new(this.matcher.address, this.inch.address);
 
         await this.matcher.setFeeBank(this.feeBank.address);
-        // await this.inch.mint(addr0, ether('100'));
-        // await this.inch.mint(addr1, ether('100'));
         await this.inch.transfer(addr1, ether('100'), { from: addr0 });
         await this.inch.approve(this.feeBank.address, ether('1000'), { from: addr0 });
         await this.inch.approve(this.feeBank.address, ether('1000'), { from: addr1 });
