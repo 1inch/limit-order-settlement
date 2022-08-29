@@ -61,6 +61,7 @@ function buildOrder (
         permit = '0x',
         preInteraction = '0x',
         postInteraction = '0x',
+        salt = '1',
     } = {},
 ) {
     if (getMakingAmount === '') {
@@ -91,7 +92,7 @@ function buildOrder (
         .reduce((acc, a, i) => acc.add(toBN(a).shln(32 * i)), toBN('0'));
 
     return {
-        salt: '1',
+        salt,
         makerAsset,
         takerAsset,
         maker,
