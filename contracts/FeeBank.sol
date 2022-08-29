@@ -4,10 +4,11 @@ pragma solidity 0.8.15;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@1inch/solidity-utils/contracts/libraries/SafeERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "./interfaces/ISettlement.sol";
 
 /// @title Contract with fee mechanism for solvers to pay for using the system
-contract FeeBank {
+contract FeeBank is Ownable {
     using SafeERC20 for IERC20;
 
     IERC20 private immutable _token;
@@ -43,6 +44,15 @@ contract FeeBank {
 
     function withdrawTo(address account, uint256 amount) external returns(uint256) {
         return _withdrawTo(account, amount);
+    }
+
+    function gatherFees(address[] memory accounts) external onlyOwner returns(uint256 totalAccountFees) {
+        for (uint256 i = 0; i < accounts.length; i++) {
+            uint256 accountFee = accountDeposits[accounts[i]] - _settlement.creditAllowance(accounts[i]);
+            accountDeposits[accounts[i]] -= accountFee;
+            totalAccountFees += accountFee;
+        }
+        _token.safeTransfer(msg.sender, totalAccountFees);
     }
 
     function _depositFor(address account, uint256 amount) internal returns(uint256 totalCreditAllowance) {

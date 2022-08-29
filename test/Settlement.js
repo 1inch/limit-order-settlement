@@ -274,6 +274,10 @@ describe('Settlement', async () => {
         expect(await this.dai.balanceOf(addr1)).to.be.bignumber.equal(addr1dai.sub(ether('25')));
     });
 
+    it('should change creditAllowance with non-zero fee', async () => {
+        // TODO: test with order's fee > 0, check that creditAllowance changing correct
+    });
+
     describe('setFeeBank', async () => {
         it('should change feeBank', async () => {
             expect(await this.matcher.feeBank()).to.be.not.equals(addr1);

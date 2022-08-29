@@ -1,4 +1,4 @@
-const { expect, ether } = require('@1inch/solidity-utils');
+const { expect, ether, toBN } = require('@1inch/solidity-utils');
 const { artifacts } = require('hardhat');
 const { addr0Wallet, addr1Wallet } = require('./helpers/utils');
 const { getPermit } = require('@1inch/solidity-utils');
@@ -19,7 +19,7 @@ describe('FeeBank', async () => {
     });
 
     beforeEach(async () => {
-        this.inch = await TokenPermitMock.new('1INCH', '1INCH', addr0, ether('200'));
+        this.inch = await TokenPermitMock.new('1INCH', '1INCH', addr0, ether('1000'));
         this.weth = await WrappedTokenMock.new('WETH', 'WETH');
 
         this.swap = await LimitOrderProtocol.new(this.weth.address);
@@ -127,6 +127,85 @@ describe('FeeBank', async () => {
             const ArithmeticOperationRevertMessage = 'VM Exception while processing transaction: reverted with panic code 0x11 (Arithmetic operation underflowed or overflowed outside of an unchecked block)';
             await expect(this.feeBank.withdraw(this.totalDepositAmount.addn(1)))
                 .to.eventually.be.rejectedWith(ArithmeticOperationRevertMessage);
+        });
+    });
+
+    describe('gatherFees', async () => {
+        it('should correct withdrawal fee for 1 account', async () => {
+            const amount = ether('10');
+            const subCreditAmount = ether('2');
+            await this.feeBank.deposit(amount, { from: addr1 });
+            await this.matcher.setFeeBank(addr0);
+            await this.matcher.subCreditAllowance(addr1, subCreditAmount);
+
+            const balanceBefore = await this.inch.balanceOf(addr0);
+            expect(await this.feeBank.accountDeposits(addr1)).to.be.bignumber.eq(amount);
+            expect(await this.matcher.creditAllowance(addr1)).to.be.bignumber.eq(amount.sub(subCreditAmount));
+            await this.feeBank.gatherFees([addr1]);
+
+            expect(await this.feeBank.accountDeposits(addr1)).to.be.bignumber.eq(amount.sub(subCreditAmount));
+            expect(await this.matcher.creditAllowance(addr1)).to.be.bignumber.eq(amount.sub(subCreditAmount));
+            expect(await this.inch.balanceOf(addr0)).to.be.bignumber.eq(balanceBefore.add(subCreditAmount));
+        });
+
+        it('should correct withdrawal fee for 2 account', async () => {
+            const addr0Amount = ether('10');
+            const addr1Amount = ether('25');
+            const subCreditAddr0Amount = ether('2');
+            const subCreditAddr1Amount = ether('11');
+            await this.feeBank.deposit(addr0Amount, { from: addr0 });
+            await this.feeBank.deposit(addr1Amount, { from: addr1 });
+            await this.matcher.setFeeBank(addr0);
+            await this.matcher.subCreditAllowance(addr0, subCreditAddr0Amount);
+            await this.matcher.subCreditAllowance(addr1, subCreditAddr1Amount);
+
+            const balanceBefore = await this.inch.balanceOf(addr0);
+            expect(await this.feeBank.accountDeposits(addr0)).to.be.bignumber.eq(addr0Amount);
+            expect(await this.feeBank.accountDeposits(addr1)).to.be.bignumber.eq(addr1Amount);
+            expect(await this.matcher.creditAllowance(addr0)).to.be.bignumber.eq(addr0Amount.sub(subCreditAddr0Amount));
+            expect(await this.matcher.creditAllowance(addr1)).to.be.bignumber.eq(addr1Amount.sub(subCreditAddr1Amount));
+            await this.feeBank.gatherFees([addr0, addr1]);
+
+            expect(await this.feeBank.accountDeposits(addr0)).to.be.bignumber.eq(addr0Amount.sub(subCreditAddr0Amount));
+            expect(await this.feeBank.accountDeposits(addr1)).to.be.bignumber.eq(addr1Amount.sub(subCreditAddr1Amount));
+            expect(await this.matcher.creditAllowance(addr0)).to.be.bignumber.eq(addr0Amount.sub(subCreditAddr0Amount));
+            expect(await this.matcher.creditAllowance(addr1)).to.be.bignumber.eq(addr1Amount.sub(subCreditAddr1Amount));
+            expect(await this.inch.balanceOf(addr0)).to.be.bignumber.eq(balanceBefore.add(subCreditAddr0Amount).add(subCreditAddr1Amount));
+        });
+
+        it('should correct withdrawal fee for several account', async () => {
+            const accounts = await web3.eth.getAccounts();
+            const amounts = [];
+            const subCreditAmounts = [];
+            let totalSubCreditAmounts = ether('0');
+            for (let i = 0; i < accounts.length; i++) {
+                amounts[i] = toBN(web3.utils.randomHex(8));
+                subCreditAmounts[i] = toBN(web3.utils.randomHex(2));
+                totalSubCreditAmounts = totalSubCreditAmounts.add(subCreditAmounts[i]);
+                await this.feeBank.depositFor(accounts[i], amounts[i]);
+            }
+            await this.matcher.setFeeBank(addr0);
+            for (let i = 0; i < accounts.length; i++) {
+                await this.matcher.subCreditAllowance(accounts[i], subCreditAmounts[i]);
+            }
+
+            const balanceBefore = await this.inch.balanceOf(addr0);
+            for (let i = 0; i < accounts.length; i++) {
+                expect(await this.feeBank.accountDeposits(accounts[i])).to.be.bignumber.eq(amounts[i]);
+                expect(await this.matcher.creditAllowance(accounts[i])).to.be.bignumber.eq(amounts[i].sub(subCreditAmounts[i]));
+            }
+
+            await this.feeBank.gatherFees(accounts);
+            for (let i = 0; i < accounts.length; i++) {
+                expect(await this.feeBank.accountDeposits(accounts[i])).to.be.bignumber.eq(amounts[i].sub(subCreditAmounts[i]));
+                expect(await this.matcher.creditAllowance(accounts[i])).to.be.bignumber.eq(amounts[i].sub(subCreditAmounts[i]));
+            }
+            expect(await this.inch.balanceOf(addr0)).to.be.bignumber.eq(balanceBefore.add(totalSubCreditAmounts));
+        });
+
+        it('should not work by non-owner', async () => {
+            await expect(this.feeBank.gatherFees([addr0, addr1], { from: addr1 }))
+                .to.eventually.be.rejectedWith('Ownable: caller is not the owner');
         });
     });
 });
