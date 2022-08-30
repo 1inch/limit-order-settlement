@@ -309,6 +309,40 @@ describe('Settlement', async () => {
         expect(await this.matcher.creditAllowance(addr0)).to.be.bignumber.eq(creditAllowanceBefore.subn(orderFee).subn(backOrderFee));
     });
 
+    it('should not change when creditAllowance is not enough', async () => {
+        const orderFee = ether('1000').toString();
+        const backOrderFee = 125;
+        const order = buildOrder(
+            { makerAsset: this.dai.address, takerAsset: this.weth.address, makingAmount: ether('100'), takingAmount: ether('0.1'), from: addr0 },
+            { salt: toBN('1').or(toBN(orderFee).shln(104)).add(toBN(2).pow(toBN(255))).toString() },
+        );
+        const backOrder = buildOrder(
+            { makerAsset: this.weth.address, takerAsset: this.dai.address, makingAmount: ether('0.1'), takingAmount: ether('100'), from: addr1 },
+            { salt: toBN('1').or(toBN(backOrderFee).shln(104)).add(toBN(2).pow(toBN(255))).toString() },
+        );
+
+        const signature = signOrder(order, this.chainId, this.swap.address, addr0Wallet.getPrivateKey());
+        const signatureBackOrder = signOrder(backOrder, this.chainId, this.swap.address, addr1Wallet.getPrivateKey());
+        const matchingParams = this.matcher.address + '01' + web3.eth.abi.encodeParameters(
+            ['address[]', 'bytes[]'],
+            [
+                [
+                    this.weth.address,
+                    this.dai.address,
+                ],
+                [
+                    this.weth.contract.methods.approve(this.swap.address, ether('0.1')).encodeABI(),
+                    this.dai.contract.methods.approve(this.swap.address, ether('100')).encodeABI(),
+                ],
+            ],
+        ).substring(2);
+        const interaction = this.matcher.address + '00' +
+            this.swap.contract.methods.fillOrder(backOrder, signatureBackOrder, matchingParams, ether('0.1'), 0, ether('100')).encodeABI().substring(10);
+
+        await expect(this.matcher.matchOrdersEOA(this.swap.address, order, signature, interaction, ether('100'), 0, ether('0.1')))
+            .to.eventually.be.rejectedWith('NotEnoughCredit()');
+    });
+
     describe('setFeeBank', async () => {
         it('should change feeBank', async () => {
             expect(await this.matcher.feeBank()).to.be.not.equals(addr1);
