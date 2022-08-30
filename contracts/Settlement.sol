@@ -11,6 +11,7 @@ import "./interfaces/IWhitelistRegistry.sol";
 
 contract Settlement is Ownable, InteractionNotificationReceiver, WhitelistChecker {
     bytes1 private constant _FINALIZE_INTERACTION = 0x01;
+    uint256 private constant _ORDER_FEE_MASK = 0x00000000000000000000FFFFFFFFFFFFFFFFFF00000000000000000000000000;
 
     error IncorrectCalldataParams();
     error FailedExternalCall();
@@ -128,7 +129,7 @@ contract Settlement is Ownable, InteractionNotificationReceiver, WhitelistChecke
         uint256 takingAmount,
         uint256 thresholdAmount
     ) private {
-        uint256 orderFee = (order.salt << 80) >> 80 >> (256 - 80 - 72);
+        uint256 orderFee = (order.salt & _ORDER_FEE_MASK) >> (256 - 80 - 72);
         if (creditAllowance[tx.origin] < orderFee) revert NotEnoughCredit(); // solhint-disable-line avoid-tx-origin
         creditAllowance[tx.origin] -= orderFee; // solhint-disable-line avoid-tx-origin
         orderMixin.fillOrder(

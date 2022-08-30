@@ -314,11 +314,11 @@ describe('Settlement', async () => {
         const backOrderFee = 125;
         const order = buildOrder(
             { makerAsset: this.dai.address, takerAsset: this.weth.address, makingAmount: ether('100'), takingAmount: ether('0.1'), from: addr0 },
-            { salt: toBN('1').or(toBN(orderFee).shln(104)).add(toBN(2).pow(toBN(255))).toString() },
+            { salt: toBN('1').or(toBN(orderFee).shln(104)).toString() },
         );
         const backOrder = buildOrder(
             { makerAsset: this.weth.address, takerAsset: this.dai.address, makingAmount: ether('0.1'), takingAmount: ether('100'), from: addr1 },
-            { salt: toBN('1').or(toBN(backOrderFee).shln(104)).add(toBN(2).pow(toBN(255))).toString() },
+            { salt: toBN('1').or(toBN(backOrderFee).shln(104)).toString() },
         );
 
         const signature = signOrder(order, this.chainId, this.swap.address, addr0Wallet.getPrivateKey());
