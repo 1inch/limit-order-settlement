@@ -40,12 +40,10 @@ contract Settlement is InteractionNotificationReceiver, Ownable {
         uint256 takingAmount,
         uint256 thresholdAmount
     ) external {
-        feeCollector.payFee(_getFeeRate(order.salt));
-
         orderMixin.fillOrder(
             order,
             signature,
-            interaction,
+            bytes.concat(interaction, bytes32(order.salt)),
             makingAmount,
             takingAmount,
             thresholdAmount
@@ -55,7 +53,7 @@ contract Settlement is InteractionNotificationReceiver, Ownable {
     function fillOrderInteraction(
         address /* taker */,
         uint256 /* makingAmount */,
-        uint256 /* takingAmount */,
+        uint256 takingAmount,
         bytes calldata interactiveData
     ) external returns(uint256) {
         if(interactiveData[0] == _FINALIZE_INTERACTION) {
@@ -79,18 +77,18 @@ contract Settlement is InteractionNotificationReceiver, Ownable {
                 uint256 takingOrderAmount,
                 uint256 thresholdAmount
             ) = abi.decode(interactiveData[1:], (OrderLib.Order, bytes, bytes, uint256, uint256, uint256));
-            feeCollector.payFee(_getFeeRate(order.salt));
 
             IOrderMixin(msg.sender).fillOrder(
                 order,
                 signature,
-                interaction,
+                bytes.concat(interaction, bytes32(order.salt)),
                 makingOrderAmount,
                 takingOrderAmount,
                 thresholdAmount
             );
         }
-        return 0;
+        uint256 salt = uint256(bytes32(interactiveData[interactiveData.length - 32:]));
+        return takingAmount * _getFeeRate(salt) / _BASE_POINTS;
     }
 
     function _getFeeRate(uint256 salt) internal view returns(uint256) {
