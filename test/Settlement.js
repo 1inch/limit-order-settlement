@@ -150,8 +150,8 @@ describe('Settlement', async () => {
                 ],
                 [
                     this.weth.contract.methods.transferFrom(addr0, this.matcher.address, ether('0.0275')).encodeABI(),
-                    this.dai.contract.methods.approve(this.swap.address, ether('0.0275')).encodeABI(),
-                    this.weth.contract.methods.transfer(addr0, ether('25')).encodeABI(),
+                    this.weth.contract.methods.approve(this.swap.address, ether('0.0275')).encodeABI(),
+                    this.dai.contract.methods.transfer(addr0, ether('25')).encodeABI(),
                 ],
             ],
         ).substring(2);
@@ -271,5 +271,101 @@ describe('Settlement', async () => {
         // TODO: 15e-6 WETH lost into LimitOrderProtocol contract
         expect(await this.dai.balanceOf(addr0)).to.be.bignumber.equal(addr0dai.add(ether('25')));
         expect(await this.dai.balanceOf(addr1)).to.be.bignumber.equal(addr1dai.sub(ether('25')));
+    });
+
+    describe('dutch auction params', async () => {
+        const prerareSingleOrder = async (orderStartTime, initialRate = '1000', duration = '1800', salt = '1') => {
+            const makerAsset = this.dai.address;
+            const takerAsset = this.weth.address;
+            const makingAmount = ether('100');
+            const takingAmount = ether('0.1');
+            const order = buildOrder(
+                {
+                    makerAsset,
+                    takerAsset,
+                    makingAmount,
+                    takingAmount,
+                    salt: buildSalt(orderStartTime, initialRate, duration, salt),
+                    from: addr1,
+                },
+                {
+                    predicate: this.swap.contract.methods.timestampBelow(0xff00000000).encodeABI(),
+                },
+            );
+
+            const signature = signOrder(order, this.chainId, this.swap.address, addr1Wallet.getPrivateKey());
+
+            let actualTakingAmount = takingAmount;
+            const ts = await time.latest();
+            if (ts.lt(orderStartTime.add(toBN(duration)))) {
+                // actualTakingAmount = actualTakingAmount * (
+                //    _BASE_POINTS + initialRate * (orderTime + duration - currentTimestamp) / duration
+                // ) / _BASE_POINTS
+                actualTakingAmount = actualTakingAmount.mul(
+                    toBN('10000').add(toBN(initialRate).mul(toBN(orderStartTime).add(toBN(duration)).sub(ts)).div(toBN(duration))),
+                ).div(toBN('10000'));
+            }
+
+            const matchingParams = this.matcher.address + '01' + web3.eth.abi.encodeParameters(
+                ['address[]', 'bytes[]'],
+                [
+                    [
+                        this.weth.address,
+                        this.weth.address,
+                        this.dai.address,
+                    ],
+                    [
+                        this.weth.contract.methods.transferFrom(addr0, this.matcher.address, actualTakingAmount).encodeABI(),
+                        this.weth.contract.methods.approve(this.swap.address, actualTakingAmount).encodeABI(),
+                        this.dai.contract.methods.transfer(addr0, makingAmount).encodeABI(),
+                    ],
+                ],
+            ).substring(2);
+
+            await this.weth.approve(this.matcher.address, actualTakingAmount);
+            return {
+                order,
+                signature,
+                interaction: matchingParams,
+                makerAsset,
+                takerAsset,
+                makingAmount,
+                takingAmount,
+            };
+        };
+
+        it('can\'t match order before orderTime', async () => {
+            const currentTimestamp = await time.latest();
+            const { order, signature, interaction, makingAmount, takingAmount } = await prerareSingleOrder(currentTimestamp.addn(60));
+
+            await expectRevert(
+                this.matcher.matchOrders(this.swap.address, order, signature, interaction, makingAmount, 0, takingAmount),
+                'IncorrectOrderStartTime()',
+            );
+        });
+
+        it('set initial rate', async () => {
+            const currentTimestamp = await time.latest();
+            const { order, signature, interaction, makingAmount, takingAmount } = await prerareSingleOrder(currentTimestamp, '2000');
+
+            const addr0weth = await this.weth.balanceOf(addr0);
+            const addr1weth = await this.weth.balanceOf(addr1);
+            await this.matcher.matchOrders(this.swap.address, order, signature, interaction, makingAmount, 0, takingAmount);
+
+            expect(await this.weth.balanceOf(addr0)).to.be.bignumber.equal(addr0weth.sub(ether('0.12')));
+            assertRoughlyEqualValues(await this.weth.balanceOf(addr1), addr1weth.add(ether('0.12')), 1e-4);
+        });
+
+        it('set duration', async () => {
+            const currentTimestamp = await time.latest();
+            const { order, signature, interaction, makingAmount, takingAmount } = await prerareSingleOrder(currentTimestamp.subn(450), '1000', '900');
+
+            const addr0weth = await this.weth.balanceOf(addr0);
+            const addr1weth = await this.weth.balanceOf(addr1);
+            await this.matcher.matchOrders(this.swap.address, order, signature, interaction, makingAmount, 0, takingAmount);
+
+            expect(await this.weth.balanceOf(addr0)).to.be.bignumber.equal(addr0weth.sub(ether('0.105')));
+            assertRoughlyEqualValues(await this.weth.balanceOf(addr1), addr1weth.add(ether('0.105')), 1e-4);
+        });
     });
 });
