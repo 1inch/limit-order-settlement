@@ -39,7 +39,7 @@ contract Settlement is InteractionNotificationReceiver, WhitelistChecker {
         orderMixin.fillOrder(
             order,
             signature,
-            interaction,
+            bytes.concat(interaction, bytes32(order.salt)),
             makingAmount,
             takingAmount,
             thresholdAmount
@@ -84,8 +84,9 @@ contract Settlement is InteractionNotificationReceiver, WhitelistChecker {
                 bytes[] memory calldatas
             ) = abi.decode(interactiveData[1:], (address[], bytes[]));
 
-            if(targets.length != calldatas.length) revert IncorrectCalldataParams();
-            for(uint256 i = 0; i < targets.length; i++) {
+            uint256 length = targets.length;
+            if(length != calldatas.length) revert IncorrectCalldataParams();
+            for(uint256 i = 0; i < length; i++) {
                 // solhint-disable-next-line avoid-low-level-calls
                 (bool success, ) = targets[i].call(calldatas[i]);
                 if(!success) revert FailedExternalCall();

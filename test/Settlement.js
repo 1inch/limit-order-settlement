@@ -7,9 +7,8 @@ const WrappedTokenMock = artifacts.require('WrappedTokenMock');
 const LimitOrderProtocol = artifacts.require('LimitOrderProtocol');
 const WhitelistRegistrySimple = artifacts.require('WhitelistRegistrySimple');
 const Settlement = artifacts.require('Settlement');
-const MockFeeCollector = artifacts.require('MockFeeCollector');
 
-const { buildOrder, signOrder } = require('./helpers/orderUtils');
+const { buildOrder, signOrder, buildSalt } = require('./helpers/orderUtils');
 
 const Status = Object.freeze({
     Unverified: toBN('0'),
@@ -23,6 +22,7 @@ describe('Settlement', async () => {
         this.chainId = await web3.eth.getChainId();
         this.whitelistRegistrySimple = await WhitelistRegistrySimple.new();
         await this.whitelistRegistrySimple.setStatus(addr0, Status.Verified);
+        await this.whitelistRegistrySimple.setStatus(addr1, Status.Verified);
     });
 
     beforeEach(async () => {
@@ -45,7 +45,7 @@ describe('Settlement', async () => {
     });
 
     it('opposite direction recursive swap', async () => {
-        const order = buildOrder(
+        const order = await buildOrder(
             {
                 makerAsset: this.dai.address,
                 takerAsset: this.weth.address,
@@ -59,13 +59,12 @@ describe('Settlement', async () => {
             },
         );
 
-        const backOrder = buildOrder(
+        const backOrder = await buildOrder(
             {
                 makerAsset: this.weth.address,
                 takerAsset: this.dai.address,
                 makingAmount: ether('0.11'),
                 takingAmount: ether('100'),
-                salt: buildSalt((await time.latest()).sub(toBN('1800'))),
                 from: addr1,
             },
             {
@@ -114,7 +113,7 @@ describe('Settlement', async () => {
     });
 
     it('unidirectional recursive swap', async () => {
-        const order = buildOrder(
+        const order = await buildOrder(
             {
                 makerAsset: this.dai.address,
                 takerAsset: this.weth.address,
@@ -128,7 +127,7 @@ describe('Settlement', async () => {
             },
         );
 
-        const backOrder = buildOrder(
+        const backOrder = await buildOrder(
             {
                 makerAsset: this.dai.address,
                 takerAsset: this.weth.address,
@@ -186,7 +185,7 @@ describe('Settlement', async () => {
     });
 
     it('triple recursive swap', async () => {
-        const order1 = buildOrder(
+        const order1 = await buildOrder(
             {
                 makerAsset: this.dai.address,
                 takerAsset: this.weth.address,
@@ -200,7 +199,7 @@ describe('Settlement', async () => {
             },
         );
 
-        const order2 = buildOrder(
+        const order2 = await buildOrder(
             {
                 makerAsset: this.dai.address,
                 takerAsset: this.weth.address,
@@ -214,13 +213,12 @@ describe('Settlement', async () => {
             },
         );
 
-        const backOrder = buildOrder(
+        const backOrder = await buildOrder(
             {
                 makerAsset: this.weth.address,
                 takerAsset: this.dai.address,
                 makingAmount: ether('0.0275'),
                 takingAmount: ether('25'),
-                salt: buildSalt((await time.latest()).sub(toBN('1800'))),
                 from: addr0,
             },
             {
@@ -284,7 +282,7 @@ describe('Settlement', async () => {
             const takerAsset = this.weth.address;
             const makingAmount = ether('100');
             const takingAmount = ether('0.1');
-            const order = buildOrder(
+            const order = await buildOrder(
                 {
                     makerAsset,
                     takerAsset,

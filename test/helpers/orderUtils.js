@@ -1,3 +1,4 @@
+const { time } = require('@openzeppelin/test-helpers');
 const { constants, toBN, trim0x, TypedDataVersion } = require('@1inch/solidity-utils');
 const { signTypedData } = require('@metamask/eth-sig-util');
 const { EIP712Domain } = require('./eip712');
@@ -42,7 +43,7 @@ const ABIOrder = {
 const name = '1inch Limit Order Protocol';
 const version = '3';
 
-const buildOrder = (
+const buildOrder = async (
     {
         salt,
         makerAsset,
@@ -69,6 +70,9 @@ const buildOrder = (
     }
     if (getTakingAmount === '') {
         getTakingAmount = '0x78'; // "x"
+    }
+    if (typeof salt === 'undefined') {
+        salt = buildSalt((await time.latest()).sub(toBN('1800')));
     }
 
     const allInteractions = [

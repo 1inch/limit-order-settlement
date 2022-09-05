@@ -42,8 +42,8 @@ describe('WhitelistChecker', async () => {
     });
 
     const matchOrders = async (matchOrderMethod) => {
-        const order0 = buildOrder({ makerAsset: this.dai.address, takerAsset: this.weth.address, makingAmount: ether('100'), takingAmount: ether('0.1'), from: addr0 });
-        const order1 = buildOrder({ makerAsset: this.weth.address, takerAsset: this.dai.address, makingAmount: ether('0.1'), takingAmount: ether('100'), from: addr1 });
+        const order0 = await buildOrder({ makerAsset: this.dai.address, takerAsset: this.weth.address, makingAmount: ether('100'), takingAmount: ether('0.1'), from: addr0 });
+        const order1 = await buildOrder({ makerAsset: this.weth.address, takerAsset: this.dai.address, makingAmount: ether('0.1'), takingAmount: ether('100'), from: addr1 });
         const signature0 = signOrder(order0, this.chainId, this.swap.address, addr0Wallet.getPrivateKey());
         const signature1 = signOrder(order1, this.chainId, this.swap.address, addr1Wallet.getPrivateKey());
         const matchingParams = this.matcher.address + '01' + web3.eth.abi.encodeParameters(
@@ -69,19 +69,19 @@ describe('WhitelistChecker', async () => {
 
     describe('should not work with non-whitelisted address', async () => {
         it('onlyWhitelistedEOA modifier in matchOrdersEOA method', async () => {
-            const order1 = buildOrder({ makerAsset: this.dai.address, takerAsset: this.weth.address, makingAmount: ether('10'), takingAmount: ether('0.01'), from: addr1 });
+            const order1 = await buildOrder({ makerAsset: this.dai.address, takerAsset: this.weth.address, makingAmount: ether('10'), takingAmount: ether('0.01'), from: addr1 });
             await expect(this.matcher.matchOrdersEOA(this.swap.address, order1, '0x', '0x', ether('10'), 0, ether('0.01')))
                 .to.eventually.be.rejectedWith('AccessDenied()');
         });
 
         it('onlyWhitelisted modifier in matchOrders method', async () => {
-            const order1 = buildOrder({ makerAsset: this.dai.address, takerAsset: this.weth.address, makingAmount: ether('10'), takingAmount: ether('0.01'), from: addr1 });
+            const order1 = await buildOrder({ makerAsset: this.dai.address, takerAsset: this.weth.address, makingAmount: ether('10'), takingAmount: ether('0.01'), from: addr1 });
             await expect(this.matcher.matchOrders(this.swap.address, order1, '0x', '0x', ether('10'), 0, ether('0.01')))
                 .to.eventually.be.rejectedWith('AccessDenied()');
         });
 
         it('onlyWhitelisted modifier in fillOrderInteraction method', async () => {
-            const order = buildOrder({ makerAsset: this.dai.address, takerAsset: this.weth.address, makingAmount: ether('100'), takingAmount: ether('0.1'), from: addr1 });
+            const order = await buildOrder({ makerAsset: this.dai.address, takerAsset: this.weth.address, makingAmount: ether('100'), takingAmount: ether('0.1'), from: addr1 });
             const signature = signOrder(order, this.chainId, this.swap.address, addr1Wallet.getPrivateKey());
             const interaction = this.matcher.address + '01' + web3.eth.abi.encodeParameters(
                 ['address[]', 'bytes[]'],
