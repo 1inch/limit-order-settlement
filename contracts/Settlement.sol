@@ -6,9 +6,10 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@1inch/limit-order-protocol/contracts/interfaces/NotificationReceiver.sol";
 import "@1inch/limit-order-protocol/contracts/interfaces/IOrderMixin.sol";
-import "./interfaces/IFeeCollector.sol";
+import "./helpers/WhitelistChecker.sol";
+import "./interfaces/IWhitelistRegistry.sol";
 
-contract Settlement is InteractionNotificationReceiver, Ownable {
+contract Settlement is InteractionNotificationReceiver, WhitelistChecker {
     bytes1 private constant _FINALIZE_INTERACTION = 0x01;
 
     uint16 private constant _BASE_POINTS = 10000; // 100%
@@ -20,16 +21,8 @@ contract Settlement is InteractionNotificationReceiver, Ownable {
     error IncorrectCalldataParams();
     error FailedExternalCall();
 
-    IFeeCollector public feeCollector;
-
-    constructor(IFeeCollector _feeCollector) {
-        feeCollector = _feeCollector;
-    }
-
-    function setFeeCollector(IFeeCollector _feeCollector) external onlyOwner() {
-        if (_feeCollector == IFeeCollector(address(0))) revert IncorrectFeeCollector();
-        feeCollector = _feeCollector;
-    }
+    // solhint-disable-next-line no-empty-blocks
+    constructor(IWhitelistRegistry whitelist, address limitOrderProtocol) WhitelistChecker(whitelist, limitOrderProtocol) {}
 
     function matchOrders(
         IOrderMixin orderMixin,
@@ -39,7 +32,32 @@ contract Settlement is InteractionNotificationReceiver, Ownable {
         uint256 makingAmount,
         uint256 takingAmount,
         uint256 thresholdAmount
-    ) external {
+    )
+        external
+        onlyWhitelisted(msg.sender)
+    {
+        orderMixin.fillOrder(
+            order,
+            signature,
+            interaction,
+            makingAmount,
+            takingAmount,
+            thresholdAmount
+        );
+    }
+
+    function matchOrdersEOA(
+        IOrderMixin orderMixin,
+        OrderLib.Order calldata order,
+        bytes calldata signature,
+        bytes calldata interaction,
+        uint256 makingAmount,
+        uint256 takingAmount,
+        uint256 thresholdAmount
+    )
+        external
+        onlyWhitelistedEOA()
+    {
         orderMixin.fillOrder(
             order,
             signature,
@@ -55,7 +73,11 @@ contract Settlement is InteractionNotificationReceiver, Ownable {
         uint256 /* makingAmount */,
         uint256 takingAmount,
         bytes calldata interactiveData
-    ) external returns(uint256) {
+    )
+        external
+        onlyLimitOrderProtocol()
+        returns(uint256)
+    {
         if(interactiveData[0] == _FINALIZE_INTERACTION) {
             (
                 address[] memory targets,
