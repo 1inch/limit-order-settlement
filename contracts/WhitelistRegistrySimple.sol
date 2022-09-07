@@ -15,7 +15,7 @@ contract WhitelistRegistrySimple is IWhitelistRegistry, Ownable {
 
     event StatusUpdate(address indexed addr, bool status);
 
-    mapping(address => bool) public status;
+    mapping(address => bool) public isWhitelisted;
 
     function batchSetStatus(
         address[] calldata addresses,
@@ -33,8 +33,8 @@ contract WhitelistRegistrySimple is IWhitelistRegistry, Ownable {
     }
 
     function _setStatus(address _address, bool _status) private {
-        if (status[_address] == _status) revert SameStatus();
-        status[_address] = _status;
+        if (isWhitelisted[_address] == _status) revert SameStatus();
+        isWhitelisted[_address] = _status;
         emit StatusUpdate(_address, _status);
     }
 

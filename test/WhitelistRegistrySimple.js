@@ -19,22 +19,22 @@ describe('WhitelistRegistrySimple', async () => {
         it('should set statuses to several addresses', async () => {
             for (const addr of [addr1, addr2, addr3]) {
                 expect(
-                    await this.whitelistRegistrySimple.status(addr),
+                    await this.whitelistRegistrySimple.isWhitelisted(addr),
                 ).to.be.eq(false);
             }
             await this.whitelistRegistrySimple.batchSetStatus(
                 [addr1, addr2],
                 [true, true],
             );
-            expect(await this.whitelistRegistrySimple.status(addr1)).to.be.eq(
-                true,
-            );
-            expect(await this.whitelistRegistrySimple.status(addr2)).to.be.eq(
-                true,
-            );
-            expect(await this.whitelistRegistrySimple.status(addr3)).to.be.eq(
-                false,
-            );
+            expect(
+                await this.whitelistRegistrySimple.isWhitelisted(addr1),
+            ).to.be.eq(true);
+            expect(
+                await this.whitelistRegistrySimple.isWhitelisted(addr2),
+            ).to.be.eq(true);
+            expect(
+                await this.whitelistRegistrySimple.isWhitelisted(addr3),
+            ).to.be.eq(false);
         });
 
         it('should not change addr\'s status to the same status', async () => {
@@ -80,13 +80,13 @@ describe('WhitelistRegistrySimple', async () => {
 
     describe('setStatus', async () => {
         it('should set status', async () => {
-            expect(await this.whitelistRegistrySimple.status(addr1)).to.be.eq(
-                false,
-            );
+            expect(
+                await this.whitelistRegistrySimple.isWhitelisted(addr1),
+            ).to.be.eq(false);
             await this.whitelistRegistrySimple.setStatus(addr1, true);
-            expect(await this.whitelistRegistrySimple.status(addr1)).to.be.eq(
-                true,
-            );
+            expect(
+                await this.whitelistRegistrySimple.isWhitelisted(addr1),
+            ).to.be.eq(true);
         });
 
         it('should not change addr\'s status to the same status', async () => {
