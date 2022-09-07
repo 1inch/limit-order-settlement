@@ -58,7 +58,7 @@ describe('WhitelistRegistry', async () => {
             for (let i = 1; i <= MAX_WHITELSITED; ++i) {
                 await this.WhitelistRegistry.register({ from: addrs[i] });
                 expect(
-                    await this.WhitelistRegistry.status(addrs[i]),
+                    await this.WhitelistRegistry.isWhitelisted(addrs[i]),
                 ).to.be.equal(true);
             }
         });
@@ -76,7 +76,7 @@ describe('WhitelistRegistry', async () => {
             for (let i = 1; i <= MAX_WHITELSITED; ++i) {
                 await this.WhitelistRegistry.register({ from: addrs[i] });
                 expect(
-                    await this.WhitelistRegistry.status(addrs[i]),
+                    await this.WhitelistRegistry.isWhitelisted(addrs[i]),
                 ).to.be.equal(true);
             }
             await expect(
@@ -85,14 +85,16 @@ describe('WhitelistRegistry', async () => {
                 }),
             ).to.eventually.be.rejectedWith('NotEnoughBalance()');
             expect(
-                await this.WhitelistRegistry.status(addrs[MAX_WHITELSITED + 1]),
+                await this.WhitelistRegistry.isWhitelisted(
+                    addrs[MAX_WHITELSITED + 1],
+                ),
             ).to.be.equal(false);
             for (let i = 1; i <= MAX_WHITELSITED; ++i) {
                 await this.Staking.transfer(addrs[0], THRESHOLD, {
                     from: addrs[i],
                 });
                 expect(
-                    await this.WhitelistRegistry.status(addrs[i]),
+                    await this.WhitelistRegistry.isWhitelisted(addrs[i]),
                 ).to.be.equal(true);
             }
             await this.Staking.transfer(addrs[MAX_WHITELSITED + 1], THRESHOLD);
@@ -100,14 +102,16 @@ describe('WhitelistRegistry', async () => {
                 from: addrs[MAX_WHITELSITED + 1],
             });
             expect(
-                await this.WhitelistRegistry.status(addrs[MAX_WHITELSITED + 1]),
+                await this.WhitelistRegistry.isWhitelisted(
+                    addrs[MAX_WHITELSITED + 1],
+                ),
             ).to.be.equal(true);
-            expect(await this.WhitelistRegistry.status(addrs[1])).to.be.equal(
-                false,
-            );
+            expect(
+                await this.WhitelistRegistry.isWhitelisted(addrs[1]),
+            ).to.be.equal(false);
             for (let i = 2; i <= MAX_WHITELSITED + 1; ++i) {
                 expect(
-                    await this.WhitelistRegistry.status(addrs[i]),
+                    await this.WhitelistRegistry.isWhitelisted(addrs[i]),
                 ).to.be.equal(true);
             }
         });
@@ -119,24 +123,26 @@ describe('WhitelistRegistry', async () => {
             for (let i = 1; i <= MAX_WHITELSITED; ++i) {
                 await this.WhitelistRegistry.register({ from: addrs[i] });
                 expect(
-                    await this.WhitelistRegistry.status(addrs[i]),
+                    await this.WhitelistRegistry.isWhitelisted(addrs[i]),
                 ).to.be.equal(true);
             }
             await this.Staking.transfer(addrs[0], toBN('1'), {
                 from: addrs[3],
             });
-            expect(await this.WhitelistRegistry.status(addrs[3])).to.be.equal(
-                true,
-            );
+            expect(
+                await this.WhitelistRegistry.isWhitelisted(addrs[3]),
+            ).to.be.equal(true);
             await this.WhitelistRegistry.register({
                 from: addrs[MAX_WHITELSITED + 1],
             });
             expect(
-                await this.WhitelistRegistry.status(addrs[MAX_WHITELSITED + 1]),
+                await this.WhitelistRegistry.isWhitelisted(
+                    addrs[MAX_WHITELSITED + 1],
+                ),
             ).to.be.equal(true);
-            expect(await this.WhitelistRegistry.status(addrs[3])).to.be.equal(
-                false,
-            );
+            expect(
+                await this.WhitelistRegistry.isWhitelisted(addrs[3]),
+            ).to.be.equal(false);
         });
 
         it('should whitelist 10 addresses, then whitelist 9 times successfully', async () => {
@@ -149,12 +155,14 @@ describe('WhitelistRegistry', async () => {
             for (let i = 1; i <= MAX_WHITELSITED + 9; ++i) {
                 await this.WhitelistRegistry.register({ from: addrs[i] });
                 expect(
-                    await this.WhitelistRegistry.status(addrs[i]),
+                    await this.WhitelistRegistry.isWhitelisted(addrs[i]),
                 ).to.be.equal(true);
             }
             let whitelisted = 0;
             for (let i = 1; i <= MAX_WHITELSITED; ++i) {
-                whitelisted += await this.WhitelistRegistry.status(addrs[i]);
+                whitelisted += await this.WhitelistRegistry.isWhitelisted(
+                    addrs[i],
+                );
             }
             expect(whitelisted).to.be.equal(1);
         });

@@ -70,7 +70,7 @@ contract WhitelistRegistry is IWhitelistRegistry, Ownable {
         emit Registered(_msgSender());
     }
 
-    function status(address addr) external view returns (bool) {
+    function isWhitelisted(address addr) external view returns (bool) {
         return _whitelist.contains(addr);
     }
 }
