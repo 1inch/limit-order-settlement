@@ -9,5 +9,5 @@ interface IWhitelistRegistry {
         Verified
     }
 
-    function status(address addr) external view returns(uint256);
+    function status(address addr) external view returns (uint256);
 }
