@@ -21,7 +21,7 @@ contract WhitelistChecker {
     }
 
     modifier onlyWhitelistedEOA() {
-        _enforceWhitelist(tx.origin);  // solhint-disable-line avoid-tx-origin
+        _enforceWhitelist(tx.origin); // solhint-disable-line avoid-tx-origin
         _;
     }
 
@@ -37,8 +37,9 @@ contract WhitelistChecker {
     }
 
     modifier onlyLimitOrderProtocol() {
-        if (msg.sender != _limitOrderProtocol) revert AccessDenied();
-        if (_checked == _NOT_CHECKED && !_isWhitelisted(tx.origin)) revert AccessDenied();  // solhint-disable-line avoid-tx-origin
+        if (msg.sender != _limitOrderProtocol) revert AccessDenied(); // solhint-disable-next-line avoid-tx-origin
+        if (_checked == _NOT_CHECKED && !_isWhitelisted(tx.origin))
+            revert AccessDenied();
         _;
     }
 
@@ -46,7 +47,7 @@ contract WhitelistChecker {
         if (!_isWhitelisted(account)) revert AccessDenied();
     }
 
-    function _isWhitelisted(address account) private view returns(bool) {
-        return _whitelist.status(account) == uint256(IWhitelistRegistry.Status.Verified);
+    function _isWhitelisted(address account) private view returns (bool) {
+        return _whitelist.status(account);
     }
 }

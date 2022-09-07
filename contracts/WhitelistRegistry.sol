@@ -20,7 +20,7 @@ contract WhitelistRegistry is IWhitelistRegistry, Ownable {
     event SetResolverThreshold(uint256 threshold);
     event SetStaking(IStaking stakingContract);
 
-    uint256 constant public MAX_WHITELISTED = 10;
+    uint256 public constant MAX_WHITELISTED = 10;
 
     AddressSet.Data private _whitelist;
 
@@ -61,7 +61,7 @@ contract WhitelistRegistry is IWhitelistRegistry, Ownable {
             staked = staking.balanceOf(curWhitelisted);
             if (staked < minStaked) {
                 minResolver = curWhitelisted;
-                minStaked = staked; 
+                minStaked = staked;
             }
         }
         if (minResolver == _msgSender()) revert NotEnoughBalance();
@@ -70,7 +70,7 @@ contract WhitelistRegistry is IWhitelistRegistry, Ownable {
         emit Registered(_msgSender());
     }
 
-    function status(address addr) external view returns (uint256) {
-        return _whitelist.contains(addr) ? 1 : 0;
+    function status(address addr) external view returns (bool) {
+        return _whitelist.contains(addr);
     }
 }

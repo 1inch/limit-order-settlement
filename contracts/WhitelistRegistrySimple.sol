@@ -13,11 +13,14 @@ contract WhitelistRegistrySimple is IWhitelistRegistry, Ownable {
     error ArraysLengthsDoNotMatch();
     error SameStatus();
 
-    event StatusUpdate(address indexed addr, uint256 status);
+    event StatusUpdate(address indexed addr, bool status);
 
-    mapping(address => uint256) public status;
+    mapping(address => bool) public status;
 
-    function batchSetStatus(address[] calldata addresses, uint256[] calldata statuses) external onlyOwner {
+    function batchSetStatus(
+        address[] calldata addresses,
+        bool[] calldata statuses
+    ) external onlyOwner {
         uint256 length = addresses.length;
         if (length != statuses.length) revert ArraysLengthsDoNotMatch();
         for (uint256 i = 0; i < length; ++i) {
@@ -25,11 +28,11 @@ contract WhitelistRegistrySimple is IWhitelistRegistry, Ownable {
         }
     }
 
-    function setStatus(address _address, uint256 _status) external onlyOwner {
+    function setStatus(address _address, bool _status) external onlyOwner {
         _setStatus(_address, _status);
     }
 
-    function _setStatus(address _address, uint256 _status) private {
+    function _setStatus(address _address, bool _status) private {
         if (status[_address] == _status) revert SameStatus();
         status[_address] = _status;
         emit StatusUpdate(_address, _status);
