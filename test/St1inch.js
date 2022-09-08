@@ -1,4 +1,4 @@
-const { expect, ether, toBN } = require('@1inch/solidity-utils');
+const { expect, ether, toBN, assertRoughlyEqualValues } = require('@1inch/solidity-utils');
 const { time } = require('@openzeppelin/test-helpers');
 const { addr0Wallet, addr1Wallet } = require('./helpers/utils');
 
@@ -20,8 +20,16 @@ describe('St1inch', async () => {
 
     it('deposit 1inch to st1inch', async () => {
         expect(await this.st1inch.depositsAmount(addr0)).to.be.bignumber.equal(toBN('0'));
+
         await this.st1inch.deposit(ether('100'), time.duration.days('1'));
 
         expect(await this.st1inch.depositsAmount(addr0)).to.be.bignumber.equal(ether('100'));
+        expect(await this.st1inch.balanceOf(addr0)).to.be.bignumber.equal(ether('100.000000000008640300'));
+        assertRoughlyEqualValues(await this.st1inch.votingPowerOf(addr0), ether('100.00000000000864'), 1e-16);
+        assertRoughlyEqualValues(
+            await this.st1inch.methods['votingPowerOf(address,uint256)'](addr0, (await time.latest()).add(time.duration.days('1'))),
+            ether('100'),
+            1e-16,
+        );
     });
 });
