@@ -64,16 +64,16 @@ contract St1inch is ERC20 {
         revert TransferFromDisabled();
     }
 
-    function deposit(uint256 amount, uint256 unlockTime) external {
-        _deposit(msg.sender, amount, unlockTime);
+    function deposit(uint256 amount, uint256 duration) external {
+        _deposit(msg.sender, amount, duration);
     }
 
-    function depositFor(address account, uint256 amount, uint256 unlockTime) external {
-        _deposit(account, amount, unlockTime);
+    function depositFor(address account, uint256 amount, uint256 duration) external {
+        _deposit(account, amount, duration);
     }
 
-    function increaseUnlockTime(uint256 unlockTime) external {
-        _deposit(msg.sender, 0, unlockTime);
+    function increaseUnlockTime(uint256 duration) external {
+        _deposit(msg.sender, 0, duration);
     }
 
     function increaseAmount(uint256 amount) external {
