@@ -42,11 +42,11 @@ contract St1inch is ERC20 {
 
     function votingPowerOf(address account) external view returns (uint256) {
         // solhint-disable-next-line not-rely-on-time
-        return _exp(balanceOf(account), block.timestamp - origin);
+        return _exp(balanceOf(account), block.timestamp - origin, expBase);
     }
 
     function votingPowerOf(address account, uint256 timestamp) external view returns (uint256) {
-        return _exp(balanceOf(account), timestamp - origin);
+        return _exp(balanceOf(account), timestamp - origin, expBase);
     }
 
     function transfer(address /* to */, uint256 /* amount */) public pure override returns (bool) {
@@ -116,10 +116,6 @@ contract St1inch is ERC20 {
         _burn(msg.sender, balanceOf(msg.sender));
 
         oneInch.transfer(to, balance);
-    }
-
-    function _exp(uint256 point, uint256 t) private view returns(uint256 exp) {
-        return _exp(point, t, expBase);
     }
 
     function _exp(uint256 point, uint256 t, uint256 base) private pure returns(uint256) {
