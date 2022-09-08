@@ -3,6 +3,7 @@
 pragma solidity 0.8.15;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/utils/math/Math.sol";
 
 contract St1inch is ERC20 {
     error ZeroAddress();
@@ -80,6 +81,7 @@ contract St1inch is ERC20 {
         _deposit(msg.sender, amount, 0);
     }
 
+    /* solhint-disable not-rely-on-time */
     function _deposit(address account, uint256 amount, uint256 duration) private {
         if (_deposits[account] > 0 && amount > 0 && duration > 0) revert ChangeAmountAndUnlockTimeForExistingAccount();
 
@@ -91,13 +93,17 @@ contract St1inch is ERC20 {
 
         uint256 balance = _deposits[account];
 
-        uint256 unlockTime = _lockedTime[account] + duration;
-        // solhint-disable-next-line not-rely-on-time
+        uint256 unlockTime = Math.max(_lockedTime[account], block.timestamp) + duration;
         if (unlockTime < block.timestamp + MIN_LOCK_PERIOD) revert LockTimeLessMinLock();
-        // solhint-disable-next-line not-rely-on-time
         if (unlockTime > block.timestamp + MAX_LOCK_PERIOD) revert LockTimeMoreMaxLock();
+        _lockedTime[account] = unlockTime;
 
         _mint(account, _exp(balance, unlockTime - origin, 1e36 / expBase) - balanceOf(account));
+    }
+    /* solhint-enable not-rely-on-time */
+
+    function withdraw() external {
+        withdrawTo(msg.sender);
     }
 
     function withdrawTo (address to) public {
@@ -110,10 +116,6 @@ contract St1inch is ERC20 {
         _burn(msg.sender, balanceOf(msg.sender));
 
         oneInch.transfer(to, balance);
-    }
-
-    function withdraw() external {
-        withdrawTo(msg.sender);
     }
 
     function _exp(uint256 point, uint256 t) private view returns(uint256 exp) {
