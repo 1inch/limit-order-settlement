@@ -24,20 +24,24 @@ contract St1inch is ERC20 {
     uint256 public immutable origin;
     uint256 public immutable expBase;
 
-    mapping(address => uint256) private _lockedTime;
+    mapping(address => uint256) private _unlockTime;
     mapping(address => uint256) private _deposits;
 
     uint256 public totalDeposits;
 
     constructor(IERC20 _oneInch, uint256 _expBase) ERC20("Staking 1inch", "st1inch") {
         oneInch = _oneInch;
-        expBase = _expBase;
+        expBase = _expBase; // TODO: improve accuracy from 1e18 to 1e36
         // solhint-disable-next-line not-rely-on-time
         origin = block.timestamp;
     }
 
     function depositsAmount(address account) external view returns (uint256) {
         return _deposits[account];
+    }
+
+    function unlockTime(address account) external view returns (uint256) {
+        return _unlockTime[account];
     }
 
     function votingPowerOf(address account) external view returns (uint256) {
@@ -93,12 +97,12 @@ contract St1inch is ERC20 {
 
         uint256 balance = _deposits[account];
 
-        uint256 unlockTime = Math.max(_lockedTime[account], block.timestamp) + duration;
-        if (unlockTime < block.timestamp + MIN_LOCK_PERIOD) revert LockTimeLessMinLock();
-        if (unlockTime > block.timestamp + MAX_LOCK_PERIOD) revert LockTimeMoreMaxLock();
-        _lockedTime[account] = unlockTime;
+        uint256 lockedTo = Math.max(_unlockTime[account], block.timestamp) + duration;
+        if (lockedTo < block.timestamp + MIN_LOCK_PERIOD) revert LockTimeLessMinLock();
+        if (lockedTo > block.timestamp + MAX_LOCK_PERIOD) revert LockTimeMoreMaxLock();
+        _unlockTime[account] = lockedTo;
 
-        _mint(account, _exp(balance, unlockTime - origin, 1e36 / expBase) - balanceOf(account));
+        _mint(account, _exp(balance, lockedTo - origin, 1e36 / expBase) - balanceOf(account));
     }
     /* solhint-enable not-rely-on-time */
 
@@ -108,7 +112,7 @@ contract St1inch is ERC20 {
 
     function withdrawTo (address to) public {
         // solhint-disable-next-line not-rely-on-time
-        if (_lockedTime[msg.sender] > block.timestamp) revert UnlockTimeWasNotCome();
+        if (_unlockTime[msg.sender] > block.timestamp) revert UnlockTimeWasNotCome();
 
         uint256 balance = _deposits[msg.sender];
         totalDeposits -= balance;
@@ -120,8 +124,8 @@ contract St1inch is ERC20 {
 
     function _exp(uint256 point, uint256 t, uint256 base) private pure returns(uint256) {
         unchecked {
-            while(t > 0) {
-                if((t & 0x01) == 1) {
+            while (t > 0) { // TODO: change to immutable table
+                if ((t & 0x01) == 1) {
                     point = point * base / 1e18;
                 }
                 base = base * base / 1e18;
