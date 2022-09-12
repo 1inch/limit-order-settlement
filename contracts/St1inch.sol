@@ -112,7 +112,7 @@ contract St1inch is ERC20 {
 
     function withdrawTo (address to) public {
         // solhint-disable-next-line not-rely-on-time
-        if (_unlockTime[msg.sender] > block.timestamp) revert UnlockTimeWasNotCome();
+        if (block.timestamp < _unlockTime[msg.sender]) revert UnlockTimeWasNotCome();
 
         uint256 balance = _deposits[msg.sender];
         totalDeposits -= balance;
