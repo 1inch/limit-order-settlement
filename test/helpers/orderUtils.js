@@ -1,4 +1,9 @@
-const { constants, toBN, trim0x, TypedDataVersion } = require('@1inch/solidity-utils');
+const {
+    constants,
+    toBN,
+    trim0x,
+    TypedDataVersion,
+} = require('@1inch/solidity-utils');
 const { signTypedData } = require('@metamask/eth-sig-util');
 const { EIP712Domain } = require('./eip712');
 
@@ -84,9 +89,12 @@ function buildOrder (
     const interactions = '0x' + allInteractions.map(trim0x).join('');
 
     // https://stackoverflow.com/a/55261098/440168
-    const cumulativeSum = (sum => value => { sum += value; return sum; })(0);
+    const cumulativeSum = ((sum) => (value) => {
+        sum += value;
+        return sum;
+    })(0);
     const offsets = allInteractions
-        .map(a => a.length / 2 - 1)
+        .map((a) => a.length / 2 - 1)
         .map(cumulativeSum)
         .reduce((acc, a, i) => acc.add(toBN(a).shln(32 * i)), toBN('0'));
 
@@ -158,7 +166,9 @@ function compactSignature (signature) {
     const v = toBN(signature.substring(130, 132), 'hex');
     return {
         r: '0x' + r.toString('hex').padStart(64, '0'),
-        vs: '0x' + v.subn(27).shln(255).add(s).toString('hex').padStart(64, '0'),
+        vs:
+            '0x' +
+            v.subn(27).shln(255).add(s).toString('hex').padStart(64, '0'),
     };
 }
 
