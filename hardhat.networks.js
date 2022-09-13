@@ -1,13 +1,13 @@
 const networks = {};
 const etherscan = { apiKey: {} };
 
-function register (
+function register(
     name,
     chainId,
     url,
     privateKey,
     etherscanNetworkName,
-    etherscanKey,
+    etherscanKey
 ) {
     if (url && privateKey && etherscanKey) {
         networks[name] = {
@@ -23,84 +23,84 @@ function register (
 }
 
 register(
-    'mainnet',
+    "mainnet",
     1,
     process.env.MAINNET_RPC_URL,
     process.env.MAINNET_PRIVATE_KEY,
-    'mainnet',
-    process.env.MAINNET_ETHERSCAN_KEY,
+    "mainnet",
+    process.env.MAINNET_ETHERSCAN_KEY
 );
 register(
-    'bsc',
+    "bsc",
     56,
     process.env.BSC_RPC_URL,
     process.env.BSC_PRIVATE_KEY,
-    'bsc',
-    process.env.BSC_ETHERSCAN_KEY,
+    "bsc",
+    process.env.BSC_ETHERSCAN_KEY
 );
 register(
-    'kovan',
+    "kovan",
     42,
     process.env.KOVAN_RPC_URL,
     process.env.KOVAN_PRIVATE_KEY,
-    'kovan',
-    process.env.KOVAN_ETHERSCAN_KEY,
+    "kovan",
+    process.env.KOVAN_ETHERSCAN_KEY
 );
 register(
-    'optimistic',
+    "optimistic",
     10,
     process.env.OPTIMISTIC_RPC_URL,
     process.env.OPTIMISTIC_PRIVATE_KEY,
-    'optimisticEthereum',
-    process.env.OPTIMISTIC_ETHERSCAN_KEY,
+    "optimisticEthereum",
+    process.env.OPTIMISTIC_ETHERSCAN_KEY
 );
 register(
-    'matic',
+    "matic",
     137,
     process.env.MATIC_RPC_URL,
     process.env.MATIC_PRIVATE_KEY,
-    'polygon',
-    process.env.MATIC_ETHERSCAN_KEY,
+    "polygon",
+    process.env.MATIC_ETHERSCAN_KEY
 );
 register(
-    'arbitrum',
+    "arbitrum",
     42161,
     process.env.ARBITRUM_RPC_URL,
     process.env.ARBITRUM_PRIVATE_KEY,
-    'arbitrumOne',
-    process.env.ARBITRUM_ETHERSCAN_KEY,
+    "arbitrumOne",
+    process.env.ARBITRUM_ETHERSCAN_KEY
 );
 register(
-    'xdai',
+    "xdai",
     100,
     process.env.XDAI_RPC_URL,
     process.env.XDAI_PRIVATE_KEY,
-    'xdai',
-    process.env.XDAI_ETHERSCAN_KEY,
+    "xdai",
+    process.env.XDAI_ETHERSCAN_KEY
 );
 register(
-    'avax',
+    "avax",
     43114,
     process.env.AVAX_RPC_URL,
     process.env.AVAX_PRIVATE_KEY,
-    'avalanche',
-    process.env.AVAX_ETHERSCAN_KEY,
+    "avalanche",
+    process.env.AVAX_ETHERSCAN_KEY
 );
 register(
-    'fantom',
+    "fantom",
     250,
     process.env.FANTOM_RPC_URL,
     process.env.FANTOM_PRIVATE_KEY,
-    'opera',
-    process.env.FANTOM_ETHERSCAN_KEY,
+    "opera",
+    process.env.FANTOM_ETHERSCAN_KEY
 );
 register(
-    'aurora',
+    "aurora",
     1313161554,
     process.env.AURORA_RPC_URL,
     process.env.AURORA_PRIVATE_KEY,
-    'aurora',
-    process.env.AURORA_ETHERSCAN_KEY,
+    "aurora",
+    process.env.AURORA_ETHERSCAN_KEY
 );
 
 module.exports = {

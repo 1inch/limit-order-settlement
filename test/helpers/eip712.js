@@ -1,41 +1,41 @@
-const { toBN, TypedDataVersion } = require('@1inch/solidity-utils');
-const { signTypedData, TypedDataUtils } = require('@metamask/eth-sig-util');
-const { fromRpcSig } = require('ethereumjs-util');
+const { toBN, TypedDataVersion } = require("@1inch/solidity-utils");
+const { signTypedData, TypedDataUtils } = require("@metamask/eth-sig-util");
+const { fromRpcSig } = require("ethereumjs-util");
 const ERC20Permit = artifacts.require(
-    '@openzeppelin/contracts/token/ERC20/extensions/draft-ERC20Permit.sol:ERC20Permit',
+    "@openzeppelin/contracts/token/ERC20/extensions/draft-ERC20Permit.sol:ERC20Permit"
 );
-const { cutSelector, trim0x } = require('./utils.js');
+const { cutSelector, trim0x } = require("./utils.js");
 
 const EIP712Domain = [
-    { name: 'name', type: 'string' },
-    { name: 'version', type: 'string' },
-    { name: 'chainId', type: 'uint256' },
-    { name: 'verifyingContract', type: 'address' },
+    { name: "name", type: "string" },
+    { name: "version", type: "string" },
+    { name: "chainId", type: "uint256" },
+    { name: "verifyingContract", type: "address" },
 ];
 
 const Permit = [
-    { name: 'owner', type: 'address' },
-    { name: 'spender', type: 'address' },
-    { name: 'value', type: 'uint256' },
-    { name: 'nonce', type: 'uint256' },
-    { name: 'deadline', type: 'uint256' },
+    { name: "owner", type: "address" },
+    { name: "spender", type: "address" },
+    { name: "value", type: "uint256" },
+    { name: "nonce", type: "uint256" },
+    { name: "deadline", type: "uint256" },
 ];
 
-function domainSeparator (name, version, chainId, verifyingContract) {
+function domainSeparator(name, version, chainId, verifyingContract) {
     return (
-        '0x' +
+        "0x" +
         TypedDataUtils.hashStruct(
-            'EIP712Domain',
+            "EIP712Domain",
             { name, version, chainId, verifyingContract },
             { EIP712Domain },
-            TypedDataVersion,
-        ).toString('hex')
+            TypedDataVersion
+        ).toString("hex")
     );
 }
 
-const defaultDeadline = toBN('18446744073709551615');
+const defaultDeadline = toBN("18446744073709551615");
 
-function buildData (
+function buildData(
     owner,
     name,
     version,
@@ -44,17 +44,17 @@ function buildData (
     spender,
     nonce,
     value,
-    deadline,
+    deadline
 ) {
     return {
-        primaryType: 'Permit',
+        primaryType: "Permit",
         types: { EIP712Domain, Permit },
         domain: { name, version, chainId, verifyingContract },
         message: { owner, spender, value, nonce, deadline },
     };
 }
 
-async function getPermit (
+async function getPermit(
     owner,
     ownerPrivateKey,
     token,
@@ -62,7 +62,7 @@ async function getPermit (
     chainId,
     spender,
     value,
-    deadline = defaultDeadline,
+    deadline = defaultDeadline
 ) {
     const permitContract = await ERC20Permit.at(token.address);
     const nonce = await permitContract.nonces(owner);
@@ -76,10 +76,10 @@ async function getPermit (
         spender,
         nonce,
         value,
-        deadline,
+        deadline
     );
     const signature = signTypedData({
-        privateKey: Buffer.from(ownerPrivateKey, 'hex'),
+        privateKey: Buffer.from(ownerPrivateKey, "hex"),
         data,
         version: TypedDataVersion,
     });
@@ -90,7 +90,7 @@ async function getPermit (
     return cutSelector(permitCall);
 }
 
-function withTarget (target, data) {
+function withTarget(target, data) {
     return target.toString() + trim0x(data);
 }
 

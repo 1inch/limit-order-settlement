@@ -1,17 +1,17 @@
-require('@nomiclabs/hardhat-etherscan');
-require('@nomiclabs/hardhat-truffle5');
-require('solidity-coverage');
-require('hardhat-dependency-compiler');
-require('hardhat-deploy');
-require('hardhat-gas-reporter');
-require('dotenv').config();
+require("@nomiclabs/hardhat-etherscan");
+require("@nomiclabs/hardhat-truffle5");
+require("solidity-coverage");
+require("hardhat-dependency-compiler");
+require("hardhat-deploy");
+require("hardhat-gas-reporter");
+require("dotenv").config();
 
-const { networks, etherscan } = require('./hardhat.networks');
+const { networks, etherscan } = require("./hardhat.networks");
 
 module.exports = {
     etherscan,
     solidity: {
-        version: '0.8.15',
+        version: "0.8.15",
         settings: {
             optimizer: {
                 enabled: true,
@@ -30,10 +30,10 @@ module.exports = {
     },
     dependencyCompiler: {
         paths: [
-            '@1inch/solidity-utils/contracts/mocks/TokenMock.sol',
-            '@1inch/limit-order-protocol/contracts/LimitOrderProtocol.sol',
-            '@1inch/limit-order-protocol/contracts/mocks/WrappedTokenMock.sol',
-            '@openzeppelin/contracts/token/ERC20/extensions/draft-ERC20Permit',
+            "@1inch/solidity-utils/contracts/mocks/TokenMock.sol",
+            "@1inch/limit-order-protocol/contracts/LimitOrderProtocol.sol",
+            "@1inch/limit-order-protocol/contracts/mocks/WrappedTokenMock.sol",
+            "@openzeppelin/contracts/token/ERC20/extensions/draft-ERC20Permit",
         ],
     },
 };
