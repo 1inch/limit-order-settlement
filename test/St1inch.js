@@ -131,11 +131,11 @@ describe('St1inch', async () => {
         await checkBalances(addr0, ether('100'), time.duration.years('2'));
     });
 
-    it('should increase unlock time for deposit (call increaseUnlockTime)', async () => {
+    it('should increase unlock time for deposit (call increaseLockDuration)', async () => {
         await this.st1inch.deposit(ether('70'), time.duration.days('1'));
         await timeIncreaseTo(await this.st1inch.unlockTime(addr0));
 
-        await this.st1inch.increaseUnlockTime(time.duration.days('10'));
+        await this.st1inch.increaseLockDuration(time.duration.days('10'));
         await checkBalances(addr0, ether('70'), time.duration.days('10'));
     });
 

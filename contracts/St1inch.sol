@@ -160,7 +160,7 @@ contract St1inch is ERC20 {
         _deposit(account, amount, duration);
     }
 
-    function increaseUnlockTime(uint256 duration) external {
+    function increaseLockDuration(uint256 duration) external {
         _deposit(msg.sender, 0, duration);
     }
 
@@ -185,17 +185,17 @@ contract St1inch is ERC20 {
 
         uint256 balance = _deposits[account];
 
-        uint256 lockedTo = Math.max(_unlockTime[account], block.timestamp) +
+        uint256 lockedTill = Math.max(_unlockTime[account], block.timestamp) +
             duration;
-        if (lockedTo < block.timestamp + MIN_LOCK_PERIOD)
+        if (lockedTill < block.timestamp + MIN_LOCK_PERIOD)
             revert LockTimeLessMinLock();
-        if (lockedTo > block.timestamp + MAX_LOCK_PERIOD)
+        if (lockedTill > block.timestamp + MAX_LOCK_PERIOD)
             revert LockTimeMoreMaxLock();
-        _unlockTime[account] = lockedTo;
+        _unlockTime[account] = lockedTill;
 
         _mint(
             account,
-            _invExp(balance, lockedTo - origin) - balanceOf(account)
+            _invExp(balance, lockedTill - origin) - balanceOf(account)
         );
     }
 
@@ -220,16 +220,16 @@ contract St1inch is ERC20 {
 
     function _exp(uint256 point, uint256 t) private view returns (uint256) {
         unchecked {
-            if (t & 1 != 0) {
+            if (t & 0x01 != 0) {
                 point = (point * expBase) / 1e18;
             }
-            if (t & 2 != 0) {
+            if (t & 0x02 != 0) {
                 point = (point * expTable1) / 1e18;
             }
-            if (t & 4 != 0) {
+            if (t & 0x04 != 0) {
                 point = (point * expTable2) / 1e18;
             }
-            if (t & 8 != 0) {
+            if (t & 0x08 != 0) {
                 point = (point * expTable3) / 1e18;
             }
             if (t & 0x10 != 0) {
@@ -316,16 +316,16 @@ contract St1inch is ERC20 {
 
     function _invExp(uint256 point, uint256 t) private view returns (uint256) {
         unchecked {
-            if (t & 1 != 0) {
+            if (t & 0x01 != 0) {
                 point = (point * 1e18) / expBase;
             }
-            if (t & 2 != 0) {
+            if (t & 0x02 != 0) {
                 point = (point * 1e18) / expTable1;
             }
-            if (t & 4 != 0) {
+            if (t & 0x04 != 0) {
                 point = (point * 1e18) / expTable2;
             }
-            if (t & 8 != 0) {
+            if (t & 0x08 != 0) {
                 point = (point * 1e18) / expTable3;
             }
             if (t & 0x10 != 0) {
