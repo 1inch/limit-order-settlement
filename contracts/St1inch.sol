@@ -77,7 +77,7 @@ contract St1inch is ERC20 {
         _deposit(account, amount, duration);
     }
 
-    function increaseUnlockTime(uint256 duration) external {
+    function increaseLockDuration(uint256 duration) external {
         _deposit(msg.sender, 0, duration);
     }
 
@@ -97,12 +97,12 @@ contract St1inch is ERC20 {
 
         uint256 balance = _deposits[account];
 
-        uint256 lockedTo = Math.max(_unlockTime[account], block.timestamp) + duration;
-        if (lockedTo < block.timestamp + MIN_LOCK_PERIOD) revert LockTimeLessMinLock();
-        if (lockedTo > block.timestamp + MAX_LOCK_PERIOD) revert LockTimeMoreMaxLock();
-        _unlockTime[account] = lockedTo;
+        uint256 lockedTill = Math.max(_unlockTime[account], block.timestamp) + duration;
+        if (lockedTill < block.timestamp + MIN_LOCK_PERIOD) revert LockTimeLessMinLock();
+        if (lockedTill > block.timestamp + MAX_LOCK_PERIOD) revert LockTimeMoreMaxLock();
+        _unlockTime[account] = lockedTill;
 
-        _mint(account, _exp(balance, lockedTo - origin, 1e36 / expBase) - balanceOf(account));
+        _mint(account, _exp(balance, lockedTill - origin, 1e36 / expBase) - balanceOf(account));
     }
     /* solhint-enable not-rely-on-time */
 
@@ -110,7 +110,7 @@ contract St1inch is ERC20 {
         withdrawTo(msg.sender);
     }
 
-    function withdrawTo (address to) public {
+    function withdrawTo(address to) public {
         // solhint-disable-next-line not-rely-on-time
         if (block.timestamp < _unlockTime[msg.sender]) revert UnlockTimeWasNotCome();
 
@@ -122,14 +122,14 @@ contract St1inch is ERC20 {
         oneInch.transfer(to, balance);
     }
 
-    function _exp(uint256 point, uint256 t, uint256 base) private pure returns(uint256) {
+    function _exp(uint256 point, uint256 time, uint256 base) private pure returns (uint256) {
         unchecked {
-            while (t > 0) { // TODO: change to immutable table
-                if ((t & 0x01) == 1) {
+            while (time > 0) { // TODO: change to immutable table
+                if ((time & 0x01) == 1) {
                     point = point * base / 1e18;
                 }
                 base = base * base / 1e18;
-                t >>= 1;
+                time >>= 1;
             }
         }
         return point;
