@@ -193,7 +193,10 @@ contract St1inch is ERC20 {
             revert LockTimeMoreMaxLock();
         _unlockTime[account] = lockedTo;
 
-        _mint(account, _exp(balance, lockedTo - origin) - balanceOf(account));
+        _mint(
+            account,
+            _invExp(balance, lockedTo - origin) - balanceOf(account)
+        );
     }
 
     /* solhint-enable not-rely-on-time */
@@ -229,83 +232,179 @@ contract St1inch is ERC20 {
             if (t & 8 != 0) {
                 point = (point * expTable3) / 1e18;
             }
-            if (t & 16 != 0) {
+            if (t & 0x10 != 0) {
                 point = (point * expTable4) / 1e18;
             }
-            if (t & 32 != 0) {
+            if (t & 0x20 != 0) {
                 point = (point * expTable5) / 1e18;
             }
-            if (t & 64 != 0) {
+            if (t & 0x40 != 0) {
                 point = (point * expTable6) / 1e18;
             }
-            if (t & 128 != 0) {
+            if (t & 0x80 != 0) {
                 point = (point * expTable7) / 1e18;
             }
-            if (t & 256 != 0) {
+            if (t & 0x100 != 0) {
                 point = (point * expTable8) / 1e18;
             }
-            if (t & 512 != 0) {
+            if (t & 0x200 != 0) {
                 point = (point * expTable9) / 1e18;
             }
-            if (t & 1024 != 0) {
+            if (t & 0x400 != 0) {
                 point = (point * expTable10) / 1e18;
             }
-            if (t & 2048 != 0) {
+            if (t & 0x800 != 0) {
                 point = (point * expTable11) / 1e18;
             }
-            if (t & 4096 != 0) {
+            if (t & 0x1000 != 0) {
                 point = (point * expTable12) / 1e18;
             }
-            if (t & 8192 != 0) {
+            if (t & 0x2000 != 0) {
                 point = (point * expTable13) / 1e18;
             }
-            if (t & (1 << 14) != 0) {
+            if (t & 0x4000 != 0) {
                 point = (point * expTable14) / 1e18;
             }
-            if (t & (1 << 15) != 0) {
+            if (t & 0x8000 != 0) {
                 point = (point * expTable15) / 1e18;
             }
-            if (t & (1 << 16) != 0) {
+            if (t & 0x10000 != 0) {
                 point = (point * expTable16) / 1e18;
             }
-            if (t & (1 << 17) != 0) {
+            if (t & 0x20000 != 0) {
                 point = (point * expTable17) / 1e18;
             }
-            if (t & (1 << 18) != 0) {
+            if (t & 0x40000 != 0) {
                 point = (point * expTable18) / 1e18;
             }
-            if (t & (1 << 19) != 0) {
+            if (t & 0x80000 != 0) {
                 point = (point * expTable19) / 1e18;
             }
-            if (t & (1 << 20) != 0) {
+            if (t & 0x100000 != 0) {
                 point = (point * expTable20) / 1e18;
             }
-            if (t & (1 << 21) != 0) {
+            if (t & 0x200000 != 0) {
                 point = (point * expTable21) / 1e18;
             }
-            if (t & (1 << 22) != 0) {
+            if (t & 0x400000 != 0) {
                 point = (point * expTable22) / 1e18;
             }
-            if (t & (1 << 23) != 0) {
+            if (t & 0x800000 != 0) {
                 point = (point * expTable23) / 1e18;
             }
-            if (t & (1 << 24) != 0) {
+            if (t & 0x1000000 != 0) {
                 point = (point * expTable24) / 1e18;
             }
-            if (t & (1 << 25) != 0) {
+            if (t & 0x2000000 != 0) {
                 point = (point * expTable25) / 1e18;
             }
-            if (t & (1 << 26) != 0) {
+            if (t & 0x4000000 != 0) {
                 point = (point * expTable26) / 1e18;
             }
-            if (t & (1 << 27) != 0) {
+            if (t & 0x8000000 != 0) {
                 point = (point * expTable27) / 1e18;
             }
-            if (t & (1 << 28) != 0) {
+            if (t & 0x10000000 != 0) {
                 point = (point * expTable28) / 1e18;
             }
-            if (t & (1 << 29) != 0) {
+            if (t & 0x20000000 != 0) {
                 point = (point * expTable29) / 1e18;
+            }
+        }
+        return point;
+    }
+
+    function _invExp(uint256 point, uint256 t) private view returns (uint256) {
+        unchecked {
+            if (t & 1 != 0) {
+                point = (point * 1e18) / expBase;
+            }
+            if (t & 2 != 0) {
+                point = (point * 1e18) / expTable1;
+            }
+            if (t & 4 != 0) {
+                point = (point * 1e18) / expTable2;
+            }
+            if (t & 8 != 0) {
+                point = (point * 1e18) / expTable3;
+            }
+            if (t & 0x10 != 0) {
+                point = (point * 1e18) / expTable4;
+            }
+            if (t & 0x20 != 0) {
+                point = (point * 1e18) / expTable5;
+            }
+            if (t & 0x40 != 0) {
+                point = (point * 1e18) / expTable6;
+            }
+            if (t & 0x80 != 0) {
+                point = (point * 1e18) / expTable7;
+            }
+            if (t & 0x100 != 0) {
+                point = (point * 1e18) / expTable8;
+            }
+            if (t & 0x200 != 0) {
+                point = (point * 1e18) / expTable9;
+            }
+            if (t & 0x400 != 0) {
+                point = (point * 1e18) / expTable10;
+            }
+            if (t & 0x800 != 0) {
+                point = (point * 1e18) / expTable11;
+            }
+            if (t & 0x1000 != 0) {
+                point = (point * 1e18) / expTable12;
+            }
+            if (t & 0x2000 != 0) {
+                point = (point * 1e18) / expTable13;
+            }
+            if (t & 0x4000 != 0) {
+                point = (point * 1e18) / expTable14;
+            }
+            if (t & 0x8000 != 0) {
+                point = (point * 1e18) / expTable15;
+            }
+            if (t & 0x10000 != 0) {
+                point = (point * 1e18) / expTable16;
+            }
+            if (t & 0x20000 != 0) {
+                point = (point * 1e18) / expTable17;
+            }
+            if (t & 0x40000 != 0) {
+                point = (point * 1e18) / expTable18;
+            }
+            if (t & 0x80000 != 0) {
+                point = (point * 1e18) / expTable19;
+            }
+            if (t & 0x100000 != 0) {
+                point = (point * 1e18) / expTable20;
+            }
+            if (t & 0x200000 != 0) {
+                point = (point * 1e18) / expTable21;
+            }
+            if (t & 0x400000 != 0) {
+                point = (point * 1e18) / expTable22;
+            }
+            if (t & 0x800000 != 0) {
+                point = (point * 1e18) / expTable23;
+            }
+            if (t & 0x1000000 != 0) {
+                point = (point * 1e18) / expTable24;
+            }
+            if (t & 0x2000000 != 0) {
+                point = (point * 1e18) / expTable25;
+            }
+            if (t & 0x4000000 != 0) {
+                point = (point * 1e18) / expTable26;
+            }
+            if (t & 0x8000000 != 0) {
+                point = (point * 1e18) / expTable27;
+            }
+            if (t & 0x10000000 != 0) {
+                point = (point * 1e18) / expTable28;
+            }
+            if (t & 0x20000000 != 0) {
+                point = (point * 1e18) / expTable29;
             }
         }
         return point;

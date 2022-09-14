@@ -37,11 +37,15 @@ describe('St1inch', async () => {
         ).to.be.bignumber.equal(balance);
         const t = (await time.latest()).add(lockDuration).sub(this.origin);
         const originPower = exp(balance, t, invertBaseExp);
-        expect(await this.st1inch.balanceOf(account)).to.be.bignumber.equal(
+        assertRoughlyEqualValues(
+            await this.st1inch.balanceOf(account),
             originPower,
+            1e-10,
         );
-        expect(await this.st1inch.votingPowerOf(account)).to.be.bignumber.equal(
+        assertRoughlyEqualValues(
+            await this.st1inch.votingPowerOf(account),
             exp(originPower, (await time.latest()).sub(this.origin)),
+            1e-10,
         );
         assertRoughlyEqualValues(
             await this.st1inch.methods['votingPowerOf(address,uint256)'](
@@ -77,11 +81,7 @@ describe('St1inch', async () => {
             toBN('0'),
         );
 
-        const tx = await this.st1inch.deposit(
-            ether('100'),
-            time.duration.days('1'),
-        );
-        console.log(tx.receipt.gasUsed);
+        await this.st1inch.deposit(ether('100'), time.duration.days('1'));
 
         await checkBalances(addr0, ether('100'), time.duration.days('1'));
     });
@@ -99,12 +99,11 @@ describe('St1inch', async () => {
         const balanceAddr0 = await this.oneInch.balanceOf(addr0);
         const balanceAddr1 = await this.oneInch.balanceOf(addr1);
 
-        const tx = await this.st1inch.depositFor(
+        await this.st1inch.depositFor(
             addr1,
             ether('100'),
             time.duration.days('1'),
         );
-        console.log(tx.receipt.gasUsed);
 
         expect(await this.oneInch.balanceOf(addr0)).to.be.bignumber.equal(
             balanceAddr0.sub(ether('100')),
@@ -125,46 +124,28 @@ describe('St1inch', async () => {
     });
 
     it('should increase unlock time for deposit (call deposit)', async () => {
-        let tx = await this.st1inch.deposit(
-            ether('100'),
-            time.duration.days('1'),
-        );
-        console.log(tx.receipt.gasUsed);
+        await this.st1inch.deposit(ether('100'), time.duration.days('1'));
         await timeIncreaseTo(await this.st1inch.unlockTime(addr0));
 
-        tx = await this.st1inch.deposit(toBN('0'), time.duration.years('2'));
-
-        console.log(tx.receipt.gasUsed);
+        await this.st1inch.deposit(toBN('0'), time.duration.years('2'));
         await checkBalances(addr0, ether('100'), time.duration.years('2'));
     });
 
     it('should increase unlock time for deposit (call increaseUnlockTime)', async () => {
-        let tx = await this.st1inch.deposit(
-            ether('70'),
-            time.duration.days('1'),
-        );
-        console.log(tx.receipt.gasUsed);
+        await this.st1inch.deposit(ether('70'), time.duration.days('1'));
         await timeIncreaseTo(await this.st1inch.unlockTime(addr0));
 
-        tx = await this.st1inch.increaseUnlockTime(time.duration.days('10'));
-        console.log(tx.receipt.gasUsed);
-
+        await this.st1inch.increaseUnlockTime(time.duration.days('10'));
         await checkBalances(addr0, ether('70'), time.duration.days('10'));
     });
 
     it('should increase deposit amount (call deposit)', async () => {
-        let tx = await this.st1inch.deposit(
-            ether('20'),
-            time.duration.days('10'),
-        );
-        console.log(tx.receipt.gasUsed);
+        await this.st1inch.deposit(ether('20'), time.duration.days('10'));
 
         const unlockTime = await this.st1inch.unlockTime(addr0);
         await timeIncreaseTo(unlockTime.sub(time.duration.days('5')));
 
-        tx = await this.st1inch.deposit(ether('30'), toBN('0'));
-        console.log(tx.receipt.gasUsed);
-
+        await this.st1inch.deposit(ether('30'), toBN('0'));
         await checkBalances(
             addr0,
             ether('50'),
@@ -173,18 +154,12 @@ describe('St1inch', async () => {
     });
 
     it('should increase deposit amount (call increaseAmount)', async () => {
-        let tx = await this.st1inch.deposit(
-            ether('70'),
-            time.duration.days('100'),
-        );
-        console.log(tx.receipt.gasUsed);
+        await this.st1inch.deposit(ether('70'), time.duration.days('100'));
 
         const unlockTime = await this.st1inch.unlockTime(addr0);
         await timeIncreaseTo(unlockTime.sub(time.duration.days('50')));
 
-        tx = await this.st1inch.increaseAmount(ether('20'));
-        console.log(tx.receipt.gasUsed);
-
+        await this.st1inch.increaseAmount(ether('20'));
         await checkBalances(
             addr0,
             ether('90'),
@@ -193,18 +168,13 @@ describe('St1inch', async () => {
     });
 
     it('should withdraw users deposit', async () => {
-        let tx = await this.st1inch.deposit(
-            ether('100'),
-            time.duration.days('50'),
-        );
-        console.log(tx.receipt.gasUsed);
+        await this.st1inch.deposit(ether('100'), time.duration.days('50'));
 
         const unlockTime = await this.st1inch.unlockTime(addr0);
         await timeIncreaseTo(unlockTime);
         const balanceAddr0 = await this.oneInch.balanceOf(addr0);
 
-        tx = await this.st1inch.withdraw();
-        console.log(tx.receipt.gasUsed);
+        await this.st1inch.withdraw();
 
         expect(await this.oneInch.balanceOf(addr0)).to.be.bignumber.equal(
             balanceAddr0.add(ether('100')),
@@ -221,19 +191,14 @@ describe('St1inch', async () => {
     });
 
     it('should withdraw users deposit and send tokens to other address', async () => {
-        let tx = await this.st1inch.deposit(
-            ether('100'),
-            time.duration.days('50'),
-        );
-        console.log(tx.receipt.gasUsed);
+        await this.st1inch.deposit(ether('100'), time.duration.days('50'));
 
         const unlockTime = await this.st1inch.unlockTime(addr0);
         await timeIncreaseTo(unlockTime);
         const balanceAddr0 = await this.oneInch.balanceOf(addr0);
         const balanceAddr1 = await this.oneInch.balanceOf(addr1);
 
-        tx = await this.st1inch.withdrawTo(addr1);
-        console.log(tx.receipt.gasUsed);
+        await this.st1inch.withdrawTo(addr1);
 
         expect(await this.oneInch.balanceOf(addr0)).to.be.bignumber.equal(
             balanceAddr0,
@@ -253,11 +218,7 @@ describe('St1inch', async () => {
     });
 
     it('should not increase time and amount for existing deposit', async () => {
-        const tx = await this.st1inch.deposit(
-            ether('50'),
-            time.duration.days('1'),
-        );
-        console.log(tx.receipt.gasUsed);
+        await this.st1inch.deposit(ether('50'), time.duration.days('1'));
 
         await expectRevert(
             this.st1inch.deposit(ether('50'), time.duration.days('1')),
@@ -282,11 +243,7 @@ describe('St1inch', async () => {
     });
 
     it('should withdraw before unlock time', async () => {
-        const tx = await this.st1inch.deposit(
-            ether('50'),
-            time.duration.days('1'),
-        );
-        console.log(tx.receipt.gasUsed);
+        await this.st1inch.deposit(ether('50'), time.duration.days('1'));
 
         await expectRevert(this.st1inch.withdraw(), 'UnlockTimeWasNotCome()');
     });
