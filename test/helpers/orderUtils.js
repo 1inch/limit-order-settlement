@@ -1,9 +1,4 @@
-const {
-    constants,
-    toBN,
-    trim0x,
-    TypedDataVersion,
-} = require('@1inch/solidity-utils');
+const { constants, toBN, trim0x, TypedDataVersion } = require('@1inch/solidity-utils');
 const { signTypedData } = require('@metamask/eth-sig-util');
 const { EIP712Domain } = require('./eip712');
 
@@ -47,7 +42,7 @@ const ABIOrder = {
 const name = '1inch Limit Order Protocol';
 const version = '3';
 
-function buildOrder (
+function buildOrder(
     {
         makerAsset,
         takerAsset,
@@ -113,7 +108,7 @@ function buildOrder (
     };
 }
 
-function buildOrderRFQ (
+function buildOrderRFQ(
     info,
     makerAsset,
     takerAsset,
@@ -133,7 +128,7 @@ function buildOrderRFQ (
     };
 }
 
-function buildOrderData (chainId, verifyingContract, order) {
+function buildOrderData(chainId, verifyingContract, order) {
     return {
         primaryType: 'Order',
         types: { EIP712Domain, Order },
@@ -142,7 +137,7 @@ function buildOrderData (chainId, verifyingContract, order) {
     };
 }
 
-function buildOrderRFQData (chainId, verifyingContract, order) {
+function buildOrderRFQData(chainId, verifyingContract, order) {
     return {
         primaryType: 'OrderRFQ',
         types: { EIP712Domain, OrderRFQ },
@@ -151,37 +146,35 @@ function buildOrderRFQData (chainId, verifyingContract, order) {
     };
 }
 
-function signOrder (order, chainId, target, privateKey) {
+function signOrder(order, chainId, target, privateKey) {
     const data = buildOrderData(chainId, target, order);
     return signTypedData({ privateKey, data, version: TypedDataVersion });
 }
 
-function signOrderRFQ (order, chainId, target, privateKey) {
+function signOrderRFQ(order, chainId, target, privateKey) {
     const data = buildOrderRFQData(chainId, target, order);
     return signTypedData({ privateKey, data, version: TypedDataVersion });
 }
 
-function compactSignature (signature) {
+function compactSignature(signature) {
     const r = toBN(signature.substring(2, 66), 'hex');
     const s = toBN(signature.substring(66, 130), 'hex');
     const v = toBN(signature.substring(130, 132), 'hex');
     return {
         r: '0x' + r.toString('hex').padStart(64, '0'),
-        vs:
-            '0x' +
-            v.subn(27).shln(255).add(s).toString('hex').padStart(64, '0'),
+        vs: '0x' + v.subn(27).shln(255).add(s).toString('hex').padStart(64, '0'),
     };
 }
 
-function unwrapWeth (amount) {
+function unwrapWeth(amount) {
     return toBN(amount).setn(252, 1).toString();
 }
 
-function makingAmount (amount) {
+function makingAmount(amount) {
     return toBN(amount).setn(255, 1).toString();
 }
 
-function takingAmount (amount) {
+function takingAmount(amount) {
     return toBN(amount).toString();
 }
 

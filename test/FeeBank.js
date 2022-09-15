@@ -70,7 +70,15 @@ describe('FeeBank', async () => {
         it('should increase accountDeposits and creditAllowance without approve with depositWithPermit()', async () => {
             const addr0Amount = ether('1');
             await this.inch.approve(this.feeBank.address, '0', { from: addr0 });
-            const permit = await getPermit(addr0, addr0Wallet.getPrivateKey(), this.inch, '1', this.chainId, this.feeBank.address, addr0Amount);
+            const permit = await getPermit(
+                addr0,
+                addr0Wallet.getPrivateKey(),
+                this.inch,
+                '1',
+                this.chainId,
+                this.feeBank.address,
+                addr0Amount,
+            );
             const addr0balanceBefore = await this.inch.balanceOf(addr0);
 
             await this.feeBank.depositWithPermit(addr0Amount, permit, { from: addr0 });
@@ -83,7 +91,15 @@ describe('FeeBank', async () => {
         it('should increase accountDeposits and creditAllowance without approve with depositForWithPermit()', async () => {
             const addr0Amount = ether('1');
             await this.inch.approve(this.feeBank.address, '0', { from: addr0 });
-            const permit = await getPermit(addr0, addr0Wallet.getPrivateKey(), this.inch, '1', this.chainId, this.feeBank.address, addr0Amount);
+            const permit = await getPermit(
+                addr0,
+                addr0Wallet.getPrivateKey(),
+                this.inch,
+                '1',
+                this.chainId,
+                this.feeBank.address,
+                addr0Amount,
+            );
             const addr0balanceBefore = await this.inch.balanceOf(addr0);
 
             await this.feeBank.depositForWithPermit(addr1, addr0Amount, permit, { from: addr0 });
@@ -124,9 +140,11 @@ describe('FeeBank', async () => {
 
         it('should not withdrawal more than account have', async () => {
             // eslint-disable-next-line max-len
-            const ArithmeticOperationRevertMessage = 'VM Exception while processing transaction: reverted with panic code 0x11 (Arithmetic operation underflowed or overflowed outside of an unchecked block)';
-            await expect(this.feeBank.withdraw(this.totalDepositAmount.addn(1)))
-                .to.eventually.be.rejectedWith(ArithmeticOperationRevertMessage);
+            const ArithmeticOperationRevertMessage =
+                'VM Exception while processing transaction: reverted with panic code 0x11 (Arithmetic operation underflowed or overflowed outside of an unchecked block)';
+            await expect(this.feeBank.withdraw(this.totalDepositAmount.addn(1))).to.eventually.be.rejectedWith(
+                ArithmeticOperationRevertMessage,
+            );
         });
     });
 
@@ -170,7 +188,9 @@ describe('FeeBank', async () => {
             expect(await this.feeBank.accountDeposits(addr1)).to.be.bignumber.eq(addr1Amount.sub(subCreditAddr1Amount));
             expect(await this.matcher.creditAllowance(addr0)).to.be.bignumber.eq(addr0Amount.sub(subCreditAddr0Amount));
             expect(await this.matcher.creditAllowance(addr1)).to.be.bignumber.eq(addr1Amount.sub(subCreditAddr1Amount));
-            expect(await this.inch.balanceOf(addr0)).to.be.bignumber.eq(balanceBefore.add(subCreditAddr0Amount).add(subCreditAddr1Amount));
+            expect(await this.inch.balanceOf(addr0)).to.be.bignumber.eq(
+                balanceBefore.add(subCreditAddr0Amount).add(subCreditAddr1Amount),
+            );
         });
 
         it('should correct withdrawal fee for several account', async () => {
@@ -192,20 +212,27 @@ describe('FeeBank', async () => {
             const balanceBefore = await this.inch.balanceOf(addr0);
             for (let i = 0; i < accounts.length; i++) {
                 expect(await this.feeBank.accountDeposits(accounts[i])).to.be.bignumber.eq(amounts[i]);
-                expect(await this.matcher.creditAllowance(accounts[i])).to.be.bignumber.eq(amounts[i].sub(subCreditAmounts[i]));
+                expect(await this.matcher.creditAllowance(accounts[i])).to.be.bignumber.eq(
+                    amounts[i].sub(subCreditAmounts[i]),
+                );
             }
 
             await this.feeBank.gatherFees(accounts);
             for (let i = 0; i < accounts.length; i++) {
-                expect(await this.feeBank.accountDeposits(accounts[i])).to.be.bignumber.eq(amounts[i].sub(subCreditAmounts[i]));
-                expect(await this.matcher.creditAllowance(accounts[i])).to.be.bignumber.eq(amounts[i].sub(subCreditAmounts[i]));
+                expect(await this.feeBank.accountDeposits(accounts[i])).to.be.bignumber.eq(
+                    amounts[i].sub(subCreditAmounts[i]),
+                );
+                expect(await this.matcher.creditAllowance(accounts[i])).to.be.bignumber.eq(
+                    amounts[i].sub(subCreditAmounts[i]),
+                );
             }
             expect(await this.inch.balanceOf(addr0)).to.be.bignumber.eq(balanceBefore.add(totalSubCreditAmounts));
         });
 
         it('should not work by non-owner', async () => {
-            await expect(this.feeBank.gatherFees([addr0, addr1], { from: addr1 }))
-                .to.eventually.be.rejectedWith('Ownable: caller is not the owner');
+            await expect(this.feeBank.gatherFees([addr0, addr1], { from: addr1 })).to.eventually.be.rejectedWith(
+                'Ownable: caller is not the owner',
+            );
         });
     });
 });

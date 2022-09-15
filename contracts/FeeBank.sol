@@ -26,7 +26,7 @@ contract FeeBank is Ownable {
      * @param amount The amount of 1INCH sender pay for incresing.
      * @return totalCreditAllowance The total sender's creditAllowance after deposit.
      */
-    function deposit(uint256 amount) external returns(uint256) {
+    function deposit(uint256 amount) external returns (uint256) {
         return _depositFor(msg.sender, amount);
     }
 
@@ -36,7 +36,7 @@ contract FeeBank is Ownable {
      * @param amount The amount of 1INCH sender pay for incresing.
      * @return totalCreditAllowance The total account's creditAllowance after deposit.
      */
-    function depositFor(address account, uint256 amount) external returns(uint256) {
+    function depositFor(address account, uint256 amount) external returns (uint256) {
         return _depositFor(account, amount);
     }
 
@@ -46,14 +46,18 @@ contract FeeBank is Ownable {
      * @param permit The data with sender's permission via token.
      * @return totalCreditAllowance The total sender's creditAllowance after deposit.
      */
-    function depositWithPermit(uint256 amount, bytes calldata permit) external returns(uint256) {
+    function depositWithPermit(uint256 amount, bytes calldata permit) external returns (uint256) {
         return depositForWithPermit(msg.sender, amount, permit);
     }
 
     /**
      * @notice See {depositFor} and {depositWithPermit}.
      */
-    function depositForWithPermit(address account, uint256 amount, bytes calldata permit) public returns(uint256) {
+    function depositForWithPermit(
+        address account,
+        uint256 amount,
+        bytes calldata permit
+    ) public returns (uint256) {
         _token.safePermit(permit);
         return _depositFor(account, amount);
     }
@@ -63,7 +67,7 @@ contract FeeBank is Ownable {
      * @param amount The amount of 1INCH sender returns.
      * @return totalCreditAllowance The total sender's creditAllowance after withdrawal.
      */
-    function withdraw(uint256 amount) external returns(uint256) {
+    function withdraw(uint256 amount) external returns (uint256) {
         return _withdrawTo(msg.sender, amount);
     }
 
@@ -73,7 +77,7 @@ contract FeeBank is Ownable {
      * @param amount The amount of withdrawaled tokens.
      * @return totalCreditAllowance The total sender's creditAllowance after withdrawal.
      */
-    function withdrawTo(address account, uint256 amount) external returns(uint256) {
+    function withdrawTo(address account, uint256 amount) external returns (uint256) {
         return _withdrawTo(account, amount);
     }
 
@@ -82,7 +86,7 @@ contract FeeBank is Ownable {
      * @param accounts Accounts whose commissions are being withdrawn.
      * @return totalAccountFees The total amount of accounts commissions.
      */
-    function gatherFees(address[] memory accounts) external onlyOwner returns(uint256 totalAccountFees) {
+    function gatherFees(address[] memory accounts) external onlyOwner returns (uint256 totalAccountFees) {
         for (uint256 i = 0; i < accounts.length; i++) {
             uint256 accountFee = accountDeposits[accounts[i]] - _settlement.creditAllowance(accounts[i]);
             accountDeposits[accounts[i]] -= accountFee;
@@ -91,13 +95,13 @@ contract FeeBank is Ownable {
         _token.safeTransfer(msg.sender, totalAccountFees);
     }
 
-    function _depositFor(address account, uint256 amount) internal returns(uint256 totalCreditAllowance) {
+    function _depositFor(address account, uint256 amount) internal returns (uint256 totalCreditAllowance) {
         _token.safeTransferFrom(msg.sender, address(this), amount);
         accountDeposits[account] += amount;
         totalCreditAllowance = _settlement.addCreditAllowance(account, amount);
     }
 
-    function _withdrawTo(address account, uint256 amount) internal returns(uint256 totalCreditAllowance) {
+    function _withdrawTo(address account, uint256 amount) internal returns (uint256 totalCreditAllowance) {
         totalCreditAllowance = _settlement.subCreditAllowance(msg.sender, amount);
         accountDeposits[msg.sender] -= amount;
         _token.safeTransfer(account, amount);

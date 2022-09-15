@@ -38,19 +38,8 @@ contract Settlement is Ownable, InteractionNotificationReceiver, WhitelistChecke
         uint256 makingAmount,
         uint256 takingAmount,
         uint256 thresholdAmount
-    )
-        external
-        onlyWhitelisted(msg.sender)
-    {
-        _matchOrder(
-            orderMixin,
-            order,
-            signature,
-            interaction,
-            makingAmount,
-            takingAmount,
-            thresholdAmount
-        );
+    ) external onlyWhitelisted(msg.sender) {
+        _matchOrder(orderMixin, order, signature, interaction, makingAmount, takingAmount, thresholdAmount);
     }
 
     function matchOrdersEOA(
@@ -61,19 +50,8 @@ contract Settlement is Ownable, InteractionNotificationReceiver, WhitelistChecke
         uint256 makingAmount,
         uint256 takingAmount,
         uint256 thresholdAmount
-    )
-        external
-        onlyWhitelistedEOA()
-    {
-        _matchOrder(
-            orderMixin,
-            order,
-            signature,
-            interaction,
-            makingAmount,
-            takingAmount,
-            thresholdAmount
-        );
+    ) external onlyWhitelistedEOA {
+        _matchOrder(orderMixin, order, signature, interaction, makingAmount, takingAmount, thresholdAmount);
     }
 
     function fillOrderInteraction(
@@ -88,8 +66,7 @@ contract Settlement is Ownable, InteractionNotificationReceiver, WhitelistChecke
                 (address[], bytes[])
             );
 
-            if (targets.length != calldatas.length)
-                revert IncorrectCalldataParams();
+            if (targets.length != calldatas.length) revert IncorrectCalldataParams();
             for (uint256 i = 0; i < targets.length; i++) {
                 // solhint-disable-next-line avoid-low-level-calls
                 (bool success, ) = targets[i].call(calldatas[i]);
@@ -103,10 +80,7 @@ contract Settlement is Ownable, InteractionNotificationReceiver, WhitelistChecke
                 uint256 makingOrderAmount,
                 uint256 takingOrderAmount,
                 uint256 thresholdAmount
-            ) = abi.decode(
-                    interactiveData[1:],
-                    (OrderLib.Order, bytes, bytes, uint256, uint256, uint256)
-                );
+            ) = abi.decode(interactiveData[1:], (OrderLib.Order, bytes, bytes, uint256, uint256, uint256));
 
             _matchOrder(
                 IOrderMixin(msg.sender),
@@ -133,22 +107,15 @@ contract Settlement is Ownable, InteractionNotificationReceiver, WhitelistChecke
         uint256 orderFee = (order.salt & _ORDER_FEE_MASK) >> (256 - 80 - 72);
         if (creditAllowance[tx.origin] < orderFee) revert NotEnoughCredit(); // solhint-disable-line avoid-tx-origin
         creditAllowance[tx.origin] -= orderFee; // solhint-disable-line avoid-tx-origin
-        orderMixin.fillOrder(
-            order,
-            signature,
-            interaction,
-            makingAmount,
-            takingAmount,
-            thresholdAmount
-        );
+        orderMixin.fillOrder(order, signature, interaction, makingAmount, takingAmount, thresholdAmount);
     }
 
-    function addCreditAllowance(address account, uint256 amount) external onlyFeeBank() returns(uint256) {
+    function addCreditAllowance(address account, uint256 amount) external onlyFeeBank returns (uint256) {
         creditAllowance[account] += amount;
         return creditAllowance[account];
     }
 
-    function subCreditAllowance(address account, uint256 amount) external onlyFeeBank() returns(uint256) {
+    function subCreditAllowance(address account, uint256 amount) external onlyFeeBank returns (uint256) {
         creditAllowance[account] -= amount;
         return creditAllowance[account];
     }
