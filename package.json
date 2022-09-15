@@ -21,7 +21,7 @@
     "lint:sol": "solhint --max-warnings 0 \"contracts/**/*.sol\"",
     "lint:sol:fix": "solhint --max-warnings 0 \"contracts/**/*.sol\" --fix",
     "lint": "yarn lint:js && yarn lint:sol",
-    "lint:fix": "yarn lint:js:fix && yarn lint:sol:fix && yarn"
+    "lint:fix": "yarn lint:js:fix && yarn lint:sol:fix"
   },
   "dependencies": {
     "@1inch/limit-order-protocol": "1inch/limit-order-protocol",
