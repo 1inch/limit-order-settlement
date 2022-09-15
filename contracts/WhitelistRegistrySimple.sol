@@ -17,10 +17,7 @@ contract WhitelistRegistrySimple is IWhitelistRegistry, Ownable {
 
     mapping(address => bool) public isWhitelisted;
 
-    function batchSetStatus(
-        address[] calldata addresses,
-        bool[] calldata statuses
-    ) external onlyOwner {
+    function batchSetStatus(address[] calldata addresses, bool[] calldata statuses) external onlyOwner {
         uint256 length = addresses.length;
         if (length != statuses.length) revert ArraysLengthsDoNotMatch();
         for (uint256 i = 0; i < length; ++i) {
