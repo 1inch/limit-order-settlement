@@ -40,7 +40,9 @@ describe('St1inch', async () => {
         await this.oneInch.mint(addr0, ether('100'));
         await this.oneInch.mint(addr1, ether('100'));
 
-        this.st1inch = await St1inch.new(this.oneInch.address, baseExp);
+        const maxUserFarms = 5;
+        const maxUserDelegations = 5;
+        this.st1inch = await St1inch.new(this.oneInch.address, baseExp, maxUserFarms, maxUserDelegations);
         await this.oneInch.approve(this.st1inch.address, ether('100'));
         await this.oneInch.approve(this.st1inch.address, ether('100'), { from: addr1 });
         this.origin = await this.st1inch.origin();

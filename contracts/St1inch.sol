@@ -4,8 +4,10 @@ pragma solidity 0.8.15;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
+import "@1inch/farming/contracts/ERC20Farmable.sol";
+import "@1inch/delegating/contracts/ERC20Delegatable.sol";
 
-contract St1inch is ERC20 {
+contract St1inch is ERC20Farmable, ERC20Delegatable {
     error ZeroAddress();
     error BurnAmountExceedsBalance();
     error ApproveDisabled();
@@ -29,7 +31,11 @@ contract St1inch is ERC20 {
 
     uint256 public totalDeposits;
 
-    constructor(IERC20 _oneInch, uint256 _expBase) ERC20("Staking 1inch", "st1inch") {
+    constructor(IERC20 _oneInch, uint256 _expBase, uint256 maxUserFarms, uint256 maxUserDelegations)
+        ERC20Farmable(maxUserFarms)
+        ERC20Delegatable(maxUserDelegations)
+        ERC20("Staking 1inch", "st1inch")
+    {
         oneInch = _oneInch;
         expBase = _expBase; // TODO: improve accuracy from 1e18 to 1e36
         // solhint-disable-next-line not-rely-on-time
@@ -53,15 +59,15 @@ contract St1inch is ERC20 {
         return _exp(balanceOf(account), timestamp - origin, expBase);
     }
 
-    function approve(address /* spender */, uint256 /* amount */) public pure override returns (bool) {
+    function approve(address /* spender */, uint256 /* amount */) public pure override(IERC20, ERC20) returns (bool) {
         revert ApproveDisabled();
     }
 
-    function transfer(address /* to */, uint256 /* amount */) public pure override returns (bool) {
+    function transfer(address /* to */, uint256 /* amount */) public pure override(IERC20, ERC20) returns (bool) {
         revert TransferDisabled();
     }
 
-    function transferFrom(address /* from */, address /* to */, uint256 /* amount */) public pure override returns (bool) {
+    function transferFrom(address /* from */, address /* to */, uint256 /* amount */) public pure override(IERC20, ERC20) returns (bool) {
         revert TransferFromDisabled();
     }
 
@@ -129,5 +135,10 @@ contract St1inch is ERC20 {
             }
         }
         return point;
+    }
+
+    // ERC20 overrides
+    function _beforeTokenTransfer(address from, address to, uint256 amount) internal override(ERC20Farmable, ERC20Delegatable) virtual {
+        super._beforeTokenTransfer(from, to, amount);
     }
 }

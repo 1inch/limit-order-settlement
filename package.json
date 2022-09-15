@@ -24,6 +24,8 @@
     "lint:fix": "yarn lint:js:fix && yarn lint:sol:fix && yarn"
   },
   "dependencies": {
+    "@1inch/delegating": "https://github.com/1inch/delegating#feature/rewardable_delegation",
+    "@1inch/farming": "https://github.com/1inch/farming",
     "@1inch/limit-order-protocol": "1inch/limit-order-protocol",
     "@openzeppelin/contracts": "4.7.3"
   },

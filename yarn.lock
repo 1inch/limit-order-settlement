@@ -2,6 +2,20 @@
 # yarn lockfile v1
 
 
+"@1inch/delegating@https://github.com/1inch/delegating#feature/rewardable_delegation":
+  version "1.0.0"
+  resolved "https://github.com/1inch/delegating#498af9d6c24371e17ded84cb708740b44b9e294a"
+  dependencies:
+    "@1inch/solidity-utils" "2.0.25"
+    "@openzeppelin/contracts" "4.5.0"
+
+"@1inch/farming@https://github.com/1inch/farming":
+  version "1.0.3"
+  resolved "https://github.com/1inch/farming#78654f82fbcfa30cec8c47f30e4b338ecf800af3"
+  dependencies:
+    "@1inch/solidity-utils" "2.0.23"
+    "@openzeppelin/contracts" "4.5.0"
+
 "@1inch/limit-order-protocol@1inch/limit-order-protocol":
   version "0.0.2"
   resolved "https://codeload.github.com/1inch/limit-order-protocol/tar.gz/9ccf756d66a258a7150cc78e2a3d733eb40b390b"
@@ -9,7 +23,22 @@
     "@chainlink/contracts" "0.4.1"
     "@openzeppelin/contracts" "4.7.0"
 
-"@1inch/solidity-utils@^2.0.25":
+"@1inch/solidity-utils@2.0.23":
+  version "2.0.23"
+  resolved "https://registry.yarnpkg.com/@1inch/solidity-utils/-/solidity-utils-2.0.23.tgz#d70df677e8e1af2b9c4dc0d4164b16935cbedb15"
+  integrity sha512-tG8jgK/ME5HfNgCMTI1jM7UT2I289znGJzuUs6pE2TMG3J9sB1iWg8BBPSM5+8iypQ74tLf//n7DWcfdzhaCjQ==
+  dependencies:
+    "@metamask/eth-sig-util" "4.0.1"
+    "@openzeppelin/contracts" "4.6.0"
+    "@openzeppelin/test-helpers" "0.5.15"
+    bn.js "5.2.1"
+    chai "4.3.6"
+    chai-as-promised "7.1.1"
+    chai-bn "0.3.1"
+    ethereumjs-util "7.1.5"
+    web3-utils "1.7.4"
+
+"@1inch/solidity-utils@2.0.25":
   version "2.0.25"
   resolved "https://registry.yarnpkg.com/@1inch/solidity-utils/-/solidity-utils-2.0.25.tgz#3f29d981f51b935f3437f693060186416c821a28"
   integrity sha512-MyGK6MuTlSR7sFYDK+TSYJRQ85KwzeMOszCSbVaBWpyJUv56LumOduN37lMJIHI7AKPuLhz0t92z/NHIrxbPXw==
@@ -644,6 +673,11 @@
   dependencies:
     find-up "^4.1.0"
     fs-extra "^8.1.0"
+
+"@openzeppelin/contracts@4.5.0":
+  version "4.5.0"
+  resolved "https://registry.yarnpkg.com/@openzeppelin/contracts/-/contracts-4.5.0.tgz#3fd75d57de172b3743cdfc1206883f56430409cc"
+  integrity sha512-fdkzKPYMjrRiPK6K4y64e6GzULR7R7RwxSigHS8DDp7aWDeoReqsQI+cxHV1UuhAqX69L1lAaWDxenfP+xiqzA==
 
 "@openzeppelin/contracts@4.6.0":
   version "4.6.0"
