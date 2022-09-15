@@ -25,9 +25,9 @@
 
       // Code style
       "indent": [2, 4],
-      "quotes": [2, "single"],
+      "quotes": [2, "single", {"avoidEscape": true}],
       "semi": ["error", "always"],
-      "space-before-function-paren": ["error", "always"],
+      "space-before-function-paren": ["error", {"anonymous": "always", "named": "never", "asyncArrow": "always"}],
       "no-use-before-define": 0,
       "no-unused-expressions": "off",
       "eqeqeq": [2, "smart"],
@@ -44,7 +44,7 @@
       "no-debugger": 0,
       "no-undef": 2,
       "object-curly-spacing": [2, "always"],
-      "max-len": [2, 200, 2],
+      "max-len": [2, 160, 2],
       "generator-star-spacing": ["error", "before"],
       "promise/avoid-new": 0,
       "promise/always-return": 0

@@ -1,14 +1,7 @@
 const networks = {};
 const etherscan = { apiKey: {} };
 
-function register (
-    name,
-    chainId,
-    url,
-    privateKey,
-    etherscanNetworkName,
-    etherscanKey,
-) {
+function register(name, chainId, url, privateKey, etherscanNetworkName, etherscanKey) {
     if (url && privateKey && etherscanKey) {
         networks[name] = {
             url,
@@ -30,14 +23,7 @@ register(
     'mainnet',
     process.env.MAINNET_ETHERSCAN_KEY,
 );
-register(
-    'bsc',
-    56,
-    process.env.BSC_RPC_URL,
-    process.env.BSC_PRIVATE_KEY,
-    'bsc',
-    process.env.BSC_ETHERSCAN_KEY,
-);
+register('bsc', 56, process.env.BSC_RPC_URL, process.env.BSC_PRIVATE_KEY, 'bsc', process.env.BSC_ETHERSCAN_KEY);
 register(
     'kovan',
     42,
@@ -70,14 +56,7 @@ register(
     'arbitrumOne',
     process.env.ARBITRUM_ETHERSCAN_KEY,
 );
-register(
-    'xdai',
-    100,
-    process.env.XDAI_RPC_URL,
-    process.env.XDAI_PRIVATE_KEY,
-    'xdai',
-    process.env.XDAI_ETHERSCAN_KEY,
-);
+register('xdai', 100, process.env.XDAI_RPC_URL, process.env.XDAI_PRIVATE_KEY, 'xdai', process.env.XDAI_ETHERSCAN_KEY);
 register(
     'avax',
     43114,
