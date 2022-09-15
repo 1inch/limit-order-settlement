@@ -11,7 +11,6 @@ contract St1inch is ERC20Farmable, ERC20Delegatable {
     error ZeroAddress();
     error BurnAmountExceedsBalance();
     error ApproveDisabled();
-    error AllowanceDisabled();
     error TransferDisabled();
     error TransferFromDisabled();
     error LockTimeMoreMaxLock();
