@@ -53,16 +53,12 @@ contract St1inch is ERC20 {
         return _exp(balanceOf(account), timestamp - origin, expBase);
     }
 
-    function transfer(address /* to */, uint256 /* amount */) public pure override returns (bool) {
-        revert TransferDisabled();
-    }
-
-    function allowance(address /* owner */, address /* spender */) public pure override returns (uint256) {
-        revert AllowanceDisabled();
-    }
-
     function approve(address /* spender */, uint256 /* amount */) public pure override returns (bool) {
         revert ApproveDisabled();
+    }
+
+    function transfer(address /* to */, uint256 /* amount */) public pure override returns (bool) {
+        revert TransferDisabled();
     }
 
     function transferFrom(address /* from */, address /* to */, uint256 /* amount */) public pure override returns (bool) {
