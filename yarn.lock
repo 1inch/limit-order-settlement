@@ -9,10 +9,10 @@
     "@chainlink/contracts" "0.4.1"
     "@openzeppelin/contracts" "4.7.0"
 
-"@1inch/solidity-utils@2.0.24":
-  version "2.0.24"
-  resolved "https://registry.yarnpkg.com/@1inch/solidity-utils/-/solidity-utils-2.0.24.tgz#4513f3864cfd1acf053a5bdb256eb72a619b2016"
-  integrity sha512-hlx60C+Yyy6hYdOpb0K5bHXhBYOAGPrpLb6cLGXMj0a7fJTFQHC+RTbJenS/I1sqECqKdRdZJPfcO7K+ybvekQ==
+"@1inch/solidity-utils@^2.0.25":
+  version "2.0.25"
+  resolved "https://registry.yarnpkg.com/@1inch/solidity-utils/-/solidity-utils-2.0.25.tgz#3f29d981f51b935f3437f693060186416c821a28"
+  integrity sha512-MyGK6MuTlSR7sFYDK+TSYJRQ85KwzeMOszCSbVaBWpyJUv56LumOduN37lMJIHI7AKPuLhz0t92z/NHIrxbPXw==
   dependencies:
     "@metamask/eth-sig-util" "4.0.1"
     "@openzeppelin/contracts" "4.6.0"
