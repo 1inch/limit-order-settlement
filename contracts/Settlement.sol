@@ -26,8 +26,9 @@ contract Settlement is Ownable, InteractionNotificationReceiver, WhitelistChecke
         _;
     }
 
-    // solhint-disable-next-line no-empty-blocks
-    constructor(IWhitelistRegistry whitelist, address limitOrderProtocol) WhitelistChecker(whitelist, limitOrderProtocol) {}
+    constructor(IWhitelistRegistry whitelist, address limitOrderProtocol)
+        WhitelistChecker(whitelist, limitOrderProtocol)
+    {} // solhint-disable-line no-empty-blocks
 
     function matchOrders(
         IOrderMixin orderMixin,
@@ -76,26 +77,23 @@ contract Settlement is Ownable, InteractionNotificationReceiver, WhitelistChecke
     }
 
     function fillOrderInteraction(
-        address /* taker */,
-        uint256 /* makingAmount */,
-        uint256 /* takingAmount */,
+        address, /* taker */
+        uint256, /* makingAmount */
+        uint256, /* takingAmount */
         bytes calldata interactiveData
-    )
-        external
-        onlyLimitOrderProtocol()
-        returns(uint256)
-    {
-        if(interactiveData[0] == _FINALIZE_INTERACTION) {
-            (
-                address[] memory targets,
-                bytes[] memory calldatas
-            ) = abi.decode(interactiveData[1:], (address[], bytes[]));
+    ) external onlyLimitOrderProtocol returns (uint256) {
+        if (interactiveData[0] == _FINALIZE_INTERACTION) {
+            (address[] memory targets, bytes[] memory calldatas) = abi.decode(
+                interactiveData[1:],
+                (address[], bytes[])
+            );
 
-            if(targets.length != calldatas.length) revert IncorrectCalldataParams();
-            for(uint256 i = 0; i < targets.length; i++) {
+            if (targets.length != calldatas.length)
+                revert IncorrectCalldataParams();
+            for (uint256 i = 0; i < targets.length; i++) {
                 // solhint-disable-next-line avoid-low-level-calls
                 (bool success, ) = targets[i].call(calldatas[i]);
-                if(!success) revert FailedExternalCall();
+                if (!success) revert FailedExternalCall();
             }
         } else {
             (
@@ -105,7 +103,10 @@ contract Settlement is Ownable, InteractionNotificationReceiver, WhitelistChecke
                 uint256 makingOrderAmount,
                 uint256 takingOrderAmount,
                 uint256 thresholdAmount
-            ) = abi.decode(interactiveData[1:], (OrderLib.Order, bytes, bytes, uint256, uint256, uint256));
+            ) = abi.decode(
+                    interactiveData[1:],
+                    (OrderLib.Order, bytes, bytes, uint256, uint256, uint256)
+                );
 
             _matchOrder(
                 IOrderMixin(msg.sender),
