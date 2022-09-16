@@ -60,11 +60,12 @@ contract St1inch is ERC20Farmable, ERC20Delegatable {
 
     uint256 public totalDeposits;
 
-    constructor(IERC20 _oneInch, uint256 _expBase, uint256 maxUserFarms, uint256 maxUserDelegations)
-        ERC20Farmable(maxUserFarms)
-        ERC20Delegatable(maxUserDelegations)
-        ERC20("Staking 1inch", "st1inch")
-    {
+    constructor(
+        IERC20 _oneInch,
+        uint256 _expBase,
+        uint256 maxUserFarms,
+        uint256 maxUserDelegations
+    ) ERC20Farmable(maxUserFarms) ERC20Delegatable(maxUserDelegations) ERC20("Staking 1inch", "st1inch") {
         oneInch = _oneInch;
         // solhint-disable-next-line not-rely-on-time
         origin = block.timestamp;
@@ -113,11 +114,7 @@ contract St1inch is ERC20Farmable, ERC20Delegatable {
         return _exp(balanceOf(account), block.timestamp - origin);
     }
 
-    function votingPowerOf(address account, uint256 timestamp)
-        external
-        view
-        returns (uint256)
-    {
+    function votingPowerOf(address account, uint256 timestamp) external view returns (uint256) {
         return _exp(balanceOf(account), timestamp - origin);
     }
 
@@ -169,8 +166,7 @@ contract St1inch is ERC20Farmable, ERC20Delegatable {
         uint256 amount,
         uint256 duration
     ) private {
-        if (_deposits[account] > 0 && amount > 0 && duration > 0)
-            revert ChangeAmountAndUnlockTimeForExistingAccount();
+        if (_deposits[account] > 0 && amount > 0 && duration > 0) revert ChangeAmountAndUnlockTimeForExistingAccount();
 
         if (amount > 0) {
             oneInch.transferFrom(msg.sender, address(this), amount);
@@ -180,18 +176,12 @@ contract St1inch is ERC20Farmable, ERC20Delegatable {
 
         uint256 balance = _deposits[account];
 
-        uint256 lockedTill = Math.max(_unlockTime[account], block.timestamp) +
-            duration;
-        if (lockedTill < block.timestamp + MIN_LOCK_PERIOD)
-            revert LockTimeLessMinLock();
-        if (lockedTill > block.timestamp + MAX_LOCK_PERIOD)
-            revert LockTimeMoreMaxLock();
+        uint256 lockedTill = Math.max(_unlockTime[account], block.timestamp) + duration;
+        if (lockedTill < block.timestamp + MIN_LOCK_PERIOD) revert LockTimeLessMinLock();
+        if (lockedTill > block.timestamp + MAX_LOCK_PERIOD) revert LockTimeMoreMaxLock();
         _unlockTime[account] = lockedTill;
 
-        _mint(
-            account,
-            _invExp(balance, lockedTill - origin) - balanceOf(account)
-        );
+        _mint(account, _invExp(balance, lockedTill - origin) - balanceOf(account));
     }
 
     /* solhint-enable not-rely-on-time */
@@ -202,8 +192,7 @@ contract St1inch is ERC20Farmable, ERC20Delegatable {
 
     function withdrawTo(address to) public {
         // solhint-disable-next-line not-rely-on-time
-        if (block.timestamp < _unlockTime[msg.sender])
-            revert UnlockTimeWasNotCome();
+        if (block.timestamp < _unlockTime[msg.sender]) revert UnlockTimeWasNotCome();
 
         uint256 balance = _deposits[msg.sender];
         totalDeposits -= balance;
@@ -406,7 +395,11 @@ contract St1inch is ERC20Farmable, ERC20Delegatable {
     }
 
     // ERC20 overrides
-    function _beforeTokenTransfer(address from, address to, uint256 amount) internal override(ERC20Farmable, ERC20Delegatable) virtual {
+    function _beforeTokenTransfer(
+        address from,
+        address to,
+        uint256 amount
+    ) internal virtual override(ERC20Farmable, ERC20Delegatable) {
         super._beforeTokenTransfer(from, to, amount);
     }
 }

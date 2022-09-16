@@ -1,21 +1,11 @@
-const {
-    expect,
-    ether,
-    toBN,
-    assertRoughlyEqualValues,
-    timeIncreaseTo,
-} = require('@1inch/solidity-utils');
-const { time, expectRevert } = require('@openzeppelin/test-helpers');
+const { expect, ether, toBN, assertRoughlyEqualValues, timeIncreaseTo, time } = require('@1inch/solidity-utils');
 const { addr0Wallet, addr1Wallet } = require('./helpers/utils');
 
 const TokenMock = artifacts.require('TokenMock');
 const St1inch = artifacts.require('St1inch');
 
 describe('St1inch', async () => {
-    const [addr0, addr1] = [
-        addr0Wallet.getAddressString(),
-        addr1Wallet.getAddressString(),
-    ];
+    const [addr0, addr1] = [addr0Wallet.getAddressString(), addr1Wallet.getAddressString()];
     const baseExp = toBN('999999981746377019');
     const invertBaseExp = ether('1000000000000000000').div(baseExp);
 
@@ -32,16 +22,10 @@ describe('St1inch', async () => {
     };
 
     const checkBalances = async (account, balance, lockDuration) => {
-        expect(
-            await this.st1inch.depositsAmount(account),
-        ).to.be.bignumber.equal(balance);
+        expect(await this.st1inch.depositsAmount(account)).to.be.bignumber.equal(balance);
         const t = (await time.latest()).add(lockDuration).sub(this.origin);
         const originPower = exp(balance, t, invertBaseExp);
-        assertRoughlyEqualValues(
-            await this.st1inch.balanceOf(account),
-            originPower,
-            1e-10,
-        );
+        assertRoughlyEqualValues(await this.st1inch.balanceOf(account), originPower, 1e-10);
         assertRoughlyEqualValues(
             await this.st1inch.votingPowerOf(account),
             exp(originPower, (await time.latest()).sub(this.origin)),
@@ -73,15 +57,9 @@ describe('St1inch', async () => {
     });
 
     it('should take users deposit', async () => {
-        expect(await this.st1inch.depositsAmount(addr0)).to.be.bignumber.equal(
-            toBN('0'),
-        );
-        expect(await this.st1inch.balanceOf(addr0)).to.be.bignumber.equal(
-            toBN('0'),
-        );
-        expect(await this.st1inch.votingPowerOf(addr0)).to.be.bignumber.equal(
-            toBN('0'),
-        );
+        expect(await this.st1inch.depositsAmount(addr0)).to.be.bignumber.equal(toBN('0'));
+        expect(await this.st1inch.balanceOf(addr0)).to.be.bignumber.equal(toBN('0'));
+        expect(await this.st1inch.votingPowerOf(addr0)).to.be.bignumber.equal(toBN('0'));
 
         await this.st1inch.deposit(ether('100'), time.duration.days('1'));
 
@@ -89,40 +67,20 @@ describe('St1inch', async () => {
     });
 
     it('should take users deposit for other account', async () => {
-        expect(await this.st1inch.depositsAmount(addr1)).to.be.bignumber.equal(
-            toBN('0'),
-        );
-        expect(await this.st1inch.balanceOf(addr1)).to.be.bignumber.equal(
-            toBN('0'),
-        );
-        expect(await this.st1inch.votingPowerOf(addr1)).to.be.bignumber.equal(
-            toBN('0'),
-        );
+        expect(await this.st1inch.depositsAmount(addr1)).to.be.bignumber.equal(toBN('0'));
+        expect(await this.st1inch.balanceOf(addr1)).to.be.bignumber.equal(toBN('0'));
+        expect(await this.st1inch.votingPowerOf(addr1)).to.be.bignumber.equal(toBN('0'));
         const balanceAddr0 = await this.oneInch.balanceOf(addr0);
         const balanceAddr1 = await this.oneInch.balanceOf(addr1);
 
-        await this.st1inch.depositFor(
-            addr1,
-            ether('100'),
-            time.duration.days('1'),
-        );
+        await this.st1inch.depositFor(addr1, ether('100'), time.duration.days('1'));
 
-        expect(await this.oneInch.balanceOf(addr0)).to.be.bignumber.equal(
-            balanceAddr0.sub(ether('100')),
-        );
-        expect(await this.oneInch.balanceOf(addr1)).to.be.bignumber.equal(
-            balanceAddr1,
-        );
+        expect(await this.oneInch.balanceOf(addr0)).to.be.bignumber.equal(balanceAddr0.sub(ether('100')));
+        expect(await this.oneInch.balanceOf(addr1)).to.be.bignumber.equal(balanceAddr1);
         await checkBalances(addr1, ether('100'), time.duration.days('1'));
-        expect(await this.st1inch.depositsAmount(addr0)).to.be.bignumber.equal(
-            toBN('0'),
-        );
-        expect(await this.st1inch.balanceOf(addr0)).to.be.bignumber.equal(
-            toBN('0'),
-        );
-        expect(await this.st1inch.votingPowerOf(addr0)).to.be.bignumber.equal(
-            toBN('0'),
-        );
+        expect(await this.st1inch.depositsAmount(addr0)).to.be.bignumber.equal(toBN('0'));
+        expect(await this.st1inch.balanceOf(addr0)).to.be.bignumber.equal(toBN('0'));
+        expect(await this.st1inch.votingPowerOf(addr0)).to.be.bignumber.equal(toBN('0'));
     });
 
     it('should increase unlock time for deposit (call deposit)', async () => {
@@ -148,11 +106,7 @@ describe('St1inch', async () => {
         await timeIncreaseTo(unlockTime.sub(time.duration.days('5')));
 
         await this.st1inch.deposit(ether('30'), toBN('0'));
-        await checkBalances(
-            addr0,
-            ether('50'),
-            unlockTime.sub(await time.latest()),
-        );
+        await checkBalances(addr0, ether('50'), unlockTime.sub(await time.latest()));
     });
 
     it('should increase deposit amount (call increaseAmount)', async () => {
@@ -162,11 +116,7 @@ describe('St1inch', async () => {
         await timeIncreaseTo(unlockTime.sub(time.duration.days('50')));
 
         await this.st1inch.increaseAmount(ether('20'));
-        await checkBalances(
-            addr0,
-            ether('90'),
-            unlockTime.sub(await time.latest()),
-        );
+        await checkBalances(addr0, ether('90'), unlockTime.sub(await time.latest()));
     });
 
     it('should withdraw users deposit', async () => {
@@ -178,18 +128,10 @@ describe('St1inch', async () => {
 
         await this.st1inch.withdraw();
 
-        expect(await this.oneInch.balanceOf(addr0)).to.be.bignumber.equal(
-            balanceAddr0.add(ether('100')),
-        );
-        expect(await this.st1inch.depositsAmount(addr0)).to.be.bignumber.equal(
-            toBN('0'),
-        );
-        expect(await this.st1inch.balanceOf(addr0)).to.be.bignumber.equal(
-            toBN('0'),
-        );
-        expect(await this.st1inch.votingPowerOf(addr0)).to.be.bignumber.equal(
-            toBN('0'),
-        );
+        expect(await this.oneInch.balanceOf(addr0)).to.be.bignumber.equal(balanceAddr0.add(ether('100')));
+        expect(await this.st1inch.depositsAmount(addr0)).to.be.bignumber.equal(toBN('0'));
+        expect(await this.st1inch.balanceOf(addr0)).to.be.bignumber.equal(toBN('0'));
+        expect(await this.st1inch.votingPowerOf(addr0)).to.be.bignumber.equal(toBN('0'));
     });
 
     it('should withdraw users deposit and send tokens to other address', async () => {
@@ -202,44 +144,31 @@ describe('St1inch', async () => {
 
         await this.st1inch.withdrawTo(addr1);
 
-        expect(await this.oneInch.balanceOf(addr0)).to.be.bignumber.equal(
-            balanceAddr0,
-        );
-        expect(await this.oneInch.balanceOf(addr1)).to.be.bignumber.equal(
-            balanceAddr1.add(ether('100')),
-        );
-        expect(await this.st1inch.depositsAmount(addr0)).to.be.bignumber.equal(
-            toBN('0'),
-        );
-        expect(await this.st1inch.balanceOf(addr0)).to.be.bignumber.equal(
-            toBN('0'),
-        );
-        expect(await this.st1inch.votingPowerOf(addr0)).to.be.bignumber.equal(
-            toBN('0'),
-        );
+        expect(await this.oneInch.balanceOf(addr0)).to.be.bignumber.equal(balanceAddr0);
+        expect(await this.oneInch.balanceOf(addr1)).to.be.bignumber.equal(balanceAddr1.add(ether('100')));
+        expect(await this.st1inch.depositsAmount(addr0)).to.be.bignumber.equal(toBN('0'));
+        expect(await this.st1inch.balanceOf(addr0)).to.be.bignumber.equal(toBN('0'));
+        expect(await this.st1inch.votingPowerOf(addr0)).to.be.bignumber.equal(toBN('0'));
     });
 
     it('should not increase time and amount for existing deposit', async () => {
         await this.st1inch.deposit(ether('50'), time.duration.days('1'));
 
-        await expectRevert(
-            this.st1inch.deposit(ether('50'), time.duration.days('1')),
+        await expect(this.st1inch.deposit(ether('50'), time.duration.days('1'))).to.be.rejectedWith(
             'ChangeAmountAndUnlockTimeForExistingAccount()',
         );
     });
 
     it('should not take deposit with lock less then MIN_LOCK_PERIOD', async () => {
         const MIN_LOCK_PERIOD = await this.st1inch.MIN_LOCK_PERIOD();
-        await expectRevert(
-            this.st1inch.deposit(ether('50'), MIN_LOCK_PERIOD.sub(toBN('1'))),
+        await expect(this.st1inch.deposit(ether('50'), MIN_LOCK_PERIOD.sub(toBN('1')))).to.be.rejectedWith(
             'LockTimeLessMinLock()',
         );
     });
 
     it('should not take deposit with lock more then MAX_LOCK_PERIOD', async () => {
         const MAX_LOCK_PERIOD = await this.st1inch.MAX_LOCK_PERIOD();
-        await expectRevert(
-            this.st1inch.deposit(ether('50'), MAX_LOCK_PERIOD.add(toBN('1'))),
+        await expect(this.st1inch.deposit(ether('50'), MAX_LOCK_PERIOD.add(toBN('1')))).to.be.rejectedWith(
             'LockTimeMoreMaxLock()',
         );
     });
@@ -247,6 +176,6 @@ describe('St1inch', async () => {
     it('should withdraw before unlock time', async () => {
         await this.st1inch.deposit(ether('50'), time.duration.days('1'));
 
-        await expectRevert(this.st1inch.withdraw(), 'UnlockTimeWasNotCome()');
+        await expect(this.st1inch.withdraw()).to.be.rejectedWith('UnlockTimeWasNotCome()');
     });
 });
