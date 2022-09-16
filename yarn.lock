@@ -2,9 +2,9 @@
 # yarn lockfile v1
 
 
-"@1inch/delegating@https://github.com/1inch/delegating#feature/rewardable_delegation":
+"@1inch/delegating@https://github.com/1inch/delegating":
   version "1.0.0"
-  resolved "https://github.com/1inch/delegating#498af9d6c24371e17ded84cb708740b44b9e294a"
+  resolved "https://github.com/1inch/delegating#0b7359290a4f3ad5aea42d3de469881390f48543"
   dependencies:
     "@1inch/solidity-utils" "2.0.25"
     "@openzeppelin/contracts" "4.5.0"
