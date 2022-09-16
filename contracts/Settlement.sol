@@ -27,14 +27,7 @@ contract Settlement is InteractionNotificationReceiver, WhitelistChecker {
         uint256 takingAmount,
         uint256 thresholdAmount
     ) external onlyWhitelisted(msg.sender) {
-        orderMixin.fillOrder(
-            order,
-            signature,
-            interaction,
-            makingAmount,
-            takingAmount,
-            thresholdAmount
-        );
+        orderMixin.fillOrder(order, signature, interaction, makingAmount, takingAmount, thresholdAmount);
     }
 
     function matchOrdersEOA(
@@ -46,14 +39,7 @@ contract Settlement is InteractionNotificationReceiver, WhitelistChecker {
         uint256 takingAmount,
         uint256 thresholdAmount
     ) external onlyWhitelistedEOA {
-        orderMixin.fillOrder(
-            order,
-            signature,
-            interaction,
-            makingAmount,
-            takingAmount,
-            thresholdAmount
-        );
+        orderMixin.fillOrder(order, signature, interaction, makingAmount, takingAmount, thresholdAmount);
     }
 
     function fillOrderInteraction(
@@ -68,8 +54,7 @@ contract Settlement is InteractionNotificationReceiver, WhitelistChecker {
                 (address[], bytes[])
             );
 
-            if (targets.length != calldatas.length)
-                revert IncorrectCalldataParams();
+            if (targets.length != calldatas.length) revert IncorrectCalldataParams();
             for (uint256 i = 0; i < targets.length; i++) {
                 // solhint-disable-next-line avoid-low-level-calls
                 (bool success, ) = targets[i].call(calldatas[i]);
@@ -83,10 +68,7 @@ contract Settlement is InteractionNotificationReceiver, WhitelistChecker {
                 uint256 makingOrderAmount,
                 uint256 takingOrderAmount,
                 uint256 thresholdAmount
-            ) = abi.decode(
-                    interactiveData[1:],
-                    (OrderLib.Order, bytes, bytes, uint256, uint256, uint256)
-                );
+            ) = abi.decode(interactiveData[1:], (OrderLib.Order, bytes, bytes, uint256, uint256, uint256));
 
             IOrderMixin(msg.sender).fillOrder(
                 order,

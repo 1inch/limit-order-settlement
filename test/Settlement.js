@@ -15,10 +15,7 @@ const Status = Object.freeze({
 });
 
 describe('Settlement', async () => {
-    const [addr0, addr1] = [
-        addr0Wallet.getAddressString(),
-        addr1Wallet.getAddressString(),
-    ];
+    const [addr0, addr1] = [addr0Wallet.getAddressString(), addr1Wallet.getAddressString()];
 
     before(async () => {
         this.chainId = await web3.eth.getChainId();
@@ -44,10 +41,7 @@ describe('Settlement', async () => {
         await this.weth.approve(this.swap.address, ether('1'));
         await this.weth.approve(this.swap.address, ether('1'), { from: addr1 });
 
-        this.matcher = await Settlement.new(
-            this.whitelistRegistrySimple.address,
-            this.swap.address,
-        );
+        this.matcher = await Settlement.new(this.whitelistRegistrySimple.address, this.swap.address);
     });
 
     it('opposite direction recursive swap', async () => {
@@ -60,9 +54,7 @@ describe('Settlement', async () => {
                 from: addr0,
             },
             {
-                predicate: this.swap.contract.methods
-                    .timestampBelow(0xff00000000)
-                    .encodeABI(),
+                predicate: this.swap.contract.methods.timestampBelow(0xff00000000).encodeABI(),
             },
         );
 
@@ -75,24 +67,12 @@ describe('Settlement', async () => {
                 from: addr1,
             },
             {
-                predicate: this.swap.contract.methods
-                    .timestampBelow(0xff00000000)
-                    .encodeABI(),
+                predicate: this.swap.contract.methods.timestampBelow(0xff00000000).encodeABI(),
             },
         );
 
-        const signature = signOrder(
-            order,
-            this.chainId,
-            this.swap.address,
-            addr0Wallet.getPrivateKey(),
-        );
-        const signatureBackOrder = signOrder(
-            backOrder,
-            this.chainId,
-            this.swap.address,
-            addr1Wallet.getPrivateKey(),
-        );
+        const signature = signOrder(order, this.chainId, this.swap.address, addr0Wallet.getPrivateKey());
+        const signatureBackOrder = signOrder(backOrder, this.chainId, this.swap.address, addr1Wallet.getPrivateKey());
 
         const matchingParams =
             this.matcher.address +
@@ -103,12 +83,8 @@ describe('Settlement', async () => {
                     [
                         [this.weth.address, this.dai.address],
                         [
-                            this.weth.contract.methods
-                                .approve(this.swap.address, ether('0.1'))
-                                .encodeABI(),
-                            this.dai.contract.methods
-                                .approve(this.swap.address, ether('100'))
-                                .encodeABI(),
+                            this.weth.contract.methods.approve(this.swap.address, ether('0.1')).encodeABI(),
+                            this.dai.contract.methods.approve(this.swap.address, ether('100')).encodeABI(),
                         ],
                     ],
                 )
@@ -118,14 +94,7 @@ describe('Settlement', async () => {
             this.matcher.address +
             '00' +
             this.swap.contract.methods
-                .fillOrder(
-                    backOrder,
-                    signatureBackOrder,
-                    matchingParams,
-                    ether('0.1'),
-                    0,
-                    ether('100'),
-                )
+                .fillOrder(backOrder, signatureBackOrder, matchingParams, ether('0.1'), 0, ether('100'))
                 .encodeABI()
                 .substring(10);
 
@@ -134,28 +103,12 @@ describe('Settlement', async () => {
         const addr0dai = await this.dai.balanceOf(addr0);
         const addr1dai = await this.dai.balanceOf(addr1);
 
-        await this.matcher.matchOrders(
-            this.swap.address,
-            order,
-            signature,
-            interaction,
-            ether('100'),
-            0,
-            ether('0.1'),
-        );
+        await this.matcher.matchOrders(this.swap.address, order, signature, interaction, ether('100'), 0, ether('0.1'));
 
-        expect(await this.weth.balanceOf(addr0)).to.be.bignumber.equal(
-            addr0weth.add(ether('0.1')),
-        );
-        expect(await this.weth.balanceOf(addr1)).to.be.bignumber.equal(
-            addr1weth.sub(ether('0.1')),
-        );
-        expect(await this.dai.balanceOf(addr0)).to.be.bignumber.equal(
-            addr0dai.sub(ether('100')),
-        );
-        expect(await this.dai.balanceOf(addr1)).to.be.bignumber.equal(
-            addr1dai.add(ether('100')),
-        );
+        expect(await this.weth.balanceOf(addr0)).to.be.bignumber.equal(addr0weth.add(ether('0.1')));
+        expect(await this.weth.balanceOf(addr1)).to.be.bignumber.equal(addr1weth.sub(ether('0.1')));
+        expect(await this.dai.balanceOf(addr0)).to.be.bignumber.equal(addr0dai.sub(ether('100')));
+        expect(await this.dai.balanceOf(addr1)).to.be.bignumber.equal(addr1dai.add(ether('100')));
     });
 
     it('unidirectional recursive swap', async () => {
@@ -168,9 +121,7 @@ describe('Settlement', async () => {
                 from: addr1,
             },
             {
-                predicate: this.swap.contract.methods
-                    .timestampBelow(0xff00000000)
-                    .encodeABI(),
+                predicate: this.swap.contract.methods.timestampBelow(0xff00000000).encodeABI(),
             },
         );
 
@@ -183,24 +134,12 @@ describe('Settlement', async () => {
                 from: addr1,
             },
             {
-                predicate: this.swap.contract.methods
-                    .timestampBelow(0xff00000000)
-                    .encodeABI(),
+                predicate: this.swap.contract.methods.timestampBelow(0xff00000000).encodeABI(),
             },
         );
 
-        const signature = signOrder(
-            order,
-            this.chainId,
-            this.swap.address,
-            addr1Wallet.getPrivateKey(),
-        );
-        const signatureBackOrder = signOrder(
-            backOrder,
-            this.chainId,
-            this.swap.address,
-            addr1Wallet.getPrivateKey(),
-        );
+        const signature = signOrder(order, this.chainId, this.swap.address, addr1Wallet.getPrivateKey());
+        const signatureBackOrder = signOrder(backOrder, this.chainId, this.swap.address, addr1Wallet.getPrivateKey());
 
         const matchingParams =
             this.matcher.address +
@@ -209,25 +148,13 @@ describe('Settlement', async () => {
                 .encodeParameters(
                     ['address[]', 'bytes[]'],
                     [
-                        [
-                            this.weth.address,
-                            this.weth.address,
-                            this.dai.address,
-                        ],
+                        [this.weth.address, this.weth.address, this.dai.address],
                         [
                             this.weth.contract.methods
-                                .transferFrom(
-                                    addr0,
-                                    this.matcher.address,
-                                    ether('0.025'),
-                                )
+                                .transferFrom(addr0, this.matcher.address, ether('0.025'))
                                 .encodeABI(),
-                            this.dai.contract.methods
-                                .approve(this.swap.address, ether('0.025'))
-                                .encodeABI(),
-                            this.weth.contract.methods
-                                .transfer(addr0, ether('25'))
-                                .encodeABI(),
+                            this.dai.contract.methods.approve(this.swap.address, ether('0.025')).encodeABI(),
+                            this.weth.contract.methods.transfer(addr0, ether('25')).encodeABI(),
                         ],
                     ],
                 )
@@ -237,14 +164,7 @@ describe('Settlement', async () => {
             this.matcher.address +
             '00' +
             this.swap.contract.methods
-                .fillOrder(
-                    backOrder,
-                    signatureBackOrder,
-                    matchingParams,
-                    ether('15'),
-                    0,
-                    ether('0.015'),
-                )
+                .fillOrder(backOrder, signatureBackOrder, matchingParams, ether('15'), 0, ether('0.015'))
                 .encodeABI()
                 .substring(10);
 
@@ -254,28 +174,12 @@ describe('Settlement', async () => {
         const addr1dai = await this.dai.balanceOf(addr1);
 
         await this.weth.approve(this.matcher.address, ether('0.025'));
-        await this.matcher.matchOrders(
-            this.swap.address,
-            order,
-            signature,
-            interaction,
-            ether('10'),
-            0,
-            ether('0.01'),
-        );
+        await this.matcher.matchOrders(this.swap.address, order, signature, interaction, ether('10'), 0, ether('0.01'));
 
-        expect(await this.weth.balanceOf(addr0)).to.be.bignumber.equal(
-            addr0weth.sub(ether('0.025')),
-        );
-        expect(await this.weth.balanceOf(addr1)).to.be.bignumber.equal(
-            addr1weth.add(ether('0.025')),
-        );
-        expect(await this.dai.balanceOf(addr0)).to.be.bignumber.equal(
-            addr0dai.add(ether('25')),
-        );
-        expect(await this.dai.balanceOf(addr1)).to.be.bignumber.equal(
-            addr1dai.sub(ether('25')),
-        );
+        expect(await this.weth.balanceOf(addr0)).to.be.bignumber.equal(addr0weth.sub(ether('0.025')));
+        expect(await this.weth.balanceOf(addr1)).to.be.bignumber.equal(addr1weth.add(ether('0.025')));
+        expect(await this.dai.balanceOf(addr0)).to.be.bignumber.equal(addr0dai.add(ether('25')));
+        expect(await this.dai.balanceOf(addr1)).to.be.bignumber.equal(addr1dai.sub(ether('25')));
     });
 
     it('triple recursive swap', async () => {
@@ -288,9 +192,7 @@ describe('Settlement', async () => {
                 from: addr1,
             },
             {
-                predicate: this.swap.contract.methods
-                    .timestampBelow(0xff00000000)
-                    .encodeABI(),
+                predicate: this.swap.contract.methods.timestampBelow(0xff00000000).encodeABI(),
             },
         );
 
@@ -303,9 +205,7 @@ describe('Settlement', async () => {
                 from: addr1,
             },
             {
-                predicate: this.swap.contract.methods
-                    .timestampBelow(0xff00000000)
-                    .encodeABI(),
+                predicate: this.swap.contract.methods.timestampBelow(0xff00000000).encodeABI(),
             },
         );
 
@@ -318,30 +218,13 @@ describe('Settlement', async () => {
                 from: addr0,
             },
             {
-                predicate: this.swap.contract.methods
-                    .timestampBelow(0xff00000000)
-                    .encodeABI(),
+                predicate: this.swap.contract.methods.timestampBelow(0xff00000000).encodeABI(),
             },
         );
 
-        const signature1 = signOrder(
-            order1,
-            this.chainId,
-            this.swap.address,
-            addr1Wallet.getPrivateKey(),
-        );
-        const signature2 = signOrder(
-            order2,
-            this.chainId,
-            this.swap.address,
-            addr1Wallet.getPrivateKey(),
-        );
-        const signatureBackOrder = signOrder(
-            backOrder,
-            this.chainId,
-            this.swap.address,
-            addr0Wallet.getPrivateKey(),
-        );
+        const signature1 = signOrder(order1, this.chainId, this.swap.address, addr1Wallet.getPrivateKey());
+        const signature2 = signOrder(order2, this.chainId, this.swap.address, addr1Wallet.getPrivateKey());
+        const signatureBackOrder = signOrder(backOrder, this.chainId, this.swap.address, addr0Wallet.getPrivateKey());
 
         const matchingParams =
             this.matcher.address +
@@ -352,12 +235,8 @@ describe('Settlement', async () => {
                     [
                         [this.weth.address, this.dai.address],
                         [
-                            this.weth.contract.methods
-                                .approve(this.swap.address, ether('0.025'))
-                                .encodeABI(),
-                            this.dai.contract.methods
-                                .approve(this.swap.address, ether('25'))
-                                .encodeABI(),
+                            this.weth.contract.methods.approve(this.swap.address, ether('0.025')).encodeABI(),
+                            this.dai.contract.methods.approve(this.swap.address, ether('25')).encodeABI(),
                         ],
                     ],
                 )
@@ -367,14 +246,7 @@ describe('Settlement', async () => {
             this.matcher.address +
             '00' +
             this.swap.contract.methods
-                .fillOrder(
-                    backOrder,
-                    signatureBackOrder,
-                    matchingParams,
-                    ether('0.025'),
-                    0,
-                    ether('25'),
-                )
+                .fillOrder(backOrder, signatureBackOrder, matchingParams, ether('0.025'), 0, ether('25'))
                 .encodeABI()
                 .substring(10);
 
@@ -382,14 +254,7 @@ describe('Settlement', async () => {
             this.matcher.address +
             '00' +
             this.swap.contract.methods
-                .fillOrder(
-                    order2,
-                    signature2,
-                    internalInteraction,
-                    ether('15'),
-                    0,
-                    ether('0.015'),
-                )
+                .fillOrder(order2, signature2, internalInteraction, ether('15'), 0, ether('0.015'))
                 .encodeABI()
                 .substring(10);
 
@@ -408,17 +273,9 @@ describe('Settlement', async () => {
             ether('0.01'),
         );
 
-        expect(await this.weth.balanceOf(addr0)).to.be.bignumber.equal(
-            addr0weth.sub(ether('0.025')),
-        );
-        expect(await this.weth.balanceOf(addr1)).to.be.bignumber.equal(
-            addr1weth.add(ether('0.025')),
-        );
-        expect(await this.dai.balanceOf(addr0)).to.be.bignumber.equal(
-            addr0dai.add(ether('25')),
-        );
-        expect(await this.dai.balanceOf(addr1)).to.be.bignumber.equal(
-            addr1dai.sub(ether('25')),
-        );
+        expect(await this.weth.balanceOf(addr0)).to.be.bignumber.equal(addr0weth.sub(ether('0.025')));
+        expect(await this.weth.balanceOf(addr1)).to.be.bignumber.equal(addr1weth.add(ether('0.025')));
+        expect(await this.dai.balanceOf(addr0)).to.be.bignumber.equal(addr0dai.add(ether('25')));
+        expect(await this.dai.balanceOf(addr1)).to.be.bignumber.equal(addr1dai.sub(ether('25')));
     });
 });

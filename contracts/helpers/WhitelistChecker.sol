@@ -38,8 +38,7 @@ contract WhitelistChecker {
 
     modifier onlyLimitOrderProtocol() {
         if (msg.sender != _limitOrderProtocol) revert AccessDenied(); // solhint-disable-next-line avoid-tx-origin
-        if (_checked == _NOT_CHECKED && !_whitelist.isWhitelisted(tx.origin))
-            revert AccessDenied();
+        if (_checked == _NOT_CHECKED && !_whitelist.isWhitelisted(tx.origin)) revert AccessDenied();
         _;
     }
 

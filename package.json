@@ -21,7 +21,7 @@
     "lint:sol": "solhint --max-warnings 0 \"contracts/**/*.sol\"",
     "lint:sol:fix": "solhint --max-warnings 0 \"contracts/**/*.sol\" --fix",
     "lint": "yarn lint:js && yarn lint:sol",
-    "lint:fix": "yarn lint:js:fix && yarn lint:sol:fix && yarn"
+    "lint:fix": "yarn lint:js:fix && yarn lint:sol:fix"
   },
   "dependencies": {
     "@1inch/delegating": "https://github.com/1inch/delegating#feature/rewardable_delegation",
@@ -35,7 +35,6 @@
     "@nomiclabs/hardhat-etherscan": "3.1.0",
     "@nomiclabs/hardhat-truffle5": "2.0.6",
     "@nomiclabs/hardhat-web3": "2.0.0",
-    "@openzeppelin/test-helpers": "^0.5.16",
     "chai": "4.3.6",
     "dotenv": "16.0.1",
     "eslint": "8.22.0",
