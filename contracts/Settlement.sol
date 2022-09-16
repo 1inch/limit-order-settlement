@@ -21,8 +21,9 @@ contract Settlement is InteractionNotificationReceiver, WhitelistChecker {
     error IncorrectCalldataParams();
     error FailedExternalCall();
 
-    // solhint-disable-next-line no-empty-blocks
-    constructor(IWhitelistRegistry whitelist, address limitOrderProtocol) WhitelistChecker(whitelist, limitOrderProtocol) {}
+    constructor(IWhitelistRegistry whitelist, address limitOrderProtocol)
+        WhitelistChecker(whitelist, limitOrderProtocol)
+    {} // solhint-disable-line no-empty-blocks
 
     function matchOrders(
         IOrderMixin orderMixin,
@@ -32,10 +33,7 @@ contract Settlement is InteractionNotificationReceiver, WhitelistChecker {
         uint256 makingAmount,
         uint256 takingAmount,
         uint256 thresholdAmount
-    )
-        external
-        onlyWhitelisted(msg.sender)
-    {
+    ) external onlyWhitelisted(msg.sender) {
         orderMixin.fillOrder(
             order,
             signature,
@@ -54,10 +52,7 @@ contract Settlement is InteractionNotificationReceiver, WhitelistChecker {
         uint256 makingAmount,
         uint256 takingAmount,
         uint256 thresholdAmount
-    )
-        external
-        onlyWhitelistedEOA()
-    {
+    ) external onlyWhitelistedEOA {
         orderMixin.fillOrder(
             order,
             signature,
@@ -69,27 +64,23 @@ contract Settlement is InteractionNotificationReceiver, WhitelistChecker {
     }
 
     function fillOrderInteraction(
-        address /* taker */,
-        uint256 /* makingAmount */,
+        address, /* taker */
+        uint256, /* makingAmount */
         uint256 takingAmount,
         bytes calldata interactiveData
-    )
-        external
-        onlyLimitOrderProtocol()
-        returns(uint256)
-    {
-        if(interactiveData[0] == _FINALIZE_INTERACTION) {
-            (
-                address[] memory targets,
-                bytes[] memory calldatas
-            ) = abi.decode(interactiveData[1:], (address[], bytes[]));
+    ) external onlyLimitOrderProtocol returns (uint256) {
+        if (interactiveData[0] == _FINALIZE_INTERACTION) {
+            (address[] memory targets, bytes[] memory calldatas) = abi.decode(
+                interactiveData[1:],
+                (address[], bytes[])
+            );
 
             uint256 length = targets.length;
-            if(length != calldatas.length) revert IncorrectCalldataParams();
-            for(uint256 i = 0; i < length; i++) {
+            if (length != calldatas.length) revert IncorrectCalldataParams();
+            for (uint256 i = 0; i < length; i++) {
                 // solhint-disable-next-line avoid-low-level-calls
                 (bool success, ) = targets[i].call(calldatas[i]);
-                if(!success) revert FailedExternalCall();
+                if (!success) revert FailedExternalCall();
             }
         } else {
             (
@@ -111,14 +102,14 @@ contract Settlement is InteractionNotificationReceiver, WhitelistChecker {
             );
         }
         uint256 salt = uint256(bytes32(interactiveData[interactiveData.length - 32:]));
-        return takingAmount * _getFeeRate(salt) / _BASE_POINTS;
+        return (takingAmount * _getFeeRate(salt)) / _BASE_POINTS;
     }
 
-    function _getFeeRate(uint256 salt) internal view returns(uint256) {
+    function _getFeeRate(uint256 salt) internal view returns (uint256) {
         uint32 orderTime = uint32((salt & (0xFFFFFFFF << 224)) >> 224); // orderTimeMask 216-255
         // solhint-disable-next-line not-rely-on-time
         uint32 currentTimestamp = uint32(block.timestamp);
-        if(orderTime > currentTimestamp) revert IncorrectOrderStartTime();
+        if (orderTime > currentTimestamp) revert IncorrectOrderStartTime();
 
         uint32 duration = uint32((salt & (0xFFFFFFFF << 192)) >> 192); // durationMask 192-215
         if (duration == 0) {
@@ -131,8 +122,9 @@ contract Settlement is InteractionNotificationReceiver, WhitelistChecker {
             initialRate = _DEFAULT_INITIAL_RATE_BUMP;
         }
 
-        return currentTimestamp < orderTime ?
-            _BASE_POINTS + initialRate * (orderTime - currentTimestamp) / duration :
-            _BASE_POINTS;
+        return
+            currentTimestamp < orderTime
+                ? _BASE_POINTS + (initialRate * (orderTime - currentTimestamp)) / duration
+                : _BASE_POINTS;
     }
 }

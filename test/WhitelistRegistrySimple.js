@@ -1,14 +1,8 @@
-const { expect, ether, toBN } = require('@1inch/solidity-utils');
+const { expect, ether } = require('@1inch/solidity-utils');
 const { artifacts } = require('hardhat');
 
 const WhitelistRegistrySimple = artifacts.require('WhitelistRegistrySimple');
 const TokenMock = artifacts.require('TokenMock');
-
-const Status = Object.freeze({
-    ProUnverified: toBN('0'),
-    ProVerified: toBN('1'),
-    ProPending: toBN('2'),
-});
 
 describe('WhitelistRegistrySimple', async () => {
     let addr1, addr2, addr3;
@@ -24,53 +18,63 @@ describe('WhitelistRegistrySimple', async () => {
     describe('batchSetStatus', async () => {
         it('should set statuses to several addresses', async () => {
             for (const addr of [addr1, addr2, addr3]) {
-                expect(await this.whitelistRegistrySimple.status(addr)).to.be.bignumber.eq(Status.ProUnverified);
+                expect(await this.whitelistRegistrySimple.isWhitelisted(addr)).to.be.eq(false);
             }
-            await this.whitelistRegistrySimple.batchSetStatus([addr1, addr2], [Status.ProVerified, Status.ProPending]);
-            expect(await this.whitelistRegistrySimple.status(addr1)).to.be.bignumber.eq(Status.ProVerified);
-            expect(await this.whitelistRegistrySimple.status(addr2)).to.be.bignumber.eq(Status.ProPending);
-            expect(await this.whitelistRegistrySimple.status(addr3)).to.be.bignumber.eq(Status.ProUnverified);
+            await this.whitelistRegistrySimple.batchSetStatus([addr1, addr2], [true, true]);
+            expect(await this.whitelistRegistrySimple.isWhitelisted(addr1)).to.be.eq(true);
+            expect(await this.whitelistRegistrySimple.isWhitelisted(addr2)).to.be.eq(true);
+            expect(await this.whitelistRegistrySimple.isWhitelisted(addr3)).to.be.eq(false);
         });
 
-        it('should not change addr\'s status to the same status', async () => {
-            await expect(this.whitelistRegistrySimple.batchSetStatus([addr1, addr2], [Status.ProUnverified, Status.ProPending]))
-                .to.eventually.be.rejectedWith('SameStatus()');
-            await expect(this.whitelistRegistrySimple.batchSetStatus([addr1, addr2], [Status.ProVerified, Status.ProUnverified]))
-                .to.eventually.be.rejectedWith('SameStatus()');
+        it("should not change addr's status to the same status", async () => {
+            await expect(
+                this.whitelistRegistrySimple.batchSetStatus([addr1, addr2], [false, false]),
+            ).to.eventually.be.rejectedWith('SameStatus()');
+            await expect(
+                this.whitelistRegistrySimple.batchSetStatus([addr1, addr2], [true, false]),
+            ).to.eventually.be.rejectedWith('SameStatus()');
         });
 
-        it('should not work with different param\'s size', async () => {
-            await expect(this.whitelistRegistrySimple.batchSetStatus([addr1, addr2, addr3], [Status.ProVerified, Status.ProVerified]))
-                .to.eventually.be.rejectedWith('ArraysLengthsDoNotMatch()');
-            await expect(this.whitelistRegistrySimple.batchSetStatus([addr1, addr2], [Status.ProVerified, Status.ProVerified, Status.ProVerified]))
-                .to.eventually.be.rejectedWith('ArraysLengthsDoNotMatch()');
+        it("should not work with different param's size", async () => {
+            await expect(
+                this.whitelistRegistrySimple.batchSetStatus([addr1, addr2, addr3], [true, true]),
+            ).to.eventually.be.rejectedWith('ArraysLengthsDoNotMatch()');
+            await expect(
+                this.whitelistRegistrySimple.batchSetStatus([addr1, addr2], [true, true, true]),
+            ).to.eventually.be.rejectedWith('ArraysLengthsDoNotMatch()');
         });
 
         it('should not work by non-owner', async () => {
-            await expect(this.whitelistRegistrySimple.batchSetStatus([addr1, addr2], [Status.ProVerified, Status.ProPending], { from: addr2 }))
-                .to.eventually.be.rejectedWith('Ownable: caller is not the owner');
+            await expect(
+                this.whitelistRegistrySimple.batchSetStatus([addr1, addr2], [true, false], { from: addr2 }),
+            ).to.eventually.be.rejectedWith('Ownable: caller is not the owner');
         });
     });
 
     describe('setStatus', async () => {
         it('should set status', async () => {
-            expect(await this.whitelistRegistrySimple.status(addr1)).to.be.bignumber.eq(Status.ProUnverified);
-            await this.whitelistRegistrySimple.setStatus(addr1, Status.ProVerified);
-            expect(await this.whitelistRegistrySimple.status(addr1)).to.be.bignumber.eq(Status.ProVerified);
+            expect(await this.whitelistRegistrySimple.isWhitelisted(addr1)).to.be.eq(false);
+            await this.whitelistRegistrySimple.setStatus(addr1, true);
+            expect(await this.whitelistRegistrySimple.isWhitelisted(addr1)).to.be.eq(true);
         });
 
-        it('should not change addr\'s status to the same status', async () => {
-            await expect(this.whitelistRegistrySimple.setStatus(addr1, Status.ProUnverified))
-                .to.eventually.be.rejectedWith('SameStatus()');
+        it("should not change addr's status to the same status", async () => {
+            await expect(this.whitelistRegistrySimple.setStatus(addr1, false)).to.eventually.be.rejectedWith(
+                'SameStatus()',
+            );
 
-            await this.whitelistRegistrySimple.setStatus(addr1, Status.ProVerified);
-            await expect(this.whitelistRegistrySimple.setStatus(addr1, Status.ProVerified))
-                .to.eventually.be.rejectedWith('SameStatus()');
+            await this.whitelistRegistrySimple.setStatus(addr1, true);
+            await expect(this.whitelistRegistrySimple.setStatus(addr1, true)).to.eventually.be.rejectedWith(
+                'SameStatus()',
+            );
         });
 
         it('should not work by non-owner', async () => {
-            await expect(this.whitelistRegistrySimple.setStatus(addr1, Status.ProVerified, { from: addr2 }))
-                .to.eventually.be.rejectedWith('Ownable: caller is not the owner');
+            await expect(
+                this.whitelistRegistrySimple.setStatus(addr1, true, {
+                    from: addr2,
+                }),
+            ).to.eventually.be.rejectedWith('Ownable: caller is not the owner');
         });
     });
 
@@ -92,8 +96,9 @@ describe('WhitelistRegistrySimple', async () => {
         });
 
         it('should not work by non-owner', async () => {
-            await expect(this.whitelistRegistrySimple.rescueFunds(this.token.address, ether('1'), { from: addr2 }))
-                .to.eventually.be.rejectedWith('Ownable: caller is not the owner');
+            await expect(
+                this.whitelistRegistrySimple.rescueFunds(this.token.address, ether('1'), { from: addr2 }),
+            ).to.eventually.be.rejectedWith('Ownable: caller is not the owner');
         });
     });
 });

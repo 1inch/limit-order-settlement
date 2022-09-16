@@ -1,8 +1,12 @@
 const { toBN, ether } = require('@1inch/solidity-utils');
 const Wallet = require('ethereumjs-wallet').default;
 
-const addr0Wallet = Wallet.fromPrivateKey(Buffer.from('ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80', 'hex'));
-const addr1Wallet = Wallet.fromPrivateKey(Buffer.from('59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d', 'hex'));
+const addr0Wallet = Wallet.fromPrivateKey(
+    Buffer.from('ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80', 'hex'),
+);
+const addr1Wallet = Wallet.fromPrivateKey(
+    Buffer.from('59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d', 'hex'),
+);
 
 const price = (val) => {
     return ether(val).toString();
@@ -27,10 +31,13 @@ const cutLastArg = (data, padding = 0) => {
 
 const joinStaticCalls = (dataArray) => {
     const trimmed = dataArray.map(trim0x);
-    const cumulativeSum = (sum => value => { sum += value; return sum; })(0);
+    const cumulativeSum = ((sum) => (value) => {
+        sum += value;
+        return sum;
+    })(0);
     return {
         offsets: trimmed
-            .map(d => d.length / 2)
+            .map((d) => d.length / 2)
             .map(cumulativeSum)
             .reduce((acc, val, i) => acc.or(toBN(val).shln(32 * i)), toBN('0')),
         data: '0x' + trimmed.join(''),

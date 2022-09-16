@@ -14,7 +14,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
 
     console.log('Settlement deployed to:', Settlement.address);
 
-    if (await getChainId() !== '31337') {
+    if ((await getChainId()) !== '31337') {
         await hre.run('verify:verify', {
             address: Settlement.address,
         });

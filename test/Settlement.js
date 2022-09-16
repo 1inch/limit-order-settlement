@@ -37,7 +37,9 @@ describe('Settlement', async () => {
         await this.weth.deposit({ from: addr1, value: ether('1') });
 
         await this.dai.approve(this.swap.address, ether('100'));
-        await this.dai.approve(this.swap.address, ether('100'), { from: addr1 });
+        await this.dai.approve(this.swap.address, ether('100'), {
+            from: addr1,
+        });
         await this.weth.approve(this.swap.address, ether('1'));
         await this.weth.approve(this.swap.address, ether('1'), { from: addr1 });
 
@@ -75,35 +77,44 @@ describe('Settlement', async () => {
         const signature = signOrder(order, this.chainId, this.swap.address, addr0Wallet.getPrivateKey());
         const signatureBackOrder = signOrder(backOrder, this.chainId, this.swap.address, addr1Wallet.getPrivateKey());
 
-        const matchingParams = this.matcher.address + '01' + web3.eth.abi.encodeParameters(
-            ['address[]', 'bytes[]'],
-            [
-                [
-                    this.weth.address,
-                    this.dai.address,
-                ],
-                [
-                    this.weth.contract.methods.approve(this.swap.address, ether('0.11')).encodeABI(),
-                    this.dai.contract.methods.approve(this.swap.address, ether('100.00')).encodeABI(),
-                ],
-            ],
-        ).substring(2);
+        const matchingParams =
+            this.matcher.address +
+            '01' +
+            web3.eth.abi
+                .encodeParameters(
+                    ['address[]', 'bytes[]'],
+                    [
+                        [this.weth.address, this.dai.address],
+                        [
+                            this.weth.contract.methods.approve(this.swap.address, ether('0.11')).encodeABI(),
+                            this.dai.contract.methods.approve(this.swap.address, ether('100.00')).encodeABI(),
+                        ],
+                    ],
+                )
+                .substring(2);
 
-        const interaction = this.matcher.address + '00' + this.swap.contract.methods.fillOrder(
-            backOrder,
-            signatureBackOrder,
-            matchingParams,
-            ether('0.11'),
-            0,
-            ether('100'),
-        ).encodeABI().substring(10);
+        const interaction =
+            this.matcher.address +
+            '00' +
+            this.swap.contract.methods
+                .fillOrder(backOrder, signatureBackOrder, matchingParams, ether('0.11'), 0, ether('100'))
+                .encodeABI()
+                .substring(10);
 
         const addr0weth = await this.weth.balanceOf(addr0);
         const addr1weth = await this.weth.balanceOf(addr1);
         const addr0dai = await this.dai.balanceOf(addr0);
         const addr1dai = await this.dai.balanceOf(addr1);
 
-        await this.matcher.matchOrders(this.swap.address, order, signature, interaction, ether('100'), 0, ether('0.11'));
+        await this.matcher.matchOrders(
+            this.swap.address,
+            order,
+            signature,
+            interaction,
+            ether('100'),
+            0,
+            ether('0.11'),
+        );
 
         assertRoughlyEqualValues(await this.weth.balanceOf(addr0), addr0weth.add(ether('0.11')), 1e-4);
         // TODO: 6e-5 WETH lost into LimitOrderProtocol contract
@@ -144,30 +155,32 @@ describe('Settlement', async () => {
         const signature = signOrder(order, this.chainId, this.swap.address, addr1Wallet.getPrivateKey());
         const signatureBackOrder = signOrder(backOrder, this.chainId, this.swap.address, addr1Wallet.getPrivateKey());
 
-        const matchingParams = this.matcher.address + '01' + web3.eth.abi.encodeParameters(
-            ['address[]', 'bytes[]'],
-            [
-                [
-                    this.weth.address,
-                    this.weth.address,
-                    this.dai.address,
-                ],
-                [
-                    this.weth.contract.methods.transferFrom(addr0, this.matcher.address, ether('0.0275')).encodeABI(),
-                    this.weth.contract.methods.approve(this.swap.address, ether('0.0275')).encodeABI(),
-                    this.dai.contract.methods.transfer(addr0, ether('25')).encodeABI(),
-                ],
-            ],
-        ).substring(2);
+        const matchingParams =
+            this.matcher.address +
+            '01' +
+            web3.eth.abi
+                .encodeParameters(
+                    ['address[]', 'bytes[]'],
+                    [
+                        [this.weth.address, this.weth.address, this.dai.address],
+                        [
+                            this.weth.contract.methods
+                                .transferFrom(addr0, this.matcher.address, ether('0.0275'))
+                                .encodeABI(),
+                            this.weth.contract.methods.approve(this.swap.address, ether('0.0275')).encodeABI(),
+                            this.dai.contract.methods.transfer(addr0, ether('25')).encodeABI(),
+                        ],
+                    ],
+                )
+                .substring(2);
 
-        const interaction = this.matcher.address + '00' + this.swap.contract.methods.fillOrder(
-            backOrder,
-            signatureBackOrder,
-            matchingParams,
-            ether('15'),
-            0,
-            ether('0.015'),
-        ).encodeABI().substring(10);
+        const interaction =
+            this.matcher.address +
+            '00' +
+            this.swap.contract.methods
+                .fillOrder(backOrder, signatureBackOrder, matchingParams, ether('15'), 0, ether('0.015'))
+                .encodeABI()
+                .substring(10);
 
         const addr0weth = await this.weth.balanceOf(addr0);
         const addr1weth = await this.weth.balanceOf(addr1);
@@ -230,44 +243,52 @@ describe('Settlement', async () => {
         const signature2 = signOrder(order2, this.chainId, this.swap.address, addr1Wallet.getPrivateKey());
         const signatureBackOrder = signOrder(backOrder, this.chainId, this.swap.address, addr0Wallet.getPrivateKey());
 
-        const matchingParams = this.matcher.address + '01' + web3.eth.abi.encodeParameters(
-            ['address[]', 'bytes[]'],
-            [
-                [
-                    this.weth.address,
-                    this.dai.address,
-                ],
-                [
-                    this.weth.contract.methods.approve(this.swap.address, ether('0.0275')).encodeABI(),
-                    this.dai.contract.methods.approve(this.swap.address, ether('25')).encodeABI(),
-                ],
-            ],
-        ).substring(2);
+        const matchingParams =
+            this.matcher.address +
+            '01' +
+            web3.eth.abi
+                .encodeParameters(
+                    ['address[]', 'bytes[]'],
+                    [
+                        [this.weth.address, this.dai.address],
+                        [
+                            this.weth.contract.methods.approve(this.swap.address, ether('0.0275')).encodeABI(),
+                            this.dai.contract.methods.approve(this.swap.address, ether('25')).encodeABI(),
+                        ],
+                    ],
+                )
+                .substring(2);
 
-        const internalInteraction = this.matcher.address + '00' + this.swap.contract.methods.fillOrder(
-            backOrder,
-            signatureBackOrder,
-            matchingParams,
-            ether('0.0275'),
-            0,
-            ether('25'),
-        ).encodeABI().substring(10);
+        const internalInteraction =
+            this.matcher.address +
+            '00' +
+            this.swap.contract.methods
+                .fillOrder(backOrder, signatureBackOrder, matchingParams, ether('0.0275'), 0, ether('25'))
+                .encodeABI()
+                .substring(10);
 
-        const externalInteraction = this.matcher.address + '00' + this.swap.contract.methods.fillOrder(
-            order2,
-            signature2,
-            internalInteraction,
-            ether('15'),
-            0,
-            ether('0.015'),
-        ).encodeABI().substring(10);
+        const externalInteraction =
+            this.matcher.address +
+            '00' +
+            this.swap.contract.methods
+                .fillOrder(order2, signature2, internalInteraction, ether('15'), 0, ether('0.015'))
+                .encodeABI()
+                .substring(10);
 
         const addr0weth = await this.weth.balanceOf(addr0);
         const addr1weth = await this.weth.balanceOf(addr1);
         const addr0dai = await this.dai.balanceOf(addr0);
         const addr1dai = await this.dai.balanceOf(addr1);
 
-        await this.matcher.matchOrders(this.swap.address, order1, signature1, externalInteraction, ether('10'), 0, ether('0.01'));
+        await this.matcher.matchOrders(
+            this.swap.address,
+            order1,
+            signature1,
+            externalInteraction,
+            ether('10'),
+            0,
+            ether('0.01'),
+        );
 
         expect(await this.weth.balanceOf(addr0)).to.be.bignumber.equal(addr0weth.sub(ether('0.0275')));
         assertRoughlyEqualValues(await this.weth.balanceOf(addr1), addr1weth.add(ether('0.0275')), 1e-4);
@@ -304,26 +325,35 @@ describe('Settlement', async () => {
                 // actualTakingAmount = actualTakingAmount * (
                 //    _BASE_POINTS + initialRate * (orderTime + duration - currentTimestamp) / duration
                 // ) / _BASE_POINTS
-                actualTakingAmount = actualTakingAmount.mul(
-                    toBN('10000').add(toBN(initialRate).mul(toBN(orderStartTime).add(toBN(duration)).sub(ts)).div(toBN(duration))),
-                ).div(toBN('10000'));
+                actualTakingAmount = actualTakingAmount
+                    .mul(
+                        toBN('10000').add(
+                            toBN(initialRate)
+                                .mul(toBN(orderStartTime).add(toBN(duration)).sub(ts))
+                                .div(toBN(duration)),
+                        ),
+                    )
+                    .div(toBN('10000'));
             }
 
-            const matchingParams = this.matcher.address + '01' + web3.eth.abi.encodeParameters(
-                ['address[]', 'bytes[]'],
-                [
-                    [
-                        this.weth.address,
-                        this.weth.address,
-                        this.dai.address,
-                    ],
-                    [
-                        this.weth.contract.methods.transferFrom(addr0, this.matcher.address, actualTakingAmount).encodeABI(),
-                        this.weth.contract.methods.approve(this.swap.address, actualTakingAmount).encodeABI(),
-                        this.dai.contract.methods.transfer(addr0, makingAmount).encodeABI(),
-                    ],
-                ],
-            ).substring(2);
+            const matchingParams =
+                this.matcher.address +
+                '01' +
+                web3.eth.abi
+                    .encodeParameters(
+                        ['address[]', 'bytes[]'],
+                        [
+                            [this.weth.address, this.weth.address, this.dai.address],
+                            [
+                                this.weth.contract.methods
+                                    .transferFrom(addr0, this.matcher.address, actualTakingAmount)
+                                    .encodeABI(),
+                                this.weth.contract.methods.approve(this.swap.address, actualTakingAmount).encodeABI(),
+                                this.dai.contract.methods.transfer(addr0, makingAmount).encodeABI(),
+                            ],
+                        ],
+                    )
+                    .substring(2);
 
             await this.weth.approve(this.matcher.address, actualTakingAmount);
             return {
@@ -337,23 +367,44 @@ describe('Settlement', async () => {
             };
         };
 
-        it('can\'t match order before orderTime', async () => {
+        it("can't match order before orderTime", async () => {
             const currentTimestamp = await time.latest();
-            const { order, signature, interaction, makingAmount, takingAmount } = await prerareSingleOrder(currentTimestamp.addn(60));
+            const { order, signature, interaction, makingAmount, takingAmount } = await prerareSingleOrder(
+                currentTimestamp.addn(60),
+            );
 
             await expectRevert(
-                this.matcher.matchOrders(this.swap.address, order, signature, interaction, makingAmount, 0, takingAmount),
+                this.matcher.matchOrders(
+                    this.swap.address,
+                    order,
+                    signature,
+                    interaction,
+                    makingAmount,
+                    0,
+                    takingAmount,
+                ),
                 'IncorrectOrderStartTime()',
             );
         });
 
         it('set initial rate', async () => {
             const currentTimestamp = await time.latest();
-            const { order, signature, interaction, makingAmount, takingAmount } = await prerareSingleOrder(currentTimestamp, '2000');
+            const { order, signature, interaction, makingAmount, takingAmount } = await prerareSingleOrder(
+                currentTimestamp,
+                '2000',
+            );
 
             const addr0weth = await this.weth.balanceOf(addr0);
             const addr1weth = await this.weth.balanceOf(addr1);
-            await this.matcher.matchOrders(this.swap.address, order, signature, interaction, makingAmount, 0, takingAmount);
+            await this.matcher.matchOrders(
+                this.swap.address,
+                order,
+                signature,
+                interaction,
+                makingAmount,
+                0,
+                takingAmount,
+            );
 
             expect(await this.weth.balanceOf(addr0)).to.be.bignumber.equal(addr0weth.sub(ether('0.12')));
             assertRoughlyEqualValues(await this.weth.balanceOf(addr1), addr1weth.add(ether('0.12')), 1e-4);
@@ -361,11 +412,23 @@ describe('Settlement', async () => {
 
         it('set duration', async () => {
             const currentTimestamp = await time.latest();
-            const { order, signature, interaction, makingAmount, takingAmount } = await prerareSingleOrder(currentTimestamp.subn(450), '1000', '900');
+            const { order, signature, interaction, makingAmount, takingAmount } = await prerareSingleOrder(
+                currentTimestamp.subn(450),
+                '1000',
+                '900',
+            );
 
             const addr0weth = await this.weth.balanceOf(addr0);
             const addr1weth = await this.weth.balanceOf(addr1);
-            await this.matcher.matchOrders(this.swap.address, order, signature, interaction, makingAmount, 0, takingAmount);
+            await this.matcher.matchOrders(
+                this.swap.address,
+                order,
+                signature,
+                interaction,
+                makingAmount,
+                0,
+                takingAmount,
+            );
 
             expect(await this.weth.balanceOf(addr0)).to.be.bignumber.equal(addr0weth.sub(ether('0.105')));
             assertRoughlyEqualValues(await this.weth.balanceOf(addr1), addr1weth.add(ether('0.105')), 1e-4);

@@ -1,7 +1,9 @@
 const { toBN, TypedDataVersion } = require('@1inch/solidity-utils');
 const { signTypedData, TypedDataUtils } = require('@metamask/eth-sig-util');
 const { fromRpcSig } = require('ethereumjs-util');
-const ERC20Permit = artifacts.require('@openzeppelin/contracts/token/ERC20/extensions/draft-ERC20Permit.sol:ERC20Permit');
+const ERC20Permit = artifacts.require(
+    '@openzeppelin/contracts/token/ERC20/extensions/draft-ERC20Permit.sol:ERC20Permit',
+);
 const { cutSelector, trim0x } = require('./utils.js');
 
 const EIP712Domain = [
@@ -20,12 +22,15 @@ const Permit = [
 ];
 
 const domainSeparator = (name, version, chainId, verifyingContract) => {
-    return '0x' + TypedDataUtils.hashStruct(
-        'EIP712Domain',
-        { name, version, chainId, verifyingContract },
-        { EIP712Domain },
-        TypedDataVersion,
-    ).toString('hex');
+    return (
+        '0x' +
+        TypedDataUtils.hashStruct(
+            'EIP712Domain',
+            { name, version, chainId, verifyingContract },
+            { EIP712Domain },
+            TypedDataVersion,
+        ).toString('hex')
+    );
 };
 
 const defaultDeadline = toBN('18446744073709551615');
@@ -39,12 +44,25 @@ const buildData = (owner, name, version, chainId, verifyingContract, spender, no
     };
 };
 
-const getPermit = async (owner, ownerPrivateKey, token, tokenVersion, chainId, spender, value, deadline = defaultDeadline) => {
+const getPermit = async (
+    owner,
+    ownerPrivateKey,
+    token,
+    tokenVersion,
+    chainId,
+    spender,
+    value,
+    deadline = defaultDeadline,
+) => {
     const permitContract = await ERC20Permit.at(token.address);
     const nonce = await permitContract.nonces(owner);
     const name = await permitContract.name();
     const data = buildData(owner, name, tokenVersion, chainId, token.address, spender, nonce, value, deadline);
-    const signature = signTypedData({ privateKey: Buffer.from(ownerPrivateKey, 'hex'), data, version: TypedDataVersion });
+    const signature = signTypedData({
+        privateKey: Buffer.from(ownerPrivateKey, 'hex'),
+        data,
+        version: TypedDataVersion,
+    });
     const { v, r, s } = fromRpcSig(signature);
     const permitCall = permitContract.contract.methods.permit(owner, spender, value, deadline, v, r, s).encodeABI();
     return cutSelector(permitCall);

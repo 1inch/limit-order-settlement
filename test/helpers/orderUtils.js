@@ -89,9 +89,12 @@ const buildOrder = async (
     const interactions = '0x' + allInteractions.map(trim0x).join('');
 
     // https://stackoverflow.com/a/55261098/440168
-    const cumulativeSum = (sum => value => { sum += value; return sum; })(0);
+    const cumulativeSum = ((sum) => (value) => {
+        sum += value;
+        return sum;
+    })(0);
     const offsets = allInteractions
-        .map(a => a.length / 2 - 1)
+        .map((a) => a.length / 2 - 1)
         .map(cumulativeSum)
         .reduce((acc, a, i) => acc.add(toBN(a).shln(32 * i)), toBN('0'));
 
@@ -134,13 +137,13 @@ const buildSalt = (
     initialStartRate = 1000, // 10000 = 100%
     duration = 180, // seconds
     salt = '1', // less than uint176
-) => (
-    (toBN(orderStartTime).shln(224).add(
-        toBN(duration).shln(192)).add(
-        toBN(initialStartRate).shln(176)).add(
-        toBN(salt),
-    )).toString()
-);
+) =>
+    toBN(orderStartTime)
+        .shln(224)
+        .add(toBN(duration).shln(192))
+        .add(toBN(initialStartRate).shln(176))
+        .add(toBN(salt))
+        .toString();
 
 const buildOrderData = (chainId, verifyingContract, order) => {
     return {
