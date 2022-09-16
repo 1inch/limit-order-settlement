@@ -1,5 +1,4 @@
-const { expect, ether, toBN, assertRoughlyEqualValues, timeIncreaseTo } = require('@1inch/solidity-utils');
-const { time, expectRevert } = require('@openzeppelin/test-helpers');
+const { expect, ether, toBN, assertRoughlyEqualValues, timeIncreaseTo, time } = require('@1inch/solidity-utils');
 const { addr0Wallet, addr1Wallet } = require('./helpers/utils');
 
 const TokenMock = artifacts.require('TokenMock');
@@ -146,30 +145,27 @@ describe('St1inch', async () => {
     it('should not increase time and amount for existing deposit', async () => {
         await this.st1inch.deposit(ether('50'), time.duration.days('1'));
 
-        await expectRevert(
+        await expect(
             this.st1inch.deposit(ether('50'), time.duration.days('1')),
-            'ChangeAmountAndUnlockTimeForExistingAccount()',
-        );
+        ).to.be.rejectedWith('ChangeAmountAndUnlockTimeForExistingAccount()');
     });
 
     it('should not take deposit with lock less then MIN_LOCK_PERIOD', async () => {
         const MIN_LOCK_PERIOD = await this.st1inch.MIN_LOCK_PERIOD();
-        await expectRevert(
+        await expect(
             this.st1inch.deposit(ether('50'), MIN_LOCK_PERIOD.sub(toBN('1'))),
-            'LockTimeLessMinLock()',
-        );
+        ).to.be.rejectedWith('LockTimeLessMinLock()');
     });
 
     it('should not take deposit with lock more then MAX_LOCK_PERIOD', async () => {
         const MAX_LOCK_PERIOD = await this.st1inch.MAX_LOCK_PERIOD();
-        await expectRevert(
+        await expect(
             this.st1inch.deposit(ether('50'), MAX_LOCK_PERIOD.add(toBN('1'))),
-            'LockTimeMoreMaxLock()',
-        );
+        ).to.be.rejectedWith('LockTimeMoreMaxLock()');
     });
 
     it('should withdraw before unlock time', async () => {
         await this.st1inch.deposit(ether('50'), time.duration.days('1'));
-        await expectRevert(this.st1inch.withdraw(), 'UnlockTimeWasNotCome()');
+        await expect(this.st1inch.withdraw()).to.be.rejectedWith('UnlockTimeWasNotCome()');
     });
 });
