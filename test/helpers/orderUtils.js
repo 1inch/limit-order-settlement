@@ -1,5 +1,4 @@
-const { time } = require('@openzeppelin/test-helpers');
-const { constants, toBN, trim0x, TypedDataVersion } = require('@1inch/solidity-utils');
+const { constants, toBN, trim0x, TypedDataVersion, time } = require('@1inch/solidity-utils');
 const { signTypedData } = require('@metamask/eth-sig-util');
 const { EIP712Domain } = require('./eip712');
 

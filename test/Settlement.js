@@ -1,5 +1,4 @@
-const { time, expectRevert } = require('@openzeppelin/test-helpers');
-const { ether, assertRoughlyEqualValues, toBN } = require('@1inch/solidity-utils');
+const { ether, assertRoughlyEqualValues, toBN, time } = require('@1inch/solidity-utils');
 const { addr0Wallet, addr1Wallet } = require('./helpers/utils');
 
 const TokenMock = artifacts.require('TokenMock');
@@ -373,7 +372,7 @@ describe('Settlement', async () => {
                 currentTimestamp.addn(60),
             );
 
-            await expectRevert(
+            await expect(
                 this.matcher.matchOrders(
                     this.swap.address,
                     order,
@@ -383,8 +382,7 @@ describe('Settlement', async () => {
                     0,
                     takingAmount,
                 ),
-                'IncorrectOrderStartTime()',
-            );
+            ).to.be.rejectedWith('IncorrectOrderStartTime()');
         });
 
         it('set initial rate', async () => {
