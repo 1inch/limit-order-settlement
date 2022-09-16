@@ -11,7 +11,7 @@ describe('St1inch', async () => {
 
     const exp = (point, t, base = baseExp) => {
         while (t.gt(toBN('0'))) {
-            if ((t.and(toBN('1'))).eq(toBN('1'))) {
+            if (t.and(toBN('1')).eq(toBN('1'))) {
                 point = point.mul(base).div(ether('1'));
             }
             base = base.mul(base).div(ether('1'));
@@ -26,9 +26,14 @@ describe('St1inch', async () => {
         const t = (await time.latest()).add(lockDuration).sub(this.origin);
         const originPower = exp(balance, t, invertBaseExp);
         expect(await this.st1inch.balanceOf(account)).to.be.bignumber.equal(originPower);
-        expect(await this.st1inch.votingPowerOf(account)).to.be.bignumber.equal(exp(originPower, (await time.latest()).sub(this.origin)));
+        expect(await this.st1inch.votingPowerOf(account)).to.be.bignumber.equal(
+            exp(originPower, (await time.latest()).sub(this.origin)),
+        );
         assertRoughlyEqualValues(
-            await this.st1inch.methods['votingPowerOf(address,uint256)'](account, (await this.st1inch.unlockTime(account))),
+            await this.st1inch.methods['votingPowerOf(address,uint256)'](
+                account,
+                await this.st1inch.unlockTime(account),
+            ),
             balance,
             1e-10,
         );
@@ -145,23 +150,23 @@ describe('St1inch', async () => {
     it('should not increase time and amount for existing deposit', async () => {
         await this.st1inch.deposit(ether('50'), time.duration.days('1'));
 
-        await expect(
-            this.st1inch.deposit(ether('50'), time.duration.days('1')),
-        ).to.be.rejectedWith('ChangeAmountAndUnlockTimeForExistingAccount()');
+        await expect(this.st1inch.deposit(ether('50'), time.duration.days('1'))).to.be.rejectedWith(
+            'ChangeAmountAndUnlockTimeForExistingAccount()',
+        );
     });
 
     it('should not take deposit with lock less then MIN_LOCK_PERIOD', async () => {
         const MIN_LOCK_PERIOD = await this.st1inch.MIN_LOCK_PERIOD();
-        await expect(
-            this.st1inch.deposit(ether('50'), MIN_LOCK_PERIOD.sub(toBN('1'))),
-        ).to.be.rejectedWith('LockTimeLessMinLock()');
+        await expect(this.st1inch.deposit(ether('50'), MIN_LOCK_PERIOD.sub(toBN('1')))).to.be.rejectedWith(
+            'LockTimeLessMinLock()',
+        );
     });
 
     it('should not take deposit with lock more then MAX_LOCK_PERIOD', async () => {
         const MAX_LOCK_PERIOD = await this.st1inch.MAX_LOCK_PERIOD();
-        await expect(
-            this.st1inch.deposit(ether('50'), MAX_LOCK_PERIOD.add(toBN('1'))),
-        ).to.be.rejectedWith('LockTimeMoreMaxLock()');
+        await expect(this.st1inch.deposit(ether('50'), MAX_LOCK_PERIOD.add(toBN('1')))).to.be.rejectedWith(
+            'LockTimeMoreMaxLock()',
+        );
     });
 
     it('should withdraw before unlock time', async () => {
