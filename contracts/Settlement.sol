@@ -120,8 +120,8 @@ contract Settlement is Ownable, InteractionNotificationReceiver, WhitelistChecke
             interactionTarget := mload(add(interaction,20))
         }
         uint256 ordersFee = ((order.salt & _ORDER_FEE_MASK) >> (256 - 80 - 72)) + prevOrdersFee;
-        if (creditAllowance[tx.origin] < ordersFee) revert NotEnoughCredit(); // solhint-disable-line avoid-tx-origin
         if (interaction.length < 20 || interactionTarget != address(this)) {
+            if (creditAllowance[tx.origin] < ordersFee) revert NotEnoughCredit(); // solhint-disable-line avoid-tx-origin
             creditAllowance[tx.origin] -= ordersFee; // solhint-disable-line avoid-tx-origin
         }
         orderMixin.fillOrder(order, signature, abi.encodePacked(interaction, ordersFee), makingAmount, takingAmount, thresholdAmount);
