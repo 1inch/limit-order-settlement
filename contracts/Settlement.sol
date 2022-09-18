@@ -62,10 +62,7 @@ contract Settlement is Ownable, InteractionNotificationReceiver, WhitelistChecke
     ) external onlyLimitOrderProtocol returns (uint256) {
         uint256 ordersFee;
         if (interactiveData[0] == _FINALIZE_INTERACTION) {
-            address[] memory targets;
-            bytes[] memory calldatas;
-
-            (targets, calldatas) = abi.decode(
+            (address[] memory targets, bytes[] memory calldatas) = abi.decode(
                 interactiveData[1:interactiveData.length-32],
                 (address[], bytes[])
             );
