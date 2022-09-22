@@ -30,11 +30,12 @@ contract St1inch is ERC20Farmable, ERC20Delegatable {
 
     uint256 public totalDeposits;
 
-    constructor(IERC20 _oneInch, uint256 _expBase, uint256 maxUserFarms, uint256 maxUserDelegations)
-        ERC20Farmable(maxUserFarms)
-        ERC20Delegatable(maxUserDelegations)
-        ERC20("Staking 1inch", "st1inch")
-    {
+    constructor(
+        IERC20 _oneInch,
+        uint256 _expBase,
+        uint256 maxUserFarms,
+        uint256 maxUserDelegations
+    ) ERC20Farmable(maxUserFarms) ERC20Delegatable(maxUserDelegations) ERC20("Staking 1inch", "st1inch") {
         oneInch = _oneInch;
         expBase = _expBase; // TODO: improve accuracy from 1e18 to 1e36
         // solhint-disable-next-line not-rely-on-time
@@ -58,15 +59,25 @@ contract St1inch is ERC20Farmable, ERC20Delegatable {
         return _exp(balanceOf(account), timestamp - origin, expBase);
     }
 
-    function approve(address /* spender */, uint256 /* amount */) public pure override(IERC20, ERC20) returns (bool) {
+    function approve(
+        address, /* spender */
+        uint256 /* amount */
+    ) public pure override(IERC20, ERC20) returns (bool) {
         revert ApproveDisabled();
     }
 
-    function transfer(address /* to */, uint256 /* amount */) public pure override(IERC20, ERC20) returns (bool) {
+    function transfer(
+        address, /* to */
+        uint256 /* amount */
+    ) public pure override(IERC20, ERC20) returns (bool) {
         revert TransferDisabled();
     }
 
-    function transferFrom(address /* from */, address /* to */, uint256 /* amount */) public pure override(IERC20, ERC20) returns (bool) {
+    function transferFrom(
+        address, /* from */
+        address, /* to */
+        uint256 /* amount */
+    ) public pure override(IERC20, ERC20) returns (bool) {
         revert TransferFromDisabled();
     }
 
@@ -74,7 +85,11 @@ contract St1inch is ERC20Farmable, ERC20Delegatable {
         _deposit(msg.sender, amount, duration);
     }
 
-    function depositFor(address account, uint256 amount, uint256 duration) external {
+    function depositFor(
+        address account,
+        uint256 amount,
+        uint256 duration
+    ) external {
         _deposit(account, amount, duration);
     }
 
@@ -87,7 +102,11 @@ contract St1inch is ERC20Farmable, ERC20Delegatable {
     }
 
     /* solhint-disable not-rely-on-time */
-    function _deposit(address account, uint256 amount, uint256 duration) private {
+    function _deposit(
+        address account,
+        uint256 amount,
+        uint256 duration
+    ) private {
         if (_deposits[account] > 0 && amount > 0 && duration > 0) revert ChangeAmountAndUnlockTimeForExistingAccount();
 
         if (amount > 0) {
@@ -105,6 +124,7 @@ contract St1inch is ERC20Farmable, ERC20Delegatable {
 
         _mint(account, _exp(balance, lockedTill - origin, 1e36 / expBase) - balanceOf(account));
     }
+
     /* solhint-enable not-rely-on-time */
 
     function withdraw() external {
@@ -123,13 +143,18 @@ contract St1inch is ERC20Farmable, ERC20Delegatable {
         oneInch.transfer(to, balance);
     }
 
-    function _exp(uint256 point, uint256 time, uint256 base) private pure returns (uint256) {
+    function _exp(
+        uint256 point,
+        uint256 time,
+        uint256 base
+    ) private pure returns (uint256) {
         unchecked {
-            while (time > 0) { // TODO: change to immutable table
+            while (time > 0) {
+                // TODO: change to immutable table
                 if ((time & 0x01) == 1) {
-                    point = point * base / 1e18;
+                    point = (point * base) / 1e18;
                 }
-                base = base * base / 1e18;
+                base = (base * base) / 1e18;
                 time >>= 1;
             }
         }
@@ -137,7 +162,11 @@ contract St1inch is ERC20Farmable, ERC20Delegatable {
     }
 
     // ERC20 overrides
-    function _beforeTokenTransfer(address from, address to, uint256 amount) internal override(ERC20Farmable, ERC20Delegatable) virtual {
+    function _beforeTokenTransfer(
+        address from,
+        address to,
+        uint256 amount
+    ) internal virtual override(ERC20Farmable, ERC20Delegatable) {
         super._beforeTokenTransfer(from, to, amount);
     }
 }
