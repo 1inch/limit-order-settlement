@@ -21,7 +21,7 @@ const Permit = [
     { name: 'deadline', type: 'uint256' },
 ];
 
-function domainSeparator(name, version, chainId, verifyingContract) {
+const domainSeparator = (name, version, chainId, verifyingContract) => {
     return (
         '0x' +
         TypedDataUtils.hashStruct(
@@ -31,20 +31,20 @@ function domainSeparator(name, version, chainId, verifyingContract) {
             TypedDataVersion,
         ).toString('hex')
     );
-}
+};
 
 const defaultDeadline = toBN('18446744073709551615');
 
-function buildData(owner, name, version, chainId, verifyingContract, spender, nonce, value, deadline) {
+const buildData = (owner, name, version, chainId, verifyingContract, spender, nonce, value, deadline) => {
     return {
         primaryType: 'Permit',
         types: { EIP712Domain, Permit },
         domain: { name, version, chainId, verifyingContract },
         message: { owner, spender, value, nonce, deadline },
     };
-}
+};
 
-async function getPermit(
+const getPermit = async (
     owner,
     ownerPrivateKey,
     token,
@@ -53,7 +53,7 @@ async function getPermit(
     spender,
     value,
     deadline = defaultDeadline,
-) {
+) => {
     const permitContract = await ERC20Permit.at(token.address);
     const nonce = await permitContract.nonces(owner);
     const name = await permitContract.name();
@@ -66,11 +66,11 @@ async function getPermit(
     const { v, r, s } = fromRpcSig(signature);
     const permitCall = permitContract.contract.methods.permit(owner, spender, value, deadline, v, r, s).encodeABI();
     return cutSelector(permitCall);
-}
+};
 
-function withTarget(target, data) {
+const withTarget = (target, data) => {
     return target.toString() + trim0x(data);
-}
+};
 
 module.exports = {
     EIP712Domain,
