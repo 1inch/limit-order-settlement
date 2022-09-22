@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity 0.8.15;
+pragma solidity 0.8.17;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
@@ -153,8 +153,9 @@ contract Settlement is Ownable, InteractionNotificationReceiver, WhitelistChecke
         uint256 orderFee = (order.salt & _ORDER_FEE_MASK) >> (256 - 80 - 72);
         uint256 currentAllowance = creditAllowance[tx.origin]; // solhint-disable-line avoid-tx-origin
         if (currentAllowance < orderFee) revert NotEnoughCredit();
-        // solhint-disable-next-line avoid-tx-origin
-        unchecked { creditAllowance[tx.origin] = currentAllowance - orderFee; }
+        unchecked {
+            creditAllowance[tx.origin] = currentAllowance - orderFee;  // solhint-disable-line avoid-tx-origin
+        }
         orderMixin.fillOrder(order, signature, interaction, makingAmount, takingAmount, thresholdAmount);
     }
 
