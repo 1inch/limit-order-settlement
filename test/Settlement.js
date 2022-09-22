@@ -503,7 +503,7 @@ describe('Settlement', async () => {
         const orderFee = ether('1000').toString();
         const backOrderFee = 125;
         const order = await buildOrder({
-            salt: toBN('1').or(toBN(orderFee).shln(104)).toString(),
+            salt: buildSalt({ orderStartTime: await defaultExpiredAuctionTimestamp(), fee: orderFee }),
             makerAsset: this.dai.address,
             takerAsset: this.weth.address,
             makingAmount: ether('100'),
@@ -511,7 +511,7 @@ describe('Settlement', async () => {
             from: addr0,
         });
         const backOrder = await buildOrder({
-            salt: toBN('1').or(toBN(backOrderFee).shln(104)).toString(),
+            salt: buildSalt({ orderStartTime: await defaultExpiredAuctionTimestamp(), fee: backOrderFee }),
             makerAsset: this.weth.address,
             takerAsset: this.dai.address,
             makingAmount: ether('0.1'),
