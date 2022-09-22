@@ -158,14 +158,16 @@ contract Settlement is Ownable, InteractionNotificationReceiver, WhitelistChecke
         orderMixin.fillOrder(order, signature, interaction, makingAmount, takingAmount, thresholdAmount);
     }
 
-    function addCreditAllowance(address account, uint256 amount) external onlyFeeBank returns (uint256) {
-        creditAllowance[account] += amount;
-        return creditAllowance[account];
+    function addCreditAllowance(address account, uint256 amount) external onlyFeeBank returns (uint256 allowance) {
+        allowance = creditAllowance[account];
+        allowance += amount;
+        creditAllowance[account] = allowance;
     }
 
-    function subCreditAllowance(address account, uint256 amount) external onlyFeeBank returns (uint256) {
-        creditAllowance[account] -= amount;
-        return creditAllowance[account];
+    function subCreditAllowance(address account, uint256 amount) external onlyFeeBank returns (uint256 allowance) {
+        allowance = creditAllowance[account];
+        allowance -= amount;
+        creditAllowance[account] = allowance;
     }
 
     function setFeeBank(address newFeeBank) external onlyOwner {
