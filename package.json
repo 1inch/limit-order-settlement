@@ -24,7 +24,7 @@
     "lint:fix": "yarn lint:js:fix && yarn lint:sol:fix"
   },
   "dependencies": {
-    "@1inch/limit-order-protocol": "1inch/limit-order-protocol",
+    "@1inch/limit-order-protocol": "https://github.com/1inch/limit-order-protocol",
     "@openzeppelin/contracts": "4.7.3"
   },
   "devDependencies": {

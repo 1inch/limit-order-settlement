@@ -13,6 +13,11 @@ contract Settlement is Ownable, InteractionNotificationReceiver, WhitelistChecke
     bytes1 private constant _FINALIZE_INTERACTION = 0x01;
     uint256 private constant _ORDER_FEE_MASK = 0x00000000000000000000FFFFFFFFFFFFFFFFFF00000000000000000000000000;
 
+    uint16 private constant _BASE_POINTS = 10000; // 100%
+    uint16 private constant _DEFAULT_INITIAL_RATE_BUMP = 1000; // 10%
+    uint32 private constant _DEFAULT_DURATION = 30 minutes;
+
+    error IncorrectOrderStartTime();
     error IncorrectCalldataParams();
     error FailedExternalCall();
     error OnlyFeeBankAccess();
@@ -39,7 +44,15 @@ contract Settlement is Ownable, InteractionNotificationReceiver, WhitelistChecke
         uint256 takingAmount,
         uint256 thresholdAmount
     ) external onlyWhitelisted(msg.sender) {
-        _matchOrder(orderMixin, order, signature, interaction, makingAmount, takingAmount, thresholdAmount);
+        _matchOrder(
+            orderMixin,
+            order,
+            signature,
+            bytes.concat(interaction, bytes32(order.salt)),
+            makingAmount,
+            takingAmount,
+            thresholdAmount
+        );
     }
 
     function matchOrdersEOA(
@@ -51,13 +64,21 @@ contract Settlement is Ownable, InteractionNotificationReceiver, WhitelistChecke
         uint256 takingAmount,
         uint256 thresholdAmount
     ) external onlyWhitelistedEOA {
-        _matchOrder(orderMixin, order, signature, interaction, makingAmount, takingAmount, thresholdAmount);
+        _matchOrder(
+            orderMixin,
+            order,
+            signature,
+            bytes.concat(interaction, bytes32(order.salt)),
+            makingAmount,
+            takingAmount,
+            thresholdAmount
+        );
     }
 
     function fillOrderInteraction(
         address, /* taker */
         uint256, /* makingAmount */
-        uint256, /* takingAmount */
+        uint256 takingAmount,
         bytes calldata interactiveData
     ) external onlyLimitOrderProtocol returns (uint256) {
         if (interactiveData[0] == _FINALIZE_INTERACTION) {
@@ -66,8 +87,9 @@ contract Settlement is Ownable, InteractionNotificationReceiver, WhitelistChecke
                 (address[], bytes[])
             );
 
-            if (targets.length != calldatas.length) revert IncorrectCalldataParams();
-            for (uint256 i = 0; i < targets.length; i++) {
+            uint256 length = targets.length;
+            if (length != calldatas.length) revert IncorrectCalldataParams();
+            for (uint256 i = 0; i < length; i++) {
                 // solhint-disable-next-line avoid-low-level-calls
                 (bool success, ) = targets[i].call(calldatas[i]);
                 if (!success) revert FailedExternalCall();
@@ -86,13 +108,37 @@ contract Settlement is Ownable, InteractionNotificationReceiver, WhitelistChecke
                 IOrderMixin(msg.sender),
                 order,
                 signature,
-                interaction,
+                bytes.concat(interaction, bytes32(order.salt)),
                 makingOrderAmount,
                 takingOrderAmount,
                 thresholdAmount
             );
         }
-        return 0;
+        uint256 salt = uint256(bytes32(interactiveData[interactiveData.length - 32:]));
+        return (takingAmount * _getFeeRate(salt)) / _BASE_POINTS;
+    }
+
+    function _getFeeRate(uint256 salt) internal view returns (uint256) {
+        uint32 orderTime = uint32((salt & (0xFFFFFFFF << 224)) >> 224); // orderTimeMask 216-255
+        // solhint-disable-next-line not-rely-on-time
+        uint32 currentTimestamp = uint32(block.timestamp);
+        if (orderTime > currentTimestamp) revert IncorrectOrderStartTime();
+
+        uint32 duration = uint32((salt & (0xFFFFFFFF << 192)) >> 192); // durationMask 192-215
+        if (duration == 0) {
+            duration = _DEFAULT_DURATION;
+        }
+        orderTime += duration;
+
+        uint16 initialRate = uint16((salt & (0xFFFF << 176)) >> 176); // initialRateMask 176-191
+        if (initialRate == 0) {
+            initialRate = _DEFAULT_INITIAL_RATE_BUMP;
+        }
+
+        return
+            currentTimestamp < orderTime
+                ? _BASE_POINTS + (initialRate * (orderTime - currentTimestamp)) / duration
+                : _BASE_POINTS;
     }
 
     function _matchOrder(
