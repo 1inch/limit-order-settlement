@@ -17,7 +17,6 @@ contract Settlement is InteractionNotificationReceiver, WhitelistChecker {
     uint32 private constant _DEFAULT_DURATION = 30 minutes;
 
     error IncorrectOrderStartTime();
-    error IncorrectFeeCollector();
     error IncorrectCalldataParams();
     error FailedExternalCall();
 
