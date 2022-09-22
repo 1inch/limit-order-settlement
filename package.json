@@ -26,7 +26,7 @@
   "dependencies": {
     "@1inch/delegating": "https://github.com/1inch/delegating",
     "@1inch/farming": "https://github.com/1inch/farming",
-    "@1inch/limit-order-protocol": "1inch/limit-order-protocol",
+    "@1inch/limit-order-protocol": "0.3.0-prerelease",
     "@openzeppelin/contracts": "4.7.3"
   },
   "devDependencies": {

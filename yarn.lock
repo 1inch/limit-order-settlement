@@ -16,9 +16,10 @@
     "@1inch/solidity-utils" "2.0.23"
     "@openzeppelin/contracts" "4.5.0"
 
-"@1inch/limit-order-protocol@1inch/limit-order-protocol":
+"@1inch/limit-order-protocol@0.3.0-prerelease":
   version "0.3.0-prerelease"
-  resolved "https://codeload.github.com/1inch/limit-order-protocol/tar.gz/171c5d7bbb280d9f754404828051f2a47fb726df"
+  resolved "https://registry.yarnpkg.com/@1inch/limit-order-protocol/-/limit-order-protocol-0.3.0-prerelease.tgz#05eeef434fc515e3b3f4410d73bd8a358696d913"
+  integrity sha512-K8O9qSG9S0TBDD28h8yl9hhA/hd8u4+zZ7IRTYcpPMK/gFlAOvnHxVXBdxZbXOQJNEWM28lKA33pylhCVB5G3g==
   dependencies:
     "@1inch/solidity-utils" "2.1.1"
     "@chainlink/contracts" "0.4.1"
