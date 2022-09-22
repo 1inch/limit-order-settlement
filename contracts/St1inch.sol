@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity 0.8.15;
+pragma solidity 0.8.17;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
@@ -118,18 +118,18 @@ contract St1inch is ERC20Farmable, ERC20Delegatable {
         return _exp(balanceOf(account), timestamp - origin);
     }
 
-    function transfer(
-        address, /* to */
-        uint256 /* amount */
-    ) public pure override(IERC20, ERC20) returns (bool) {
-        revert TransferDisabled();
-    }
-
     function approve(
         address, /* spender */
         uint256 /* amount */
     ) public pure override(IERC20, ERC20) returns (bool) {
         revert ApproveDisabled();
+    }
+
+    function transfer(
+        address, /* to */
+        uint256 /* amount */
+    ) public pure override(IERC20, ERC20) returns (bool) {
+        revert TransferDisabled();
     }
 
     function transferFrom(

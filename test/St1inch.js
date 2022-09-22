@@ -25,11 +25,9 @@ describe('St1inch', async () => {
         expect(await this.st1inch.depositsAmount(account)).to.be.bignumber.equal(balance);
         const t = (await time.latest()).add(lockDuration).sub(this.origin);
         const originPower = exp(balance, t, invertBaseExp);
-        assertRoughlyEqualValues(await this.st1inch.balanceOf(account), originPower, 1e-10);
-        assertRoughlyEqualValues(
-            await this.st1inch.votingPowerOf(account),
+        expect(await this.st1inch.balanceOf(account)).to.be.bignumber.equal(originPower);
+        expect(await this.st1inch.votingPowerOf(account)).to.be.bignumber.equal(
             exp(originPower, (await time.latest()).sub(this.origin)),
-            1e-10,
         );
         assertRoughlyEqualValues(
             await this.st1inch.methods['votingPowerOf(address,uint256)'](

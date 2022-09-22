@@ -11,7 +11,7 @@ const { networks, etherscan } = require('./hardhat.networks');
 module.exports = {
     etherscan,
     solidity: {
-        version: '0.8.15',
+        version: '0.8.17',
         settings: {
             optimizer: {
                 enabled: true,
@@ -31,6 +31,7 @@ module.exports = {
     dependencyCompiler: {
         paths: [
             '@1inch/solidity-utils/contracts/mocks/TokenMock.sol',
+            '@1inch/solidity-utils/contracts/mocks/ERC20PermitMock.sol',
             '@1inch/limit-order-protocol/contracts/LimitOrderProtocol.sol',
             '@1inch/limit-order-protocol/contracts/mocks/WrappedTokenMock.sol',
             '@openzeppelin/contracts/token/ERC20/extensions/draft-ERC20Permit',

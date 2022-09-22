@@ -39,14 +39,14 @@ describe('WhitelistChecker', async () => {
     });
 
     const matchOrders = async (matchOrderMethod) => {
-        const order0 = buildOrder({
+        const order0 = await buildOrder({
             makerAsset: this.dai.address,
             takerAsset: this.weth.address,
             makingAmount: ether('100'),
             takingAmount: ether('0.1'),
             from: addr0,
         });
-        const order1 = buildOrder({
+        const order1 = await buildOrder({
             makerAsset: this.weth.address,
             takerAsset: this.dai.address,
             makingAmount: ether('0.1'),
@@ -82,7 +82,7 @@ describe('WhitelistChecker', async () => {
 
     describe('should not work with non-whitelisted address', async () => {
         it('onlyWhitelistedEOA modifier in matchOrdersEOA method', async () => {
-            const order1 = buildOrder({
+            const order1 = await buildOrder({
                 makerAsset: this.dai.address,
                 takerAsset: this.weth.address,
                 makingAmount: ether('10'),
@@ -95,7 +95,7 @@ describe('WhitelistChecker', async () => {
         });
 
         it('onlyWhitelisted modifier in matchOrders method', async () => {
-            const order1 = buildOrder({
+            const order1 = await buildOrder({
                 makerAsset: this.dai.address,
                 takerAsset: this.weth.address,
                 makingAmount: ether('10'),
@@ -108,7 +108,7 @@ describe('WhitelistChecker', async () => {
         });
 
         it('onlyWhitelisted modifier in fillOrderInteraction method', async () => {
-            const order = buildOrder({
+            const order = await buildOrder({
                 makerAsset: this.dai.address,
                 takerAsset: this.weth.address,
                 makingAmount: ether('100'),
