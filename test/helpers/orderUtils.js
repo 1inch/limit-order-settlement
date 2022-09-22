@@ -71,7 +71,7 @@ const buildOrder = async (
         getTakingAmount = '0x78'; // "x"
     }
     if (typeof salt === 'undefined') {
-        salt = buildSalt((await time.latest()).sub(toBN('1800')));
+        salt = buildSalt({ orderStartTime: await defaultExpiredAuctionTimestamp() });
     }
 
     const allInteractions = [
@@ -131,16 +131,20 @@ const buildOrderRFQ = (
     };
 };
 
-const buildSalt = (
+const defaultExpiredAuctionTimestamp = async () => (await time.latest()).subn(1800);
+
+const buildSalt = ({
     orderStartTime,
     initialStartRate = 1000, // 10000 = 100%
     duration = 180, // seconds
+    fee = 0, // in wei
     salt = '1', // less than uint176
-) =>
+}) =>
     toBN(orderStartTime)
         .shln(224)
         .add(toBN(duration).shln(192))
         .add(toBN(initialStartRate).shln(176))
+        .add(toBN(fee).shln(104))
         .add(toBN(salt))
         .toString();
 
@@ -202,6 +206,7 @@ module.exports = {
     buildOrderData,
     buildOrderRFQData,
     buildSalt,
+    defaultExpiredAuctionTimestamp,
     signOrder,
     signOrderRFQ,
     compactSignature,

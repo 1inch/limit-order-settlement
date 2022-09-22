@@ -9,8 +9,9 @@ import "@1inch/limit-order-protocol/contracts/interfaces/IOrderMixin.sol";
 import "./helpers/WhitelistChecker.sol";
 import "./interfaces/IWhitelistRegistry.sol";
 
-contract Settlement is InteractionNotificationReceiver, WhitelistChecker {
+contract Settlement is Ownable, InteractionNotificationReceiver, WhitelistChecker {
     bytes1 private constant _FINALIZE_INTERACTION = 0x01;
+    uint256 private constant _ORDER_FEE_MASK = 0x00000000000000000000FFFFFFFFFFFFFFFFFF00000000000000000000000000;
 
     uint16 private constant _BASE_POINTS = 10000; // 100%
     uint16 private constant _DEFAULT_INITIAL_RATE_BUMP = 1000; // 10%
@@ -19,6 +20,16 @@ contract Settlement is InteractionNotificationReceiver, WhitelistChecker {
     error IncorrectOrderStartTime();
     error IncorrectCalldataParams();
     error FailedExternalCall();
+    error OnlyFeeBankAccess();
+    error NotEnoughCredit();
+
+    address public feeBank;
+    mapping(address => uint256) public creditAllowance;
+
+    modifier onlyFeeBank() {
+        if (msg.sender != feeBank) revert OnlyFeeBankAccess();
+        _;
+    }
 
     constructor(IWhitelistRegistry whitelist, address limitOrderProtocol)
         WhitelistChecker(whitelist, limitOrderProtocol)
@@ -33,7 +44,8 @@ contract Settlement is InteractionNotificationReceiver, WhitelistChecker {
         uint256 takingAmount,
         uint256 thresholdAmount
     ) external onlyWhitelisted(msg.sender) {
-        orderMixin.fillOrder(
+        _matchOrder(
+            orderMixin,
             order,
             signature,
             bytes.concat(interaction, bytes32(order.salt)),
@@ -52,7 +64,8 @@ contract Settlement is InteractionNotificationReceiver, WhitelistChecker {
         uint256 takingAmount,
         uint256 thresholdAmount
     ) external onlyWhitelistedEOA {
-        orderMixin.fillOrder(
+        _matchOrder(
+            orderMixin,
             order,
             signature,
             bytes.concat(interaction, bytes32(order.salt)),
@@ -91,7 +104,8 @@ contract Settlement is InteractionNotificationReceiver, WhitelistChecker {
                 uint256 thresholdAmount
             ) = abi.decode(interactiveData[1:], (OrderLib.Order, bytes, bytes, uint256, uint256, uint256));
 
-            IOrderMixin(msg.sender).fillOrder(
+            _matchOrder(
+                IOrderMixin(msg.sender),
                 order,
                 signature,
                 bytes.concat(interaction, bytes32(order.salt)),
@@ -125,5 +139,38 @@ contract Settlement is InteractionNotificationReceiver, WhitelistChecker {
             currentTimestamp < orderTime
                 ? _BASE_POINTS + (initialRate * (orderTime - currentTimestamp)) / duration
                 : _BASE_POINTS;
+    }
+
+    function _matchOrder(
+        IOrderMixin orderMixin,
+        OrderLib.Order memory order,
+        bytes memory signature,
+        bytes memory interaction,
+        uint256 makingAmount,
+        uint256 takingAmount,
+        uint256 thresholdAmount
+    ) private {
+        uint256 orderFee = (order.salt & _ORDER_FEE_MASK) >> (256 - 80 - 72);
+        uint256 currentAllowance = creditAllowance[tx.origin]; // solhint-disable-line avoid-tx-origin
+        if (currentAllowance < orderFee) revert NotEnoughCredit();
+        // solhint-disable-next-line avoid-tx-origin
+        unchecked { creditAllowance[tx.origin] = currentAllowance - orderFee; }
+        orderMixin.fillOrder(order, signature, interaction, makingAmount, takingAmount, thresholdAmount);
+    }
+
+    function addCreditAllowance(address account, uint256 amount) external onlyFeeBank returns (uint256 allowance) {
+        allowance = creditAllowance[account];
+        allowance += amount;
+        creditAllowance[account] = allowance;
+    }
+
+    function subCreditAllowance(address account, uint256 amount) external onlyFeeBank returns (uint256 allowance) {
+        allowance = creditAllowance[account];
+        allowance -= amount;
+        creditAllowance[account] = allowance;
+    }
+
+    function setFeeBank(address newFeeBank) external onlyOwner {
+        feeBank = newFeeBank;
     }
 }

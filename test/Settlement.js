@@ -6,8 +6,9 @@ const WrappedTokenMock = artifacts.require('WrappedTokenMock');
 const LimitOrderProtocol = artifacts.require('LimitOrderProtocol');
 const WhitelistRegistrySimple = artifacts.require('WhitelistRegistrySimple');
 const Settlement = artifacts.require('Settlement');
+const FeeBank = artifacts.require('FeeBank');
 
-const { buildOrder, signOrder, buildSalt } = require('./helpers/orderUtils');
+const { buildOrder, signOrder, buildSalt, defaultExpiredAuctionTimestamp } = require('./helpers/orderUtils');
 
 const Status = Object.freeze({
     Unverified: toBN('0'),
@@ -27,11 +28,13 @@ describe('Settlement', async () => {
     beforeEach(async () => {
         this.dai = await TokenMock.new('DAI', 'DAI');
         this.weth = await WrappedTokenMock.new('WETH', 'WETH');
+        this.inch = await TokenMock.new('1INCH', '1INCH');
 
         this.swap = await LimitOrderProtocol.new(this.weth.address);
 
         await this.dai.mint(addr0, ether('100'));
         await this.dai.mint(addr1, ether('100'));
+        await this.inch.mint(addr0, ether('100'));
         await this.weth.deposit({ from: addr0, value: ether('1') });
         await this.weth.deposit({ from: addr1, value: ether('1') });
 
@@ -43,6 +46,11 @@ describe('Settlement', async () => {
         await this.weth.approve(this.swap.address, ether('1'), { from: addr1 });
 
         this.matcher = await Settlement.new(this.whitelistRegistrySimple.address, this.swap.address);
+        this.feeBank = await FeeBank.new(this.matcher.address, this.inch.address);
+        await this.matcher.setFeeBank(this.feeBank.address);
+
+        await this.inch.approve(this.feeBank.address, ether('100'));
+        await this.feeBank.deposit(ether('100'));
     });
 
     it('opposite direction recursive swap', async () => {
@@ -52,7 +60,7 @@ describe('Settlement', async () => {
                 takerAsset: this.weth.address,
                 makingAmount: ether('100'),
                 takingAmount: ether('0.1'),
-                salt: buildSalt(await time.latest()),
+                salt: buildSalt({ orderStartTime: await time.latest() }),
                 from: addr0,
             },
             {
@@ -129,7 +137,7 @@ describe('Settlement', async () => {
                 takerAsset: this.weth.address,
                 makingAmount: ether('10'),
                 takingAmount: ether('0.01'),
-                salt: buildSalt(await time.latest()),
+                salt: buildSalt({ orderStartTime: await time.latest() }),
                 from: addr1,
             },
             {
@@ -143,7 +151,7 @@ describe('Settlement', async () => {
                 takerAsset: this.weth.address,
                 makingAmount: ether('15'),
                 takingAmount: ether('0.015'),
-                salt: buildSalt(await time.latest()),
+                salt: buildSalt({ orderStartTime: await time.latest() }),
                 from: addr1,
             },
             {
@@ -203,7 +211,7 @@ describe('Settlement', async () => {
                 takerAsset: this.weth.address,
                 makingAmount: ether('10'),
                 takingAmount: ether('0.01'),
-                salt: buildSalt(await time.latest()),
+                salt: buildSalt({ orderStartTime: await time.latest() }),
                 from: addr1,
             },
             {
@@ -217,7 +225,7 @@ describe('Settlement', async () => {
                 takerAsset: this.weth.address,
                 makingAmount: ether('15'),
                 takingAmount: ether('0.015'),
-                salt: buildSalt(await time.latest()),
+                salt: buildSalt({ orderStartTime: await time.latest() }),
                 from: addr1,
             },
             {
@@ -297,18 +305,18 @@ describe('Settlement', async () => {
     });
 
     describe('dutch auction params', async () => {
-        const prerareSingleOrder = async (orderStartTime, initialRate = '1000', duration = '1800', salt = '1') => {
+        const prerareSingleOrder = async (orderStartTime, initialStartRate = '1000', duration = '1800', salt = '1') => {
             const makerAsset = this.dai.address;
             const takerAsset = this.weth.address;
             const makingAmount = ether('100');
             const takingAmount = ether('0.1');
             const order = await buildOrder(
                 {
+                    salt: buildSalt({ orderStartTime, initialStartRate, duration, salt }),
                     makerAsset,
                     takerAsset,
                     makingAmount,
                     takingAmount,
-                    salt: buildSalt(orderStartTime, initialRate, duration, salt),
                     from: addr1,
                 },
                 {
@@ -322,12 +330,12 @@ describe('Settlement', async () => {
             const ts = await time.latest();
             if (ts.lt(orderStartTime.add(toBN(duration)))) {
                 // actualTakingAmount = actualTakingAmount * (
-                //    _BASE_POINTS + initialRate * (orderTime + duration - currentTimestamp) / duration
+                //    _BASE_POINTS + initialStartRate * (orderTime + duration - currentTimestamp) / duration
                 // ) / _BASE_POINTS
                 actualTakingAmount = actualTakingAmount
                     .mul(
                         toBN('10000').add(
-                            toBN(initialRate)
+                            toBN(initialStartRate)
                                 .mul(toBN(orderStartTime).add(toBN(duration)).sub(ts))
                                 .div(toBN(duration)),
                         ),
@@ -430,6 +438,168 @@ describe('Settlement', async () => {
 
             expect(await this.weth.balanceOf(addr0)).to.be.bignumber.equal(addr0weth.sub(ether('0.105')));
             assertRoughlyEqualValues(await this.weth.balanceOf(addr1), addr1weth.add(ether('0.105')), 1e-4);
+        });
+    });
+
+    it('should change creditAllowance with non-zero fee', async () => {
+        const orderFee = 100;
+        const backOrderFee = 125;
+        const order = await buildOrder({
+            salt: buildSalt({ orderStartTime: await defaultExpiredAuctionTimestamp(), fee: orderFee }),
+            makerAsset: this.dai.address,
+            takerAsset: this.weth.address,
+            makingAmount: ether('100'),
+            takingAmount: ether('0.1'),
+            from: addr0,
+        });
+        const backOrder = await buildOrder({
+            salt: buildSalt({ orderStartTime: await defaultExpiredAuctionTimestamp(), fee: backOrderFee }),
+            makerAsset: this.weth.address,
+            takerAsset: this.dai.address,
+            makingAmount: ether('0.1'),
+            takingAmount: ether('100'),
+            from: addr1,
+        });
+        const signature = signOrder(order, this.chainId, this.swap.address, addr0Wallet.getPrivateKey());
+        const signatureBackOrder = signOrder(backOrder, this.chainId, this.swap.address, addr1Wallet.getPrivateKey());
+        const matchingParams =
+            this.matcher.address +
+            '01' +
+            web3.eth.abi
+                .encodeParameters(
+                    ['address[]', 'bytes[]'],
+                    [
+                        [this.weth.address, this.dai.address],
+                        [
+                            this.weth.contract.methods.approve(this.swap.address, ether('0.1')).encodeABI(),
+                            this.dai.contract.methods.approve(this.swap.address, ether('100')).encodeABI(),
+                        ],
+                    ],
+                )
+                .substring(2);
+        const interaction =
+            this.matcher.address +
+            '00' +
+            this.swap.contract.methods
+                .fillOrder(backOrder, signatureBackOrder, matchingParams, ether('0.1'), 0, ether('100'))
+                .encodeABI()
+                .substring(10);
+        const creditAllowanceBefore = await this.matcher.creditAllowance(addr0);
+        await this.matcher.matchOrdersEOA(
+            this.swap.address,
+            order,
+            signature,
+            interaction,
+            ether('100'),
+            0,
+            ether('0.1'),
+        );
+        expect(await this.matcher.creditAllowance(addr0)).to.be.bignumber.eq(
+            creditAllowanceBefore.subn(orderFee).subn(backOrderFee),
+        );
+    });
+
+    it('should not change when creditAllowance is not enough', async () => {
+        const orderFee = ether('1000').toString();
+        const backOrderFee = 125;
+        const order = await buildOrder({
+            salt: buildSalt({ orderStartTime: await defaultExpiredAuctionTimestamp(), fee: orderFee }),
+            makerAsset: this.dai.address,
+            takerAsset: this.weth.address,
+            makingAmount: ether('100'),
+            takingAmount: ether('0.1'),
+            from: addr0,
+        });
+        const backOrder = await buildOrder({
+            salt: buildSalt({ orderStartTime: await defaultExpiredAuctionTimestamp(), fee: backOrderFee }),
+            makerAsset: this.weth.address,
+            takerAsset: this.dai.address,
+            makingAmount: ether('0.1'),
+            takingAmount: ether('100'),
+            from: addr1,
+        });
+        const signature = signOrder(order, this.chainId, this.swap.address, addr0Wallet.getPrivateKey());
+        const signatureBackOrder = signOrder(backOrder, this.chainId, this.swap.address, addr1Wallet.getPrivateKey());
+        const matchingParams =
+            this.matcher.address +
+            '01' +
+            web3.eth.abi
+                .encodeParameters(
+                    ['address[]', 'bytes[]'],
+                    [
+                        [this.weth.address, this.dai.address],
+                        [
+                            this.weth.contract.methods.approve(this.swap.address, ether('0.1')).encodeABI(),
+                            this.dai.contract.methods.approve(this.swap.address, ether('100')).encodeABI(),
+                        ],
+                    ],
+                )
+                .substring(2);
+        const interaction =
+            this.matcher.address +
+            '00' +
+            this.swap.contract.methods
+                .fillOrder(backOrder, signatureBackOrder, matchingParams, ether('0.1'), 0, ether('100'))
+                .encodeABI()
+                .substring(10);
+        await expect(
+            this.matcher.matchOrdersEOA(
+                this.swap.address,
+                order,
+                signature,
+                interaction,
+                ether('100'),
+                0,
+                ether('0.1'),
+            ),
+        ).to.eventually.be.rejectedWith('NotEnoughCredit()');
+    });
+
+    describe('setFeeBank', async () => {
+        it('should change feeBank', async () => {
+            expect(await this.matcher.feeBank()).to.be.not.equals(addr1);
+            await this.matcher.setFeeBank(addr1);
+            expect((await this.matcher.feeBank()).toLowerCase()).to.be.equals(addr1.toLowerCase());
+        });
+        it('should not change feeBank by non-owner', async () => {
+            await expect(this.matcher.setFeeBank(addr1, { from: addr1 })).to.eventually.be.rejectedWith(
+                'Ownable: caller is not the owner',
+            );
+        });
+    });
+
+    describe('addCreditAllowance', async () => {
+        it('should increase credit', async () => {
+            const amount = ether('100');
+            expect(await this.matcher.creditAllowance(addr1)).to.be.bignumber.eq('0');
+            await this.matcher.setFeeBank(addr0);
+            await this.matcher.addCreditAllowance(addr1, amount);
+            expect(await this.matcher.creditAllowance(addr1)).to.be.bignumber.eq(amount);
+        });
+        it('should not increase credit by non-feeBank address', async () => {
+            await expect(this.matcher.addCreditAllowance(addr1, ether('100'))).to.eventually.be.rejectedWith(
+                'OnlyFeeBankAccess()',
+            );
+        });
+    });
+
+    describe('subCreditAllowance', async () => {
+        beforeEach(async () => {
+            this.creditAmount = ether('100');
+            await this.matcher.setFeeBank(addr0);
+            await this.matcher.addCreditAllowance(addr1, this.creditAmount);
+        });
+        it('should decrease credit', async () => {
+            const amount = ether('10');
+            expect(await this.matcher.creditAllowance(addr1)).to.be.bignumber.eq(this.creditAmount);
+            await this.matcher.subCreditAllowance(addr1, amount);
+            expect(await this.matcher.creditAllowance(addr1)).to.be.bignumber.eq(this.creditAmount.sub(amount));
+        });
+        it('should not deccrease credit by non-feeBank address', async () => {
+            await this.matcher.setFeeBank(this.feeBank.address);
+            await expect(this.matcher.subCreditAllowance(addr1, ether('10'))).to.eventually.be.rejectedWith(
+                'OnlyFeeBankAccess()',
+            );
         });
     });
 });
