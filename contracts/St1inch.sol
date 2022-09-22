@@ -20,7 +20,6 @@ contract St1inch is ERC20Farmable, ERC20Delegatable {
 
     uint256 public constant MIN_LOCK_PERIOD = 1 days;
     uint256 public constant MAX_LOCK_PERIOD = 4 * 365 days;
-    uint256 public constant MAX_BITS = 26; // Store as constant or do ugly put 26 right into array size?
 
     IERC20 public immutable oneInch;
     uint256 public immutable origin;
