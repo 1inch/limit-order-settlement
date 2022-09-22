@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity 0.8.15;
+pragma solidity 0.8.17;
 
 import "@1inch/limit-order-protocol/contracts/interfaces/NotificationReceiver.sol";
 import "@1inch/limit-order-protocol/contracts/interfaces/IOrderMixin.sol";
