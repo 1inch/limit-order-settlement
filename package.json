@@ -26,7 +26,7 @@
   "dependencies": {
     "@1inch/delegating": "https://github.com/1inch/delegating",
     "@1inch/farming": "https://github.com/1inch/farming",
-    "@1inch/limit-order-protocol": "1inch/limit-order-protocol",
+    "@1inch/limit-order-protocol": "0.3.0-prerelease",
     "@openzeppelin/contracts": "4.7.3"
   },
   "devDependencies": {
@@ -50,7 +50,7 @@
     "hardhat-gas-reporter": "1.0.8",
     "prettier": "^2.7.1",
     "prettier-plugin-solidity": "^1.0.0-beta.24",
-    "solc": "0.8.16",
+    "solc": "0.8.17",
     "solhint": "3.3.7",
     "solidity-coverage": "0.7.21",
     "solidity-docgen": "0.6.0-beta.22"
