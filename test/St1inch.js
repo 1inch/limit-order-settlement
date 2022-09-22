@@ -7,9 +7,9 @@ const St1inch = artifacts.require('St1inch');
 describe('St1inch', async () => {
     const [addr0, addr1] = [addr0Wallet.getAddressString(), addr1Wallet.getAddressString()];
     const baseExp = toBN('999999981746377019');
-    const invertBaseExp = ether('1000000000000000000').div(baseExp);
 
-    const exp = (point, t, base = baseExp) => {
+    const exp = (point, t) => {
+        let base = baseExp;
         while (t.gt(toBN('0'))) {
             if (t.and(toBN('1')).eq(toBN('1'))) {
                 point = point.mul(base).div(ether('1'));
@@ -21,15 +21,26 @@ describe('St1inch', async () => {
         return point;
     };
 
+    const expInv = (point, t) => {
+        let base = baseExp;
+        while (t.gt(toBN('0'))) {
+            if (t.and(toBN('1')).eq(toBN('1'))) {
+                point = point.mul(ether('1')).div(base);
+            }
+            base = base.mul(base).div(ether('1'));
+            t = t.shrn(1);
+        }
+
+        return point;
+    };
+
     const checkBalances = async (account, balance, lockDuration) => {
         expect(await this.st1inch.depositsAmount(account)).to.be.bignumber.equal(balance);
         const t = (await time.latest()).add(lockDuration).sub(this.origin);
-        const originPower = exp(balance, t, invertBaseExp);
-        assertRoughlyEqualValues(await this.st1inch.balanceOf(account), originPower, 1e-10);
-        assertRoughlyEqualValues(
-            await this.st1inch.votingPowerOf(account),
+        const originPower = expInv(balance, t);
+        expect(await this.st1inch.balanceOf(account)).to.be.bignumber.equal(originPower);
+        expect(await this.st1inch.votingPowerOf(account)).to.be.bignumber.equal(
             exp(originPower, (await time.latest()).sub(this.origin)),
-            1e-10,
         );
         assertRoughlyEqualValues(
             await this.st1inch.methods['votingPowerOf(address,uint256)'](
