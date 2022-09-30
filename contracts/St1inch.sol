@@ -6,8 +6,11 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@1inch/farming/contracts/ERC20Farmable.sol";
 import "@1inch/delegating/contracts/ERC20Delegatable.sol";
+import "@1inch/solidity-utils/contracts/libraries/SafeERC20.sol";
 
 contract St1inch is ERC20Farmable, ERC20Delegatable {
+    using SafeERC20 for IERC20;
+
     error ZeroAddress();
     error BurnAmountExceedsBalance();
     error ApproveDisabled();
@@ -143,11 +146,29 @@ contract St1inch is ERC20Farmable, ERC20Delegatable {
         _deposit(msg.sender, amount, duration);
     }
 
+    function depositWithPermit(
+        uint256 amount,
+        uint256 duration,
+        bytes calldata permit
+    ) external {
+        depositForWithPermit(msg.sender, amount, duration, permit);
+    }
+
     function depositFor(
         address account,
         uint256 amount,
         uint256 duration
     ) external {
+        _deposit(account, amount, duration);
+    }
+
+    function depositForWithPermit(
+        address account,
+        uint256 amount,
+        uint256 duration,
+        bytes calldata permit
+    ) public {
+        oneInch.safePermit(permit);
         _deposit(account, amount, duration);
     }
 
