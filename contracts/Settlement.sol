@@ -18,7 +18,7 @@ contract Settlement is Ownable, InteractionNotificationReceiver, WhitelistChecke
     uint256 private constant _ORDER_TIME_START_SHIFT = 224; // orderTimeMask 216-255
     uint256 private constant _ORDER_DURATION_SHIFT = 192; // durationMask 192-215
     uint256 private constant _ORDER_INITIAL_RATE_SHIFT = 176; // initialRateMask 176-191
-    uint256 private constant _ORDER_FEE_SHIFT = 104; // orderFee 176-191
+    uint256 private constant _ORDER_FEE_SHIFT = 104; // orderFee 104-175
 
     uint16 private constant _BASE_POINTS = 10000; // 100%
     uint16 private constant _DEFAULT_INITIAL_RATE_BUMP = 1000; // 10%
