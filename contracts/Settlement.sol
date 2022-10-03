@@ -154,7 +154,7 @@ contract Settlement is Ownable, InteractionNotificationReceiver, WhitelistChecke
         uint256 currentAllowance = creditAllowance[tx.origin]; // solhint-disable-line avoid-tx-origin
         if (currentAllowance < orderFee) revert NotEnoughCredit();
         unchecked {
-            creditAllowance[tx.origin] = currentAllowance - orderFee;  // solhint-disable-line avoid-tx-origin
+            creditAllowance[tx.origin] = currentAllowance - orderFee; // solhint-disable-line avoid-tx-origin
         }
         orderMixin.fillOrder(order, signature, interaction, makingAmount, takingAmount, thresholdAmount);
     }
