@@ -55,7 +55,7 @@ contract Settlement is Ownable, InteractionNotificationReceiver, WhitelistChecke
             orderMixin,
             order,
             signature,
-            bytes.concat(interaction, bytes32(order.salt)),
+            abi.encodePacked(interaction, bytes32(order.salt)),
             makingAmount,
             takingAmount,
             thresholdAmount
@@ -75,7 +75,7 @@ contract Settlement is Ownable, InteractionNotificationReceiver, WhitelistChecke
             orderMixin,
             order,
             signature,
-            bytes.concat(interaction, bytes32(order.salt)),
+            abi.encodePacked(interaction, bytes32(order.salt)),
             makingAmount,
             takingAmount,
             thresholdAmount
@@ -89,10 +89,10 @@ contract Settlement is Ownable, InteractionNotificationReceiver, WhitelistChecke
         bytes calldata interactiveData
     ) external onlyLimitOrderProtocol returns (uint256) {
         if (interactiveData[0] == _FINALIZE_INTERACTION) {
-            (address[] memory targets, bytes[] memory calldatas) = abi.decode(
-                interactiveData[1:],
-                (address[], bytes[])
-            );
+            (
+                address[] calldata targets,
+                bytes[] calldata calldatas
+            ) = _abiDecodeFinal(interactiveData[1:]);
 
             uint256 length = targets.length;
             if (length != calldatas.length) revert IncorrectCalldataParams();
@@ -103,19 +103,19 @@ contract Settlement is Ownable, InteractionNotificationReceiver, WhitelistChecke
             }
         } else {
             (
-                OrderLib.Order memory order,
-                bytes memory signature,
-                bytes memory interaction,
+                OrderLib.Order calldata order,
+                bytes calldata signature,
+                bytes calldata interaction,
                 uint256 makingOrderAmount,
                 uint256 takingOrderAmount,
                 uint256 thresholdAmount
-            ) = abi.decode(interactiveData[1:], (OrderLib.Order, bytes, bytes, uint256, uint256, uint256));
+            ) = _abiDecodeIteration(interactiveData[1:]);
 
             _matchOrder(
                 IOrderMixin(msg.sender),
                 order,
                 signature,
-                bytes.concat(interaction, bytes32(order.salt)),
+                abi.encodePacked(interaction, bytes32(order.salt)),
                 makingOrderAmount,
                 takingOrderAmount,
                 thresholdAmount
@@ -150,8 +150,8 @@ contract Settlement is Ownable, InteractionNotificationReceiver, WhitelistChecke
 
     function _matchOrder(
         IOrderMixin orderMixin,
-        OrderLib.Order memory order,
-        bytes memory signature,
+        OrderLib.Order calldata order,
+        bytes calldata signature,
         bytes memory interaction,
         uint256 makingAmount,
         uint256 takingAmount,
@@ -180,5 +180,49 @@ contract Settlement is Ownable, InteractionNotificationReceiver, WhitelistChecke
 
     function setFeeBank(address newFeeBank) external onlyOwner {
         feeBank = newFeeBank;
+    }
+
+    function _abiDecodeFinal(bytes calldata cd) private pure
+        returns(
+            address[] calldata targets,
+            bytes[] calldata calldatas
+        )
+    {
+        assembly {  // solhint-disable-line no-inline-assembly
+            let ptr := add(cd.offset, calldataload(cd.offset))
+            targets.offset := add(ptr, 0x20)
+            targets.length := calldataload(ptr)
+
+            ptr := add(cd.offset, calldataload(add(cd.offset, 0x20)))
+            calldatas.offset := add(ptr, 0x20)
+            calldatas.length := calldataload(ptr)
+        }
+    }
+
+    function _abiDecodeIteration(bytes calldata cd) private pure
+        returns(
+            OrderLib.Order calldata order,
+            bytes calldata signature,
+            bytes calldata interaction,
+            uint256 makingOrderAmount,
+            uint256 takingOrderAmount,
+            uint256 thresholdAmount
+        )
+    {
+        assembly {  // solhint-disable-line no-inline-assembly
+            order := add(cd.offset, calldataload(cd.offset))
+
+            let ptr := add(cd.offset, calldataload(add(cd.offset, 0x20)))
+            signature.offset := add(ptr, 0x20)
+            signature.length := calldataload(ptr)
+
+            ptr := add(cd.offset, calldataload(add(cd.offset, 0x40)))
+            interaction.offset := add(ptr, 0x20)
+            interaction.length := calldataload(ptr)
+
+            makingOrderAmount := calldataload(add(cd.offset, 0x60))
+            takingOrderAmount := calldataload(add(cd.offset, 0x80))
+            thresholdAmount := calldataload(add(cd.offset, 0xa0))
+        }
     }
 }
