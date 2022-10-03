@@ -154,7 +154,7 @@ describe('FeeBank', async () => {
             const subCreditAmount = ether('2');
             await this.feeBank.deposit(amount, { from: addr1 });
             await this.matcher.setFeeBank(addr0);
-            await this.matcher.subCreditAllowance(addr1, subCreditAmount);
+            await this.matcher.decreaseCreditAllowance(addr1, subCreditAmount);
 
             const balanceBefore = await this.inch.balanceOf(addr0);
             expect(await this.feeBank.accountDeposits(addr1)).to.be.bignumber.eq(amount);
@@ -174,8 +174,8 @@ describe('FeeBank', async () => {
             await this.feeBank.deposit(addr0Amount, { from: addr0 });
             await this.feeBank.deposit(addr1Amount, { from: addr1 });
             await this.matcher.setFeeBank(addr0);
-            await this.matcher.subCreditAllowance(addr0, subCreditAddr0Amount);
-            await this.matcher.subCreditAllowance(addr1, subCreditAddr1Amount);
+            await this.matcher.decreaseCreditAllowance(addr0, subCreditAddr0Amount);
+            await this.matcher.decreaseCreditAllowance(addr1, subCreditAddr1Amount);
 
             const balanceBefore = await this.inch.balanceOf(addr0);
             expect(await this.feeBank.accountDeposits(addr0)).to.be.bignumber.eq(addr0Amount);
@@ -206,7 +206,7 @@ describe('FeeBank', async () => {
             }
             await this.matcher.setFeeBank(addr0);
             for (let i = 0; i < accounts.length; i++) {
-                await this.matcher.subCreditAllowance(accounts[i], subCreditAmounts[i]);
+                await this.matcher.decreaseCreditAllowance(accounts[i], subCreditAmounts[i]);
             }
 
             const balanceBefore = await this.inch.balanceOf(addr0);

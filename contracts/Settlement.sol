@@ -11,7 +11,14 @@ import "./interfaces/IWhitelistRegistry.sol";
 
 contract Settlement is Ownable, InteractionNotificationReceiver, WhitelistChecker {
     bytes1 private constant _FINALIZE_INTERACTION = 0x01;
-    uint256 private constant _ORDER_FEE_MASK = 0x00000000000000000000FFFFFFFFFFFFFFFFFF00000000000000000000000000;
+    uint256 private constant _ORDER_TIME_START_MASK     = 0xFFFFFFFF00000000000000000000000000000000000000000000000000000000;
+    uint256 private constant _ORDER_DURATION_MASK       = 0x00000000FFFFFFFF000000000000000000000000000000000000000000000000;
+    uint256 private constant _ORDER_INITIAL_RATE_MASK   = 0x0000000000000000FFFF00000000000000000000000000000000000000000000;
+    uint256 private constant _ORDER_FEE_MASK            = 0x00000000000000000000FFFFFFFFFFFFFFFFFF00000000000000000000000000;
+    uint256 private constant _ORDER_TIME_START_SHIFT = 224; // orderTimeMask 216-255
+    uint256 private constant _ORDER_DURATION_SHIFT = 192; // durationMask 192-215
+    uint256 private constant _ORDER_INITIAL_RATE_SHIFT = 176; // initialRateMask 176-191
+    uint256 private constant _ORDER_FEE_SHIFT = 104; // orderFee 104-175
 
     uint16 private constant _BASE_POINTS = 10000; // 100%
     uint16 private constant _DEFAULT_INITIAL_RATE_BUMP = 1000; // 10%
@@ -119,18 +126,18 @@ contract Settlement is Ownable, InteractionNotificationReceiver, WhitelistChecke
     }
 
     function _getFeeRate(uint256 salt) internal view returns (uint256) {
-        uint32 orderTime = uint32((salt & (0xFFFFFFFF << 224)) >> 224); // orderTimeMask 216-255
+        uint256 orderTime = (salt & _ORDER_TIME_START_MASK) >> _ORDER_TIME_START_SHIFT;
         // solhint-disable-next-line not-rely-on-time
-        uint32 currentTimestamp = uint32(block.timestamp);
+        uint256 currentTimestamp = block.timestamp;
         if (orderTime > currentTimestamp) revert IncorrectOrderStartTime();
 
-        uint32 duration = uint32((salt & (0xFFFFFFFF << 192)) >> 192); // durationMask 192-215
+        uint256 duration = (salt & _ORDER_DURATION_MASK) >> _ORDER_DURATION_SHIFT;
         if (duration == 0) {
             duration = _DEFAULT_DURATION;
         }
         orderTime += duration;
 
-        uint16 initialRate = uint16((salt & (0xFFFF << 176)) >> 176); // initialRateMask 176-191
+        uint256 initialRate = (salt & _ORDER_INITIAL_RATE_MASK) >> _ORDER_INITIAL_RATE_SHIFT;
         if (initialRate == 0) {
             initialRate = _DEFAULT_INITIAL_RATE_BUMP;
         }
@@ -150,7 +157,7 @@ contract Settlement is Ownable, InteractionNotificationReceiver, WhitelistChecke
         uint256 takingAmount,
         uint256 thresholdAmount
     ) private {
-        uint256 orderFee = (order.salt & _ORDER_FEE_MASK) >> (256 - 80 - 72);
+        uint256 orderFee = (order.salt & _ORDER_FEE_MASK) >> _ORDER_FEE_SHIFT;
         uint256 currentAllowance = creditAllowance[tx.origin]; // solhint-disable-line avoid-tx-origin
         if (currentAllowance < orderFee) revert NotEnoughCredit();
         unchecked {
@@ -159,13 +166,13 @@ contract Settlement is Ownable, InteractionNotificationReceiver, WhitelistChecke
         orderMixin.fillOrder(order, signature, interaction, makingAmount, takingAmount, thresholdAmount);
     }
 
-    function addCreditAllowance(address account, uint256 amount) external onlyFeeBank returns (uint256 allowance) {
+    function increaseCreditAllowance(address account, uint256 amount) external onlyFeeBank returns (uint256 allowance) {
         allowance = creditAllowance[account];
         allowance += amount;
         creditAllowance[account] = allowance;
     }
 
-    function subCreditAllowance(address account, uint256 amount) external onlyFeeBank returns (uint256 allowance) {
+    function decreaseCreditAllowance(address account, uint256 amount) external onlyFeeBank returns (uint256 allowance) {
         allowance = creditAllowance[account];
         allowance -= amount;
         creditAllowance[account] = allowance;
