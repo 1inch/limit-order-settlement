@@ -444,6 +444,7 @@ describe('Settlement', async () => {
     it('should change creditAllowance with non-zero fee', async () => {
         const orderFee = 100;
         const backOrderFee = 125;
+        const basePoints = ether('0.001'); // 1e15
         const order = await buildOrder({
             salt: buildSalt({ orderStartTime: await defaultExpiredAuctionTimestamp(), fee: orderFee }),
             makerAsset: this.dai.address,
@@ -495,7 +496,7 @@ describe('Settlement', async () => {
             ether('0.1'),
         );
         expect(await this.matcher.creditAllowance(addr0)).to.be.bignumber.eq(
-            creditAllowanceBefore.subn(orderFee).subn(backOrderFee),
+            creditAllowanceBefore.sub(basePoints.muln(orderFee)).sub(basePoints.muln(backOrderFee)),
         );
     });
 
