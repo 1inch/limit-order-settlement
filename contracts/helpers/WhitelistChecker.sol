@@ -33,10 +33,13 @@ contract WhitelistChecker {
         }
     }
 
-    function _onlyLimitOrderProtocol() internal view returns (address) {
-        if (msg.sender != _limitOrderProtocol) revert AccessDenied(); // solhint-disable-next-line avoid-tx-origin
-        if (_checked == address(0) && !_whitelist.isWhitelisted(tx.origin)) revert AccessDenied();
-        return _checked != address(0) ? _checked : tx.origin; // solhint-disable-line avoid-tx-origin
+    function _onlyLimitOrderProtocol() internal view returns (address checked) {
+        if (msg.sender != _limitOrderProtocol) revert AccessDenied(); // solhint-disable-line avoid-tx-origin
+        checked = _checked;
+        if (checked == address(0)) {
+            checked = tx.origin; // solhint-disable-line avoid-tx-origin
+            if (!_whitelist.isWhitelisted(checked)) revert AccessDenied();
+        }
     }
 
     function _enforceWhitelist(address account) private view {
