@@ -8,9 +8,11 @@ import "../interfaces/IWhitelistRegistry.sol";
 contract WhitelistChecker {
     error AccessDenied();
 
+    address private constant _NOT_CHECKED = address(1);
+
     IWhitelistRegistry private immutable _whitelist;
     address private _limitOrderProtocol;
-    address private _checked;
+    address private _checked = _NOT_CHECKED;
 
     constructor(IWhitelistRegistry whitelist, address limitOrderProtocol) {
         _whitelist = whitelist;
@@ -24,10 +26,10 @@ contract WhitelistChecker {
 
     modifier onlyWhitelisted(address account) {
         _enforceWhitelist(account);
-        if (_checked == address(0)) {
+        if (_checked == _NOT_CHECKED) {
             _checked = account;
             _;
-            _checked = address(0);
+            _checked = _NOT_CHECKED;
         } else {
             _;
         }
@@ -36,7 +38,7 @@ contract WhitelistChecker {
     function _onlyLimitOrderProtocol() internal view returns (address checked) {
         if (msg.sender != _limitOrderProtocol) revert AccessDenied(); // solhint-disable-line avoid-tx-origin
         checked = _checked;
-        if (checked == address(0)) {
+        if (checked == _NOT_CHECKED) {
             checked = tx.origin; // solhint-disable-line avoid-tx-origin
             if (!_whitelist.isWhitelisted(checked)) revert AccessDenied();
         }
