@@ -14,7 +14,6 @@ describe('WhitelistChecker', async () => {
 
     before(async () => {
         this.chainId = await web3.eth.getChainId();
-        this.whitelistRegistrySimple = await WhitelistRegistrySimple.new();
     });
 
     beforeEach(async () => {
@@ -35,6 +34,7 @@ describe('WhitelistChecker', async () => {
         await this.weth.approve(this.swap.address, ether('1'));
         await this.weth.approve(this.swap.address, ether('1'), { from: addr1 });
 
+        this.whitelistRegistrySimple = await WhitelistRegistrySimple.new();
         this.matcher = await Settlement.new(this.whitelistRegistrySimple.address, this.swap.address);
     });
 
@@ -135,10 +135,6 @@ describe('WhitelistChecker', async () => {
     describe('should work with whitelisted address', async () => {
         beforeEach(async () => {
             await this.whitelistRegistrySimple.setStatus(addr0, true);
-        });
-
-        afterEach(async () => {
-            await this.whitelistRegistrySimple.setStatus(addr0, false);
         });
 
         it('onlyWhitelistedEOA modifier in matchOrdersEOA method', async () => {
