@@ -1,7 +1,15 @@
-const { expect, ether, toBN, assertRoughlyEqualValues, timeIncreaseTo, time } = require('@1inch/solidity-utils');
+const {
+    expect,
+    ether,
+    toBN,
+    assertRoughlyEqualValues,
+    timeIncreaseTo,
+    time,
+    getPermit,
+} = require('@1inch/solidity-utils');
 const { addr0Wallet, addr1Wallet } = require('./helpers/utils');
 
-const TokenMock = artifacts.require('TokenMock');
+const TokenPermitMock = artifacts.require('ERC20PermitMock');
 const St1inch = artifacts.require('St1inch');
 
 describe('St1inch', async () => {
@@ -52,10 +60,13 @@ describe('St1inch', async () => {
         );
     };
 
+    before(async () => {
+        this.chainId = await web3.eth.getChainId();
+    });
+
     beforeEach(async () => {
-        this.oneInch = await TokenMock.new('1inch', '1inch');
-        await this.oneInch.mint(addr0, ether('100'));
-        await this.oneInch.mint(addr1, ether('100'));
+        this.oneInch = await TokenPermitMock.new('1inch', '1inch', addr0, ether('200'));
+        await this.oneInch.transfer(addr1, ether('100'), { from: addr0 });
 
         const maxUserFarms = 5;
         const maxUserDelegations = 5;
@@ -77,6 +88,26 @@ describe('St1inch', async () => {
         await checkBalances(addr0, ether('100'), time.duration.days('1'));
     });
 
+    it('should take users deposit with permit', async () => {
+        expect(await this.st1inch.depositsAmount(addr0)).to.be.bignumber.equal(toBN('0'));
+        expect(await this.st1inch.balanceOf(addr0)).to.be.bignumber.equal(toBN('0'));
+        expect(await this.st1inch.votingPowerOf(addr0)).to.be.bignumber.equal(toBN('0'));
+        await this.oneInch.approve(this.st1inch.address, '0');
+        const permit = await getPermit(
+            addr0,
+            addr0Wallet.getPrivateKey(),
+            this.oneInch,
+            '1',
+            this.chainId,
+            this.st1inch.address,
+            ether('100'),
+        );
+
+        await this.st1inch.depositWithPermit(ether('100'), time.duration.days('1'), permit);
+
+        await checkBalances(addr0, ether('100'), time.duration.days('1'));
+    });
+
     it('should take users deposit for other account', async () => {
         expect(await this.st1inch.depositsAmount(addr1)).to.be.bignumber.equal(toBN('0'));
         expect(await this.st1inch.balanceOf(addr1)).to.be.bignumber.equal(toBN('0'));
@@ -85,6 +116,33 @@ describe('St1inch', async () => {
         const balanceAddr1 = await this.oneInch.balanceOf(addr1);
 
         await this.st1inch.depositFor(addr1, ether('100'), time.duration.days('1'));
+
+        expect(await this.oneInch.balanceOf(addr0)).to.be.bignumber.equal(balanceAddr0.sub(ether('100')));
+        expect(await this.oneInch.balanceOf(addr1)).to.be.bignumber.equal(balanceAddr1);
+        await checkBalances(addr1, ether('100'), time.duration.days('1'));
+        expect(await this.st1inch.depositsAmount(addr0)).to.be.bignumber.equal(toBN('0'));
+        expect(await this.st1inch.balanceOf(addr0)).to.be.bignumber.equal(toBN('0'));
+        expect(await this.st1inch.votingPowerOf(addr0)).to.be.bignumber.equal(toBN('0'));
+    });
+
+    it('should take users deposit with permit for other account', async () => {
+        expect(await this.st1inch.depositsAmount(addr1)).to.be.bignumber.equal(toBN('0'));
+        expect(await this.st1inch.balanceOf(addr1)).to.be.bignumber.equal(toBN('0'));
+        expect(await this.st1inch.votingPowerOf(addr1)).to.be.bignumber.equal(toBN('0'));
+        const balanceAddr0 = await this.oneInch.balanceOf(addr0);
+        const balanceAddr1 = await this.oneInch.balanceOf(addr1);
+        await this.oneInch.approve(this.st1inch.address, '0');
+        const permit = await getPermit(
+            addr0,
+            addr0Wallet.getPrivateKey(),
+            this.oneInch,
+            '1',
+            this.chainId,
+            this.st1inch.address,
+            ether('100'),
+        );
+
+        await this.st1inch.depositForWithPermit(addr1, ether('100'), time.duration.days('1'), permit);
 
         expect(await this.oneInch.balanceOf(addr0)).to.be.bignumber.equal(balanceAddr0.sub(ether('100')));
         expect(await this.oneInch.balanceOf(addr1)).to.be.bignumber.equal(balanceAddr1);

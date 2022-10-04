@@ -98,11 +98,11 @@ contract FeeBank is Ownable {
     function _depositFor(address account, uint256 amount) internal returns (uint256 totalCreditAllowance) {
         _token.safeTransferFrom(msg.sender, address(this), amount);
         accountDeposits[account] += amount;
-        totalCreditAllowance = _settlement.addCreditAllowance(account, amount);
+        totalCreditAllowance = _settlement.increaseCreditAllowance(account, amount);
     }
 
     function _withdrawTo(address account, uint256 amount) internal returns (uint256 totalCreditAllowance) {
-        totalCreditAllowance = _settlement.subCreditAllowance(msg.sender, amount);
+        totalCreditAllowance = _settlement.decreaseCreditAllowance(msg.sender, amount);
         accountDeposits[msg.sender] -= amount;
         _token.safeTransfer(account, amount);
     }

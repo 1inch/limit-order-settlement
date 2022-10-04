@@ -731,36 +731,36 @@ describe('Settlement', async () => {
         });
     });
 
-    describe('addCreditAllowance', async () => {
+    describe('increaseCreditAllowance', async () => {
         it('should increase credit', async () => {
             const amount = ether('100');
             expect(await this.matcher.creditAllowance(addr1)).to.be.bignumber.eq('0');
             await this.matcher.setFeeBank(addr0);
-            await this.matcher.addCreditAllowance(addr1, amount);
+            await this.matcher.increaseCreditAllowance(addr1, amount);
             expect(await this.matcher.creditAllowance(addr1)).to.be.bignumber.eq(amount);
         });
         it('should not increase credit by non-feeBank address', async () => {
-            await expect(this.matcher.addCreditAllowance(addr1, ether('100'))).to.eventually.be.rejectedWith(
+            await expect(this.matcher.increaseCreditAllowance(addr1, ether('100'))).to.eventually.be.rejectedWith(
                 'OnlyFeeBankAccess()',
             );
         });
     });
 
-    describe('subCreditAllowance', async () => {
+    describe('decreaseCreditAllowance', async () => {
         beforeEach(async () => {
             this.creditAmount = ether('100');
             await this.matcher.setFeeBank(addr0);
-            await this.matcher.addCreditAllowance(addr1, this.creditAmount);
+            await this.matcher.increaseCreditAllowance(addr1, this.creditAmount);
         });
         it('should decrease credit', async () => {
             const amount = ether('10');
             expect(await this.matcher.creditAllowance(addr1)).to.be.bignumber.eq(this.creditAmount);
-            await this.matcher.subCreditAllowance(addr1, amount);
+            await this.matcher.decreaseCreditAllowance(addr1, amount);
             expect(await this.matcher.creditAllowance(addr1)).to.be.bignumber.eq(this.creditAmount.sub(amount));
         });
         it('should not deccrease credit by non-feeBank address', async () => {
             await this.matcher.setFeeBank(this.feeBank.address);
-            await expect(this.matcher.subCreditAllowance(addr1, ether('10'))).to.eventually.be.rejectedWith(
+            await expect(this.matcher.decreaseCreditAllowance(addr1, ether('10'))).to.eventually.be.rejectedWith(
                 'OnlyFeeBankAccess()',
             );
         });

@@ -11,7 +11,16 @@ import "./interfaces/IWhitelistRegistry.sol";
 
 contract Settlement is Ownable, InteractionNotificationReceiver, WhitelistChecker {
     bytes1 private constant _FINALIZE_INTERACTION = 0x01;
+    uint256 private constant _ORDER_TIME_START_MASK =
+        0xFFFFFFFF00000000000000000000000000000000000000000000000000000000;
+    uint256 private constant _ORDER_DURATION_MASK = 0x00000000FFFFFFFF000000000000000000000000000000000000000000000000;
+    uint256 private constant _ORDER_INITIAL_RATE_MASK =
+        0x0000000000000000FFFF00000000000000000000000000000000000000000000;
     uint256 private constant _ORDER_FEE_MASK = 0x00000000000000000000FFFFFFFFFFFFFFFFFF00000000000000000000000000;
+    uint256 private constant _ORDER_TIME_START_SHIFT = 224; // orderTimeMask 216-255
+    uint256 private constant _ORDER_DURATION_SHIFT = 192; // durationMask 192-215
+    uint256 private constant _ORDER_INITIAL_RATE_SHIFT = 176; // initialRateMask 176-191
+    uint256 private constant _ORDER_FEE_SHIFT = 104; // orderFee 104-175
 
     uint16 private constant _BASE_POINTS = 10000; // 100%
     uint16 private constant _DEFAULT_INITIAL_RATE_BUMP = 1000; // 10%
@@ -49,7 +58,7 @@ contract Settlement is Ownable, InteractionNotificationReceiver, WhitelistChecke
             order,
             msg.sender,
             signature,
-            bytes.concat(interaction, bytes32(order.salt)),
+            abi.encodePacked(interaction, bytes32(order.salt)),
             makingAmount,
             takingAmount,
             thresholdAmount
@@ -70,7 +79,7 @@ contract Settlement is Ownable, InteractionNotificationReceiver, WhitelistChecke
             order,
             tx.origin, // solhint-disable-line avoid-tx-origin
             signature,
-            bytes.concat(interaction, bytes32(order.salt)),
+            abi.encodePacked(interaction, bytes32(order.salt)),
             makingAmount,
             takingAmount,
             thresholdAmount
@@ -85,10 +94,7 @@ contract Settlement is Ownable, InteractionNotificationReceiver, WhitelistChecke
     ) external returns (uint256) {
         address interactor = _onlyLimitOrderProtocol();
         if (interactiveData[0] == _FINALIZE_INTERACTION) {
-            (address[] memory targets, bytes[] memory calldatas) = abi.decode(
-                interactiveData[1:],
-                (address[], bytes[])
-            );
+            (address[] calldata targets, bytes[] calldata calldatas) = _abiDecodeFinal(interactiveData[1:]);
 
             uint256 length = targets.length;
             if (length != calldatas.length) revert IncorrectCalldataParams();
@@ -99,20 +105,20 @@ contract Settlement is Ownable, InteractionNotificationReceiver, WhitelistChecke
             }
         } else {
             (
-                OrderLib.Order memory order,
-                bytes memory signature,
-                bytes memory interaction,
+                OrderLib.Order calldata order,
+                bytes calldata signature,
+                bytes calldata interaction,
                 uint256 makingOrderAmount,
                 uint256 takingOrderAmount,
                 uint256 thresholdAmount
-            ) = abi.decode(interactiveData[1:], (OrderLib.Order, bytes, bytes, uint256, uint256, uint256));
+            ) = _abiDecodeIteration(interactiveData[1:]);
 
             _matchOrder(
                 IOrderMixin(msg.sender),
                 order,
                 interactor,
                 signature,
-                bytes.concat(interaction, bytes32(order.salt)),
+                abi.encodePacked(interaction, bytes32(order.salt)),
                 makingOrderAmount,
                 takingOrderAmount,
                 thresholdAmount
@@ -123,18 +129,18 @@ contract Settlement is Ownable, InteractionNotificationReceiver, WhitelistChecke
     }
 
     function _getFeeRate(uint256 salt) internal view returns (uint256) {
-        uint32 orderTime = uint32((salt & (0xFFFFFFFF << 224)) >> 224); // orderTimeMask 216-255
+        uint256 orderTime = (salt & _ORDER_TIME_START_MASK) >> _ORDER_TIME_START_SHIFT;
         // solhint-disable-next-line not-rely-on-time
-        uint32 currentTimestamp = uint32(block.timestamp);
+        uint256 currentTimestamp = block.timestamp;
         if (orderTime > currentTimestamp) revert IncorrectOrderStartTime();
 
-        uint32 duration = uint32((salt & (0xFFFFFFFF << 192)) >> 192); // durationMask 192-215
+        uint256 duration = (salt & _ORDER_DURATION_MASK) >> _ORDER_DURATION_SHIFT;
         if (duration == 0) {
             duration = _DEFAULT_DURATION;
         }
         orderTime += duration;
 
-        uint16 initialRate = uint16((salt & (0xFFFF << 176)) >> 176); // initialRateMask 176-191
+        uint256 initialRate = (salt & _ORDER_INITIAL_RATE_MASK) >> _ORDER_INITIAL_RATE_SHIFT;
         if (initialRate == 0) {
             initialRate = _DEFAULT_INITIAL_RATE_BUMP;
         }
@@ -149,30 +155,79 @@ contract Settlement is Ownable, InteractionNotificationReceiver, WhitelistChecke
         IOrderMixin orderMixin,
         OrderLib.Order memory order,
         address interactor,
-        bytes memory signature,
+        bytes calldata signature,
         bytes memory interaction,
         uint256 makingAmount,
         uint256 takingAmount,
         uint256 thresholdAmount
     ) private {
-        uint256 orderFee = (order.salt & _ORDER_FEE_MASK) >> (256 - 80 - 72);
-        uint256 currentAllowance = creditAllowance[interactor]; // solhint-disable-line avoid-tx-origin
+        uint256 orderFee = (order.salt & _ORDER_FEE_MASK) >> _ORDER_FEE_SHIFT;
+        uint256 currentAllowance = creditAllowance[interactor];
         if (currentAllowance < orderFee) revert NotEnoughCredit();
         unchecked {
-            creditAllowance[interactor] = currentAllowance - orderFee; // solhint-disable-line avoid-tx-origin
+            creditAllowance[interactor] = currentAllowance - orderFee;
         }
         orderMixin.fillOrder(order, signature, interaction, makingAmount, takingAmount, thresholdAmount);
     }
 
-    function addCreditAllowance(address account, uint256 amount) external onlyFeeBank returns (uint256 allowance) {
-        creditAllowance[account] += amount;
+    function increaseCreditAllowance(address account, uint256 amount) external onlyFeeBank returns (uint256 allowance) {
+        allowance = creditAllowance[account];
+        allowance += amount;
+        creditAllowance[account] = allowance;
     }
 
-    function subCreditAllowance(address account, uint256 amount) external onlyFeeBank returns (uint256 allowance) {
-        creditAllowance[account] -= amount;
+    function decreaseCreditAllowance(address account, uint256 amount) external onlyFeeBank returns (uint256 allowance) {
+        allowance = creditAllowance[account];
+        allowance -= amount;
+        creditAllowance[account] = allowance;
     }
 
     function setFeeBank(address newFeeBank) external onlyOwner {
         feeBank = newFeeBank;
+    }
+
+    function _abiDecodeFinal(bytes calldata cd)
+        private
+        pure
+        returns (address[] calldata targets, bytes[] calldata calldatas)
+    {
+        assembly { // solhint-disable-line no-inline-assembly
+            let ptr := add(cd.offset, calldataload(cd.offset))
+            targets.offset := add(ptr, 0x20)
+            targets.length := calldataload(ptr)
+
+            ptr := add(cd.offset, calldataload(add(cd.offset, 0x20)))
+            calldatas.offset := add(ptr, 0x20)
+            calldatas.length := calldataload(ptr)
+        }
+    }
+
+    function _abiDecodeIteration(bytes calldata cd)
+        private
+        pure
+        returns (
+            OrderLib.Order calldata order,
+            bytes calldata signature,
+            bytes calldata interaction,
+            uint256 makingOrderAmount,
+            uint256 takingOrderAmount,
+            uint256 thresholdAmount
+        )
+    {
+        assembly { // solhint-disable-line no-inline-assembly
+            order := add(cd.offset, calldataload(cd.offset))
+
+            let ptr := add(cd.offset, calldataload(add(cd.offset, 0x20)))
+            signature.offset := add(ptr, 0x20)
+            signature.length := calldataload(ptr)
+
+            ptr := add(cd.offset, calldataload(add(cd.offset, 0x40)))
+            interaction.offset := add(ptr, 0x20)
+            interaction.length := calldataload(ptr)
+
+            makingOrderAmount := calldataload(add(cd.offset, 0x60))
+            takingOrderAmount := calldataload(add(cd.offset, 0x80))
+            thresholdAmount := calldataload(add(cd.offset, 0xa0))
+        }
     }
 }

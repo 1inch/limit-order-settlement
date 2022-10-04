@@ -28,7 +28,7 @@ interface ISettlement is InteractionNotificationReceiver {
 
     function creditAllowance(address account) external returns (uint256);
 
-    function addCreditAllowance(address account, uint256 amount) external returns (uint256);
+    function increaseCreditAllowance(address account, uint256 amount) external returns (uint256);
 
-    function subCreditAllowance(address account, uint256 amount) external returns (uint256);
+    function decreaseCreditAllowance(address account, uint256 amount) external returns (uint256);
 }
