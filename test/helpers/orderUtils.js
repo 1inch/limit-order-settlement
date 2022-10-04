@@ -144,7 +144,7 @@ const buildSalt = ({
         .shln(224)
         .add(toBN(duration).shln(192))
         .add(toBN(initialStartRate).shln(176))
-        .add(toBN(fee).shln(104))
+        .add(toBN(fee).shln(144))
         .add(toBN(salt))
         .toString();
 
