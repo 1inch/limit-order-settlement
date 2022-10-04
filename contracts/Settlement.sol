@@ -57,7 +57,7 @@ contract Settlement is Ownable, InteractionNotificationReceiver, WhitelistChecke
             order,
             msg.sender,
             signature,
-            abi.encodePacked(interaction, bytes32(order.salt)),
+            interaction,
             makingAmount,
             takingAmount,
             thresholdAmount
@@ -78,7 +78,7 @@ contract Settlement is Ownable, InteractionNotificationReceiver, WhitelistChecke
             order,
             tx.origin, // solhint-disable-line avoid-tx-origin
             signature,
-            abi.encodePacked(interaction, bytes32(order.salt)),
+            interaction,
             makingAmount,
             takingAmount,
             thresholdAmount
@@ -117,7 +117,7 @@ contract Settlement is Ownable, InteractionNotificationReceiver, WhitelistChecke
                 order,
                 interactor,
                 signature,
-                abi.encodePacked(interaction, bytes32(order.salt)),
+                interaction,
                 makingOrderAmount,
                 takingOrderAmount,
                 thresholdAmount
@@ -152,7 +152,7 @@ contract Settlement is Ownable, InteractionNotificationReceiver, WhitelistChecke
 
     function _matchOrder(
         IOrderMixin orderMixin,
-        OrderLib.Order memory order,
+        OrderLib.Order calldata order,
         address interactor,
         bytes calldata signature,
         bytes memory interaction,
@@ -166,7 +166,7 @@ contract Settlement is Ownable, InteractionNotificationReceiver, WhitelistChecke
         unchecked {
             creditAllowance[interactor] = currentAllowance - orderFee;
         }
-        orderMixin.fillOrder(order, signature, interaction, makingAmount, takingAmount, thresholdAmount);
+        orderMixin.fillOrder(order, signature, abi.encodePacked(interaction, order.salt), makingAmount, takingAmount, thresholdAmount);
     }
 
     function increaseCreditAllowance(address account, uint256 amount) external onlyFeeBank returns (uint256 allowance) {
