@@ -47,6 +47,7 @@ contract Settlement is Ownable, InteractionNotificationReceiver, WhitelistChecke
         _matchOrder(
             orderMixin,
             order,
+            msg.sender,
             signature,
             bytes.concat(interaction, bytes32(order.salt)),
             makingAmount,
@@ -67,6 +68,7 @@ contract Settlement is Ownable, InteractionNotificationReceiver, WhitelistChecke
         _matchOrder(
             orderMixin,
             order,
+            tx.origin, // solhint-disable-line avoid-tx-origin
             signature,
             bytes.concat(interaction, bytes32(order.salt)),
             makingAmount,
@@ -80,7 +82,8 @@ contract Settlement is Ownable, InteractionNotificationReceiver, WhitelistChecke
         uint256, /* makingAmount */
         uint256 takingAmount,
         bytes calldata interactiveData
-    ) external onlyLimitOrderProtocol returns (uint256) {
+    ) external returns (uint256) {
+        address interactor = _onlyLimitOrderProtocol();
         if (interactiveData[0] == _FINALIZE_INTERACTION) {
             (address[] memory targets, bytes[] memory calldatas) = abi.decode(
                 interactiveData[1:],
@@ -107,6 +110,7 @@ contract Settlement is Ownable, InteractionNotificationReceiver, WhitelistChecke
             _matchOrder(
                 IOrderMixin(msg.sender),
                 order,
+                interactor,
                 signature,
                 bytes.concat(interaction, bytes32(order.salt)),
                 makingOrderAmount,
@@ -144,6 +148,7 @@ contract Settlement is Ownable, InteractionNotificationReceiver, WhitelistChecke
     function _matchOrder(
         IOrderMixin orderMixin,
         OrderLib.Order memory order,
+        address interactor,
         bytes memory signature,
         bytes memory interaction,
         uint256 makingAmount,
@@ -151,24 +156,20 @@ contract Settlement is Ownable, InteractionNotificationReceiver, WhitelistChecke
         uint256 thresholdAmount
     ) private {
         uint256 orderFee = (order.salt & _ORDER_FEE_MASK) >> (256 - 80 - 72);
-        uint256 currentAllowance = creditAllowance[tx.origin]; // solhint-disable-line avoid-tx-origin
+        uint256 currentAllowance = creditAllowance[interactor]; // solhint-disable-line avoid-tx-origin
         if (currentAllowance < orderFee) revert NotEnoughCredit();
         unchecked {
-            creditAllowance[tx.origin] = currentAllowance - orderFee;  // solhint-disable-line avoid-tx-origin
+            creditAllowance[interactor] = currentAllowance - orderFee; // solhint-disable-line avoid-tx-origin
         }
         orderMixin.fillOrder(order, signature, interaction, makingAmount, takingAmount, thresholdAmount);
     }
 
     function addCreditAllowance(address account, uint256 amount) external onlyFeeBank returns (uint256 allowance) {
-        allowance = creditAllowance[account];
-        allowance += amount;
-        creditAllowance[account] = allowance;
+        creditAllowance[account] += amount;
     }
 
     function subCreditAllowance(address account, uint256 amount) external onlyFeeBank returns (uint256 allowance) {
-        allowance = creditAllowance[account];
-        allowance -= amount;
-        creditAllowance[account] = allowance;
+        creditAllowance[account] -= amount;
     }
 
     function setFeeBank(address newFeeBank) external onlyOwner {
