@@ -52,16 +52,7 @@ contract Settlement is Ownable, InteractionNotificationReceiver, WhitelistChecke
         uint256 takingAmount,
         uint256 thresholdAmount
     ) external onlyWhitelisted(msg.sender) {
-        _matchOrder(
-            orderMixin,
-            order,
-            msg.sender,
-            signature,
-            interaction,
-            makingAmount,
-            takingAmount,
-            thresholdAmount
-        );
+        _matchOrder(orderMixin, order, msg.sender, signature, interaction, makingAmount, takingAmount, thresholdAmount);
     }
 
     function matchOrdersEOA(
@@ -166,7 +157,14 @@ contract Settlement is Ownable, InteractionNotificationReceiver, WhitelistChecke
         unchecked {
             creditAllowance[interactor] = currentAllowance - orderFee;
         }
-        orderMixin.fillOrder(order, signature, abi.encodePacked(interaction, order.salt), makingAmount, takingAmount, thresholdAmount);
+        orderMixin.fillOrder(
+            order,
+            signature,
+            abi.encodePacked(interaction, order.salt),
+            makingAmount,
+            takingAmount,
+            thresholdAmount
+        );
     }
 
     function increaseCreditAllowance(address account, uint256 amount) external onlyFeeBank returns (uint256 allowance) {
@@ -190,7 +188,8 @@ contract Settlement is Ownable, InteractionNotificationReceiver, WhitelistChecke
         pure
         returns (address[] calldata targets, bytes[] calldata calldatas)
     {
-        assembly { // solhint-disable-line no-inline-assembly
+        // solhint-disable-next-line no-inline-assembly
+        assembly {
             let ptr := add(cd.offset, calldataload(cd.offset))
             targets.offset := add(ptr, 0x20)
             targets.length := calldataload(ptr)
@@ -213,7 +212,8 @@ contract Settlement is Ownable, InteractionNotificationReceiver, WhitelistChecke
             uint256 thresholdAmount
         )
     {
-        assembly { // solhint-disable-line no-inline-assembly
+        // solhint-disable-next-line no-inline-assembly
+        assembly {
             order := add(cd.offset, calldataload(cd.offset))
 
             let ptr := add(cd.offset, calldataload(add(cd.offset, 0x20)))
