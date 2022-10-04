@@ -36,7 +36,7 @@ contract WhitelistChecker {
     }
 
     function _onlyLimitOrderProtocol() internal view returns (address checked) {
-        if (msg.sender != _limitOrderProtocol) revert AccessDenied(); // solhint-disable-line avoid-tx-origin
+        if (msg.sender != _limitOrderProtocol) revert AccessDenied();
         checked = _checked;
         if (checked == _NOT_CHECKED) {
             checked = tx.origin; // solhint-disable-line avoid-tx-origin
