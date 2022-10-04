@@ -18,6 +18,7 @@ const Status = Object.freeze({
 
 describe('Settlement', async () => {
     const [addr0, addr1] = [addr0Wallet.getAddressString(), addr1Wallet.getAddressString()];
+    const basePoints = ether('0.001'); // 1e15
 
     before(async () => {
         this.chainId = await web3.eth.getChainId();
@@ -447,7 +448,6 @@ describe('Settlement', async () => {
     it('should change creditAllowance with non-zero fee', async () => {
         const orderFee = 100;
         const backOrderFee = 125;
-        const basePoints = ether('0.001'); // 1e15
         const order = await buildOrder({
             salt: buildSalt({ orderStartTime: await defaultExpiredAuctionTimestamp(), fee: orderFee }),
             makerAsset: this.dai.address,
@@ -549,7 +549,7 @@ describe('Settlement', async () => {
         const creditAllowanceBefore = await this.matcher.creditAllowance(addr0);
         await this.matcher.matchOrders(this.swap.address, order, signature, interaction, ether('100'), 0, ether('0.1'));
         expect(await this.matcher.creditAllowance(addr0)).to.be.bignumber.eq(
-            creditAllowanceBefore.subn(orderFee).subn(backOrderFee),
+            creditAllowanceBefore.sub(basePoints.muln(orderFee)).sub(basePoints.muln(backOrderFee)),
         );
     });
 
@@ -607,7 +607,7 @@ describe('Settlement', async () => {
             ether('0.1'),
         );
         expect(await this.matcher.creditAllowance(addr0)).to.be.bignumber.eq(
-            creditAllowanceBefore.subn(orderFee).subn(backOrderFee),
+            creditAllowanceBefore.sub(basePoints.muln(orderFee)).sub(basePoints.muln(backOrderFee)),
         );
     });
 
@@ -659,7 +659,7 @@ describe('Settlement', async () => {
         const creditAllowanceBefore = await this.matcher.creditAllowance(this.proxy.address);
         await this.proxy.matchOrders(this.swap.address, order, signature, interaction, ether('100'), 0, ether('0.1'));
         expect(await this.matcher.creditAllowance(this.proxy.address)).to.be.bignumber.eq(
-            creditAllowanceBefore.subn(orderFee).subn(backOrderFee),
+            creditAllowanceBefore.sub(basePoints.muln(orderFee)).sub(basePoints.muln(backOrderFee)),
         );
     });
 
