@@ -52,15 +52,7 @@ contract Settlement is Ownable, InteractionNotificationReceiver, WhitelistChecke
         uint256 takingAmount,
         uint256 thresholdAmount
     ) external onlyWhitelisted(msg.sender) {
-        _matchOrder(
-            orderMixin,
-            order,
-            signature,
-            abi.encodePacked(interaction, bytes32(order.salt)),
-            makingAmount,
-            takingAmount,
-            thresholdAmount
-        );
+        _matchOrder(orderMixin, order, msg.sender, signature, interaction, makingAmount, takingAmount, thresholdAmount);
     }
 
     function matchOrdersEOA(
@@ -75,8 +67,9 @@ contract Settlement is Ownable, InteractionNotificationReceiver, WhitelistChecke
         _matchOrder(
             orderMixin,
             order,
+            tx.origin, // solhint-disable-line avoid-tx-origin
             signature,
-            abi.encodePacked(interaction, bytes32(order.salt)),
+            interaction,
             makingAmount,
             takingAmount,
             thresholdAmount
@@ -88,7 +81,8 @@ contract Settlement is Ownable, InteractionNotificationReceiver, WhitelistChecke
         uint256, /* makingAmount */
         uint256 takingAmount,
         bytes calldata interactiveData
-    ) external onlyLimitOrderProtocol returns (uint256) {
+    ) external returns (uint256) {
+        address interactor = _onlyLimitOrderProtocol();
         if (interactiveData[0] == _FINALIZE_INTERACTION) {
             (address[] calldata targets, bytes[] calldata calldatas) = _abiDecodeFinal(interactiveData[1:]);
 
@@ -112,8 +106,9 @@ contract Settlement is Ownable, InteractionNotificationReceiver, WhitelistChecke
             _matchOrder(
                 IOrderMixin(msg.sender),
                 order,
+                interactor,
                 signature,
-                abi.encodePacked(interaction, bytes32(order.salt)),
+                interaction,
                 makingOrderAmount,
                 takingOrderAmount,
                 thresholdAmount
@@ -149,6 +144,7 @@ contract Settlement is Ownable, InteractionNotificationReceiver, WhitelistChecke
     function _matchOrder(
         IOrderMixin orderMixin,
         OrderLib.Order calldata order,
+        address interactor,
         bytes calldata signature,
         bytes memory interaction,
         uint256 makingAmount,
@@ -156,12 +152,19 @@ contract Settlement is Ownable, InteractionNotificationReceiver, WhitelistChecke
         uint256 thresholdAmount
     ) private {
         uint256 orderFee = ((order.salt & _ORDER_FEE_MASK) >> _ORDER_FEE_SHIFT) * _ORDER_FEE_BASE_POINTS;
-        uint256 currentAllowance = creditAllowance[tx.origin]; // solhint-disable-line avoid-tx-origin
+        uint256 currentAllowance = creditAllowance[interactor];
         if (currentAllowance < orderFee) revert NotEnoughCredit();
         unchecked {
-            creditAllowance[tx.origin] = currentAllowance - orderFee; // solhint-disable-line avoid-tx-origin
+            creditAllowance[interactor] = currentAllowance - orderFee;
         }
-        orderMixin.fillOrder(order, signature, interaction, makingAmount, takingAmount, thresholdAmount);
+        orderMixin.fillOrder(
+            order,
+            signature,
+            abi.encodePacked(interaction, order.salt),
+            makingAmount,
+            takingAmount,
+            thresholdAmount
+        );
     }
 
     function increaseCreditAllowance(address account, uint256 amount) external onlyFeeBank returns (uint256 allowance) {
@@ -185,7 +188,8 @@ contract Settlement is Ownable, InteractionNotificationReceiver, WhitelistChecke
         pure
         returns (address[] calldata targets, bytes[] calldata calldatas)
     {
-        assembly { // solhint-disable-line no-inline-assembly
+        // solhint-disable-next-line no-inline-assembly
+        assembly {
             let ptr := add(cd.offset, calldataload(cd.offset))
             targets.offset := add(ptr, 0x20)
             targets.length := calldataload(ptr)
@@ -208,7 +212,8 @@ contract Settlement is Ownable, InteractionNotificationReceiver, WhitelistChecke
             uint256 thresholdAmount
         )
     {
-        assembly { // solhint-disable-line no-inline-assembly
+        // solhint-disable-next-line no-inline-assembly
+        assembly {
             order := add(cd.offset, calldataload(cd.offset))
 
             let ptr := add(cd.offset, calldataload(add(cd.offset, 0x20)))
