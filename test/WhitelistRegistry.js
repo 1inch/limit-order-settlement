@@ -27,18 +27,6 @@ describe('WhitelistRegistry', async () => {
         });
     });
 
-    describe('setters', async () => {
-        it('staking setter', async () => {
-            await this.WhitelistRegistry.setStaking(DUMMY_ADDRESS);
-            expect(await this.WhitelistRegistry.staking()).to.equal(DUMMY_ADDRESS);
-        });
-
-        it('threshold setter', async () => {
-            await this.WhitelistRegistry.setResolverThreshold(toBN('0'));
-            expect(await this.WhitelistRegistry.resolverThreshold()).to.be.bignumber.equal(toBN('0'));
-        });
-    });
-
     describe('register', async () => {
         it('should whitelist 10 addresses', async () => {
             for (let i = 1; i <= MAX_WHITELSITED; ++i) {

@@ -17,15 +17,13 @@ contract WhitelistRegistry is IWhitelistRegistry, Ownable {
     error NotEnoughBalance();
 
     event Registered(address addr);
-    event SetResolverThreshold(uint256 threshold);
-    event SetStaking(IStaking stakingContract);
 
     uint256 public constant MAX_WHITELISTED = 10;
 
     AddressSet.Data private _whitelist;
 
-    uint256 public resolverThreshold;
-    IStaking public staking;
+    uint256 public immutable resolverThreshold;
+    IStaking public immutable staking;
 
     constructor(IStaking staking_, uint256 threshold) {
         staking = staking_;
@@ -34,16 +32,6 @@ contract WhitelistRegistry is IWhitelistRegistry, Ownable {
 
     function rescueFunds(IERC20 token, uint256 amount) external onlyOwner {
         token.uniTransfer(payable(msg.sender), amount);
-    }
-
-    function setResolverThreshold(uint256 threshold) external onlyOwner {
-        resolverThreshold = threshold;
-        emit SetResolverThreshold(threshold);
-    }
-
-    function setStaking(IStaking staking_) external onlyOwner {
-        staking = staking_;
-        emit SetStaking(staking_);
     }
 
     function register() external {
