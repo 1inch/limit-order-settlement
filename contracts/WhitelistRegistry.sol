@@ -47,14 +47,14 @@ contract WhitelistRegistry is IWhitelistRegistry, Ownable {
     }
 
     function register() external {
-        uint256 staked = staking.balanceOf(_msgSender());
+        uint256 staked = staking.balanceOf(msg.sender);
         if (staked < resolverThreshold) revert BalanceLessThanThreshold();
         uint256 whitelistLength = _whitelist.length();
         if (whitelistLength < MAX_WHITELISTED) {
-            _whitelist.add(_msgSender());
+            _whitelist.add(msg.sender);
             return;
         }
-        address minResolver = _msgSender();
+        address minResolver = msg.sender;
         uint256 minStaked = staked;
         for (uint256 i = 0; i < whitelistLength; ++i) {
             address curWhitelisted = _whitelist.at(i);
@@ -64,10 +64,10 @@ contract WhitelistRegistry is IWhitelistRegistry, Ownable {
                 minStaked = staked;
             }
         }
-        if (minResolver == _msgSender()) revert NotEnoughBalance();
+        if (minResolver == msg.sender) revert NotEnoughBalance();
         _whitelist.remove(minResolver);
-        _whitelist.add(_msgSender());
-        emit Registered(_msgSender());
+        _whitelist.add(msg.sender);
+        emit Registered(msg.sender);
     }
 
     function isWhitelisted(address addr) external view returns (bool) {
