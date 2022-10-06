@@ -47,18 +47,17 @@ contract WhitelistRegistry is IWhitelistRegistry, Ownable {
     }
 
     function register() external {
-        uint256 staked = staking.balanceOf(msg.sender);
-        if (staked < resolverThreshold) revert BalanceLessThanThreshold();
+        if (staking.votingPowerOf(msg.sender) < resolverThreshold) revert BalanceLessThanThreshold();
         uint256 whitelistLength = _whitelist.length();
         if (whitelistLength < MAX_WHITELISTED) {
             _whitelist.add(msg.sender);
             return;
         }
         address minResolver = msg.sender;
-        uint256 minStaked = staked;
+        uint256 minStaked = staking.balanceOf(msg.sender);
         for (uint256 i = 0; i < whitelistLength; ++i) {
             address curWhitelisted = _whitelist.at(i);
-            staked = staking.balanceOf(curWhitelisted);
+            uint256 staked = staking.balanceOf(curWhitelisted);
             if (staked < minStaked) {
                 minResolver = curWhitelisted;
                 minStaked = staked;
@@ -76,9 +75,9 @@ contract WhitelistRegistry is IWhitelistRegistry, Ownable {
 
     function clean() external {
         uint256 whitelistLength = _whitelist.length();
-        for(uint256 i = 0; i < whitelistLength; i++) {
-            address curWhitelisted = _whitelist.at(i);
-            if (staking.balanceOf(curWhitelisted) < resolverThreshold) {
+        for(uint256 i = 1; i <= whitelistLength; i++) {
+            address curWhitelisted = _whitelist.at(i-1);
+            if (staking.votingPowerOf(curWhitelisted) < resolverThreshold) {
                 _whitelist.remove(curWhitelisted);
                 whitelistLength--;
                 i--;
