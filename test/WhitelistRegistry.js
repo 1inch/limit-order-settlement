@@ -121,4 +121,25 @@ describe('WhitelistRegistry', async () => {
             expect(whitelisted).to.be.equal(1);
         });
     });
+
+    describe('clean', async () => {
+        it('should remove from whitelist addresses which not enough staked balance', async () => {
+            for (let i = 1; i <= MAX_WHITELSITED; ++i) {
+                await this.Staking.transfer(addrs[i], THRESHOLD.addn(1));
+                await this.WhitelistRegistry.register({ from: addrs[i] });
+                expect(await this.WhitelistRegistry.isWhitelisted(addrs[i])).to.be.equal(true);
+                if (i % 2 === 0) {
+                    await this.Staking.transfer(addrs[0], '2', { from: addrs[i] });
+                }
+            }
+            await this.WhitelistRegistry.clean();
+            for (let i = 1; i <= MAX_WHITELSITED; ++i) {
+                if (i % 2 === 0) {
+                    expect(await this.WhitelistRegistry.isWhitelisted(addrs[i])).to.be.equal(false);
+                } else {
+                    expect(await this.WhitelistRegistry.isWhitelisted(addrs[i])).to.be.equal(true);
+                }
+            }
+        });
+    });
 });
