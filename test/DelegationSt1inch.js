@@ -11,14 +11,15 @@ describe('Delegation st1inch', async () => {
     const baseExp = toBN('999999981746377019');
     const threshold = ether('1');
     const MAX_WHITELISTED = 3;
-    const maxUserFarms = 5;
+    const maxSt1inchFarms = 5;
+    const maxDelegatorsFarms = 5;
     const maxUserDelegations = 5;
     const commonLockDuration = time.duration.days('10');
 
     const stakeAndRegisterIntoDelegation = async (user, amount, userIndex) => {
         await this.st1inch.depositFor(user, amount, commonLockDuration);
         await this.delegation.contract.methods
-            .register(`${userIndex}DelegatingToken`, `A${userIndex}DT`, '5')
+            .register(`${userIndex}DelegatingToken`, `A${userIndex}DT`, maxDelegatorsFarms)
             .send({ from: user });
         await this.st1inch.delegate(this.delegation.address, user, { from: user });
     };
@@ -32,7 +33,7 @@ describe('Delegation st1inch', async () => {
         this.oneInch = await TokenPermitMock.new('1inch', '1inch', addr0, ether('200'));
         await this.oneInch.transfer(addr1, ether('100'));
 
-        this.st1inch = await St1inch.new(this.oneInch.address, baseExp, maxUserFarms, maxUserDelegations);
+        this.st1inch = await St1inch.new(this.oneInch.address, baseExp, maxSt1inchFarms, maxUserDelegations);
         await this.oneInch.approve(this.st1inch.address, ether('100'));
         await this.oneInch.approve(this.st1inch.address, ether('100'), {
             from: addr1,
