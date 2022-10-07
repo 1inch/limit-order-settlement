@@ -8,8 +8,9 @@ import "@1inch/limit-order-protocol/contracts/interfaces/NotificationReceiver.so
 import "@1inch/limit-order-protocol/contracts/interfaces/IOrderMixin.sol";
 import "./helpers/WhitelistChecker.sol";
 import "./interfaces/IWhitelistRegistry.sol";
+import "./interfaces/ISettlement.sol";
 
-contract Settlement is Ownable, InteractionNotificationReceiver, WhitelistChecker {
+contract Settlement is ISettlement, Ownable, WhitelistChecker {
     bytes1 private constant _FINALIZE_INTERACTION = 0x01;
     uint256 private constant _ORDER_TIME_START_MASK     = 0xFFFFFFFF00000000000000000000000000000000000000000000000000000000; // prettier-ignore
     uint256 private constant _ORDER_DURATION_MASK       = 0x00000000FFFFFFFF000000000000000000000000000000000000000000000000; // prettier-ignore
@@ -50,9 +51,10 @@ contract Settlement is Ownable, InteractionNotificationReceiver, WhitelistChecke
         bytes calldata interaction,
         uint256 makingAmount,
         uint256 takingAmount,
-        uint256 thresholdAmount
+        uint256 thresholdAmount,
+        address target
     ) external onlyWhitelisted(msg.sender) {
-        _matchOrder(orderMixin, order, msg.sender, signature, interaction, makingAmount, takingAmount, thresholdAmount);
+        _matchOrder(orderMixin, order, msg.sender, signature, interaction, makingAmount, takingAmount, thresholdAmount, target);
     }
 
     function matchOrdersEOA(
@@ -62,7 +64,8 @@ contract Settlement is Ownable, InteractionNotificationReceiver, WhitelistChecke
         bytes calldata interaction,
         uint256 makingAmount,
         uint256 takingAmount,
-        uint256 thresholdAmount
+        uint256 thresholdAmount,
+        address target
     ) external onlyWhitelistedEOA {
         _matchOrder(
             orderMixin,
@@ -72,7 +75,8 @@ contract Settlement is Ownable, InteractionNotificationReceiver, WhitelistChecke
             interaction,
             makingAmount,
             takingAmount,
-            thresholdAmount
+            thresholdAmount,
+            target
         );
     }
 
@@ -100,7 +104,8 @@ contract Settlement is Ownable, InteractionNotificationReceiver, WhitelistChecke
                 bytes calldata interaction,
                 uint256 makingOrderAmount,
                 uint256 takingOrderAmount,
-                uint256 thresholdAmount
+                uint256 thresholdAmount,
+                address target
             ) = _abiDecodeIteration(interactiveData[1:]);
 
             _matchOrder(
@@ -111,7 +116,8 @@ contract Settlement is Ownable, InteractionNotificationReceiver, WhitelistChecke
                 interaction,
                 makingOrderAmount,
                 takingOrderAmount,
-                thresholdAmount
+                thresholdAmount,
+                target
             );
         }
         uint256 salt = uint256(bytes32(interactiveData[interactiveData.length - 32:]));
@@ -146,10 +152,11 @@ contract Settlement is Ownable, InteractionNotificationReceiver, WhitelistChecke
         OrderLib.Order calldata order,
         address interactor,
         bytes calldata signature,
-        bytes memory interaction,
+        bytes calldata interaction,
         uint256 makingAmount,
         uint256 takingAmount,
-        uint256 thresholdAmount
+        uint256 thresholdAmount,
+        address target
     ) private {
         uint256 orderFee = ((order.salt & _ORDER_FEE_MASK) >> _ORDER_FEE_SHIFT) * _ORDER_FEE_BASE_POINTS;
         uint256 currentAllowance = creditAllowance[interactor];
@@ -157,13 +164,15 @@ contract Settlement is Ownable, InteractionNotificationReceiver, WhitelistChecke
         unchecked {
             creditAllowance[interactor] = currentAllowance - orderFee;
         }
-        orderMixin.fillOrder(
+        bytes memory patchedInteraction = abi.encodePacked(interaction, order.salt);
+        orderMixin.fillOrderTo(
             order,
             signature,
-            abi.encodePacked(interaction, order.salt),
+            patchedInteraction,
             makingAmount,
             takingAmount,
-            thresholdAmount
+            thresholdAmount,
+            target
         );
     }
 
@@ -209,7 +218,8 @@ contract Settlement is Ownable, InteractionNotificationReceiver, WhitelistChecke
             bytes calldata interaction,
             uint256 makingOrderAmount,
             uint256 takingOrderAmount,
-            uint256 thresholdAmount
+            uint256 thresholdAmount,
+            address target
         )
     {
         // solhint-disable-next-line no-inline-assembly
@@ -227,6 +237,7 @@ contract Settlement is Ownable, InteractionNotificationReceiver, WhitelistChecke
             makingOrderAmount := calldataload(add(cd.offset, 0x60))
             takingOrderAmount := calldataload(add(cd.offset, 0x80))
             thresholdAmount := calldataload(add(cd.offset, 0xa0))
+            target := calldataload(add(cd.offset, 0xc0))
         }
     }
 }

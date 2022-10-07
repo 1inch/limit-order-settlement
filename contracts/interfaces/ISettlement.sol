@@ -13,7 +13,8 @@ interface ISettlement is InteractionNotificationReceiver {
         bytes calldata interaction,
         uint256 makingAmount,
         uint256 takingAmount,
-        uint256 thresholdAmount
+        uint256 thresholdAmount,
+        address target
     ) external;
 
     function matchOrdersEOA(
@@ -23,7 +24,8 @@ interface ISettlement is InteractionNotificationReceiver {
         bytes calldata interaction,
         uint256 makingAmount,
         uint256 takingAmount,
-        uint256 thresholdAmount
+        uint256 thresholdAmount,
+        address target
     ) external;
 
     function creditAllowance(address account) external returns (uint256);

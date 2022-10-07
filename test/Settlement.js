@@ -108,7 +108,7 @@ describe('Settlement', async () => {
             this.matcher.address +
             '00' +
             this.swap.contract.methods
-                .fillOrder(backOrder, signatureBackOrder, matchingParams, ether('0.11'), 0, ether('100'))
+                .fillOrderTo(backOrder, signatureBackOrder, matchingParams, ether('0.11'), 0, ether('100'), this.matcher.address)
                 .encodeABI()
                 .substring(10);
 
@@ -125,6 +125,7 @@ describe('Settlement', async () => {
             ether('100'),
             0,
             ether('0.11'),
+            this.matcher.address,
         );
 
         assertRoughlyEqualValues(await this.weth.balanceOf(addr0), addr0weth.add(ether('0.11')), 1e-4);
@@ -189,7 +190,7 @@ describe('Settlement', async () => {
             this.matcher.address +
             '00' +
             this.swap.contract.methods
-                .fillOrder(backOrder, signatureBackOrder, matchingParams, ether('15'), 0, ether('0.015'))
+                .fillOrderTo(backOrder, signatureBackOrder, matchingParams, ether('15'), 0, ether('0.015'), this.matcher.address)
                 .encodeABI()
                 .substring(10);
 
@@ -199,7 +200,7 @@ describe('Settlement', async () => {
         const addr1dai = await this.dai.balanceOf(addr1);
 
         await this.weth.approve(this.matcher.address, ether('0.0275'));
-        await this.matcher.matchOrders(this.swap.address, order, signature, interaction, ether('10'), 0, ether('0.01'));
+        await this.matcher.matchOrders(this.swap.address, order, signature, interaction, ether('10'), 0, ether('0.01'), this.matcher.address);
 
         expect(await this.weth.balanceOf(addr0)).to.be.bignumber.equal(addr0weth.sub(ether('0.0275')));
         assertRoughlyEqualValues(await this.weth.balanceOf(addr1), addr1weth.add(ether('0.0275')), 1e-4);
@@ -274,7 +275,7 @@ describe('Settlement', async () => {
             this.matcher.address +
             '00' +
             this.swap.contract.methods
-                .fillOrder(backOrder, signatureBackOrder, matchingParams, ether('0.0275'), 0, ether('25'))
+                .fillOrderTo(backOrder, signatureBackOrder, matchingParams, ether('0.0275'), 0, ether('25'), this.matcher.address)
                 .encodeABI()
                 .substring(10);
 
@@ -282,7 +283,7 @@ describe('Settlement', async () => {
             this.matcher.address +
             '00' +
             this.swap.contract.methods
-                .fillOrder(order2, signature2, internalInteraction, ether('15'), 0, ether('0.015'))
+                .fillOrderTo(order2, signature2, internalInteraction, ether('15'), 0, ether('0.015'), this.matcher.address)
                 .encodeABI()
                 .substring(10);
 
@@ -299,6 +300,7 @@ describe('Settlement', async () => {
             ether('10'),
             0,
             ether('0.01'),
+            this.matcher.address,
         );
 
         expect(await this.weth.balanceOf(addr0)).to.be.bignumber.equal(addr0weth.sub(ether('0.0275')));
@@ -393,6 +395,7 @@ describe('Settlement', async () => {
                     makingAmount,
                     0,
                     takingAmount,
+                    this.matcher.address,
                 ),
             ).to.be.rejectedWith('IncorrectOrderStartTime()');
         });
@@ -414,6 +417,7 @@ describe('Settlement', async () => {
                 makingAmount,
                 0,
                 takingAmount,
+                this.matcher.address,
             );
 
             expect(await this.weth.balanceOf(addr0)).to.be.bignumber.equal(addr0weth.sub(ether('0.12')));
@@ -438,6 +442,7 @@ describe('Settlement', async () => {
                 makingAmount,
                 0,
                 takingAmount,
+                this.matcher.address
             );
 
             expect(await this.weth.balanceOf(addr0)).to.be.bignumber.equal(addr0weth.sub(ether('0.105')));
@@ -485,7 +490,7 @@ describe('Settlement', async () => {
             this.matcher.address +
             '00' +
             this.swap.contract.methods
-                .fillOrder(backOrder, signatureBackOrder, matchingParams, ether('0.1'), 0, ether('100'))
+                .fillOrderTo(backOrder, signatureBackOrder, matchingParams, ether('0.1'), 0, ether('100'), this.matcher.address)
                 .encodeABI()
                 .substring(10);
         const creditAllowanceBefore = await this.matcher.creditAllowance(addr0);
@@ -497,6 +502,7 @@ describe('Settlement', async () => {
             ether('100'),
             0,
             ether('0.1'),
+            this.matcher.address,
         );
         expect(await this.matcher.creditAllowance(addr0)).to.be.bignumber.eq(
             creditAllowanceBefore.sub(basePoints.muln(orderFee)).sub(basePoints.muln(backOrderFee)),
@@ -543,11 +549,11 @@ describe('Settlement', async () => {
             this.matcher.address +
             '00' +
             this.swap.contract.methods
-                .fillOrder(backOrder, signatureBackOrder, matchingParams, ether('0.1'), 0, ether('100'))
+                .fillOrderTo(backOrder, signatureBackOrder, matchingParams, ether('0.1'), 0, ether('100'), this.matcher.address)
                 .encodeABI()
                 .substring(10);
         const creditAllowanceBefore = await this.matcher.creditAllowance(addr0);
-        await this.matcher.matchOrders(this.swap.address, order, signature, interaction, ether('100'), 0, ether('0.1'));
+        await this.matcher.matchOrders(this.swap.address, order, signature, interaction, ether('100'), 0, ether('0.1'), this.matcher.address);
         expect(await this.matcher.creditAllowance(addr0)).to.be.bignumber.eq(
             creditAllowanceBefore.sub(basePoints.muln(orderFee)).sub(basePoints.muln(backOrderFee)),
         );
@@ -593,7 +599,7 @@ describe('Settlement', async () => {
             this.matcher.address +
             '00' +
             this.swap.contract.methods
-                .fillOrder(backOrder, signatureBackOrder, matchingParams, ether('0.1'), 0, ether('100'))
+                .fillOrderTo(backOrder, signatureBackOrder, matchingParams, ether('0.1'), 0, ether('100'), this.matcher.address)
                 .encodeABI()
                 .substring(10);
         const creditAllowanceBefore = await this.matcher.creditAllowance(addr0);
@@ -605,6 +611,7 @@ describe('Settlement', async () => {
             ether('100'),
             0,
             ether('0.1'),
+            this.matcher.address,
         );
         expect(await this.matcher.creditAllowance(addr0)).to.be.bignumber.eq(
             creditAllowanceBefore.sub(basePoints.muln(orderFee)).sub(basePoints.muln(backOrderFee)),
@@ -651,13 +658,13 @@ describe('Settlement', async () => {
             this.matcher.address +
             '00' +
             this.swap.contract.methods
-                .fillOrder(backOrder, signatureBackOrder, matchingParams, ether('0.1'), 0, ether('100'))
+                .fillOrderTo(backOrder, signatureBackOrder, matchingParams, ether('0.1'), 0, ether('100'), this.matcher.address)
                 .encodeABI()
                 .substring(10);
         await this.whitelistRegistrySimple.setStatus(this.proxy.address, Status.Verified);
         await this.proxy.deposit(ether('100'));
         const creditAllowanceBefore = await this.matcher.creditAllowance(this.proxy.address);
-        await this.proxy.matchOrders(this.swap.address, order, signature, interaction, ether('100'), 0, ether('0.1'));
+        await this.proxy.matchOrders(this.swap.address, order, signature, interaction, ether('100'), 0, ether('0.1'), this.matcher.address);
         expect(await this.matcher.creditAllowance(this.proxy.address)).to.be.bignumber.eq(
             creditAllowanceBefore.sub(basePoints.muln(orderFee)).sub(basePoints.muln(backOrderFee)),
         );
@@ -703,7 +710,7 @@ describe('Settlement', async () => {
             this.matcher.address +
             '00' +
             this.swap.contract.methods
-                .fillOrder(backOrder, signatureBackOrder, matchingParams, ether('0.1'), 0, ether('100'))
+                .fillOrderTo(backOrder, signatureBackOrder, matchingParams, ether('0.1'), 0, ether('100'), this.matcher.address)
                 .encodeABI()
                 .substring(10);
         await expect(
@@ -715,6 +722,7 @@ describe('Settlement', async () => {
                 ether('100'),
                 0,
                 ether('0.1'),
+                this.matcher.address,
             ),
         ).to.eventually.be.rejectedWith('NotEnoughCredit()');
     });

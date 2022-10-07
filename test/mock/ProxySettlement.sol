@@ -33,9 +33,10 @@ contract ProxySettlement {
         bytes calldata interaction,
         uint256 makingAmount,
         uint256 takingAmount,
-        uint256 thresholdAmount
+        uint256 thresholdAmount,
+        address target
     ) external {
-        _settlement.matchOrders(orderMixin, order, signature, interaction, makingAmount, takingAmount, thresholdAmount);
+        _settlement.matchOrders(orderMixin, order, signature, interaction, makingAmount, takingAmount, thresholdAmount, target);
     }
 
     function matchOrdersEOA(
@@ -45,7 +46,8 @@ contract ProxySettlement {
         bytes calldata interaction,
         uint256 makingAmount,
         uint256 takingAmount,
-        uint256 thresholdAmount
+        uint256 thresholdAmount,
+        address target
     ) external {
         _settlement.matchOrdersEOA(
             orderMixin,
@@ -54,7 +56,8 @@ contract ProxySettlement {
             interaction,
             makingAmount,
             takingAmount,
-            thresholdAmount
+            thresholdAmount,
+            target
         );
     }
 }

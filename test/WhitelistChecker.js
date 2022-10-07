@@ -74,10 +74,10 @@ describe('WhitelistChecker', async () => {
             this.matcher.address +
             '00' +
             this.swap.contract.methods
-                .fillOrder(order1, signature1, matchingParams, ether('0.1'), 0, ether('100'))
+                .fillOrderTo(order1, signature1, matchingParams, ether('0.1'), 0, ether('100'), this.matcher.address)
                 .encodeABI()
                 .substring(10);
-        await matchOrderMethod(this.swap.address, order0, signature0, interaction, ether('100'), 0, ether('0.1'));
+        await matchOrderMethod(this.swap.address, order0, signature0, interaction, ether('100'), 0, ether('0.1'), this.matcher.address);
     };
 
     describe('should not work with non-whitelisted address', async () => {
@@ -90,7 +90,7 @@ describe('WhitelistChecker', async () => {
                 from: addr1,
             });
             await expect(
-                this.matcher.matchOrdersEOA(this.swap.address, order1, '0x', '0x', ether('10'), 0, ether('0.01')),
+                this.matcher.matchOrdersEOA(this.swap.address, order1, '0x', '0x', ether('10'), 0, ether('0.01'), this.matcher.address),
             ).to.eventually.be.rejectedWith('AccessDenied()');
         });
 
@@ -103,7 +103,7 @@ describe('WhitelistChecker', async () => {
                 from: addr1,
             });
             await expect(
-                this.matcher.matchOrders(this.swap.address, order1, '0x', '0x', ether('10'), 0, ether('0.01')),
+                this.matcher.matchOrders(this.swap.address, order1, '0x', '0x', ether('10'), 0, ether('0.01'), this.matcher.address),
             ).to.eventually.be.rejectedWith('AccessDenied()');
         });
 
