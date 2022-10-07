@@ -442,7 +442,7 @@ describe('Settlement', async () => {
                 makingAmount,
                 0,
                 takingAmount,
-                this.matcher.address
+                this.matcher.address,
             );
 
             expect(await this.weth.balanceOf(addr0)).to.be.bignumber.equal(addr0weth.sub(ether('0.105')));
