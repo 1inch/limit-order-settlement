@@ -18,14 +18,13 @@ contract WhitelistRegistry is IWhitelistRegistry, Ownable {
 
     event Registered(address addr);
     event SetResolverThreshold(uint256 threshold);
-    event SetStaking(IStaking stakingContract);
 
     uint256 public constant MAX_WHITELISTED = 10;
 
     AddressSet.Data private _whitelist;
 
     uint256 public resolverThreshold;
-    IStaking public staking;
+    IStaking public immutable staking;
 
     constructor(IStaking staking_, uint256 threshold) {
         staking = staking_;
@@ -39,11 +38,6 @@ contract WhitelistRegistry is IWhitelistRegistry, Ownable {
     function setResolverThreshold(uint256 threshold) external onlyOwner {
         resolverThreshold = threshold;
         emit SetResolverThreshold(threshold);
-    }
-
-    function setStaking(IStaking staking_) external onlyOwner {
-        staking = staking_;
-        emit SetStaking(staking_);
     }
 
     function register() external {

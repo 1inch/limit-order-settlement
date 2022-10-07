@@ -5,7 +5,6 @@ const WhitelistRegistry = artifacts.require('WhitelistRegistry');
 const TokenMock = artifacts.require('TokenMock');
 const THRESHOLD = ether('1');
 const MAX_WHITELISTED = 10;
-const DUMMY_ADDRESS = '0xdF20864533D39994a9FE499EeA663C8c7285fb57';
 
 describe('WhitelistRegistry', async () => {
     let addrs;
@@ -28,11 +27,6 @@ describe('WhitelistRegistry', async () => {
     });
 
     describe('setters', async () => {
-        it('staking setter', async () => {
-            await this.WhitelistRegistry.setStaking(DUMMY_ADDRESS);
-            expect(await this.WhitelistRegistry.staking()).to.equal(DUMMY_ADDRESS);
-        });
-
         it('threshold setter', async () => {
             await this.WhitelistRegistry.setResolverThreshold(toBN('0'));
             expect(await this.WhitelistRegistry.resolverThreshold()).to.be.bignumber.equal(toBN('0'));
