@@ -30,6 +30,7 @@ module.exports = {
     },
     dependencyCompiler: {
         paths: [
+            '@1inch/delegating/contracts/delegations/RewardableDelegation.sol',
             '@1inch/solidity-utils/contracts/mocks/TokenMock.sol',
             '@1inch/solidity-utils/contracts/mocks/ERC20PermitMock.sol',
             '@1inch/limit-order-protocol/contracts/LimitOrderProtocol.sol',
