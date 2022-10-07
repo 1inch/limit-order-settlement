@@ -76,12 +76,15 @@ contract WhitelistRegistry is IWhitelistRegistry, Ownable {
 
     function clean() external {
         uint256 whitelistLength = _whitelist.length();
-        for(uint256 i = 0; i < whitelistLength; i++) {
-            address curWhitelisted = _whitelist.at(i);
-            if (staking.balanceOf(curWhitelisted) < resolverThreshold) {
-                _whitelist.remove(curWhitelisted);
-                whitelistLength--;
-                i--;
+        unchecked {
+            for(uint256 i = 0; i < whitelistLength;) {
+                address curWhitelisted = _whitelist.at(i);
+                if (staking.balanceOf(curWhitelisted) < resolverThreshold) {
+                    _whitelist.remove(curWhitelisted);
+                    whitelistLength--;
+                } else {
+                    i++;
+                }
             }
         }
     }
