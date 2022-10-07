@@ -9,6 +9,7 @@ const DUMMY_ADDRESS = '0xdF20864533D39994a9FE499EeA663C8c7285fb57';
 
 describe('WhitelistRegistry', async () => {
     let addrs;
+    const MAX_WHITELISTED = 10;
 
     before(async () => {
         addrs = await web3.eth.getAccounts();
@@ -16,7 +17,7 @@ describe('WhitelistRegistry', async () => {
 
     beforeEach(async () => {
         this.Staking = await TokenMock.new('ST1INCH', 'ST1INCH');
-        this.WhitelistRegistry = await WhitelistRegistry.new(this.Staking.address, THRESHOLD);
+        this.WhitelistRegistry = await WhitelistRegistry.new(this.Staking.address, THRESHOLD, MAX_WHITELISTED);
         await this.Staking.mint(addrs[0], ether('100'));
     });
 

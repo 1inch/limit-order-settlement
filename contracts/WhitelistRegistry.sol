@@ -20,16 +20,21 @@ contract WhitelistRegistry is IWhitelistRegistry, Ownable {
     event SetResolverThreshold(uint256 threshold);
     event SetStaking(IStaking stakingContract);
 
-    uint256 public constant MAX_WHITELISTED = 10;
+    uint256 public immutable maxWhitelisted;
 
     AddressSet.Data private _whitelist;
 
     uint256 public resolverThreshold;
     IStaking public staking;
 
-    constructor(IStaking staking_, uint256 threshold) {
+    constructor(
+        IStaking staking_,
+        uint256 threshold,
+        uint256 maxWhitelisted_
+    ) {
         staking = staking_;
         resolverThreshold = threshold;
+        maxWhitelisted = maxWhitelisted_;
     }
 
     function rescueFunds(IERC20 token, uint256 amount) external onlyOwner {
@@ -50,7 +55,7 @@ contract WhitelistRegistry is IWhitelistRegistry, Ownable {
         uint256 staked = staking.balanceOf(msg.sender);
         if (staked < resolverThreshold) revert BalanceLessThanThreshold();
         uint256 whitelistLength = _whitelist.length();
-        if (whitelistLength < MAX_WHITELISTED) {
+        if (whitelistLength < maxWhitelisted) {
             _whitelist.add(msg.sender);
             return;
         }
