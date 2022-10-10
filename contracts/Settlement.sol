@@ -145,11 +145,14 @@ contract Settlement is ISettlement, Ownable, WhitelistChecker {
         }
 
         unchecked {
-            if (block.timestamp > orderStartTime) {  // solhint-disable-line not-rely-on-time
-                uint256 timePassed = block.timestamp - orderStartTime;  // solhint-disable-line not-rely-on-time
-                return timePassed < duration
-                    ? _BASE_POINTS + initialRateBump * (duration - timePassed) / duration
-                    : _BASE_POINTS;
+            // solhint-disable-next-line not-rely-on-time
+            if (block.timestamp > orderStartTime) {
+                // solhint-disable-next-line not-rely-on-time
+                uint256 timePassed = block.timestamp - orderStartTime;
+                return
+                    timePassed < duration
+                        ? _BASE_POINTS + (initialRateBump * (duration - timePassed)) / duration
+                        : _BASE_POINTS;
             } else {
                 return _BASE_POINTS + initialRateBump;
             }
