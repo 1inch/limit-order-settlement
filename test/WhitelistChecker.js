@@ -38,7 +38,7 @@ describe('WhitelistChecker', async () => {
         this.matcher = await Settlement.new(this.whitelistRegistrySimple.address, this.swap.address);
     });
 
-    const matchOrders = async (matchOrderMethod) => {
+    const settleOrders = async (settleOrderMethod) => {
         const order0 = await buildOrder({
             makerAsset: this.dai.address,
             takerAsset: this.weth.address,
@@ -77,7 +77,7 @@ describe('WhitelistChecker', async () => {
                 .fillOrderTo(order1, signature1, matchingParams, ether('0.1'), 0, ether('100'), this.matcher.address)
                 .encodeABI()
                 .substring(10);
-        await matchOrderMethod(
+        await settleOrderMethod(
             this.swap.address,
             order0,
             signature0,
@@ -90,7 +90,7 @@ describe('WhitelistChecker', async () => {
     };
 
     describe('should not work with non-whitelisted address', async () => {
-        it('onlyWhitelistedEOA modifier in matchOrdersEOA method', async () => {
+        it('onlyWhitelistedEOA modifier in settleOrdersEOA method', async () => {
             const order1 = await buildOrder({
                 makerAsset: this.dai.address,
                 takerAsset: this.weth.address,
@@ -99,7 +99,7 @@ describe('WhitelistChecker', async () => {
                 from: addr1,
             });
             await expect(
-                this.matcher.matchOrdersEOA(
+                this.matcher.settleOrdersEOA(
                     this.swap.address,
                     order1,
                     '0x',
@@ -112,7 +112,7 @@ describe('WhitelistChecker', async () => {
             ).to.eventually.be.rejectedWith('AccessDenied()');
         });
 
-        it('onlyWhitelisted modifier in matchOrders method', async () => {
+        it('onlyWhitelisted modifier in settleOrders method', async () => {
             const order1 = await buildOrder({
                 makerAsset: this.dai.address,
                 takerAsset: this.weth.address,
@@ -121,7 +121,7 @@ describe('WhitelistChecker', async () => {
                 from: addr1,
             });
             await expect(
-                this.matcher.matchOrders(
+                this.matcher.settleOrders(
                     this.swap.address,
                     order1,
                     '0x',
@@ -164,13 +164,13 @@ describe('WhitelistChecker', async () => {
             await this.whitelistRegistrySimple.setStatus(addr0, true);
         });
 
-        it('onlyWhitelistedEOA modifier in matchOrdersEOA method', async () => {
+        it('onlyWhitelistedEOA modifier in settleOrdersEOA method', async () => {
             const addr0weth = await this.weth.balanceOf(addr0);
             const addr1weth = await this.weth.balanceOf(addr1);
             const addr0dai = await this.dai.balanceOf(addr0);
             const addr1dai = await this.dai.balanceOf(addr1);
 
-            await matchOrders(this.matcher.matchOrdersEOA);
+            await settleOrders(this.matcher.settleOrdersEOA);
 
             expect(await this.weth.balanceOf(addr0)).to.be.bignumber.equal(addr0weth.add(ether('0.1')));
             expect(await this.weth.balanceOf(addr1)).to.be.bignumber.equal(addr1weth.sub(ether('0.1')));
@@ -178,13 +178,13 @@ describe('WhitelistChecker', async () => {
             expect(await this.dai.balanceOf(addr1)).to.be.bignumber.equal(addr1dai.add(ether('100')));
         });
 
-        it('onlyWhitelisted modifier in matchOrders method', async () => {
+        it('onlyWhitelisted modifier in settleOrders method', async () => {
             const addr0weth = await this.weth.balanceOf(addr0);
             const addr1weth = await this.weth.balanceOf(addr1);
             const addr0dai = await this.dai.balanceOf(addr0);
             const addr1dai = await this.dai.balanceOf(addr1);
 
-            await matchOrders(this.matcher.matchOrders);
+            await settleOrders(this.matcher.settleOrders);
 
             expect(await this.weth.balanceOf(addr0)).to.be.bignumber.equal(addr0weth.add(ether('0.1')));
             expect(await this.weth.balanceOf(addr1)).to.be.bignumber.equal(addr1weth.sub(ether('0.1')));
