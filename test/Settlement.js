@@ -1,4 +1,4 @@
-const { ether, assertRoughlyEqualValues, toBN, time } = require('@1inch/solidity-utils');
+const { ether, assertRoughlyEqualValues, toBN, BN, time } = require('@1inch/solidity-utils');
 const { addr0Wallet, addr1Wallet } = require('./helpers/utils');
 
 const TokenMock = artifacts.require('TokenMock');
@@ -342,7 +342,7 @@ describe('Settlement', async () => {
                     .mul(
                         toBN('10000').add(
                             toBN(initialStartRate)
-                                .mul(toBN(orderStartTime).add(toBN(duration)).sub(ts))
+                                .mul(BN.min(toBN(orderStartTime).add(toBN(duration)).sub(ts), toBN(duration)))
                                 .div(toBN(duration)),
                         ),
                     )
@@ -380,24 +380,28 @@ describe('Settlement', async () => {
             };
         };
 
-        it("can't match order before orderTime", async () => {
+        it('matching order before orderTime has maximal rate bump', async () => {
             const currentTimestamp = await time.latest();
             const { order, signature, interaction, makingAmount, takingAmount } = await prerareSingleOrder(
                 currentTimestamp.addn(60),
             );
 
-            await expect(
-                this.matcher.matchOrders(
-                    this.swap.address,
-                    order,
-                    signature,
-                    interaction,
-                    makingAmount,
-                    0,
-                    takingAmount,
-                    this.matcher.address,
-                ),
-            ).to.be.rejectedWith('IncorrectOrderStartTime()');
+            const addr0weth = await this.weth.balanceOf(addr0);
+            const addr1weth = await this.weth.balanceOf(addr1);
+
+            await this.matcher.matchOrders(
+                this.swap.address,
+                order,
+                signature,
+                interaction,
+                makingAmount,
+                0,
+                takingAmount,
+                this.matcher.address,
+            );
+
+            expect(await this.weth.balanceOf(addr1)).to.be.bignumber.equal(addr1weth.add(ether('0.11')));
+            expect(await this.weth.balanceOf(addr0)).to.be.bignumber.equal(addr0weth.sub(ether('0.11')));
         });
 
         it('set initial rate', async () => {
