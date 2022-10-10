@@ -125,7 +125,7 @@ describe('Settlement', async () => {
         const addr0dai = await this.dai.balanceOf(addr0);
         const addr1dai = await this.dai.balanceOf(addr1);
 
-        await this.matcher.matchOrders(
+        await this.matcher.settleOrders(
             this.swap.address,
             order,
             signature,
@@ -216,7 +216,7 @@ describe('Settlement', async () => {
         const addr1dai = await this.dai.balanceOf(addr1);
 
         await this.weth.approve(this.matcher.address, ether('0.0275'));
-        await this.matcher.matchOrders(
+        await this.matcher.settleOrders(
             this.swap.address,
             order,
             signature,
@@ -333,7 +333,7 @@ describe('Settlement', async () => {
         const addr0dai = await this.dai.balanceOf(addr0);
         const addr1dai = await this.dai.balanceOf(addr1);
 
-        await this.matcher.matchOrders(
+        await this.matcher.settleOrders(
             this.swap.address,
             order1,
             signature1,
@@ -430,7 +430,7 @@ describe('Settlement', async () => {
             const addr0weth = await this.weth.balanceOf(addr0);
             const addr1weth = await this.weth.balanceOf(addr1);
 
-            await this.matcher.matchOrders(
+            await this.matcher.settleOrders(
                 this.swap.address,
                 order,
                 signature,
@@ -454,7 +454,7 @@ describe('Settlement', async () => {
 
             const addr0weth = await this.weth.balanceOf(addr0);
             const addr1weth = await this.weth.balanceOf(addr1);
-            await this.matcher.matchOrders(
+            await this.matcher.settleOrders(
                 this.swap.address,
                 order,
                 signature,
@@ -479,7 +479,7 @@ describe('Settlement', async () => {
 
             const addr0weth = await this.weth.balanceOf(addr0);
             const addr1weth = await this.weth.balanceOf(addr1);
-            await this.matcher.matchOrders(
+            await this.matcher.settleOrders(
                 this.swap.address,
                 order,
                 signature,
@@ -547,7 +547,7 @@ describe('Settlement', async () => {
                 .encodeABI()
                 .substring(10);
         const creditAllowanceBefore = await this.matcher.creditAllowance(addr0);
-        await this.matcher.matchOrdersEOA(
+        await this.matcher.settleOrdersEOA(
             this.swap.address,
             order,
             signature,
@@ -614,7 +614,7 @@ describe('Settlement', async () => {
                 .encodeABI()
                 .substring(10);
         const creditAllowanceBefore = await this.matcher.creditAllowance(addr0);
-        await this.matcher.matchOrders(
+        await this.matcher.settleOrders(
             this.swap.address,
             order,
             signature,
@@ -681,7 +681,7 @@ describe('Settlement', async () => {
                 .encodeABI()
                 .substring(10);
         const creditAllowanceBefore = await this.matcher.creditAllowance(addr0);
-        await this.proxy.matchOrdersEOA(
+        await this.proxy.settleOrdersEOA(
             this.swap.address,
             order,
             signature,
@@ -750,7 +750,7 @@ describe('Settlement', async () => {
         await this.whitelistRegistrySimple.setStatus(this.proxy.address, Status.Verified);
         await this.proxy.deposit(ether('100'));
         const creditAllowanceBefore = await this.matcher.creditAllowance(this.proxy.address);
-        await this.proxy.matchOrders(
+        await this.proxy.settleOrders(
             this.swap.address,
             order,
             signature,
@@ -817,7 +817,7 @@ describe('Settlement', async () => {
                 .encodeABI()
                 .substring(10);
         await expect(
-            this.matcher.matchOrdersEOA(
+            this.matcher.settleOrdersEOA(
                 this.swap.address,
                 order,
                 signature,

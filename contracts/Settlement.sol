@@ -43,7 +43,7 @@ contract Settlement is ISettlement, Ownable, WhitelistChecker {
         WhitelistChecker(whitelist, limitOrderProtocol)
     {} // solhint-disable-line no-empty-blocks
 
-    function matchOrders(
+    function settleOrders(
         IOrderMixin orderMixin,
         OrderLib.Order calldata order,
         bytes calldata signature,
@@ -53,7 +53,7 @@ contract Settlement is ISettlement, Ownable, WhitelistChecker {
         uint256 thresholdAmount,
         address target
     ) external onlyWhitelisted(msg.sender) {
-        _matchOrder(
+        _settleOrder(
             orderMixin,
             order,
             msg.sender,
@@ -66,7 +66,7 @@ contract Settlement is ISettlement, Ownable, WhitelistChecker {
         );
     }
 
-    function matchOrdersEOA(
+    function settleOrdersEOA(
         IOrderMixin orderMixin,
         OrderLib.Order calldata order,
         bytes calldata signature,
@@ -76,7 +76,7 @@ contract Settlement is ISettlement, Ownable, WhitelistChecker {
         uint256 thresholdAmount,
         address target
     ) external onlyWhitelistedEOA {
-        _matchOrder(
+        _settleOrder(
             orderMixin,
             order,
             tx.origin, // solhint-disable-line avoid-tx-origin
@@ -117,7 +117,7 @@ contract Settlement is ISettlement, Ownable, WhitelistChecker {
                 address target
             ) = _abiDecodeIteration(interactiveData[1:]);
 
-            _matchOrder(
+            _settleOrder(
                 IOrderMixin(msg.sender),
                 order,
                 interactor,
@@ -156,7 +156,7 @@ contract Settlement is ISettlement, Ownable, WhitelistChecker {
         }
     }
 
-    function _matchOrder(
+    function _settleOrder(
         IOrderMixin orderMixin,
         OrderLib.Order calldata order,
         address interactor,
