@@ -26,7 +26,6 @@ contract Settlement is ISettlement, Ownable, WhitelistChecker {
     uint16 private constant _DEFAULT_INITIAL_RATE_BUMP = 1000; // 10%
     uint32 private constant _DEFAULT_DURATION = 30 minutes;
 
-    error IncorrectOrderStartTime();
     error IncorrectCalldataParams();
     error FailedExternalCall();
     error OnlyFeeBankAccess();
@@ -125,26 +124,26 @@ contract Settlement is ISettlement, Ownable, WhitelistChecker {
     }
 
     function _getFeeRate(uint256 salt) internal view returns (uint256) {
-        uint256 orderTime = (salt & _ORDER_TIME_START_MASK) >> _ORDER_TIME_START_SHIFT;
-        // solhint-disable-next-line not-rely-on-time
-        uint256 currentTimestamp = block.timestamp;
-        if (orderTime > currentTimestamp) revert IncorrectOrderStartTime();
-
+        uint256 orderStartTime = (salt & _ORDER_TIME_START_MASK) >> _ORDER_TIME_START_SHIFT;
         uint256 duration = (salt & _ORDER_DURATION_MASK) >> _ORDER_DURATION_SHIFT;
+        uint256 initialRateBump = (salt & _ORDER_INITIAL_RATE_MASK) >> _ORDER_INITIAL_RATE_SHIFT;
         if (duration == 0) {
             duration = _DEFAULT_DURATION;
         }
-        orderTime += duration;
-
-        uint256 initialRate = (salt & _ORDER_INITIAL_RATE_MASK) >> _ORDER_INITIAL_RATE_SHIFT;
-        if (initialRate == 0) {
-            initialRate = _DEFAULT_INITIAL_RATE_BUMP;
+        if (initialRateBump == 0) {
+            initialRateBump = _DEFAULT_INITIAL_RATE_BUMP;
         }
 
-        return
-            currentTimestamp < orderTime
-                ? _BASE_POINTS + (initialRate * (orderTime - currentTimestamp)) / duration
-                : _BASE_POINTS;
+        unchecked {
+            if (block.timestamp > orderStartTime) {  // solhint-disable-line not-rely-on-time
+                uint256 timePassed = block.timestamp - orderStartTime;  // solhint-disable-line not-rely-on-time
+                return timePassed < duration
+                    ? _BASE_POINTS + initialRateBump * (duration - timePassed) / duration
+                    : _BASE_POINTS;
+            } else {
+                return _BASE_POINTS + initialRateBump;
+            }
+        }
     }
 
     function _matchOrder(
