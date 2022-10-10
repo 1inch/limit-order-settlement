@@ -33,7 +33,7 @@ library OrderSaltParser {
         );
     }
 
-    function init(uint32 startTime_, uint32 duration_, uint16 initialRate_, uint32 fee_, uint144 salt_) internal pure returns (OrderSalt memory) {
+    function create(uint32 startTime_, uint32 duration_, uint16 initialRate_, uint32 fee_, uint144 salt_) internal pure returns (OrderSalt memory) {
         return OrderSalt(startTime_, duration_, initialRate_, fee_, salt_);
     }
 
