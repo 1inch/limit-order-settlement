@@ -130,10 +130,10 @@ contract Settlement is ISettlement, Ownable, WhitelistChecker {
             );
         }
         uint256 salt = uint256(bytes32(interactiveData[interactiveData.length - 32:]));
-        return (takingAmount * _getFeeRate(salt)) / _BASE_POINTS;
+        return (takingAmount * _calculateRateBump(salt)) / _BASE_POINTS;
     }
 
-    function _getFeeRate(uint256 salt) internal view returns (uint256) {
+    function _calculateRateBump(uint256 salt) internal view returns (uint256) {
         uint256 orderStartTime = (salt & _ORDER_TIME_START_MASK) >> _ORDER_TIME_START_SHIFT;
         uint256 duration = (salt & _ORDER_DURATION_MASK) >> _ORDER_DURATION_SHIFT;
         uint256 initialRateBump = (salt & _ORDER_INITIAL_RATE_MASK) >> _ORDER_INITIAL_RATE_SHIFT;
