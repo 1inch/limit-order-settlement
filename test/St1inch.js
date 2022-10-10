@@ -247,4 +247,22 @@ describe('St1inch', async () => {
 
         await expect(this.st1inch.withdraw()).to.be.rejectedWith('UnlockTimeWasNotCome()');
     });
+
+    it('should emergency withdraw', async () => {
+        await this.st1inch.deposit(ether('50'), time.duration.days('1'));
+        const balanceAddr0 = await this.oneInch.balanceOf(addr0);
+        expect(await this.st1inch.emergencyExit()).to.be.equal(false);
+
+        await this.st1inch.setEmergencyExit(true);
+        await this.st1inch.withdraw();
+
+        expect(await this.st1inch.emergencyExit()).to.be.equal(true);
+        expect(await this.oneInch.balanceOf(addr0)).to.be.bignumber.equal(balanceAddr0.add(ether('50')));
+    });
+
+    it("shouldn't call setEmergencyExit if caller isn't the owner", async () => {
+        await expect(this.st1inch.setEmergencyExit(true, { from: addr1 })).to.be.rejectedWith(
+            'Ownable: caller is not the owner',
+        );
+    });
 });
