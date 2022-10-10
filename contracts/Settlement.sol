@@ -53,7 +53,17 @@ contract Settlement is ISettlement, Ownable, WhitelistChecker {
         uint256 thresholdAmount,
         address target
     ) external onlyWhitelisted(msg.sender) {
-        _matchOrder(orderMixin, order, msg.sender, signature, interaction, makingAmount, takingAmount, thresholdAmount, target);
+        _matchOrder(
+            orderMixin,
+            order,
+            msg.sender,
+            signature,
+            interaction,
+            makingAmount,
+            takingAmount,
+            thresholdAmount,
+            target
+        );
     }
 
     function matchOrdersEOA(
