@@ -49,11 +49,11 @@ contract St1inch is ERC20Farmable, ERC20Delegatable, VotingPowerCalculator {
     }
 
     function votingPowerOf(address account) external view returns (uint256) {
-        return VotingPowerCalculator.votingPowerOf(balanceOf(account));
+        return votingPowerOf(balanceOf(account));
     }
 
     function votingPowerOf(address account, uint256 timestamp) external view returns (uint256) {
-        return VotingPowerCalculator.votingPowerOf(balanceOf(account), timestamp);
+        return votingPowerOf(balanceOf(account), timestamp);
     }
 
     function approve(
@@ -137,7 +137,7 @@ contract St1inch is ERC20Farmable, ERC20Delegatable, VotingPowerCalculator {
         if (lockedTill > block.timestamp + MAX_LOCK_PERIOD) revert LockTimeMoreMaxLock();
         _unlockTime[account] = lockedTill;
 
-        _mint(account, VotingPowerCalculator._invExp(balance, lockedTill - origin) - balanceOf(account));
+        _mint(account, _invExp(balance, lockedTill - origin) - balanceOf(account));
     }
 
     /* solhint-enable not-rely-on-time */

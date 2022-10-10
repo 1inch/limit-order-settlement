@@ -1,9 +1,10 @@
 const { expect, ether, toBN } = require('@1inch/solidity-utils');
 const { artifacts } = require('hardhat');
 
-const WhitelistRegistry = artifacts.require('WhitelistRegistry');
-const TokenMock = artifacts.require('TokenMock');
+const WhitelistRegistryMock = artifacts.require('WhitelistRegistryMock');
+const VotingPowerCalculatorMock = artifacts.require('VotingPowerCalculatorMock');
 const THRESHOLD = ether('1');
+const VOTING_POWER_THRESHOLD = THRESHOLD.muln(2);
 const MAX_WHITELISTED = 10;
 
 describe('WhitelistRegistry', async () => {
@@ -14,15 +15,15 @@ describe('WhitelistRegistry', async () => {
     });
 
     beforeEach(async () => {
-        this.Staking = await TokenMock.new('ST1INCH', 'ST1INCH');
-        this.WhitelistRegistry = await WhitelistRegistry.new(this.Staking.address, THRESHOLD);
+        this.Staking = await VotingPowerCalculatorMock.new('ST1INCH', 'ST1INCH');
+        this.WhitelistRegistry = await WhitelistRegistryMock.new(this.Staking.address, this.Staking.address, THRESHOLD);
         await this.Staking.mint(addrs[0], ether('100'));
     });
 
     describe('storage vars', async () => {
         it('check storage vars', async () => {
             expect(await this.WhitelistRegistry.resolverThreshold()).to.be.bignumber.equal(THRESHOLD);
-            expect(await this.WhitelistRegistry.staking()).to.equal(this.Staking.address);
+            expect(await this.WhitelistRegistry.rewardToken()).to.equal(this.Staking.address);
         });
     });
 
@@ -36,7 +37,7 @@ describe('WhitelistRegistry', async () => {
     describe('register', async () => {
         it('should whitelist 10 addresses', async () => {
             for (let i = 1; i <= MAX_WHITELISTED; ++i) {
-                await this.Staking.transfer(addrs[i], THRESHOLD);
+                await this.Staking.transfer(addrs[i], VOTING_POWER_THRESHOLD);
             }
             for (let i = 1; i <= MAX_WHITELISTED; ++i) {
                 await this.WhitelistRegistry.register({ from: addrs[i] });
@@ -52,7 +53,7 @@ describe('WhitelistRegistry', async () => {
 
         it('should whitelist 10 addresses, then fail to whitelist due to not enough balance, then whitelist successfully', async () => {
             for (let i = 1; i <= MAX_WHITELISTED + 1; ++i) {
-                await this.Staking.transfer(addrs[i], THRESHOLD);
+                await this.Staking.transfer(addrs[i], VOTING_POWER_THRESHOLD);
             }
             for (let i = 1; i <= MAX_WHITELISTED; ++i) {
                 await this.WhitelistRegistry.register({ from: addrs[i] });
@@ -83,7 +84,7 @@ describe('WhitelistRegistry', async () => {
 
         it('should whitelist 10 addresses, then lower balance, then whitelist successfully', async () => {
             for (let i = 1; i <= MAX_WHITELISTED + 1; ++i) {
-                await this.Staking.transfer(addrs[i], THRESHOLD);
+                await this.Staking.transfer(addrs[i], VOTING_POWER_THRESHOLD);
             }
             for (let i = 1; i <= MAX_WHITELISTED; ++i) {
                 await this.WhitelistRegistry.register({ from: addrs[i] });
@@ -102,7 +103,7 @@ describe('WhitelistRegistry', async () => {
 
         it('should whitelist 10 addresses, then whitelist 9 times successfully', async () => {
             for (let i = 1; i <= MAX_WHITELISTED + 9; ++i) {
-                await this.Staking.transfer(addrs[i], i <= MAX_WHITELISTED ? THRESHOLD : THRESHOLD.add(toBN('1')));
+                await this.Staking.transfer(addrs[i], i <= MAX_WHITELISTED ? VOTING_POWER_THRESHOLD : VOTING_POWER_THRESHOLD.add(toBN('1')));
             }
             for (let i = 1; i <= MAX_WHITELISTED + 9; ++i) {
                 await this.WhitelistRegistry.register({ from: addrs[i] });
@@ -119,11 +120,11 @@ describe('WhitelistRegistry', async () => {
     describe('clean', async () => {
         it('should remove from whitelist addresses which not enough staked balance', async () => {
             for (let i = 0; i < MAX_WHITELISTED; ++i) {
-                await this.Staking.transfer(addrs[i], THRESHOLD.addn(1));
+                await this.Staking.transfer(addrs[i], VOTING_POWER_THRESHOLD.addn(1));
                 await this.WhitelistRegistry.register({ from: addrs[i] });
                 expect(await this.WhitelistRegistry.isWhitelisted(addrs[i])).to.be.equal(true);
                 if (i % 2 === 1) {
-                    await this.Staking.transfer(addrs[0], '2', { from: addrs[i] });
+                    await this.Staking.transfer(addrs[i - 1], VOTING_POWER_THRESHOLD, { from: addrs[i] });
                 }
             }
             await this.WhitelistRegistry.clean();

@@ -5,11 +5,12 @@ pragma solidity 0.8.17;
 import "@1inch/solidity-utils/contracts/libraries/UniERC20.sol";
 import "@1inch/solidity-utils/contracts/libraries/AddressSet.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "./interfaces/IStaking.sol";
+import "./helpers/VotingPowerCalculator.sol";
+import "./interfaces/IRewardableToken.sol";
 import "./interfaces/IWhitelistRegistry.sol";
 
 /// @title Contract with trades resolvers whitelist
-contract WhitelistRegistry is IWhitelistRegistry, Ownable {
+contract WhitelistRegistry is IWhitelistRegistry, Ownable, VotingPowerCalculator {
     using UniERC20 for IERC20;
     using AddressSet for AddressSet.Data;
 
@@ -24,10 +25,10 @@ contract WhitelistRegistry is IWhitelistRegistry, Ownable {
     AddressSet.Data private _whitelist;
 
     uint256 public resolverThreshold;
-    IStaking public immutable staking;
+    IRewardableToken public immutable rewardToken;
 
-    constructor(IStaking staking_, uint256 threshold) {
-        staking = staking_;
+    constructor(IRewardableToken rewardToken_, VotingPowerCalculator st1inch_, uint256 threshold) VotingPowerCalculator(st1inch_.expBase(), st1inch_.origin()) {
+        rewardToken = rewardToken_;
         resolverThreshold = threshold;
     }
 
@@ -41,21 +42,20 @@ contract WhitelistRegistry is IWhitelistRegistry, Ownable {
     }
 
     function register() external {
-        uint256 staked = staking.balanceOf(msg.sender);
-        if (staked < resolverThreshold) revert BalanceLessThanThreshold();
+        if (votingPowerOf(rewardToken.balanceOf(msg.sender)) < resolverThreshold) revert BalanceLessThanThreshold();
         uint256 whitelistLength = _whitelist.length();
         if (whitelistLength < MAX_WHITELISTED) {
             _whitelist.add(msg.sender);
             return;
         }
         address minResolver = msg.sender;
-        uint256 minStaked = staked;
+        uint256 minReward = rewardToken.balanceOf(msg.sender);
         for (uint256 i = 0; i < whitelistLength; ++i) {
             address curWhitelisted = _whitelist.at(i);
-            staked = staking.balanceOf(curWhitelisted);
-            if (staked < minStaked) {
+            uint256 reward = rewardToken.balanceOf(curWhitelisted);
+            if (reward < minReward) {
                 minResolver = curWhitelisted;
-                minStaked = staked;
+                minReward = reward;
             }
         }
         if (minResolver == msg.sender) revert NotEnoughBalance();
@@ -73,7 +73,7 @@ contract WhitelistRegistry is IWhitelistRegistry, Ownable {
         unchecked {
             for(uint256 i = 0; i < whitelistLength;) {
                 address curWhitelisted = _whitelist.at(i);
-                if (staking.balanceOf(curWhitelisted) < resolverThreshold) {
+                if (votingPowerOf(rewardToken.balanceOf(curWhitelisted)) < resolverThreshold) {
                     _whitelist.remove(curWhitelisted);
                     whitelistLength--;
                 } else {
