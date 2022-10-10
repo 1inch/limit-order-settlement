@@ -36,7 +36,16 @@ contract ProxySettlement {
         uint256 thresholdAmount,
         address target
     ) external {
-        _settlement.matchOrders(orderMixin, order, signature, interaction, makingAmount, takingAmount, thresholdAmount, target);
+        _settlement.matchOrders(
+            orderMixin,
+            order,
+            signature,
+            interaction,
+            makingAmount,
+            takingAmount,
+            thresholdAmount,
+            target
+        );
     }
 
     function matchOrdersEOA(

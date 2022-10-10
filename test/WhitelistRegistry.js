@@ -8,7 +8,6 @@ const MAX_WHITELISTED = 10;
 
 describe('WhitelistRegistry', async () => {
     let addrs;
-    const MAX_WHITELISTED = 10;
 
     before(async () => {
         addrs = await web3.eth.getAccounts();
