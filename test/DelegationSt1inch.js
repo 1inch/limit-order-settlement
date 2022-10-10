@@ -16,7 +16,7 @@ describe('Delegation st1inch', async () => {
     const maxUserDelegations = 5;
     const commonLockDuration = time.duration.days('10');
 
-    const stakeAndRegisterIntoDelegation = async (user, amount, userIndex) => {
+    const stakeAndRegisterInDelegation = async (user, amount, userIndex) => {
         await this.st1inch.depositFor(user, amount, commonLockDuration);
         await this.delegation.contract.methods
             .register(`${userIndex}DelegatingToken`, `A${userIndex}DT`, maxDelegatorsFarms)
@@ -43,22 +43,57 @@ describe('Delegation st1inch', async () => {
         await this.delegation.transferOwnership(this.st1inch.address);
     });
 
-    it('should add account into whitelist, when sum stacked st1inch and deposit st1inch is sufficient', async () => {
-        // fill all whitelist into WhitelistRegistry
-        for (let i = 0; i < MAX_WHITELISTED; ++i) {
-            const userIndex = i + 2;
-            const user = this.accounts[userIndex];
-            await stakeAndRegisterIntoDelegation(user, ether('2').muln(i + 1), userIndex);
-            await this.whitelistRegistry.register({ from: user });
-        }
-        await stakeAndRegisterIntoDelegation(addr0, ether('1'), 0);
-        // addr0 shouldn't register becouse his st1inch balance less that all of the whitelisted accounts
-        await expect(this.whitelistRegistry.register()).to.be.rejectedWith('NotEnoughBalance()');
-        // create other stake and delegate to addr0
-        await this.st1inch.deposit(ether('2'), commonLockDuration, { from: addr1 });
-        await this.st1inch.delegate(this.delegation.address, addr0, { from: addr1 });
-        // register addr0 into whitelistRegistry and chack that
-        await this.whitelistRegistry.register();
-        expect(await this.whitelistRegistry.isWhitelisted(addr0)).to.be.equal(true);
+    describe('For add to whitelist', async () => {
+        const depositAndDelegateTo = async (from, to, amount, duration = commonLockDuration) => {
+            await this.st1inch.deposit(amount, duration, { from });
+            await this.st1inch.delegate(this.delegation.address, to, { from });
+        };
+
+        beforeEach(async () => {
+            // fill all whitelist into WhitelistRegistry
+            for (let i = 0; i < MAX_WHITELISTED; ++i) {
+                const userIndex = i + 2;
+                const user = this.accounts[userIndex];
+                await stakeAndRegisterInDelegation(user, ether('2').muln(i + 1), userIndex);
+                await this.whitelistRegistry.register({ from: user });
+            }
+            await stakeAndRegisterInDelegation(addr0, ether('1'), 0);
+        });
+
+        it('should add account, when sum stacked st1inch and deposit st1inch is sufficient', async () => {
+            // addr0 shouldn't register becouse his st1inch balance less that all of the whitelisted accounts
+            await expect(this.whitelistRegistry.register()).to.be.rejectedWith('NotEnoughBalance()');
+            // create other stake and delegate to addr0
+            await depositAndDelegateTo(addr1, addr0, ether('2'));
+            // register addr0 into whitelistRegistry and chack that
+            await this.whitelistRegistry.register();
+            expect(await this.whitelistRegistry.isWhitelisted(addr0)).to.be.equal(true);
+        });
+
+        it('should add account, when sum stacked st1inch and deposit st1inch is sufficient (delegate before deposit)', async () => {
+            // delegate to addr0 and deposit 1inch
+            await this.st1inch.delegate(this.delegation.address, addr0, { from: addr1 });
+            await this.st1inch.deposit(ether('2'), commonLockDuration, { from: addr1 });
+
+            await this.whitelistRegistry.register();
+        });
+
+        it('should decrease delegatee balance, if delegator undelegate stake', async () => {
+            await depositAndDelegateTo(addr1, addr0, ether('2'));
+            await this.whitelistRegistry.register();
+
+            await this.st1inch.undelegate(this.delegation.address, { from: addr1 });
+            await this.whitelistRegistry.register({ from: this.accounts[2] });
+            expect(await this.whitelistRegistry.isWhitelisted(addr0)).to.be.equal(false);
+        });
+
+        it('should decrease delegatee balance, if delegator delegate to other account', async () => {
+            await depositAndDelegateTo(addr1, addr0, ether('2'));
+            await this.whitelistRegistry.register();
+
+            await this.st1inch.delegate(this.delegation.address, this.accounts[2], { from: addr1 });
+            await this.whitelistRegistry.register({ from: this.accounts[2] });
+            expect(await this.whitelistRegistry.isWhitelisted(addr0)).to.be.equal(false);
+        });
     });
 });
