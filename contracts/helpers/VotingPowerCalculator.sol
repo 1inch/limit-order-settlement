@@ -72,16 +72,19 @@ abstract contract VotingPowerCalculator {
         expTable29 = (expTable28 * expTable28) / 1e18;
     }
 
-    function votingPowerOf(uint256 balance) public view virtual returns (uint256) {
+    // solhint-disable-next-line no-empty-blocks
+    function balanceOf(address account) public view virtual returns (uint256) {}
+
+    function votingPowerOf(address account) external view virtual returns (uint256) {
         // solhint-disable-next-line not-rely-on-time
-        return _exp(balance, block.timestamp - origin);
+        return _exp(balanceOf(account), block.timestamp - origin);
     }
 
-    function votingPowerOf(uint256 balance, uint256 timestamp) public view returns (uint256) {
-        return _exp(balance, timestamp - origin);
+    function votingPowerOf(address account, uint256 timestamp) external view returns (uint256) {
+        return _exp(balanceOf(account), timestamp - origin);
     }
 
-    function _exp(uint256 point, uint256 t) private view returns (uint256) {
+    function _exp(uint256 point, uint256 t) internal view returns (uint256) {
         unchecked {
             if (t & 0x01 != 0) {
                 point = (point * expBase) / 1e18;

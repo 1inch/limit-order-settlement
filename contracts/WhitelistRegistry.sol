@@ -5,12 +5,11 @@ pragma solidity 0.8.17;
 import "@1inch/solidity-utils/contracts/libraries/UniERC20.sol";
 import "@1inch/solidity-utils/contracts/libraries/AddressSet.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "./helpers/VotingPowerCalculator.sol";
-import "./interfaces/IRewardableToken.sol";
 import "./interfaces/IWhitelistRegistry.sol";
+import "./helpers/VotingPowerCalculator.sol";
 
 /// @title Contract with trades resolvers whitelist
-contract WhitelistRegistry is IWhitelistRegistry, Ownable, VotingPowerCalculator {
+contract WhitelistRegistry is IWhitelistRegistry, Ownable {
     using UniERC20 for IERC20;
     using AddressSet for AddressSet.Data;
 
@@ -25,9 +24,9 @@ contract WhitelistRegistry is IWhitelistRegistry, Ownable, VotingPowerCalculator
     AddressSet.Data private _whitelist;
 
     uint256 public resolverThreshold;
-    IRewardableToken public immutable rewardToken;
+    VotingPowerCalculator public immutable rewardToken;
 
-    constructor(IRewardableToken rewardToken_, VotingPowerCalculator st1inch_, uint256 threshold) VotingPowerCalculator(st1inch_.expBase(), st1inch_.origin()) {
+    constructor(VotingPowerCalculator rewardToken_, uint256 threshold) {
         rewardToken = rewardToken_;
         resolverThreshold = threshold;
     }
@@ -42,7 +41,7 @@ contract WhitelistRegistry is IWhitelistRegistry, Ownable, VotingPowerCalculator
     }
 
     function register() external {
-        if (votingPowerOf(rewardToken.balanceOf(msg.sender)) < resolverThreshold) revert BalanceLessThanThreshold();
+        if (rewardToken.votingPowerOf(msg.sender) < resolverThreshold) revert BalanceLessThanThreshold();
         uint256 whitelistLength = _whitelist.length();
         if (whitelistLength < MAX_WHITELISTED) {
             _whitelist.add(msg.sender);
@@ -73,7 +72,7 @@ contract WhitelistRegistry is IWhitelistRegistry, Ownable, VotingPowerCalculator
         unchecked {
             for(uint256 i = 0; i < whitelistLength;) {
                 address curWhitelisted = _whitelist.at(i);
-                if (votingPowerOf(rewardToken.balanceOf(curWhitelisted)) < resolverThreshold) {
+                if (rewardToken.votingPowerOf(curWhitelisted) < resolverThreshold) {
                     _whitelist.remove(curWhitelisted);
                     whitelistLength--;
                 } else {

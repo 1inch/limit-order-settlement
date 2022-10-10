@@ -48,12 +48,17 @@ contract St1inch is ERC20Farmable, ERC20Delegatable, VotingPowerCalculator {
         return _unlockTime[account];
     }
 
-    function votingPowerOf(address account) external view returns (uint256) {
-        return votingPowerOf(balanceOf(account));
+    function votingPowerOf(uint256 balance) public view virtual returns (uint256) {
+        // solhint-disable-next-line not-rely-on-time
+        return _exp(balance, block.timestamp - origin);
     }
 
-    function votingPowerOf(address account, uint256 timestamp) external view returns (uint256) {
-        return votingPowerOf(balanceOf(account), timestamp);
+    function votingPowerOf(uint256 balance, uint256 timestamp) public view returns (uint256) {
+        return _exp(balance, timestamp - origin);
+    }
+
+    function balanceOf(address account) public view override(VotingPowerCalculator,ERC20,IERC20) returns (uint256) {
+        return ERC20.balanceOf(account);
     }
 
     function approve(
