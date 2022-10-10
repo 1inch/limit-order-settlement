@@ -15,14 +15,14 @@ describe('WhitelistRegistry', async () => {
     });
 
     beforeEach(async () => {
-        this.Staking = await RewardableDelegationTopicWithVotingPowerMock.new('reward1INCH', 'reward1INCH');
-        this.WhitelistRegistry = await WhitelistRegistry.new(this.Staking.address, THRESHOLD);
+        this.RewardDelegationTopic = await RewardableDelegationTopicWithVotingPowerMock.new('reward1INCH', 'reward1INCH');
+        this.WhitelistRegistry = await WhitelistRegistry.new(this.RewardDelegationTopic.address, THRESHOLD);
     });
 
     describe('storage vars', async () => {
         it('check storage vars', async () => {
             expect(await this.WhitelistRegistry.resolverThreshold()).to.be.bignumber.equal(THRESHOLD);
-            expect(await this.WhitelistRegistry.rewardToken()).to.equal(this.Staking.address);
+            expect(await this.WhitelistRegistry.rewardDelegationTopic()).to.equal(this.RewardDelegationTopic.address);
         });
     });
 
@@ -36,7 +36,7 @@ describe('WhitelistRegistry', async () => {
     describe('register', async () => {
         it('should whitelist 10 addresses', async () => {
             for (let i = 1; i <= MAX_WHITELISTED; ++i) {
-                await this.Staking.mint(addrs[i], VOTING_POWER_THRESHOLD);
+                await this.RewardDelegationTopic.mint(addrs[i], VOTING_POWER_THRESHOLD);
             }
             for (let i = 1; i <= MAX_WHITELISTED; ++i) {
                 await this.WhitelistRegistry.register({ from: addrs[i] });
@@ -52,7 +52,7 @@ describe('WhitelistRegistry', async () => {
 
         it('should whitelist 10 addresses, then fail to whitelist due to not enough balance, then whitelist successfully', async () => {
             for (let i = 1; i <= MAX_WHITELISTED + 1; ++i) {
-                await this.Staking.mint(addrs[i], VOTING_POWER_THRESHOLD);
+                await this.RewardDelegationTopic.mint(addrs[i], VOTING_POWER_THRESHOLD);
             }
             for (let i = 1; i <= MAX_WHITELISTED; ++i) {
                 await this.WhitelistRegistry.register({ from: addrs[i] });
@@ -65,10 +65,10 @@ describe('WhitelistRegistry', async () => {
             ).to.eventually.be.rejectedWith('NotEnoughBalance()');
             expect(await this.WhitelistRegistry.isWhitelisted(addrs[MAX_WHITELISTED + 1])).to.be.equal(false);
             for (let i = 1; i <= MAX_WHITELISTED; ++i) {
-                await this.Staking.burn(addrs[i], THRESHOLD);
+                await this.RewardDelegationTopic.burn(addrs[i], THRESHOLD);
                 expect(await this.WhitelistRegistry.isWhitelisted(addrs[i])).to.be.equal(true);
             }
-            await this.Staking.mint(addrs[MAX_WHITELISTED + 1], THRESHOLD);
+            await this.RewardDelegationTopic.mint(addrs[MAX_WHITELISTED + 1], THRESHOLD);
             await this.WhitelistRegistry.register({
                 from: addrs[MAX_WHITELISTED + 1],
             });
@@ -81,13 +81,13 @@ describe('WhitelistRegistry', async () => {
 
         it('should whitelist 10 addresses, then lower balance, then whitelist successfully', async () => {
             for (let i = 1; i <= MAX_WHITELISTED + 1; ++i) {
-                await this.Staking.mint(addrs[i], VOTING_POWER_THRESHOLD);
+                await this.RewardDelegationTopic.mint(addrs[i], VOTING_POWER_THRESHOLD);
             }
             for (let i = 1; i <= MAX_WHITELISTED; ++i) {
                 await this.WhitelistRegistry.register({ from: addrs[i] });
                 expect(await this.WhitelistRegistry.isWhitelisted(addrs[i])).to.be.equal(true);
             }
-            await this.Staking.burn(addrs[3], toBN('1'));
+            await this.RewardDelegationTopic.burn(addrs[3], toBN('1'));
             expect(await this.WhitelistRegistry.isWhitelisted(addrs[3])).to.be.equal(true);
             await this.WhitelistRegistry.register({
                 from: addrs[MAX_WHITELISTED + 1],
@@ -98,7 +98,7 @@ describe('WhitelistRegistry', async () => {
 
         it('should whitelist 10 addresses, then whitelist 9 times successfully', async () => {
             for (let i = 1; i <= MAX_WHITELISTED + 9; ++i) {
-                await this.Staking.mint(addrs[i], i <= MAX_WHITELISTED ? VOTING_POWER_THRESHOLD : VOTING_POWER_THRESHOLD.add(toBN('1')));
+                await this.RewardDelegationTopic.mint(addrs[i], i <= MAX_WHITELISTED ? VOTING_POWER_THRESHOLD : VOTING_POWER_THRESHOLD.add(toBN('1')));
             }
             for (let i = 1; i <= MAX_WHITELISTED + 9; ++i) {
                 await this.WhitelistRegistry.register({ from: addrs[i] });
@@ -115,12 +115,12 @@ describe('WhitelistRegistry', async () => {
     describe('clean', async () => {
         it('should remove from whitelist addresses which not enough staked balance', async () => {
             for (let i = 0; i < MAX_WHITELISTED; ++i) {
-                await this.Staking.mint(addrs[i], VOTING_POWER_THRESHOLD.addn(1));
+                await this.RewardDelegationTopic.mint(addrs[i], VOTING_POWER_THRESHOLD.addn(1));
                 await this.WhitelistRegistry.register({ from: addrs[i] });
                 expect(await this.WhitelistRegistry.isWhitelisted(addrs[i])).to.be.equal(true);
                 if (i % 2 === 1) {
-                    await this.Staking.burn(addrs[i], VOTING_POWER_THRESHOLD);
-                    await this.Staking.mint(addrs[i - 1], VOTING_POWER_THRESHOLD);
+                    await this.RewardDelegationTopic.burn(addrs[i], VOTING_POWER_THRESHOLD);
+                    await this.RewardDelegationTopic.mint(addrs[i - 1], VOTING_POWER_THRESHOLD);
                 }
             }
             await this.WhitelistRegistry.clean();

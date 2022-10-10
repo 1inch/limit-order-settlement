@@ -24,10 +24,10 @@ contract WhitelistRegistry is IWhitelistRegistry, Ownable {
     AddressSet.Data private _whitelist;
 
     uint256 public resolverThreshold;
-    VotingPowerCalculator public immutable rewardToken;
+    VotingPowerCalculator public immutable rewardDelegationTopic;
 
-    constructor(VotingPowerCalculator rewardToken_, uint256 threshold) {
-        rewardToken = rewardToken_;
+    constructor(VotingPowerCalculator rewardDelegationTopic_, uint256 threshold) {
+        rewardDelegationTopic = rewardDelegationTopic_;
         resolverThreshold = threshold;
     }
 
@@ -41,17 +41,17 @@ contract WhitelistRegistry is IWhitelistRegistry, Ownable {
     }
 
     function register() external {
-        if (rewardToken.votingPowerOf(msg.sender) < resolverThreshold) revert BalanceLessThanThreshold();
+        if (rewardDelegationTopic.votingPowerOf(msg.sender) < resolverThreshold) revert BalanceLessThanThreshold();
         uint256 whitelistLength = _whitelist.length();
         if (whitelistLength < MAX_WHITELISTED) {
             _whitelist.add(msg.sender);
             return;
         }
         address minResolver = msg.sender;
-        uint256 minReward = rewardToken.balanceOf(msg.sender);
+        uint256 minReward = rewardDelegationTopic.balanceOf(msg.sender);
         for (uint256 i = 0; i < whitelistLength; ++i) {
             address curWhitelisted = _whitelist.at(i);
-            uint256 reward = rewardToken.balanceOf(curWhitelisted);
+            uint256 reward = rewardDelegationTopic.balanceOf(curWhitelisted);
             if (reward < minReward) {
                 minResolver = curWhitelisted;
                 minReward = reward;
@@ -72,7 +72,7 @@ contract WhitelistRegistry is IWhitelistRegistry, Ownable {
         unchecked {
             for(uint256 i = 0; i < whitelistLength;) {
                 address curWhitelisted = _whitelist.at(i);
-                if (rewardToken.votingPowerOf(curWhitelisted) < resolverThreshold) {
+                if (rewardDelegationTopic.votingPowerOf(curWhitelisted) < resolverThreshold) {
                     _whitelist.remove(curWhitelisted);
                     whitelistLength--;
                 } else {
