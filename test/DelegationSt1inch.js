@@ -4,6 +4,7 @@ const { addr0Wallet, addr1Wallet } = require('./helpers/utils');
 const TokenPermitMock = artifacts.require('ERC20PermitMock');
 const WhitelistRegistry = artifacts.require('WhitelistRegistry');
 const RewardableDelegation = artifacts.require('RewardableDelegation');
+const DelegateeToken = artifacts.require('DelegateeToken');
 const St1inch = artifacts.require('St1inch');
 
 describe('Delegation st1inch', async () => {
@@ -76,6 +77,20 @@ describe('Delegation st1inch', async () => {
             await this.st1inch.deposit(ether('2'), commonLockDuration, { from: addr1 });
 
             await this.whitelistRegistry.register();
+        });
+
+        it('should accrue DelegateeToken token after delegate', async () => {
+            const delegateeToken = await DelegateeToken.at(await this.delegation.registration(addr0));
+            const balanceDelegetee = await delegateeToken.balanceOf(addr0);
+            expect(await delegateeToken.totalSupply()).to.be.bignumber.equal(balanceDelegetee);
+            expect(await this.st1inch.balanceOf(addr0)).to.be.bignumber.equal(balanceDelegetee);
+
+            await depositAndDelegateTo(addr1, addr0, ether('2'));
+
+            const balanceDelegator = await delegateeToken.balanceOf(addr1);
+            expect(balanceDelegetee.mul(await this.st1inch.balanceOf(addr1))).to.be.bignumber.equal(
+                balanceDelegator.mul(await this.st1inch.balanceOf(addr0)),
+            );
         });
 
         it('should decrease delegatee balance, if delegator undelegate stake', async () => {
