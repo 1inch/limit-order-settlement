@@ -260,7 +260,9 @@ describe('St1inch', async () => {
         expect(await this.oneInch.balanceOf(addr0)).to.be.bignumber.equal(balanceAddr0.add(ether('50')));
     });
 
-    it('shouldn\'t call setEmergencyExit if caller isn\'t the owner', async () => {
-        await expect(this.st1inch.setEmergencyExit(true, { from: addr1 })).to.be.rejectedWith('Ownable: caller is not the owner');
+    it("shouldn't call setEmergencyExit if caller isn't the owner", async () => {
+        await expect(this.st1inch.setEmergencyExit(true, { from: addr1 })).to.be.rejectedWith(
+            'Ownable: caller is not the owner',
+        );
     });
 });
