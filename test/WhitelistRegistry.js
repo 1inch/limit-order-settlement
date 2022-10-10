@@ -16,7 +16,7 @@ describe('WhitelistRegistry', async () => {
 
     beforeEach(async () => {
         this.RewardDelegationTopic = await RewardableDelegationTopicWithVotingPowerMock.new('reward1INCH', 'reward1INCH');
-        this.WhitelistRegistry = await WhitelistRegistry.new(this.RewardDelegationTopic.address, THRESHOLD);
+        this.WhitelistRegistry = await WhitelistRegistry.new(this.RewardDelegationTopic.address, THRESHOLD, MAX_WHITELISTED);
     });
 
     describe('storage vars', async () => {

@@ -4,12 +4,13 @@ pragma solidity 0.8.17;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "@1inch/farming/contracts/ERC20Farmable.sol";
 import "@1inch/delegating/contracts/ERC20Delegatable.sol";
 import "@1inch/solidity-utils/contracts/libraries/SafeERC20.sol";
 import "./helpers/VotingPowerCalculator.sol";
 
-contract St1inch is ERC20Farmable, ERC20Delegatable, VotingPowerCalculator {
+contract St1inch is ERC20Farmable, ERC20Delegatable, Ownable, VotingPowerCalculator {
     using SafeERC20 for IERC20;
 
     error ZeroAddress();
@@ -30,6 +31,7 @@ contract St1inch is ERC20Farmable, ERC20Delegatable, VotingPowerCalculator {
     mapping(address => uint256) private _deposits;
 
     uint256 public totalDeposits;
+    bool public emergencyExit;
 
     constructor(
         IERC20 _oneInch,
@@ -38,6 +40,10 @@ contract St1inch is ERC20Farmable, ERC20Delegatable, VotingPowerCalculator {
         uint256 maxUserDelegations
     ) ERC20Farmable(maxUserFarms) ERC20Delegatable(maxUserDelegations) ERC20("Staking 1inch", "st1inch") VotingPowerCalculator(_expBase, block.timestamp) { // solhint-disable-line not-rely-on-time
         oneInch = _oneInch;
+    }
+
+    function setEmergencyExit(bool _emergencyExit) external onlyOwner {
+        emergencyExit = _emergencyExit;
     }
 
     function depositsAmount(address account) external view returns (uint256) {
@@ -153,7 +159,7 @@ contract St1inch is ERC20Farmable, ERC20Delegatable, VotingPowerCalculator {
 
     function withdrawTo(address to) public {
         // solhint-disable-next-line not-rely-on-time
-        if (block.timestamp < _unlockTime[msg.sender]) revert UnlockTimeWasNotCome();
+        if (!emergencyExit && block.timestamp < _unlockTime[msg.sender]) revert UnlockTimeWasNotCome();
 
         uint256 balance = _deposits[msg.sender];
         totalDeposits -= balance;

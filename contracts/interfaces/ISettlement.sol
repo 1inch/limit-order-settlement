@@ -6,7 +6,7 @@ import "@1inch/limit-order-protocol/contracts/interfaces/NotificationReceiver.so
 import "@1inch/limit-order-protocol/contracts/interfaces/IOrderMixin.sol";
 
 interface ISettlement is InteractionNotificationReceiver {
-    function matchOrders(
+    function settleOrders(
         IOrderMixin orderMixin,
         OrderLib.Order calldata order,
         bytes calldata signature,
@@ -17,7 +17,7 @@ interface ISettlement is InteractionNotificationReceiver {
         address target
     ) external;
 
-    function matchOrdersEOA(
+    function settleOrdersEOA(
         IOrderMixin orderMixin,
         OrderLib.Order calldata order,
         bytes calldata signature,

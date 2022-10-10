@@ -26,7 +26,7 @@ contract ProxySettlement {
         _feeBank.deposit(amount);
     }
 
-    function matchOrders(
+    function settleOrders(
         IOrderMixin orderMixin,
         OrderLib.Order calldata order,
         bytes calldata signature,
@@ -36,10 +36,19 @@ contract ProxySettlement {
         uint256 thresholdAmount,
         address target
     ) external {
-        _settlement.matchOrders(orderMixin, order, signature, interaction, makingAmount, takingAmount, thresholdAmount, target);
+        _settlement.settleOrders(
+            orderMixin,
+            order,
+            signature,
+            interaction,
+            makingAmount,
+            takingAmount,
+            thresholdAmount,
+            target
+        );
     }
 
-    function matchOrdersEOA(
+    function settleOrdersEOA(
         IOrderMixin orderMixin,
         OrderLib.Order calldata order,
         bytes calldata signature,
@@ -49,7 +58,7 @@ contract ProxySettlement {
         uint256 thresholdAmount,
         address target
     ) external {
-        _settlement.matchOrdersEOA(
+        _settlement.settleOrdersEOA(
             orderMixin,
             order,
             signature,

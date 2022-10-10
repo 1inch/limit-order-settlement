@@ -19,16 +19,21 @@ contract WhitelistRegistry is IWhitelistRegistry, Ownable {
     event Registered(address addr);
     event SetResolverThreshold(uint256 threshold);
 
-    uint256 public constant MAX_WHITELISTED = 10;
+    uint256 public immutable maxWhitelisted;
 
     AddressSet.Data private _whitelist;
 
     uint256 public resolverThreshold;
     VotingPowerCalculator public immutable rewardDelegationTopic;
 
-    constructor(VotingPowerCalculator rewardDelegationTopic_, uint256 threshold) {
+    constructor(
+        VotingPowerCalculator rewardDelegationTopic_,
+        uint256 threshold,
+        uint256 maxWhitelisted_
+    ) {
         rewardDelegationTopic = rewardDelegationTopic_;
         resolverThreshold = threshold;
+        maxWhitelisted = maxWhitelisted_;
     }
 
     function rescueFunds(IERC20 token, uint256 amount) external onlyOwner {
@@ -43,7 +48,7 @@ contract WhitelistRegistry is IWhitelistRegistry, Ownable {
     function register() external {
         if (rewardDelegationTopic.votingPowerOf(msg.sender) < resolverThreshold) revert BalanceLessThanThreshold();
         uint256 whitelistLength = _whitelist.length();
-        if (whitelistLength < MAX_WHITELISTED) {
+        if (whitelistLength < maxWhitelisted) {
             _whitelist.add(msg.sender);
             return;
         }
@@ -70,7 +75,7 @@ contract WhitelistRegistry is IWhitelistRegistry, Ownable {
     function clean() external {
         uint256 whitelistLength = _whitelist.length();
         unchecked {
-            for(uint256 i = 0; i < whitelistLength;) {
+            for (uint256 i = 0; i < whitelistLength; ) {
                 address curWhitelisted = _whitelist.at(i);
                 if (rewardDelegationTopic.votingPowerOf(curWhitelisted) < resolverThreshold) {
                     _whitelist.remove(curWhitelisted);

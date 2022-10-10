@@ -43,7 +43,7 @@ contract Settlement is ISettlement, Ownable, WhitelistChecker {
         WhitelistChecker(whitelist, limitOrderProtocol)
     {} // solhint-disable-line no-empty-blocks
 
-    function matchOrders(
+    function settleOrders(
         IOrderMixin orderMixin,
         OrderLib.Order calldata order,
         bytes calldata signature,
@@ -53,10 +53,20 @@ contract Settlement is ISettlement, Ownable, WhitelistChecker {
         uint256 thresholdAmount,
         address target
     ) external onlyWhitelisted(msg.sender) {
-        _matchOrder(orderMixin, order, msg.sender, signature, interaction, makingAmount, takingAmount, thresholdAmount, target);
+        _settleOrder(
+            orderMixin,
+            order,
+            msg.sender,
+            signature,
+            interaction,
+            makingAmount,
+            takingAmount,
+            thresholdAmount,
+            target
+        );
     }
 
-    function matchOrdersEOA(
+    function settleOrdersEOA(
         IOrderMixin orderMixin,
         OrderLib.Order calldata order,
         bytes calldata signature,
@@ -66,7 +76,7 @@ contract Settlement is ISettlement, Ownable, WhitelistChecker {
         uint256 thresholdAmount,
         address target
     ) external onlyWhitelistedEOA {
-        _matchOrder(
+        _settleOrder(
             orderMixin,
             order,
             tx.origin, // solhint-disable-line avoid-tx-origin
@@ -107,7 +117,7 @@ contract Settlement is ISettlement, Ownable, WhitelistChecker {
                 address target
             ) = _abiDecodeIteration(interactiveData[1:]);
 
-            _matchOrder(
+            _settleOrder(
                 IOrderMixin(msg.sender),
                 order,
                 interactor,
@@ -120,10 +130,10 @@ contract Settlement is ISettlement, Ownable, WhitelistChecker {
             );
         }
         uint256 salt = uint256(bytes32(interactiveData[interactiveData.length - 32:]));
-        return (takingAmount * _getFeeRate(salt)) / _BASE_POINTS;
+        return (takingAmount * _calculateRateBump(salt)) / _BASE_POINTS;
     }
 
-    function _getFeeRate(uint256 salt) internal view returns (uint256) {
+    function _calculateRateBump(uint256 salt) internal view returns (uint256) {
         uint256 orderStartTime = (salt & _ORDER_TIME_START_MASK) >> _ORDER_TIME_START_SHIFT;
         uint256 duration = (salt & _ORDER_DURATION_MASK) >> _ORDER_DURATION_SHIFT;
         uint256 initialRateBump = (salt & _ORDER_INITIAL_RATE_MASK) >> _ORDER_INITIAL_RATE_SHIFT;
@@ -135,18 +145,21 @@ contract Settlement is ISettlement, Ownable, WhitelistChecker {
         }
 
         unchecked {
-            if (block.timestamp > orderStartTime) {  // solhint-disable-line not-rely-on-time
-                uint256 timePassed = block.timestamp - orderStartTime;  // solhint-disable-line not-rely-on-time
-                return timePassed < duration
-                    ? _BASE_POINTS + initialRateBump * (duration - timePassed) / duration
-                    : _BASE_POINTS;
+            // solhint-disable-next-line not-rely-on-time
+            if (block.timestamp > orderStartTime) {
+                // solhint-disable-next-line not-rely-on-time
+                uint256 timePassed = block.timestamp - orderStartTime;
+                return
+                    timePassed < duration
+                        ? _BASE_POINTS + (initialRateBump * (duration - timePassed)) / duration
+                        : _BASE_POINTS;
             } else {
                 return _BASE_POINTS + initialRateBump;
             }
         }
     }
 
-    function _matchOrder(
+    function _settleOrder(
         IOrderMixin orderMixin,
         OrderLib.Order calldata order,
         address interactor,
