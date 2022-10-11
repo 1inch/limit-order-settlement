@@ -11,7 +11,7 @@ const ORDER_DURATION_SHIFT = 192; // durationMask 192-223
 const ORDER_INITIAL_RATE_SHIFT = 176; // initialRateMask 176-191
 const ORDER_FEE_SHIFT = 144; // orderFee 144-175
 
-const init = (orderSalt) => {
+const initSaltObj = (orderSalt) => {
     return {
         startTime: orderSalt.and(ORDER_TIME_START_MASK).shrn(ORDER_TIME_START_SHIFT),
         duration: orderSalt.and(ORDER_DURATION_MASK).shrn(ORDER_DURATION_SHIFT),
@@ -21,7 +21,7 @@ const init = (orderSalt) => {
     };
 };
 
-const create = (startTime, duration, initialRate, fee, salt) => {
+const createSaltObj = (startTime, duration, initialRate, fee, salt) => {
     return {
         startTime,
         duration,
@@ -40,12 +40,12 @@ const encodeParameters = (startTime, duration, initialRate, fee, salt) => {
             web3.eth.abi.encodeParameter('uint144', salt).substr(-36);
 };
 
-const parserObjToOrderSalt = (parserObj) => {
-    return toBN(parserObj.startTime).shln(ORDER_TIME_START_SHIFT).add(
-        toBN(parserObj.duration).shln(ORDER_DURATION_SHIFT).add(
-            toBN(parserObj.initialRate).shln(ORDER_INITIAL_RATE_SHIFT).add(
-                toBN(parserObj.fee).shln(ORDER_FEE_SHIFT).add(
-                    toBN(parserObj.salt),
+const saltObjToOrderSalt = (saltObj) => {
+    return toBN(saltObj.startTime).shln(ORDER_TIME_START_SHIFT).add(
+        toBN(saltObj.duration).shln(ORDER_DURATION_SHIFT).add(
+            toBN(saltObj.initialRate).shln(ORDER_INITIAL_RATE_SHIFT).add(
+                toBN(saltObj.fee).shln(ORDER_FEE_SHIFT).add(
+                    toBN(saltObj.salt),
                 ),
             ),
         ),
@@ -73,10 +73,10 @@ const onlySalt = (orderSalt) => {
 };
 
 module.exports = {
-    init,
-    create,
+    initSaltObj,
+    createSaltObj,
     encodeParameters,
-    parserObjToOrderSalt,
+    saltObjToOrderSalt,
     onlyStartTime,
     onlyDuration,
     onlyInitialRate,
