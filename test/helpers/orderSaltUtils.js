@@ -1,10 +1,12 @@
 const { toBN } = require('@1inch/solidity-utils');
 
-const TIME_START_MASK        = toBN('0xFFFFFFFF00000000000000000000000000000000000000000000000000000000');  // prettier-ignore
-const DURATION_MASK          = toBN('0x00000000FFFFFFFF000000000000000000000000000000000000000000000000');  // prettier-ignore
-const INITIAL_RATE_BUMP_MASK = toBN('0x0000000000000000FFFF00000000000000000000000000000000000000000000');  // prettier-ignore
-const FEE_MASK               = toBN('0x00000000000000000000FFFFFFFF000000000000000000000000000000000000');  // prettier-ignore
-const SALT_MASK              = toBN('0x0000000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF');  // prettier-ignore
+/* eslint-disable no-multi-spaces */
+const TIME_START_MASK        = toBN('0xFFFFFFFF00000000000000000000000000000000000000000000000000000000'); // prettier-ignore
+const DURATION_MASK          = toBN('0x00000000FFFFFFFF000000000000000000000000000000000000000000000000'); // prettier-ignore
+const INITIAL_RATE_BUMP_MASK = toBN('0x0000000000000000FFFF00000000000000000000000000000000000000000000'); // prettier-ignore
+const FEE_MASK               = toBN('0x00000000000000000000FFFFFFFF000000000000000000000000000000000000'); // prettier-ignore
+const SALT_MASK              = toBN('0x0000000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF'); // prettier-ignore
+/* eslint-enable no-multi-spaces */
 
 const TIME_START_SHIFT = 224; // orderTimeMask 224-255
 const DURATION_SHIFT = 192; // durationMask 192-223
@@ -21,34 +23,14 @@ const initSaltObj = (orderSalt) => {
     };
 };
 
-const createSaltObj = (startTime, duration, initialRate, fee, salt) => {
-    return {
-        startTime,
-        duration,
-        initialRate,
-        fee,
-        salt,
-    };
-};
-
 const encodeParameters = (startTime, duration, initialRate, fee, salt) => {
-    return '0x' +
-            web3.eth.abi.encodeParameter('uint32', startTime).substr(-8) +
-            web3.eth.abi.encodeParameter('uint32', duration).substr(-8) +
-            web3.eth.abi.encodeParameter('uint16', initialRate).substr(-4) +
-            web3.eth.abi.encodeParameter('uint32', fee).substr(-8) +
-            web3.eth.abi.encodeParameter('uint144', salt).substr(-36);
-};
-
-const saltObjToOrderSalt = (saltObj) => {
-    return toBN(saltObj.startTime).shln(TIME_START_SHIFT).add(
-        toBN(saltObj.duration).shln(DURATION_SHIFT).add(
-            toBN(saltObj.initialRate).shln(INITIAL_RATE_SHIFT).add(
-                toBN(saltObj.fee).shln(FEE_SHIFT).add(
-                    toBN(saltObj.salt),
-                ),
-            ),
-        ),
+    return (
+        '0x' +
+        web3.eth.abi.encodeParameter('uint32', startTime).substr(-8) +
+        web3.eth.abi.encodeParameter('uint32', duration).substr(-8) +
+        web3.eth.abi.encodeParameter('uint16', initialRate).substr(-4) +
+        web3.eth.abi.encodeParameter('uint32', fee).substr(-8) +
+        web3.eth.abi.encodeParameter('uint144', salt).substr(-36)
     );
 };
 
@@ -74,9 +56,7 @@ const getSalt = (orderSalt) => {
 
 module.exports = {
     initSaltObj,
-    createSaltObj,
     encodeParameters,
-    saltObjToOrderSalt,
     getStartTime,
     getDuration,
     getInitialRateBump,

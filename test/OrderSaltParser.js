@@ -1,8 +1,6 @@
 const { expect, toBN, constants } = require('@1inch/solidity-utils');
 const {
     initSaltObj,
-    createSaltObj,
-    saltObjToOrderSalt,
     encodeParameters,
     getStartTime, // eslint-disable-line no-unused-vars
     getDuration, // eslint-disable-line no-unused-vars
@@ -18,14 +16,6 @@ const ORDERSALT_WITH_SPECIFIC_VALUES = toBN('0x000000010000000200030000000400000
 const ORDERSALT_WITH_SIMPLE_VALUES = toBN('0x0000001100000022003300000044000000000000000000000000000000000555');
 const ORDERSALT_WITH_FILLED_BOUNDARY_BITS = toBN('0xF0000001F0000002F003F0000004F00000000000000000000000000000000123');
 const ORDERSALT_WITH_FILLED_ALL_BITS = toBN(constants.MAX_UINT256);
-
-const compareParserObjects = (saltObj1, saltObj2) => {
-    expect(saltObj1.startTime).to.be.bignumber.equals(saltObj2.startTime);
-    expect(saltObj1.duration).to.be.bignumber.equals(saltObj2.duration);
-    expect(saltObj1.initialRate).to.be.bignumber.equals(saltObj2.initialRate);
-    expect(saltObj1.fee).to.be.bignumber.equals(saltObj2.fee);
-    expect(saltObj1.salt).to.be.bignumber.equals(saltObj2.salt);
-};
 
 describe('OrderSaltParserTest', async () => {
     beforeEach(async () => {
