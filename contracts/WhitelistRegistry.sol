@@ -6,6 +6,7 @@ import "@1inch/solidity-utils/contracts/libraries/UniERC20.sol";
 import "@1inch/solidity-utils/contracts/libraries/AddressSet.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./interfaces/IWhitelistRegistry.sol";
+import "./interfaces/IVotable.sol";
 import "./helpers/VotingPowerCalculator.sol";
 
 /// @title Contract with trades resolvers whitelist
@@ -24,20 +25,20 @@ contract WhitelistRegistry is IWhitelistRegistry, Ownable {
     AddressSet.Data private _whitelist;
 
     uint256 public resolverThreshold;
-    VotingPowerCalculator public immutable rewardDelegationTopic;
+    IVotable public immutable token;
 
     constructor(
-        VotingPowerCalculator rewardDelegationTopic_,
-        uint256 threshold,
+        IVotable token_,
+        uint256 resolverThreshold_,
         uint256 maxWhitelisted_
     ) {
-        rewardDelegationTopic = rewardDelegationTopic_;
-        resolverThreshold = threshold;
+        token = token_;
+        resolverThreshold = resolverThreshold_;
         maxWhitelisted = maxWhitelisted_;
     }
 
-    function rescueFunds(IERC20 token, uint256 amount) external onlyOwner {
-        token.uniTransfer(payable(msg.sender), amount);
+    function rescueFunds(IERC20 token_, uint256 amount) external onlyOwner {
+        token_.uniTransfer(payable(msg.sender), amount);
     }
 
     function setResolverThreshold(uint256 threshold) external onlyOwner {
@@ -46,17 +47,17 @@ contract WhitelistRegistry is IWhitelistRegistry, Ownable {
     }
 
     function register() external {
-        if (rewardDelegationTopic.votingPowerOf(msg.sender) < resolverThreshold) revert BalanceLessThanThreshold();
+        if (token.votingPowerOf(msg.sender) < resolverThreshold) revert BalanceLessThanThreshold();
         uint256 whitelistLength = _whitelist.length();
         if (whitelistLength < maxWhitelisted) {
             _whitelist.add(msg.sender);
             return;
         }
         address minResolver = msg.sender;
-        uint256 minReward = rewardDelegationTopic.balanceOf(msg.sender);
+        uint256 minReward = token.balanceOf(msg.sender);
         for (uint256 i = 0; i < whitelistLength; ++i) {
             address curWhitelisted = _whitelist.at(i);
-            uint256 reward = rewardDelegationTopic.balanceOf(curWhitelisted);
+            uint256 reward = token.balanceOf(curWhitelisted);
             if (reward < minReward) {
                 minResolver = curWhitelisted;
                 minReward = reward;
@@ -77,7 +78,7 @@ contract WhitelistRegistry is IWhitelistRegistry, Ownable {
         unchecked {
             for (uint256 i = 0; i < whitelistLength; ) {
                 address curWhitelisted = _whitelist.at(i);
-                if (rewardDelegationTopic.votingPowerOf(curWhitelisted) < resolverThreshold) {
+                if (token.votingPowerOf(curWhitelisted) < resolverThreshold) {
                     _whitelist.remove(curWhitelisted);
                     whitelistLength--;
                 } else {

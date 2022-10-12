@@ -9,8 +9,9 @@ import "@1inch/farming/contracts/ERC20Farmable.sol";
 import "@1inch/delegating/contracts/ERC20Delegatable.sol";
 import "@1inch/solidity-utils/contracts/libraries/SafeERC20.sol";
 import "./helpers/VotingPowerCalculator.sol";
+import "./interfaces/IVotable.sol";
 
-contract St1inch is ERC20Farmable, ERC20Delegatable, Ownable, VotingPowerCalculator {
+contract St1inch is ERC20Farmable, ERC20Delegatable, Ownable, VotingPowerCalculator, IVotable {
     using SafeERC20 for IERC20;
 
     error ZeroAddress();
@@ -32,14 +33,23 @@ contract St1inch is ERC20Farmable, ERC20Delegatable, Ownable, VotingPowerCalcula
 
     uint256 public totalDeposits;
     bool public emergencyExit;
+    uint256 public immutable expBase;
+    // solhint-disable-next-line not-rely-on-time
+    uint256 public immutable origin = block.timestamp;
 
     constructor(
         IERC20 _oneInch,
         uint256 _expBase,
         uint256 maxUserFarms,
         uint256 maxUserDelegations
-    ) ERC20Farmable(maxUserFarms) ERC20Delegatable(maxUserDelegations) ERC20("Staking 1inch", "st1inch") VotingPowerCalculator(_expBase, block.timestamp) { // solhint-disable-line not-rely-on-time
+    )
+        ERC20Farmable(maxUserFarms)
+        ERC20Delegatable(maxUserDelegations)
+        ERC20("Staking 1inch", "st1inch")
+        VotingPowerCalculator(_expBase, origin)
+    {
         oneInch = _oneInch;
+        expBase = _expBase;
     }
 
     function setEmergencyExit(bool _emergencyExit) external onlyOwner {
@@ -54,17 +64,22 @@ contract St1inch is ERC20Farmable, ERC20Delegatable, Ownable, VotingPowerCalcula
         return _unlockTime[account];
     }
 
-    function votingPowerOf(uint256 balance) public view virtual returns (uint256) {
+    function votingPowerOf(address account) external view returns (uint256) {
         // solhint-disable-next-line not-rely-on-time
-        return _exp(balance, block.timestamp - origin);
+        return _votingPowerAt(balanceOf(account), block.timestamp);
     }
 
-    function votingPowerOf(uint256 balance, uint256 timestamp) public view returns (uint256) {
-        return _exp(balance, timestamp - origin);
+    function votingPowerOfAt(address account, uint256 timestamp) external view returns (uint256) {
+        return _votingPowerAt(balanceOf(account), timestamp);
     }
 
-    function balanceOf(address account) public view override(VotingPowerCalculator, ERC20, IERC20) returns (uint256) {
-        return ERC20.balanceOf(account);
+    function votingPower(uint256 balance) external view returns (uint256) {
+        // solhint-disable-next-line not-rely-on-time
+        return _votingPowerAt(balance, block.timestamp);
+    }
+
+    function votingPowerAt(uint256 balance, uint256 timestamp) external view returns (uint256) {
+        return _votingPowerAt(balance, timestamp);
     }
 
     function approve(
@@ -148,7 +163,7 @@ contract St1inch is ERC20Farmable, ERC20Delegatable, Ownable, VotingPowerCalcula
         if (lockedTill > block.timestamp + MAX_LOCK_PERIOD) revert LockTimeMoreMaxLock();
         _unlockTime[account] = lockedTill;
 
-        _mint(account, _invExp(balance, lockedTill - origin) - balanceOf(account));
+        _mint(account, _balanceAt(balance, lockedTill) - balanceOf(account));
     }
 
     /* solhint-enable not-rely-on-time */

@@ -39,7 +39,7 @@ describe('Delegation st1inch', async () => {
         await this.oneInch.approve(this.st1inch.address, ether('100'), {
             from: addr1,
         });
-        this.delegation = await RewardableDelegation.new('Rewardable', 'RWD', baseExp, await this.st1inch.origin());
+        this.delegation = await RewardableDelegation.new('Rewardable', 'RWD', this.st1inch.address);
         this.whitelistRegistry = await WhitelistRegistry.new(this.delegation.address, threshold, MAX_WHITELISTED);
         await this.delegation.transferOwnership(this.st1inch.address);
     });

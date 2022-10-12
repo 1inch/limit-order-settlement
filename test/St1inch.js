@@ -51,10 +51,7 @@ describe('St1inch', async () => {
             exp(originPower, (await time.latest()).sub(this.origin)),
         );
         assertRoughlyEqualValues(
-            await this.st1inch.methods['votingPowerOf(address,uint256)'](
-                account,
-                await this.st1inch.unlockTime(account),
-            ),
+            await this.st1inch.votingPowerOfAt(account, await this.st1inch.unlockTime(account)),
             balance,
             1e-10,
         );

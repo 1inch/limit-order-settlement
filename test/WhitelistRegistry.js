@@ -1,28 +1,31 @@
-const { expect, ether, toBN } = require('@1inch/solidity-utils');
+const { expect, ether, toBN, constants } = require('@1inch/solidity-utils');
 const { artifacts } = require('hardhat');
 
 const WhitelistRegistry = artifacts.require('WhitelistRegistry');
 const RewardableDelegationTopicWithVotingPowerMock = artifacts.require('RewardableDelegationTopicWithVotingPowerMock');
+const St1inch = artifacts.require('St1inch');
 const THRESHOLD = ether('1');
 const VOTING_POWER_THRESHOLD = THRESHOLD.muln(2);
 const MAX_WHITELISTED = 10;
 
 describe('WhitelistRegistry', async () => {
     let addrs;
+    let st1inch;
 
     before(async () => {
         addrs = await web3.eth.getAccounts();
+        st1inch = await St1inch.new(constants.ZERO_ADDRESS, 0, 0, 0);
     });
 
     beforeEach(async () => {
-        this.RewardDelegationTopic = await RewardableDelegationTopicWithVotingPowerMock.new('reward1INCH', 'reward1INCH');
+        this.RewardDelegationTopic = await RewardableDelegationTopicWithVotingPowerMock.new('reward1INCH', 'reward1INCH', st1inch.address);
         this.WhitelistRegistry = await WhitelistRegistry.new(this.RewardDelegationTopic.address, THRESHOLD, MAX_WHITELISTED);
     });
 
     describe('storage vars', async () => {
         it('check storage vars', async () => {
             expect(await this.WhitelistRegistry.resolverThreshold()).to.be.bignumber.equal(THRESHOLD);
-            expect(await this.WhitelistRegistry.rewardDelegationTopic()).to.equal(this.RewardDelegationTopic.address);
+            expect(await this.WhitelistRegistry.token()).to.equal(this.RewardDelegationTopic.address);
         });
     });
 

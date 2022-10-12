@@ -2,46 +2,43 @@
 
 pragma solidity 0.8.17;
 
-abstract contract VotingPowerCalculator {
-    uint256 public immutable origin;
-    uint256 public immutable expBase;
-    uint256 public immutable expTable1;
-    uint256 public immutable expTable2;
-    uint256 public immutable expTable3;
-    uint256 public immutable expTable4;
-    uint256 public immutable expTable5;
-    uint256 public immutable expTable6;
-    uint256 public immutable expTable7;
-    uint256 public immutable expTable8;
-    uint256 public immutable expTable9;
-    uint256 public immutable expTable10;
-    uint256 public immutable expTable11;
-    uint256 public immutable expTable12;
-    uint256 public immutable expTable13;
-    uint256 public immutable expTable14;
-    uint256 public immutable expTable15;
-    uint256 public immutable expTable16;
-    uint256 public immutable expTable17;
-    uint256 public immutable expTable18;
-    uint256 public immutable expTable19;
-    uint256 public immutable expTable20;
-    uint256 public immutable expTable21;
-    uint256 public immutable expTable22;
-    uint256 public immutable expTable23;
-    uint256 public immutable expTable24;
-    uint256 public immutable expTable25;
-    uint256 public immutable expTable26;
-    uint256 public immutable expTable27;
-    uint256 public immutable expTable28;
-    uint256 public immutable expTable29;
+contract VotingPowerCalculator {
+    uint256 private immutable origin;
+    uint256 private immutable expTable0;
+    uint256 private immutable expTable1;
+    uint256 private immutable expTable2;
+    uint256 private immutable expTable3;
+    uint256 private immutable expTable4;
+    uint256 private immutable expTable5;
+    uint256 private immutable expTable6;
+    uint256 private immutable expTable7;
+    uint256 private immutable expTable8;
+    uint256 private immutable expTable9;
+    uint256 private immutable expTable10;
+    uint256 private immutable expTable11;
+    uint256 private immutable expTable12;
+    uint256 private immutable expTable13;
+    uint256 private immutable expTable14;
+    uint256 private immutable expTable15;
+    uint256 private immutable expTable16;
+    uint256 private immutable expTable17;
+    uint256 private immutable expTable18;
+    uint256 private immutable expTable19;
+    uint256 private immutable expTable20;
+    uint256 private immutable expTable21;
+    uint256 private immutable expTable22;
+    uint256 private immutable expTable23;
+    uint256 private immutable expTable24;
+    uint256 private immutable expTable25;
+    uint256 private immutable expTable26;
+    uint256 private immutable expTable27;
+    uint256 private immutable expTable28;
+    uint256 private immutable expTable29;
 
-    constructor(
-        uint256 _expBase,
-        uint256 _origin
-    ) {
-        origin = _origin;
-        expBase = _expBase;
-        expTable1 = (expBase * expBase) / 1e18;
+    constructor(uint256 expBase_, uint256 origin_) {
+        origin = origin_;
+        expTable0 = expBase_;
+        expTable1 = (expTable0 * expTable0) / 1e18;
         expTable2 = (expTable1 * expTable1) / 1e18;
         expTable3 = (expTable2 * expTable2) / 1e18;
         expTable4 = (expTable3 * expTable3) / 1e18;
@@ -72,206 +69,199 @@ abstract contract VotingPowerCalculator {
         expTable29 = (expTable28 * expTable28) / 1e18;
     }
 
-    function balanceOf(address account) public view virtual returns (uint256);
-
-    function votingPowerOf(address account) external view virtual returns (uint256) {
-        // solhint-disable-next-line not-rely-on-time
-        return _exp(balanceOf(account), block.timestamp - origin);
-    }
-
-    function votingPowerOf(address account, uint256 timestamp) external view returns (uint256) {
-        return _exp(balanceOf(account), timestamp - origin);
-    }
-
-    function _exp(uint256 point, uint256 t) internal view returns (uint256) {
+    function _votingPowerAt(uint256 balance, uint256 timestamp) internal view returns (uint256 votingPower) {
         unchecked {
+            uint256 t = timestamp - origin;
+            votingPower = balance;
             if (t & 0x01 != 0) {
-                point = (point * expBase) / 1e18;
+                votingPower = (votingPower * expTable0) / 1e18;
             }
             if (t & 0x02 != 0) {
-                point = (point * expTable1) / 1e18;
+                votingPower = (votingPower * expTable1) / 1e18;
             }
             if (t & 0x04 != 0) {
-                point = (point * expTable2) / 1e18;
+                votingPower = (votingPower * expTable2) / 1e18;
             }
             if (t & 0x08 != 0) {
-                point = (point * expTable3) / 1e18;
+                votingPower = (votingPower * expTable3) / 1e18;
             }
             if (t & 0x10 != 0) {
-                point = (point * expTable4) / 1e18;
+                votingPower = (votingPower * expTable4) / 1e18;
             }
             if (t & 0x20 != 0) {
-                point = (point * expTable5) / 1e18;
+                votingPower = (votingPower * expTable5) / 1e18;
             }
             if (t & 0x40 != 0) {
-                point = (point * expTable6) / 1e18;
+                votingPower = (votingPower * expTable6) / 1e18;
             }
             if (t & 0x80 != 0) {
-                point = (point * expTable7) / 1e18;
+                votingPower = (votingPower * expTable7) / 1e18;
             }
             if (t & 0x100 != 0) {
-                point = (point * expTable8) / 1e18;
+                votingPower = (votingPower * expTable8) / 1e18;
             }
             if (t & 0x200 != 0) {
-                point = (point * expTable9) / 1e18;
+                votingPower = (votingPower * expTable9) / 1e18;
             }
             if (t & 0x400 != 0) {
-                point = (point * expTable10) / 1e18;
+                votingPower = (votingPower * expTable10) / 1e18;
             }
             if (t & 0x800 != 0) {
-                point = (point * expTable11) / 1e18;
+                votingPower = (votingPower * expTable11) / 1e18;
             }
             if (t & 0x1000 != 0) {
-                point = (point * expTable12) / 1e18;
+                votingPower = (votingPower * expTable12) / 1e18;
             }
             if (t & 0x2000 != 0) {
-                point = (point * expTable13) / 1e18;
+                votingPower = (votingPower * expTable13) / 1e18;
             }
             if (t & 0x4000 != 0) {
-                point = (point * expTable14) / 1e18;
+                votingPower = (votingPower * expTable14) / 1e18;
             }
             if (t & 0x8000 != 0) {
-                point = (point * expTable15) / 1e18;
+                votingPower = (votingPower * expTable15) / 1e18;
             }
             if (t & 0x10000 != 0) {
-                point = (point * expTable16) / 1e18;
+                votingPower = (votingPower * expTable16) / 1e18;
             }
             if (t & 0x20000 != 0) {
-                point = (point * expTable17) / 1e18;
+                votingPower = (votingPower * expTable17) / 1e18;
             }
             if (t & 0x40000 != 0) {
-                point = (point * expTable18) / 1e18;
+                votingPower = (votingPower * expTable18) / 1e18;
             }
             if (t & 0x80000 != 0) {
-                point = (point * expTable19) / 1e18;
+                votingPower = (votingPower * expTable19) / 1e18;
             }
             if (t & 0x100000 != 0) {
-                point = (point * expTable20) / 1e18;
+                votingPower = (votingPower * expTable20) / 1e18;
             }
             if (t & 0x200000 != 0) {
-                point = (point * expTable21) / 1e18;
+                votingPower = (votingPower * expTable21) / 1e18;
             }
             if (t & 0x400000 != 0) {
-                point = (point * expTable22) / 1e18;
+                votingPower = (votingPower * expTable22) / 1e18;
             }
             if (t & 0x800000 != 0) {
-                point = (point * expTable23) / 1e18;
+                votingPower = (votingPower * expTable23) / 1e18;
             }
             if (t & 0x1000000 != 0) {
-                point = (point * expTable24) / 1e18;
+                votingPower = (votingPower * expTable24) / 1e18;
             }
             if (t & 0x2000000 != 0) {
-                point = (point * expTable25) / 1e18;
+                votingPower = (votingPower * expTable25) / 1e18;
             }
             if (t & 0x4000000 != 0) {
-                point = (point * expTable26) / 1e18;
+                votingPower = (votingPower * expTable26) / 1e18;
             }
             if (t & 0x8000000 != 0) {
-                point = (point * expTable27) / 1e18;
+                votingPower = (votingPower * expTable27) / 1e18;
             }
             if (t & 0x10000000 != 0) {
-                point = (point * expTable28) / 1e18;
+                votingPower = (votingPower * expTable28) / 1e18;
             }
             if (t & 0x20000000 != 0) {
-                point = (point * expTable29) / 1e18;
+                votingPower = (votingPower * expTable29) / 1e18;
             }
         }
-        return point;
+        return votingPower;
     }
 
-    function _invExp(uint256 point, uint256 t) internal view returns (uint256) {
+    function _balanceAt(uint256 votingPower, uint256 timestamp) internal view returns (uint256 balance) {
         unchecked {
+            uint256 t = timestamp - origin;
+            balance = votingPower;
             if (t & 0x01 != 0) {
-                point = (point * 1e18) / expBase;
+                balance = (balance * 1e18) / expTable0;
             }
             if (t & 0x02 != 0) {
-                point = (point * 1e18) / expTable1;
+                balance = (balance * 1e18) / expTable1;
             }
             if (t & 0x04 != 0) {
-                point = (point * 1e18) / expTable2;
+                balance = (balance * 1e18) / expTable2;
             }
             if (t & 0x08 != 0) {
-                point = (point * 1e18) / expTable3;
+                balance = (balance * 1e18) / expTable3;
             }
             if (t & 0x10 != 0) {
-                point = (point * 1e18) / expTable4;
+                balance = (balance * 1e18) / expTable4;
             }
             if (t & 0x20 != 0) {
-                point = (point * 1e18) / expTable5;
+                balance = (balance * 1e18) / expTable5;
             }
             if (t & 0x40 != 0) {
-                point = (point * 1e18) / expTable6;
+                balance = (balance * 1e18) / expTable6;
             }
             if (t & 0x80 != 0) {
-                point = (point * 1e18) / expTable7;
+                balance = (balance * 1e18) / expTable7;
             }
             if (t & 0x100 != 0) {
-                point = (point * 1e18) / expTable8;
+                balance = (balance * 1e18) / expTable8;
             }
             if (t & 0x200 != 0) {
-                point = (point * 1e18) / expTable9;
+                balance = (balance * 1e18) / expTable9;
             }
             if (t & 0x400 != 0) {
-                point = (point * 1e18) / expTable10;
+                balance = (balance * 1e18) / expTable10;
             }
             if (t & 0x800 != 0) {
-                point = (point * 1e18) / expTable11;
+                balance = (balance * 1e18) / expTable11;
             }
             if (t & 0x1000 != 0) {
-                point = (point * 1e18) / expTable12;
+                balance = (balance * 1e18) / expTable12;
             }
             if (t & 0x2000 != 0) {
-                point = (point * 1e18) / expTable13;
+                balance = (balance * 1e18) / expTable13;
             }
             if (t & 0x4000 != 0) {
-                point = (point * 1e18) / expTable14;
+                balance = (balance * 1e18) / expTable14;
             }
             if (t & 0x8000 != 0) {
-                point = (point * 1e18) / expTable15;
+                balance = (balance * 1e18) / expTable15;
             }
             if (t & 0x10000 != 0) {
-                point = (point * 1e18) / expTable16;
+                balance = (balance * 1e18) / expTable16;
             }
             if (t & 0x20000 != 0) {
-                point = (point * 1e18) / expTable17;
+                balance = (balance * 1e18) / expTable17;
             }
             if (t & 0x40000 != 0) {
-                point = (point * 1e18) / expTable18;
+                balance = (balance * 1e18) / expTable18;
             }
             if (t & 0x80000 != 0) {
-                point = (point * 1e18) / expTable19;
+                balance = (balance * 1e18) / expTable19;
             }
             if (t & 0x100000 != 0) {
-                point = (point * 1e18) / expTable20;
+                balance = (balance * 1e18) / expTable20;
             }
             if (t & 0x200000 != 0) {
-                point = (point * 1e18) / expTable21;
+                balance = (balance * 1e18) / expTable21;
             }
             if (t & 0x400000 != 0) {
-                point = (point * 1e18) / expTable22;
+                balance = (balance * 1e18) / expTable22;
             }
             if (t & 0x800000 != 0) {
-                point = (point * 1e18) / expTable23;
+                balance = (balance * 1e18) / expTable23;
             }
             if (t & 0x1000000 != 0) {
-                point = (point * 1e18) / expTable24;
+                balance = (balance * 1e18) / expTable24;
             }
             if (t & 0x2000000 != 0) {
-                point = (point * 1e18) / expTable25;
+                balance = (balance * 1e18) / expTable25;
             }
             if (t & 0x4000000 != 0) {
-                point = (point * 1e18) / expTable26;
+                balance = (balance * 1e18) / expTable26;
             }
             if (t & 0x8000000 != 0) {
-                point = (point * 1e18) / expTable27;
+                balance = (balance * 1e18) / expTable27;
             }
             if (t & 0x10000000 != 0) {
-                point = (point * 1e18) / expTable28;
+                balance = (balance * 1e18) / expTable28;
             }
             if (t & 0x20000000 != 0) {
-                point = (point * 1e18) / expTable29;
+                balance = (balance * 1e18) / expTable29;
             }
         }
-        return point;
+        return balance;
     }
 }
