@@ -26,23 +26,27 @@ describe('OrderSaltParserTest', async () => {
         for (const method of ['getStartTime', 'getDuration', 'getInitialRateBump', 'getFee', 'getSalt']) {
             describe(method, async () => {
                 it('with specific values', async () => {
-                    expect(await this.orderSaltParserTest[method](ORDERSALT_WITH_SPECIFIC_VALUES))
-                        .to.be.bignumber.equals(eval(method + '(ORDERSALT_WITH_SPECIFIC_VALUES)')); // eslint-disable-line no-eval
+                    expect(
+                        await this.orderSaltParserTest[method](ORDERSALT_WITH_SPECIFIC_VALUES),
+                    ).to.be.bignumber.equals(eval(method + '(ORDERSALT_WITH_SPECIFIC_VALUES)')); // eslint-disable-line no-eval
                 });
 
                 it('with simple values', async () => {
-                    expect(await this.orderSaltParserTest[method](ORDERSALT_WITH_SIMPLE_VALUES))
-                        .to.be.bignumber.equals(eval(method + '(ORDERSALT_WITH_SIMPLE_VALUES)')); // eslint-disable-line no-eval
+                    expect(await this.orderSaltParserTest[method](ORDERSALT_WITH_SIMPLE_VALUES)).to.be.bignumber.equals(
+                        eval(method + '(ORDERSALT_WITH_SIMPLE_VALUES)'), // eslint-disable-line no-eval
+                    );
                 });
 
                 it('with filled bits on the value boundaries', async () => {
-                    expect(await this.orderSaltParserTest[method](ORDERSALT_WITH_FILLED_BOUNDARY_BITS))
-                        .to.be.bignumber.equals(eval(method + '(ORDERSALT_WITH_FILLED_BOUNDARY_BITS)')); // eslint-disable-line no-eval
+                    expect(
+                        await this.orderSaltParserTest[method](ORDERSALT_WITH_FILLED_BOUNDARY_BITS),
+                    ).to.be.bignumber.equals(eval(method + '(ORDERSALT_WITH_FILLED_BOUNDARY_BITS)')); // eslint-disable-line no-eval
                 });
 
                 it('with filled all bits', async () => {
-                    expect(await this.orderSaltParserTest[method](ORDERSALT_WITH_FILLED_ALL_BITS))
-                        .to.be.bignumber.equals(eval(method + '(ORDERSALT_WITH_FILLED_ALL_BITS)')); // eslint-disable-line no-eval
+                    expect(
+                        await this.orderSaltParserTest[method](ORDERSALT_WITH_FILLED_ALL_BITS),
+                    ).to.be.bignumber.equals(eval(method + '(ORDERSALT_WITH_FILLED_ALL_BITS)')); // eslint-disable-line no-eval
                 });
             });
         }
@@ -51,26 +55,62 @@ describe('OrderSaltParserTest', async () => {
     describe('encodeParameters', async () => {
         it('with specific values', async () => {
             const parseObj = initSaltObj(ORDERSALT_WITH_SPECIFIC_VALUES);
-            expect(toBN(encodeParameters(parseObj.startTime, parseObj.duration, parseObj.initialRate, parseObj.fee, parseObj.salt)))
-                .to.be.bignumber.equals(ORDERSALT_WITH_SPECIFIC_VALUES);
+            expect(
+                toBN(
+                    encodeParameters(
+                        parseObj.startTime,
+                        parseObj.duration,
+                        parseObj.initialRate,
+                        parseObj.fee,
+                        parseObj.salt,
+                    ),
+                ),
+            ).to.be.bignumber.equals(ORDERSALT_WITH_SPECIFIC_VALUES);
         });
 
         it('with simple values', async () => {
             const parseObj = initSaltObj(ORDERSALT_WITH_SIMPLE_VALUES);
-            expect(toBN(encodeParameters(parseObj.startTime, parseObj.duration, parseObj.initialRate, parseObj.fee, parseObj.salt)))
-                .to.be.bignumber.equals(ORDERSALT_WITH_SIMPLE_VALUES);
+            expect(
+                toBN(
+                    encodeParameters(
+                        parseObj.startTime,
+                        parseObj.duration,
+                        parseObj.initialRate,
+                        parseObj.fee,
+                        parseObj.salt,
+                    ),
+                ),
+            ).to.be.bignumber.equals(ORDERSALT_WITH_SIMPLE_VALUES);
         });
 
         it('with filled bits on the value boundaries', async () => {
             const parseObj = initSaltObj(ORDERSALT_WITH_FILLED_BOUNDARY_BITS);
-            expect(toBN(encodeParameters(parseObj.startTime, parseObj.duration, parseObj.initialRate, parseObj.fee, parseObj.salt)))
-                .to.be.bignumber.equals(ORDERSALT_WITH_FILLED_BOUNDARY_BITS);
+            expect(
+                toBN(
+                    encodeParameters(
+                        parseObj.startTime,
+                        parseObj.duration,
+                        parseObj.initialRate,
+                        parseObj.fee,
+                        parseObj.salt,
+                    ),
+                ),
+            ).to.be.bignumber.equals(ORDERSALT_WITH_FILLED_BOUNDARY_BITS);
         });
 
         it('with filled all bits', async () => {
             const parseObj = initSaltObj(ORDERSALT_WITH_FILLED_ALL_BITS);
-            expect(toBN(encodeParameters(parseObj.startTime, parseObj.duration, parseObj.initialRate, parseObj.fee, parseObj.salt)))
-                .to.be.bignumber.equals(ORDERSALT_WITH_FILLED_ALL_BITS);
+            expect(
+                toBN(
+                    encodeParameters(
+                        parseObj.startTime,
+                        parseObj.duration,
+                        parseObj.initialRate,
+                        parseObj.fee,
+                        parseObj.salt,
+                    ),
+                ),
+            ).to.be.bignumber.equals(ORDERSALT_WITH_FILLED_ALL_BITS);
         });
     });
 });
