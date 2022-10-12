@@ -63,7 +63,7 @@ contract St1inch is ERC20Farmable, ERC20Delegatable, Ownable, VotingPowerCalcula
         return _exp(balance, timestamp - origin);
     }
 
-    function balanceOf(address account) public view override(VotingPowerCalculator,ERC20,IERC20) returns (uint256) {
+    function balanceOf(address account) public view override(VotingPowerCalculator, ERC20, IERC20) returns (uint256) {
         return ERC20.balanceOf(account);
     }
 

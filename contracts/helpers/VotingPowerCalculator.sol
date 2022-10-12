@@ -72,8 +72,7 @@ abstract contract VotingPowerCalculator {
         expTable29 = (expTable28 * expTable28) / 1e18;
     }
 
-    // solhint-disable-next-line no-empty-blocks
-    function balanceOf(address account) public view virtual returns (uint256) {}
+    function balanceOf(address account) public view virtual returns (uint256);
 
     function votingPowerOf(address account) external view virtual returns (uint256) {
         // solhint-disable-next-line not-rely-on-time

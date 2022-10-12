@@ -13,7 +13,7 @@ contract RewardableDelegationTopicWithVotingPower is RewardableDelegation, Votin
         uint256 origin_
     ) RewardableDelegation(name_, symbol_) VotingPowerCalculator(expBase_, origin_) {} // solhint-disable-line no-empty-blocks
 
-    function balanceOf(address account) public view override(VotingPowerCalculator,ERC20,IERC20) returns (uint256) {
+    function balanceOf(address account) public view override(VotingPowerCalculator, ERC20, IERC20) returns (uint256) {
         return ERC20.balanceOf(account);
     }
 }
