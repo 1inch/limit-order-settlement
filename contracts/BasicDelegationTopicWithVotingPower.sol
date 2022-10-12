@@ -5,7 +5,7 @@ pragma solidity 0.8.17;
 import "@1inch/delegating/contracts/delegations/BasicDelegation.sol";
 import "./helpers/VotingPowerCalculator.sol";
 
-contract BaseDelegationTopicWithVotingPower is BasicDelegation, VotingPowerCalculator {
+contract BasicDelegationTopicWithVotingPower is BasicDelegation, VotingPowerCalculator {
     constructor(
         string memory name_,
         string memory symbol_,
