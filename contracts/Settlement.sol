@@ -7,20 +7,14 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@1inch/limit-order-protocol/contracts/interfaces/NotificationReceiver.sol";
 import "@1inch/limit-order-protocol/contracts/interfaces/IOrderMixin.sol";
 import "./helpers/WhitelistChecker.sol";
+import "./libraries/OrderSaltParser.sol";
 import "./interfaces/IWhitelistRegistry.sol";
 import "./interfaces/ISettlement.sol";
 
 contract Settlement is ISettlement, Ownable, WhitelistChecker {
-    bytes1 private constant _FINALIZE_INTERACTION = 0x01;
-    uint256 private constant _ORDER_TIME_START_MASK     = 0xFFFFFFFF00000000000000000000000000000000000000000000000000000000; // prettier-ignore
-    uint256 private constant _ORDER_DURATION_MASK       = 0x00000000FFFFFFFF000000000000000000000000000000000000000000000000; // prettier-ignore
-    uint256 private constant _ORDER_INITIAL_RATE_MASK   = 0x0000000000000000FFFF00000000000000000000000000000000000000000000; // prettier-ignore
-    uint256 private constant _ORDER_FEE_MASK            = 0x00000000000000000000FFFFFFFF000000000000000000000000000000000000; // prettier-ignore
-    uint256 private constant _ORDER_TIME_START_SHIFT = 224; // orderTimeMask 224-255
-    uint256 private constant _ORDER_DURATION_SHIFT = 192; // durationMask 192-223
-    uint256 private constant _ORDER_INITIAL_RATE_SHIFT = 176; // initialRateMask 176-191
-    uint256 private constant _ORDER_FEE_SHIFT = 144; // orderFee 144-175
+    using OrderSaltParser for uint256;
 
+    bytes1 private constant _FINALIZE_INTERACTION = 0x01;
     uint256 private constant _ORDER_FEE_BASE_POINTS = 1e15;
     uint16 private constant _BASE_POINTS = 10000; // 100%
     uint16 private constant _DEFAULT_INITIAL_RATE_BUMP = 1000; // 10%
@@ -134,9 +128,9 @@ contract Settlement is ISettlement, Ownable, WhitelistChecker {
     }
 
     function _calculateRateBump(uint256 salt) internal view returns (uint256) {
-        uint256 orderStartTime = (salt & _ORDER_TIME_START_MASK) >> _ORDER_TIME_START_SHIFT;
-        uint256 duration = (salt & _ORDER_DURATION_MASK) >> _ORDER_DURATION_SHIFT;
-        uint256 initialRateBump = (salt & _ORDER_INITIAL_RATE_MASK) >> _ORDER_INITIAL_RATE_SHIFT;
+        uint256 orderStartTime = salt.getStartTime();
+        uint256 duration = salt.getDuration();
+        uint256 initialRateBump = salt.getInitialRateBump();
         if (duration == 0) {
             duration = _DEFAULT_DURATION;
         }
@@ -170,7 +164,7 @@ contract Settlement is ISettlement, Ownable, WhitelistChecker {
         uint256 thresholdAmount,
         address target
     ) private {
-        uint256 orderFee = ((order.salt & _ORDER_FEE_MASK) >> _ORDER_FEE_SHIFT) * _ORDER_FEE_BASE_POINTS;
+        uint256 orderFee = order.salt.getFee() * _ORDER_FEE_BASE_POINTS;
         uint256 currentAllowance = creditAllowance[interactor];
         if (currentAllowance < orderFee) revert NotEnoughCredit();
         unchecked {
