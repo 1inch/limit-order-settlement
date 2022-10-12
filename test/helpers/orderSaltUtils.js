@@ -1,23 +1,23 @@
 const { toBN } = require('@1inch/solidity-utils');
 
-const ORDER_TIME_START_MASK = toBN('0xFFFFFFFF00000000000000000000000000000000000000000000000000000000');
-const ORDER_DURATION_MASK = toBN('0x00000000FFFFFFFF000000000000000000000000000000000000000000000000');
-const ORDER_INITIAL_RATE_MASK = toBN('0x0000000000000000FFFF00000000000000000000000000000000000000000000');
-const ORDER_FEE_MASK = toBN('0x00000000000000000000FFFFFFFF000000000000000000000000000000000000');
-const ORDER_SALT_MASK = toBN('0x0000000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF');
+const TIME_START_MASK        = toBN('0xFFFFFFFF00000000000000000000000000000000000000000000000000000000');  // prettier-ignore
+const DURATION_MASK          = toBN('0x00000000FFFFFFFF000000000000000000000000000000000000000000000000');  // prettier-ignore
+const INITIAL_RATE_BUMP_MASK = toBN('0x0000000000000000FFFF00000000000000000000000000000000000000000000');  // prettier-ignore
+const FEE_MASK               = toBN('0x00000000000000000000FFFFFFFF000000000000000000000000000000000000');  // prettier-ignore
+const SALT_MASK              = toBN('0x0000000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF');  // prettier-ignore
 
-const ORDER_TIME_START_SHIFT = 224; // orderTimeMask 224-255
-const ORDER_DURATION_SHIFT = 192; // durationMask 192-223
-const ORDER_INITIAL_RATE_SHIFT = 176; // initialRateMask 176-191
-const ORDER_FEE_SHIFT = 144; // orderFee 144-175
+const TIME_START_SHIFT = 224; // orderTimeMask 224-255
+const DURATION_SHIFT = 192; // durationMask 192-223
+const INITIAL_RATE_BUMP_SHIFT = 176; // initialRateMask 176-191
+const FEE_SHIFT = 144; // orderFee 144-175
 
 const initSaltObj = (orderSalt) => {
     return {
-        startTime: orderSalt.and(ORDER_TIME_START_MASK).shrn(ORDER_TIME_START_SHIFT),
-        duration: orderSalt.and(ORDER_DURATION_MASK).shrn(ORDER_DURATION_SHIFT),
-        initialRate: orderSalt.and(ORDER_INITIAL_RATE_MASK).shrn(ORDER_INITIAL_RATE_SHIFT),
-        fee: orderSalt.and(ORDER_FEE_MASK).shrn(ORDER_FEE_SHIFT),
-        salt: orderSalt.and(ORDER_SALT_MASK),
+        startTime: orderSalt.and(TIME_START_MASK).shrn(TIME_START_SHIFT),
+        duration: orderSalt.and(DURATION_MASK).shrn(DURATION_SHIFT),
+        initialRate: orderSalt.and(INITIAL_RATE_BUMP_MASK).shrn(INITIAL_RATE_BUMP_SHIFT),
+        fee: orderSalt.and(FEE_MASK).shrn(FEE_SHIFT),
+        salt: orderSalt.and(SALT_MASK),
     };
 };
 
@@ -41,10 +41,10 @@ const encodeParameters = (startTime, duration, initialRate, fee, salt) => {
 };
 
 const saltObjToOrderSalt = (saltObj) => {
-    return toBN(saltObj.startTime).shln(ORDER_TIME_START_SHIFT).add(
-        toBN(saltObj.duration).shln(ORDER_DURATION_SHIFT).add(
-            toBN(saltObj.initialRate).shln(ORDER_INITIAL_RATE_SHIFT).add(
-                toBN(saltObj.fee).shln(ORDER_FEE_SHIFT).add(
+    return toBN(saltObj.startTime).shln(TIME_START_SHIFT).add(
+        toBN(saltObj.duration).shln(DURATION_SHIFT).add(
+            toBN(saltObj.initialRate).shln(INITIAL_RATE_SHIFT).add(
+                toBN(saltObj.fee).shln(FEE_SHIFT).add(
                     toBN(saltObj.salt),
                 ),
             ),
@@ -52,24 +52,24 @@ const saltObjToOrderSalt = (saltObj) => {
     );
 };
 
-const onlyStartTime = (orderSalt) => {
-    return orderSalt.and(ORDER_TIME_START_MASK).shrn(ORDER_TIME_START_SHIFT);
+const getStartTime = (orderSalt) => {
+    return orderSalt.and(TIME_START_MASK).shrn(TIME_START_SHIFT);
 };
 
-const onlyDuration = (orderSalt) => {
-    return orderSalt.and(ORDER_DURATION_MASK).shrn(ORDER_DURATION_SHIFT);
+const getDuration = (orderSalt) => {
+    return orderSalt.and(DURATION_MASK).shrn(DURATION_SHIFT);
 };
 
-const onlyInitialRate = (orderSalt) => {
-    return orderSalt.and(ORDER_INITIAL_RATE_MASK).shrn(ORDER_INITIAL_RATE_SHIFT);
+const getInitialRateBump = (orderSalt) => {
+    return orderSalt.and(INITIAL_RATE_BUMP_MASK).shrn(INITIAL_RATE_BUMP_SHIFT);
 };
 
-const onlyFee = (orderSalt) => {
-    return orderSalt.and(ORDER_FEE_MASK).shrn(ORDER_FEE_SHIFT);
+const getFee = (orderSalt) => {
+    return orderSalt.and(FEE_MASK).shrn(FEE_SHIFT);
 };
 
-const onlySalt = (orderSalt) => {
-    return orderSalt.and(ORDER_SALT_MASK);
+const getSalt = (orderSalt) => {
+    return orderSalt.and(SALT_MASK);
 };
 
 module.exports = {
@@ -77,9 +77,9 @@ module.exports = {
     createSaltObj,
     encodeParameters,
     saltObjToOrderSalt,
-    onlyStartTime,
-    onlyDuration,
-    onlyInitialRate,
-    onlyFee,
-    onlySalt,
+    getStartTime,
+    getDuration,
+    getInitialRateBump,
+    getFee,
+    getSalt,
 };

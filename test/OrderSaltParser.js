@@ -4,11 +4,11 @@ const {
     createSaltObj,
     saltObjToOrderSalt,
     encodeParameters,
-    onlyStartTime, // eslint-disable-line no-unused-vars
-    onlyDuration, // eslint-disable-line no-unused-vars
-    onlyInitialRate, // eslint-disable-line no-unused-vars
-    onlyFee, // eslint-disable-line no-unused-vars
-    onlySalt, // eslint-disable-line no-unused-vars
+    getStartTime, // eslint-disable-line no-unused-vars
+    getDuration, // eslint-disable-line no-unused-vars
+    getInitialRateBump, // eslint-disable-line no-unused-vars
+    getFee, // eslint-disable-line no-unused-vars
+    getSalt, // eslint-disable-line no-unused-vars
 } = require('./helpers/orderSaltUtils');
 const { artifacts } = require('hardhat');
 
@@ -32,70 +32,8 @@ describe('OrderSaltParserTest', async () => {
         this.orderSaltParserTest = await OrderSaltParserTest.new();
     });
 
-    describe('init', async () => {
-        it('with specific values', async () => {
-            compareParserObjects(await this.orderSaltParserTest.init(ORDERSALT_WITH_SPECIFIC_VALUES), {
-                startTime: toBN('1'),
-                duration: toBN('2'),
-                initialRate: toBN('3'),
-                fee: toBN('4'),
-                salt: toBN('5'),
-            });
-        });
-
-        it('with simple values', async () => {
-            compareParserObjects(await this.orderSaltParserTest.init(ORDERSALT_WITH_SIMPLE_VALUES), initSaltObj(ORDERSALT_WITH_SIMPLE_VALUES));
-        });
-
-        it('with filled bits on the value boundaries', async () => {
-            compareParserObjects(await this.orderSaltParserTest.init(ORDERSALT_WITH_FILLED_BOUNDARY_BITS), initSaltObj(ORDERSALT_WITH_FILLED_BOUNDARY_BITS));
-        });
-
-        it('with filled all bits', async () => {
-            compareParserObjects(await this.orderSaltParserTest.init(ORDERSALT_WITH_FILLED_ALL_BITS), initSaltObj(ORDERSALT_WITH_FILLED_ALL_BITS));
-        });
-    });
-
-    describe('create', async () => {
-        it('should create parserObj with specific values', async () => {
-            compareParserObjects(await this.orderSaltParserTest.create(toBN('1'), toBN('2'), toBN('3'), toBN('4'), toBN('5')), {
-                startTime: toBN('1'),
-                duration: toBN('2'),
-                initialRate: toBN('3'),
-                fee: toBN('4'),
-                salt: toBN('5'),
-            });
-            compareParserObjects(
-                await this.orderSaltParserTest.create(toBN('1'), toBN('2'), toBN('3'), toBN('4'), toBN('5')),
-                createSaltObj(toBN('1'), toBN('2'), toBN('3'), toBN('4'), toBN('5')),
-            );
-        });
-    });
-
-    describe('orderSalt', async () => {
-        it('with specific values', async () => {
-            const parserObj = await this.orderSaltParserTest.init(ORDERSALT_WITH_SPECIFIC_VALUES);
-            expect(await this.orderSaltParserTest.orderSalt(parserObj)).to.be.bignumber.equals(saltObjToOrderSalt(parserObj));
-        });
-
-        it('with simple values', async () => {
-            const parserObj = await this.orderSaltParserTest.init(ORDERSALT_WITH_SIMPLE_VALUES);
-            expect(await this.orderSaltParserTest.orderSalt(parserObj)).to.be.bignumber.equals(saltObjToOrderSalt(parserObj));
-        });
-
-        it('with filled bits on the value boundaries', async () => {
-            const parserObj = await this.orderSaltParserTest.init(ORDERSALT_WITH_FILLED_BOUNDARY_BITS);
-            expect(await this.orderSaltParserTest.orderSalt(parserObj)).to.be.bignumber.equals(saltObjToOrderSalt(parserObj));
-        });
-
-        it('with filled all bits', async () => {
-            const parserObj = await this.orderSaltParserTest.init(ORDERSALT_WITH_FILLED_ALL_BITS);
-            expect(await this.orderSaltParserTest.orderSalt(parserObj)).to.be.bignumber.equals(saltObjToOrderSalt(parserObj));
-        });
-    });
-
     describe('separate fields', async () => {
-        for (const method of ['onlyStartTime', 'onlyDuration', 'onlyInitialRate', 'onlyFee', 'onlySalt']) {
+        for (const method of ['getStartTime', 'getDuration', 'getInitialRateBump', 'getFee', 'getSalt']) {
             describe(method, async () => {
                 it('with specific values', async () => {
                     expect(await this.orderSaltParserTest[method](ORDERSALT_WITH_SPECIFIC_VALUES))

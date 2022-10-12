@@ -128,9 +128,9 @@ contract Settlement is ISettlement, Ownable, WhitelistChecker {
     }
 
     function _calculateRateBump(uint256 salt) internal view returns (uint256) {
-        uint256 orderStartTime = salt.onlyStartTime();
-        uint256 duration = salt.onlyDuration();
-        uint256 initialRateBump = salt.onlyInitialRate();
+        uint256 orderStartTime = salt.getStartTime();
+        uint256 duration = salt.getDuration();
+        uint256 initialRateBump = salt.getInitialRateBump();
         if (duration == 0) {
             duration = _DEFAULT_DURATION;
         }
@@ -164,7 +164,7 @@ contract Settlement is ISettlement, Ownable, WhitelistChecker {
         uint256 thresholdAmount,
         address target
     ) private {
-        uint256 orderFee = order.salt.onlyFee() * _ORDER_FEE_BASE_POINTS;
+        uint256 orderFee = order.salt.getFee() * _ORDER_FEE_BASE_POINTS;
         uint256 currentAllowance = creditAllowance[interactor];
         if (currentAllowance < orderFee) revert NotEnoughCredit();
         unchecked {

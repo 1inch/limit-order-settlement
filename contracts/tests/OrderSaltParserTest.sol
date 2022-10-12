@@ -6,37 +6,24 @@ import "../libraries/OrderSaltParser.sol";
 
 contract OrderSaltParserTest {
     using OrderSaltParser for uint256;
-    using OrderSaltParser for OrderSaltParser.OrderSalt;
 
-    function init(uint256 orderSalt_) external pure returns (OrderSaltParser.OrderSalt memory) {
-        return orderSalt_.init();
+    function getStartTime(uint256 orderSalt_) external pure returns (uint256) {
+        return orderSalt_.getStartTime();
     }
 
-    function create(uint32 startTime_, uint32 duration_, uint16 initialRate_, uint32 fee_, uint144 salt_) external pure returns (OrderSaltParser.OrderSalt memory) {
-        return OrderSaltParser.create(startTime_, duration_, initialRate_, fee_, salt_);
+    function getDuration(uint256 orderSalt_) external pure returns (uint256) {
+        return orderSalt_.getDuration();
     }
 
-    function orderSalt(OrderSaltParser.OrderSalt memory self) external pure returns (uint256) {
-        return self.orderSalt();
+    function getInitialRateBump(uint256 orderSalt_) external pure returns (uint256) {
+        return orderSalt_.getInitialRateBump();
     }
 
-    function onlyStartTime(uint256 orderSalt_) external pure returns (uint256) {
-        return orderSalt_.onlyStartTime();
+    function getFee(uint256 orderSalt_) external pure returns (uint256) {
+        return orderSalt_.getFee();
     }
 
-    function onlyDuration(uint256 orderSalt_) external pure returns (uint256) {
-        return orderSalt_.onlyDuration();
-    }
-
-    function onlyInitialRate(uint256 orderSalt_) external pure returns (uint256) {
-        return orderSalt_.onlyInitialRate();
-    }
-
-    function onlyFee(uint256 orderSalt_) external pure returns (uint256) {
-        return orderSalt_.onlyFee();
-    }
-
-    function onlySalt(uint256 orderSalt_) external pure returns (uint256) {
-        return orderSalt_.onlySalt();
+    function getSalt(uint256 orderSalt_) external pure returns (uint256) {
+        return orderSalt_.getSalt();
     }
 }
