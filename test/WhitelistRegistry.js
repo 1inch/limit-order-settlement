@@ -23,6 +23,7 @@ describe('WhitelistRegistry', async () => {
         it('check storage vars', async () => {
             expect(await this.WhitelistRegistry.resolverThreshold()).to.be.bignumber.equal(THRESHOLD);
             expect(await this.WhitelistRegistry.staking()).to.equal(this.Staking.address);
+            expect(await this.WhitelistRegistry.maxWhitelisted()).to.be.bignumber.equal(toBN(MAX_WHITELISTED));
         });
     });
 
@@ -134,6 +135,134 @@ describe('WhitelistRegistry', async () => {
                     expect(await this.WhitelistRegistry.isWhitelisted(addrs[i])).to.be.equal(true);
                 }
             }
+        });
+    });
+
+    describe('setMaxWhitelisted', async () => {
+        const expectAddrsInWhitelist = async (indexFrom, indexTo, except = []) => {
+            for (let i = indexFrom; i <= indexTo; i++) {
+                if (except.indexOf(i) !== -1) {
+                    expect(await this.WhitelistRegistry.isWhitelisted(addrs[i])).to.be.equal(false);
+                } else {
+                    expect(await this.WhitelistRegistry.isWhitelisted(addrs[i])).to.be.equal(true);
+                }
+            }
+        };
+
+        beforeEach(async () => {
+            this.whitelestedAmount = MAX_WHITELISTED / 5;
+            for (let i = 1; i <= this.whitelestedAmount; ++i) {
+                await this.Staking.transfer(addrs[i], THRESHOLD);
+                await this.WhitelistRegistry.register({ from: addrs[i] });
+            }
+        });
+
+        describe('increase more than current max whitelist size', async () => {
+            it('should not change whitelist', async () => {
+                await this.WhitelistRegistry.setMaxWhitelisted(MAX_WHITELISTED + 1);
+                await expectAddrsInWhitelist(1, this.whitelestedAmount);
+            });
+
+            it('should increase max whitelist size', async () => {
+                const NEW_MAX_WHITELISTED = MAX_WHITELISTED + 1;
+                await this.WhitelistRegistry.setMaxWhitelisted(NEW_MAX_WHITELISTED);
+
+                // add to whitelist additional addrs, total more than initially MAX_WHITELISTED
+                for (let i = this.whitelestedAmount + 1; i <= NEW_MAX_WHITELISTED; ++i) {
+                    await this.Staking.transfer(addrs[i], THRESHOLD);
+                    await this.WhitelistRegistry.register({ from: addrs[i] });
+                }
+                await expectAddrsInWhitelist(1, NEW_MAX_WHITELISTED);
+
+                // add to whitelist additional addrs, total more than NEW_MAX_WHITELISTED
+                await this.Staking.transfer(addrs[NEW_MAX_WHITELISTED + 1], THRESHOLD);
+                await expect(
+                    this.WhitelistRegistry.register({
+                        from: addrs[NEW_MAX_WHITELISTED + 1],
+                    }),
+                ).to.eventually.be.rejectedWith('NotEnoughBalance()');
+            });
+        });
+
+        describe('decrease but stay more than whitelisted amount', async () => {
+            it('should not change whitelist ', async () => {
+                await this.WhitelistRegistry.setMaxWhitelisted(this.whitelestedAmount + 1);
+                await expectAddrsInWhitelist(1, this.whitelestedAmount);
+            });
+
+            it('should decrease max whitelist size', async () => {
+                const NEW_MAX_WHITELISTED = MAX_WHITELISTED - 1;
+                await this.WhitelistRegistry.setMaxWhitelisted(NEW_MAX_WHITELISTED);
+
+                // add to whitelist additional addrs, total NEW_MAX_WHITELISTED
+                for (let i = this.whitelestedAmount + 1; i <= NEW_MAX_WHITELISTED; ++i) {
+                    await this.Staking.transfer(addrs[i], THRESHOLD);
+                    await this.WhitelistRegistry.register({ from: addrs[i] });
+                }
+                await expectAddrsInWhitelist(1, NEW_MAX_WHITELISTED);
+
+                // add to whitelist additional addrs, total more than NEW_MAX_WHITELISTED
+                await this.Staking.transfer(addrs[NEW_MAX_WHITELISTED + 1], THRESHOLD);
+                await expect(
+                    this.WhitelistRegistry.register({
+                        from: addrs[NEW_MAX_WHITELISTED + 1],
+                    }),
+                ).to.eventually.be.rejectedWith('NotEnoughBalance()');
+            });
+        });
+
+        describe('decrease less than whitelisted amount', async () => {
+            it('should remove last added addresses when staking balances are equals', async () => {
+                await this.WhitelistRegistry.setMaxWhitelisted(this.whitelestedAmount - 1);
+                await expectAddrsInWhitelist(1, this.whitelestedAmount, [this.whitelestedAmount]);
+            });
+
+            it('should remove addresses with least staking amount ', async () => {
+                // make the addrs[2] with the least balance
+                for (let i = 1; i <= this.whitelestedAmount; i++) {
+                    await this.Staking.transfer(addrs[i], i === 2 ? 1 : i * 100);
+                }
+                await this.WhitelistRegistry.setMaxWhitelisted(this.whitelestedAmount - 1);
+                await expectAddrsInWhitelist(1, this.whitelestedAmount, [2]);
+            });
+
+            it('should decrease max whitelist size', async () => {
+                const NEW_MAX_WHITELISTED = this.whitelestedAmount - 1;
+                await this.WhitelistRegistry.setMaxWhitelisted(NEW_MAX_WHITELISTED);
+
+                // add to whitelist additional addr
+                await this.Staking.transfer(addrs[this.whitelestedAmount + 1], THRESHOLD);
+                await expect(
+                    this.WhitelistRegistry.register({
+                        from: addrs[this.whitelestedAmount + 1],
+                    }),
+                ).to.eventually.be.rejectedWith('NotEnoughBalance()');
+            });
+
+            it('should remove addresses with least staking amount when addresses have random balances', async () => {
+                await this.WhitelistRegistry.setMaxWhitelisted(MAX_WHITELISTED);
+                for (let i = this.whitelestedAmount + 1; i <= MAX_WHITELISTED; ++i) {
+                    await this.Staking.transfer(addrs[i], THRESHOLD);
+                    await this.WhitelistRegistry.register({ from: addrs[i] });
+                }
+
+                // make random amounts
+                await this.Staking.transfer(addrs[1], ether('2'));
+                await this.Staking.transfer(addrs[2], ether('11'));
+                await this.Staking.transfer(addrs[3], ether('6'));
+                await this.Staking.transfer(addrs[4], ether('3'));
+                await this.Staking.transfer(addrs[5], ether('7'));
+                await this.Staking.transfer(addrs[6], ether('1'));
+                await this.Staking.transfer(addrs[7], ether('2'));
+                await this.Staking.transfer(addrs[8], ether('6'));
+                await this.Staking.transfer(addrs[9], ether('8'));
+                await this.Staking.transfer(addrs[10], ether('2'));
+
+                await this.WhitelistRegistry.setMaxWhitelisted(4);
+
+                console.log(await this.WhitelistRegistry.getWhitelist());
+                await expectAddrsInWhitelist(1, this.whitelestedAmount, [1, 3, 4, 6, 7, 10]);
+            });
         });
     });
 });

@@ -12,6 +12,7 @@ import "./interfaces/IWhitelistRegistry.sol";
 contract WhitelistRegistry is IWhitelistRegistry, Ownable {
     using UniERC20 for IERC20;
     using AddressSet for AddressSet.Data;
+    using AddressArray for AddressArray.Data;
 
     error BalanceLessThanThreshold();
     error NotEnoughBalance();
@@ -19,10 +20,9 @@ contract WhitelistRegistry is IWhitelistRegistry, Ownable {
     event Registered(address addr);
     event SetResolverThreshold(uint256 threshold);
 
-    uint256 public immutable maxWhitelisted;
-
     AddressSet.Data private _whitelist;
 
+    uint256 public maxWhitelisted;
     uint256 public resolverThreshold;
     IStaking public immutable staking;
 
@@ -85,6 +85,49 @@ contract WhitelistRegistry is IWhitelistRegistry, Ownable {
                     i++;
                 }
             }
+        }
+    }
+
+    function getWhitelist() public view returns (address[] memory) {
+        return _whitelist.items.get();
+    }
+
+    function setMaxWhitelisted(uint256 size) external onlyOwner {
+        uint256 whitelistLength = _whitelist.length();
+        if (size < whitelistLength) {
+            _excludePoorest(_whitelist, staking, whitelistLength - size);
+        }
+        maxWhitelisted = size;
+    }
+
+    function _excludePoorest(AddressSet.Data storage set, IStaking token, uint256 amount) private {
+        address[] memory excluded = new address[](amount);
+        uint256[] memory excludedStaked = new uint256[](amount);
+
+        address[] memory addresses = set.items.get();
+        for (uint256 i = 0; i < addresses.length; i++) {
+            address curAddress = addresses[i];
+            uint256 staked = token.balanceOf(curAddress);
+            for (uint256 j = 0; j < amount; j++) {
+                if (excluded[j] == address(0)) {
+                    excluded[j] = curAddress;
+                    excludedStaked[j] = staked;
+                } else {
+                    if (staked <= excludedStaked[j]) {
+                        for (uint256 k = amount-1; k >= j+1 ; k--) {
+                            excluded[k] = excluded[k-1];
+                            excludedStaked[k] = excludedStaked[k-1];
+                        }
+                        excluded[j] = curAddress;
+                        excludedStaked[j] = staked;
+                        break;
+                    }
+                }
+            }
+        }
+
+        for (uint256 i = 0; i < amount; i++) {
+            set.remove(excluded[i]);
         }
     }
 }
