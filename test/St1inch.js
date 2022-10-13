@@ -69,10 +69,7 @@ describe('St1inch', async () => {
             precision,
         );
         assertRoughlyEqualValues(
-            await this.st1inch.methods['votingPowerOf(address,uint256)'](
-                account,
-                await this.st1inch.unlockTime(account),
-            ),
+            await this.st1inch.votingPowerOfAt(account, await this.st1inch.unlockTime(account)),
             balance,
             precision,
         );
