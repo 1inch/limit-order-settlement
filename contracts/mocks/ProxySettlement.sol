@@ -3,8 +3,8 @@
 pragma solidity 0.8.17;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "../../contracts/interfaces/ISettlement.sol";
-import "../../contracts/interfaces/IFeeBank.sol";
+import "../interfaces/ISettlement.sol";
+import "../interfaces/IFeeBank.sol";
 
 contract ProxySettlement {
     ISettlement private _settlement;

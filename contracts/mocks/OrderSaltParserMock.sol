@@ -4,7 +4,7 @@ pragma solidity 0.8.17;
 
 import "../libraries/OrderSaltParser.sol";
 
-contract OrderSaltParserTest {
+contract OrderSaltParserMock {
     using OrderSaltParser for uint256;
 
     function getStartTime(uint256 orderSalt_) external pure returns (uint256) {

@@ -10,16 +10,16 @@ const {
 } = require('./helpers/orderSaltUtils');
 const { artifacts } = require('hardhat');
 
-const OrderSaltParserTest = artifacts.require('OrderSaltParserTest');
+const OrderSaltParserMock = artifacts.require('OrderSaltParserMock');
 
 const ORDERSALT_WITH_SPECIFIC_VALUES = toBN('0x0000000100000002000300000004000000000000000000000000000000000005');
 const ORDERSALT_WITH_SIMPLE_VALUES = toBN('0x0000001100000022003300000044000000000000000000000000000000000555');
 const ORDERSALT_WITH_FILLED_BOUNDARY_BITS = toBN('0xF0000001F0000002F003F0000004F00000000000000000000000000000000123');
 const ORDERSALT_WITH_FILLED_ALL_BITS = toBN(constants.MAX_UINT256);
 
-describe('OrderSaltParserTest', async () => {
+describe('OrderSaltParserMock', async () => {
     beforeEach(async () => {
-        this.orderSaltParserTest = await OrderSaltParserTest.new();
+        this.orderSaltParserMock = await OrderSaltParserMock.new();
     });
 
     describe('separate fields', async () => {
@@ -27,25 +27,25 @@ describe('OrderSaltParserTest', async () => {
             describe(method, async () => {
                 it('with specific values', async () => {
                     expect(
-                        await this.orderSaltParserTest[method](ORDERSALT_WITH_SPECIFIC_VALUES),
+                        await this.orderSaltParserMock[method](ORDERSALT_WITH_SPECIFIC_VALUES),
                     ).to.be.bignumber.equals(eval(method + '(ORDERSALT_WITH_SPECIFIC_VALUES)')); // eslint-disable-line no-eval
                 });
 
                 it('with simple values', async () => {
-                    expect(await this.orderSaltParserTest[method](ORDERSALT_WITH_SIMPLE_VALUES)).to.be.bignumber.equals(
+                    expect(await this.orderSaltParserMock[method](ORDERSALT_WITH_SIMPLE_VALUES)).to.be.bignumber.equals(
                         eval(method + '(ORDERSALT_WITH_SIMPLE_VALUES)'), // eslint-disable-line no-eval
                     );
                 });
 
                 it('with filled bits on the value boundaries', async () => {
                     expect(
-                        await this.orderSaltParserTest[method](ORDERSALT_WITH_FILLED_BOUNDARY_BITS),
+                        await this.orderSaltParserMock[method](ORDERSALT_WITH_FILLED_BOUNDARY_BITS),
                     ).to.be.bignumber.equals(eval(method + '(ORDERSALT_WITH_FILLED_BOUNDARY_BITS)')); // eslint-disable-line no-eval
                 });
 
                 it('with filled all bits', async () => {
                     expect(
-                        await this.orderSaltParserTest[method](ORDERSALT_WITH_FILLED_ALL_BITS),
+                        await this.orderSaltParserMock[method](ORDERSALT_WITH_FILLED_ALL_BITS),
                     ).to.be.bignumber.equals(eval(method + '(ORDERSALT_WITH_FILLED_ALL_BITS)')); // eslint-disable-line no-eval
                 });
             });

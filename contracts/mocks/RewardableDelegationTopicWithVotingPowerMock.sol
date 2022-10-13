@@ -3,8 +3,8 @@
 pragma solidity ^0.8.0;
 pragma abicoder v1;
 
-import "../../contracts/RewardableDelegationTopicWithVotingPower.sol";
-import "../../contracts/St1inch.sol";
+import "../RewardableDelegationTopicWithVotingPower.sol";
+import "../St1inch.sol";
 
 contract RewardableDelegationTopicWithVotingPowerMock is RewardableDelegationTopicWithVotingPower {
     constructor(string memory name, string memory symbol, St1inch st1inch)
