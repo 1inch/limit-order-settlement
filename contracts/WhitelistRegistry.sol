@@ -54,13 +54,13 @@ contract WhitelistRegistry is IWhitelistRegistry, Ownable {
             return;
         }
         address minResolver = msg.sender;
-        uint256 minReward = token.balanceOf(msg.sender);
+        uint256 minBalance = token.balanceOf(msg.sender);
         for (uint256 i = 0; i < whitelistLength; ++i) {
             address curWhitelisted = _whitelist.at(i);
-            uint256 reward = token.balanceOf(curWhitelisted);
-            if (reward < minReward) {
+            uint256 balance = token.balanceOf(curWhitelisted);
+            if (balance < minBalance) {
                 minResolver = curWhitelisted;
-                minReward = reward;
+                minBalance = balance;
             }
         }
         if (minResolver == msg.sender) revert NotEnoughBalance();
