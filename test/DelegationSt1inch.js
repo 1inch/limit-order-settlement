@@ -3,7 +3,7 @@ const { addr0Wallet, addr1Wallet } = require('./helpers/utils');
 
 const TokenPermitMock = artifacts.require('ERC20PermitMock');
 const WhitelistRegistry = artifacts.require('WhitelistRegistry');
-const RewardableDelegation = artifacts.require('RewardableDelegation');
+const RewardableDelegation = artifacts.require('RewardableDelegationTopicWithVotingPower');
 const DelegateeToken = artifacts.require('DelegateeToken');
 const St1inch = artifacts.require('St1inch');
 
@@ -39,7 +39,7 @@ describe('Delegation st1inch', async () => {
         await this.oneInch.approve(this.st1inch.address, ether('100'), {
             from: addr1,
         });
-        this.delegation = await RewardableDelegation.new('Rewardable', 'RWD');
+        this.delegation = await RewardableDelegation.new('Rewardable', 'RWD', this.st1inch.address);
         this.whitelistRegistry = await WhitelistRegistry.new(this.delegation.address, threshold, MAX_WHITELISTED);
         await this.delegation.transferOwnership(this.st1inch.address);
     });

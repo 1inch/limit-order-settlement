@@ -5,8 +5,9 @@ pragma solidity 0.8.17;
 import "@1inch/solidity-utils/contracts/libraries/UniERC20.sol";
 import "@1inch/solidity-utils/contracts/libraries/AddressSet.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "./interfaces/IStaking.sol";
 import "./interfaces/IWhitelistRegistry.sol";
+import "./interfaces/IVotable.sol";
+import "./helpers/VotingPowerCalculator.sol";
 
 /// @title Contract with trades resolvers whitelist
 contract WhitelistRegistry is IWhitelistRegistry, Ownable {
@@ -24,20 +25,20 @@ contract WhitelistRegistry is IWhitelistRegistry, Ownable {
 
     uint256 public maxWhitelisted;
     uint256 public resolverThreshold;
-    IStaking public immutable staking;
+    IVotable public immutable token;
 
     constructor(
-        IStaking staking_,
-        uint256 threshold,
+        IVotable token_,
+        uint256 resolverThreshold_,
         uint256 maxWhitelisted_
     ) {
-        staking = staking_;
-        resolverThreshold = threshold;
+        token = token_;
+        resolverThreshold = resolverThreshold_;
         maxWhitelisted = maxWhitelisted_;
     }
 
-    function rescueFunds(IERC20 token, uint256 amount) external onlyOwner {
-        token.uniTransfer(payable(msg.sender), amount);
+    function rescueFunds(IERC20 token_, uint256 amount) external onlyOwner {
+        token_.uniTransfer(payable(msg.sender), amount);
     }
 
     function setResolverThreshold(uint256 threshold) external onlyOwner {
@@ -46,21 +47,20 @@ contract WhitelistRegistry is IWhitelistRegistry, Ownable {
     }
 
     function register() external {
-        uint256 staked = staking.balanceOf(msg.sender);
-        if (staked < resolverThreshold) revert BalanceLessThanThreshold();
+        if (token.votingPowerOf(msg.sender) < resolverThreshold) revert BalanceLessThanThreshold();
         uint256 whitelistLength = _whitelist.length();
         if (whitelistLength < maxWhitelisted) {
             _whitelist.add(msg.sender);
             return;
         }
         address minResolver = msg.sender;
-        uint256 minStaked = staked;
+        uint256 minBalance = token.balanceOf(msg.sender);
         for (uint256 i = 0; i < whitelistLength; ++i) {
             address curWhitelisted = _whitelist.at(i);
-            staked = staking.balanceOf(curWhitelisted);
-            if (staked < minStaked) {
+            uint256 balance = token.balanceOf(curWhitelisted);
+            if (balance < minBalance) {
                 minResolver = curWhitelisted;
-                minStaked = staked;
+                minBalance = balance;
             }
         }
         if (minResolver == msg.sender) revert NotEnoughBalance();
@@ -78,7 +78,7 @@ contract WhitelistRegistry is IWhitelistRegistry, Ownable {
         unchecked {
             for (uint256 i = 0; i < whitelistLength; ) {
                 address curWhitelisted = _whitelist.at(i);
-                if (staking.balanceOf(curWhitelisted) < resolverThreshold) {
+                if (token.votingPowerOf(curWhitelisted) < resolverThreshold) {
                     _whitelist.remove(curWhitelisted);
                     whitelistLength--;
                 } else {
@@ -95,19 +95,19 @@ contract WhitelistRegistry is IWhitelistRegistry, Ownable {
     function setMaxWhitelisted(uint256 size) external onlyOwner {
         uint256 whitelistLength = _whitelist.length();
         if (size < whitelistLength) {
-            _excludePoorest(_whitelist, staking, whitelistLength - size);
+            _excludePoorest(_whitelist, token, whitelistLength - size);
         }
         maxWhitelisted = size;
     }
 
-    function _excludePoorest(AddressSet.Data storage set, IStaking token, uint256 amount) private {
+    function _excludePoorest(AddressSet.Data storage set, IVotable vtoken, uint256 amount) private {
         address[] memory excluded = new address[](amount);
         uint256[] memory excludedStaked = new uint256[](amount);
 
         address[] memory addresses = set.items.get();
         for (uint256 i = 0; i < addresses.length; i++) {
             address curAddress = addresses[i];
-            uint256 staked = token.balanceOf(curAddress);
+            uint256 staked = vtoken.balanceOf(curAddress);
             for (uint256 j = 0; j < amount; j++) {
                 if (excluded[j] == address(0)) {
                     excluded[j] = curAddress;
