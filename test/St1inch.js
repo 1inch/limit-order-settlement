@@ -57,6 +57,27 @@ describe('St1inch', async () => {
         );
     };
 
+    const checkBalancesPrecision = async (account, balance, lockDuration, precision) => {
+        expect(await this.st1inch.depositsAmount(account)).to.be.bignumber.equal(balance);
+        const t = (await time.latest()).add(lockDuration).sub(this.origin);
+        const originPower = expInv(balance, t);
+
+        assertRoughlyEqualValues(await this.st1inch.balanceOf(account), originPower, precision);
+        assertRoughlyEqualValues(
+            await this.st1inch.votingPowerOf(account),
+            exp(originPower, (await time.latest()).sub(this.origin)),
+            precision,
+        );
+        assertRoughlyEqualValues(
+            await this.st1inch.methods['votingPowerOf(address,uint256)'](
+                account,
+                await this.st1inch.unlockTime(account),
+            ),
+            balance,
+            precision,
+        );
+    };
+
     before(async () => {
         this.chainId = await web3.eth.getChainId();
     });
@@ -175,6 +196,38 @@ describe('St1inch', async () => {
         await checkBalances(addr0, ether('50'), unlockTime.sub(await time.latest()));
     });
 
+    it('should increase deposit amount (call deposit, 1 year lock)', async () => {
+        await this.st1inch.deposit(ether('20'), time.duration.days('365'));
+
+        const unlockTime = await this.st1inch.unlockTime(addr0);
+        await timeIncreaseTo(unlockTime);
+        await checkBalancesPrecision(addr0, ether('20'), toBN(0), 1e-7);
+    });
+
+    it('should increase deposit amount (call deposit, 2 year lock)', async () => {
+        await this.st1inch.deposit(ether('20'), time.duration.days('730'));
+
+        const unlockTime = await this.st1inch.unlockTime(addr0);
+        await timeIncreaseTo(unlockTime);
+        await checkBalancesPrecision(addr0, ether('20'), toBN(0), 1e-7);
+    });
+
+    it('should increase deposit amount (call deposit, 3 year lock)', async () => {
+        await this.st1inch.deposit(ether('20'), time.duration.days('1095'));
+
+        const unlockTime = await this.st1inch.unlockTime(addr0);
+        await timeIncreaseTo(unlockTime);
+        await checkBalancesPrecision(addr0, ether('20'), toBN(0), 1e-7);
+    });
+
+    it('should increase deposit amount (call deposit, 4 year lock)', async () => {
+        await this.st1inch.deposit(ether('20'), time.duration.days('1460'));
+
+        const unlockTime = await this.st1inch.unlockTime(addr0);
+        await timeIncreaseTo(unlockTime);
+        await checkBalancesPrecision(addr0, ether('20'), toBN(0), 1e-7);
+    });
+
     it('should increase deposit amount (call increaseAmount)', async () => {
         await this.st1inch.deposit(ether('70'), time.duration.days('100'));
 
@@ -183,6 +236,21 @@ describe('St1inch', async () => {
 
         await this.st1inch.increaseAmount(ether('20'));
         await checkBalances(addr0, ether('90'), unlockTime.sub(await time.latest()));
+    });
+
+    it('should withdraw users deposit', async () => {
+        await this.st1inch.deposit(ether('100'), time.duration.days('50'));
+
+        const unlockTime = await this.st1inch.unlockTime(addr0);
+        await timeIncreaseTo(unlockTime);
+        const balanceAddr0 = await this.oneInch.balanceOf(addr0);
+
+        await this.st1inch.withdraw();
+
+        expect(await this.oneInch.balanceOf(addr0)).to.be.bignumber.equal(balanceAddr0.add(ether('100')));
+        expect(await this.st1inch.depositsAmount(addr0)).to.be.bignumber.equal(toBN('0'));
+        expect(await this.st1inch.balanceOf(addr0)).to.be.bignumber.equal(toBN('0'));
+        expect(await this.st1inch.votingPowerOf(addr0)).to.be.bignumber.equal(toBN('0'));
     });
 
     it('should withdraw users deposit', async () => {
