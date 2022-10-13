@@ -95,39 +95,43 @@ contract WhitelistRegistry is IWhitelistRegistry, Ownable {
     function setMaxWhitelisted(uint256 size) external onlyOwner {
         uint256 whitelistLength = _whitelist.length();
         if (size < whitelistLength) {
-            _excludePoorest(_whitelist, token, whitelistLength - size);
+            _shrinkPoorest(_whitelist, token, whitelistLength - size);
         }
         maxWhitelisted = size;
     }
 
-    function _excludePoorest(AddressSet.Data storage set, IVotable vtoken, uint256 amount) private {
-        address[] memory excluded = new address[](amount);
-        uint256[] memory excludedStaked = new uint256[](amount);
-
+    function _shrinkPoorest(AddressSet.Data storage set, IVotable vtoken, uint256 size) private {
+        uint256 richestIndex = 0;
         address[] memory addresses = set.items.get();
+        uint256[] memory balances = new uint256[](addresses.length);
         for (uint256 i = 0; i < addresses.length; i++) {
-            address curAddress = addresses[i];
-            uint256 staked = vtoken.balanceOf(curAddress);
-            for (uint256 j = 0; j < amount; j++) {
-                if (excluded[j] == address(0)) {
-                    excluded[j] = curAddress;
-                    excludedStaked[j] = staked;
-                } else {
-                    if (staked <= excludedStaked[j]) {
-                        for (uint256 k = amount-1; k >= j+1 ; k--) {
-                            excluded[k] = excluded[k-1];
-                            excludedStaked[k] = excludedStaked[k-1];
+            balances[i] = vtoken.balanceOf(addresses[i]);
+            if (balances[i] > balances[richestIndex]) {
+                richestIndex = i;
+            }
+        }
+
+        for (uint256 i = size; i < addresses.length; i++) {
+            if (balances[i] <= balances[richestIndex]) {
+                // Swap i-th and richest-th elements
+                (addresses[i], addresses[richestIndex]) = (addresses[richestIndex], addresses[i]);
+                (balances[i], balances[richestIndex]) = (balances[richestIndex], balances[i]);
+
+                // Find new richest in first size elements
+                if (i < addresses.length) {
+                    richestIndex = 0;
+                    for (uint256 j = 1; j < size; j++) {
+                        if (balances[j] > balances[richestIndex]) {
+                            richestIndex = j;
                         }
-                        excluded[j] = curAddress;
-                        excludedStaked[j] = staked;
-                        break;
                     }
                 }
             }
         }
 
-        for (uint256 i = 0; i < amount; i++) {
-            set.remove(excluded[i]);
+        // Remove poorest elements from set
+        for (uint256 i = 0; i < size; i++) {
+            set.remove(addresses[i]);
         }
     }
 }
