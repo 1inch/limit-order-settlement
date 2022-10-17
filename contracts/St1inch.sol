@@ -159,8 +159,9 @@ contract St1inch is ERC20Farmable, ERC20Delegatable, Ownable, VotingPowerCalcula
         uint256 balance = _deposits[account];
 
         uint256 lockedTill = Math.max(_unlockTime[account], block.timestamp) + duration;
-        if (lockedTill < block.timestamp + MIN_LOCK_PERIOD) revert LockTimeLessMinLock();
-        if (lockedTill > block.timestamp + MAX_LOCK_PERIOD) revert LockTimeMoreMaxLock();
+        uint256 lockedPeriod = lockedTill - block.timestamp;
+        if (lockedPeriod < MIN_LOCK_PERIOD) revert LockTimeLessMinLock();
+        if (lockedPeriod > MAX_LOCK_PERIOD) revert LockTimeMoreMaxLock();
         _unlockTime[account] = lockedTill;
 
         _mint(account, _balanceAt(balance, lockedTill) - balanceOf(account));
