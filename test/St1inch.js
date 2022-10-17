@@ -57,24 +57,6 @@ describe('St1inch', async () => {
         );
     };
 
-    const checkBalancesPrecision = async (account, balance, lockDuration, precision) => {
-        expect(await this.st1inch.depositsAmount(account)).to.be.bignumber.equal(balance);
-        const t = (await time.latest()).add(lockDuration).sub(this.origin);
-        const originPower = expInv(balance, t);
-
-        assertRoughlyEqualValues(await this.st1inch.balanceOf(account), originPower, precision);
-        assertRoughlyEqualValues(
-            await this.st1inch.votingPowerOf(account),
-            exp(originPower, (await time.latest()).sub(this.origin)),
-            precision,
-        );
-        assertRoughlyEqualValues(
-            await this.st1inch.votingPowerOfAt(account, await this.st1inch.unlockTime(account)),
-            balance,
-            precision,
-        );
-    };
-
     before(async () => {
         this.chainId = await web3.eth.getChainId();
     });
@@ -193,36 +175,48 @@ describe('St1inch', async () => {
         await checkBalances(addr0, ether('50'), unlockTime.sub(await time.latest()));
     });
 
-    it('should increase deposit amount (call deposit, 1 year lock)', async () => {
-        await this.st1inch.deposit(ether('20'), time.duration.days('365'));
-
-        const unlockTime = await this.st1inch.unlockTime(addr0);
-        await timeIncreaseTo(unlockTime);
-        await checkBalancesPrecision(addr0, ether('20'), toBN(0), 1e-7);
+    it('call deposit, 1 year lock, compare voting power against expected value', async () => {
+        await this.st1inch.deposit(ether('1'), time.duration.days('365'));
+        assertRoughlyEqualValues(await this.st1inch.votingPowerOfAt(addr0, this.origin), ether('0.1778'), 1e-4);
     });
 
-    it('should increase deposit amount (call deposit, 2 year lock)', async () => {
-        await this.st1inch.deposit(ether('20'), time.duration.days('730'));
-
-        const unlockTime = await this.st1inch.unlockTime(addr0);
-        await timeIncreaseTo(unlockTime);
-        await checkBalancesPrecision(addr0, ether('20'), toBN(0), 1e-7);
+    it('call deposit, 2 years lock, compare voting power against expected value', async () => {
+        await this.st1inch.deposit(ether('1'), time.duration.days('730'));
+        assertRoughlyEqualValues(await this.st1inch.votingPowerOfAt(addr0, this.origin), ether('0.3162'), 1e-4);
     });
 
-    it('should increase deposit amount (call deposit, 3 year lock)', async () => {
-        await this.st1inch.deposit(ether('20'), time.duration.days('1095'));
-
-        const unlockTime = await this.st1inch.unlockTime(addr0);
-        await timeIncreaseTo(unlockTime);
-        await checkBalancesPrecision(addr0, ether('20'), toBN(0), 1e-7);
+    it('call deposit, 3 years lock, compare voting power against expected value', async () => {
+        await this.st1inch.deposit(ether('1'), time.duration.days('1095'));
+        assertRoughlyEqualValues(await this.st1inch.votingPowerOfAt(addr0, this.origin), ether('0.5623'), 1e-4);
     });
 
-    it('should increase deposit amount (call deposit, 4 year lock)', async () => {
-        await this.st1inch.deposit(ether('20'), time.duration.days('1460'));
+    it('call deposit, 4 years lock, compare voting power against expected value', async () => {
+        await this.st1inch.deposit(ether('1'), time.duration.days('1460'));
+        assertRoughlyEqualValues(await this.st1inch.votingPowerOfAt(addr0, this.origin), ether('1'), 1e-4);
+    });
 
+    it('call deposit, 1 year lock, compare voting power against expected value after the lock end', async () => {
+        await this.st1inch.deposit(ether('1'), time.duration.days('365'));
         const unlockTime = await this.st1inch.unlockTime(addr0);
-        await timeIncreaseTo(unlockTime);
-        await checkBalancesPrecision(addr0, ether('20'), toBN(0), 1e-7);
+        assertRoughlyEqualValues(await this.st1inch.votingPowerOfAt(addr0, unlockTime), ether('0.1'), 1e-4);
+    });
+
+    it('call deposit, 2 years lock, compare voting power against expected value after the lock end', async () => {
+        await this.st1inch.deposit(ether('1'), time.duration.days('730'));
+        const unlockTime = await this.st1inch.unlockTime(addr0);
+        assertRoughlyEqualValues(await this.st1inch.votingPowerOfAt(addr0, unlockTime), ether('0.1'), 1e-4);
+    });
+
+    it('call deposit, 3 years lock, compare voting power against expected value after the lock end', async () => {
+        await this.st1inch.deposit(ether('1'), time.duration.days('1095'));
+        const unlockTime = await this.st1inch.unlockTime(addr0);
+        assertRoughlyEqualValues(await this.st1inch.votingPowerOfAt(addr0, unlockTime), ether('0.1'), 1e-4);
+    });
+
+    it('call deposit, 4 years lock, compare voting power against expected value after the lock end', async () => {
+        await this.st1inch.deposit(ether('1'), time.duration.days('1460'));
+        const unlockTime = await this.st1inch.unlockTime(addr0);
+        assertRoughlyEqualValues(await this.st1inch.votingPowerOfAt(addr0, unlockTime), ether('0.1'), 1e-4);
     });
 
     it('should increase deposit amount (call increaseAmount)', async () => {
