@@ -245,21 +245,6 @@ describe('St1inch', async () => {
         expect(await this.st1inch.votingPowerOf(addr0)).to.be.bignumber.equal(toBN('0'));
     });
 
-    it('should withdraw users deposit', async () => {
-        await this.st1inch.deposit(ether('100'), time.duration.days('50'));
-
-        const unlockTime = await this.st1inch.unlockTime(addr0);
-        await timeIncreaseTo(unlockTime);
-        const balanceAddr0 = await this.oneInch.balanceOf(addr0);
-
-        await this.st1inch.withdraw();
-
-        expect(await this.oneInch.balanceOf(addr0)).to.be.bignumber.equal(balanceAddr0.add(ether('100')));
-        expect(await this.st1inch.depositsAmount(addr0)).to.be.bignumber.equal(toBN('0'));
-        expect(await this.st1inch.balanceOf(addr0)).to.be.bignumber.equal(toBN('0'));
-        expect(await this.st1inch.votingPowerOf(addr0)).to.be.bignumber.equal(toBN('0'));
-    });
-
     it('should withdraw users deposit and send tokens to other address', async () => {
         await this.st1inch.deposit(ether('100'), time.duration.days('50'));
 
