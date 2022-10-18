@@ -178,17 +178,17 @@ describe('St1inch', async () => {
 
     it('call deposit, 1 year lock, compare voting power against expected value', async () => {
         await this.st1inch.deposit(ether('1'), time.duration.days('365'));
-        assertRoughlyEqualValues(await this.st1inch.votingPowerOfAt(addr0, this.origin), ether('0.1778'), 1e-4);
+        assertRoughlyEqualValues(await this.st1inch.votingPowerOfAt(addr0, this.origin), ether('0.17782'), 1e-4);
     });
 
     it('call deposit, 2 years lock, compare voting power against expected value', async () => {
         await this.st1inch.deposit(ether('1'), time.duration.days('730'));
-        assertRoughlyEqualValues(await this.st1inch.votingPowerOfAt(addr0, this.origin), ether('0.3162'), 1e-4);
+        assertRoughlyEqualValues(await this.st1inch.votingPowerOfAt(addr0, this.origin), ether('0.31622'), 1e-4);
     });
 
     it('call deposit, 3 years lock, compare voting power against expected value', async () => {
         await this.st1inch.deposit(ether('1'), time.duration.days('1095'));
-        assertRoughlyEqualValues(await this.st1inch.votingPowerOfAt(addr0, this.origin), ether('0.5623'), 1e-4);
+        assertRoughlyEqualValues(await this.st1inch.votingPowerOfAt(addr0, this.origin), ether('0.56234'), 1e-4);
     });
 
     it('call deposit, 4 years lock, compare voting power against expected value', async () => {
