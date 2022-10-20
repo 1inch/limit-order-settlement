@@ -1,360 +1,375 @@
-const { ether, assertRoughlyEqualValues, toBN, BN, time } = require('@1inch/solidity-utils');
-const { addr0Wallet, addr1Wallet } = require('./helpers/utils');
-
-const TokenMock = artifacts.require('TokenMock');
-const WrappedTokenMock = artifacts.require('WrappedTokenMock');
-const LimitOrderProtocol = artifacts.require('LimitOrderProtocol');
-const WhitelistRegistrySimple = artifacts.require('WhitelistRegistrySimple');
-const Settlement = artifacts.require('Settlement');
-const FeeBank = artifacts.require('FeeBank');
-const ProxySettlement = artifacts.require('ProxySettlement');
-
+const { assertRoughlyEqualValues, time, expect } = require('@1inch/solidity-utils');
+const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
+const { ethers } = require('hardhat');
+const { ether } = require('./helpers/orderUtils');
+const { deploySwapTokens, deploySimpleRegistry, getChainId } = require('./helpers/fixtures');
 const { buildOrder, signOrder, buildSalt, defaultExpiredAuctionTimestamp } = require('./helpers/orderUtils');
 
 const Status = Object.freeze({
-    Unverified: toBN('0'),
-    Verified: toBN('1'),
+    Unverified: 0,
+    Verified: 1,
 });
 
 describe('Settlement', async () => {
-    const [addr0, addr1] = [addr0Wallet.getAddressString(), addr1Wallet.getAddressString()];
     const basePoints = ether('0.001'); // 1e15
+    let addr, addr1;
+    let chainId;
+    let whitelistRegistrySimple;
+    const abiCoder = ethers.utils.defaultAbiCoder;
 
     before(async () => {
-        this.chainId = await web3.eth.getChainId();
-        this.whitelistRegistrySimple = await WhitelistRegistrySimple.new();
-        await this.whitelistRegistrySimple.setStatus(addr0, Status.Verified);
-        await this.whitelistRegistrySimple.setStatus(addr1, Status.Verified);
+        chainId = await getChainId();
+        whitelistRegistrySimple = await deploySimpleRegistry();
+        [addr, addr1] = await ethers.getSigners();
+        await whitelistRegistrySimple.setStatus(addr.address, Status.Verified);
+        await whitelistRegistrySimple.setStatus(addr1.address, Status.Verified);
     });
 
-    beforeEach(async () => {
-        this.dai = await TokenMock.new('DAI', 'DAI');
-        this.weth = await WrappedTokenMock.new('WETH', 'WETH');
-        this.inch = await TokenMock.new('1INCH', '1INCH');
+    async function initContracts() {
+        const { dai, weth, inch, swap } = await deploySwapTokens();
 
-        this.swap = await LimitOrderProtocol.new(this.weth.address);
+        await dai.mint(addr.address, ether('100'));
+        await dai.mint(addr1.address, ether('100'));
+        await inch.mint(addr.address, ether('100'));
+        await weth.deposit({ value: ether('1') });
+        await weth.connect(addr1).deposit({ value: ether('1') });
 
-        await this.dai.mint(addr0, ether('100'));
-        await this.dai.mint(addr1, ether('100'));
-        await this.inch.mint(addr0, ether('100'));
-        await this.weth.deposit({ from: addr0, value: ether('1') });
-        await this.weth.deposit({ from: addr1, value: ether('1') });
+        await dai.approve(swap.address, ether('100'));
+        await dai.connect(addr1).approve(swap.address, ether('100'));
+        await weth.approve(swap.address, ether('1'));
+        await weth.connect(addr1).approve(swap.address, ether('1'));
 
-        await this.dai.approve(this.swap.address, ether('100'));
-        await this.dai.approve(this.swap.address, ether('100'), {
-            from: addr1,
-        });
-        await this.weth.approve(this.swap.address, ether('1'));
-        await this.weth.approve(this.swap.address, ether('1'), { from: addr1 });
+        const Settlement = await ethers.getContractFactory('Settlement');
+        const matcher = await Settlement.deploy(whitelistRegistrySimple.address, swap.address);
+        await matcher.deployed();
 
-        this.matcher = await Settlement.new(this.whitelistRegistrySimple.address, this.swap.address);
-        this.feeBank = await FeeBank.new(this.matcher.address, this.inch.address);
-        await this.matcher.setFeeBank(this.feeBank.address);
-        await this.inch.approve(this.feeBank.address, ether('100'));
-        await this.feeBank.deposit(ether('100'));
+        const FeeBank = await ethers.getContractFactory('FeeBank');
+        const feeBank = await FeeBank.deploy(matcher.address, inch.address);
+        await feeBank.deployed();
 
-        this.proxy = await ProxySettlement.new(this.matcher.address, this.inch.address, this.feeBank.address);
-        await this.inch.mint(this.proxy.address, ether('100'));
-    });
+        await matcher.setFeeBank(feeBank.address);
+        await inch.approve(feeBank.address, ether('100'));
+        await feeBank.deposit(ether('100'));
+
+        const ProxySettlement = await ethers.getContractFactory('ProxySettlement');
+        const proxy = await ProxySettlement.deploy(matcher.address, inch.address, feeBank.address);
+        await proxy.deployed();
+        await inch.mint(proxy.address, ether('100'));
+
+        return { dai, weth, swap, matcher, feeBank, proxy };
+    }
 
     it('opposite direction recursive swap', async () => {
+        const { dai, weth, swap, matcher } = await loadFixture(initContracts);
+
         const order = await buildOrder(
             {
-                makerAsset: this.dai.address,
-                takerAsset: this.weth.address,
+                makerAsset: dai.address,
+                takerAsset: weth.address,
                 makingAmount: ether('100'),
                 takingAmount: ether('0.1'),
                 salt: buildSalt({ orderStartTime: await time.latest() }),
-                from: addr0,
+                from: addr.address,
             },
             {
-                predicate: this.swap.contract.methods.timestampBelow(0xff00000000).encodeABI(),
+                predicate: swap.interface.encodeFunctionData('timestampBelow', [0xff00000000]),
             },
         );
 
         const backOrder = await buildOrder(
             {
-                makerAsset: this.weth.address,
-                takerAsset: this.dai.address,
+                makerAsset: weth.address,
+                takerAsset: dai.address,
                 makingAmount: ether('0.11'),
                 takingAmount: ether('100'),
-                from: addr1,
+                from: addr1.address,
             },
             {
-                predicate: this.swap.contract.methods.timestampBelow(0xff00000000).encodeABI(),
+                predicate: swap.interface.encodeFunctionData('timestampBelow', [0xff00000000]),
             },
         );
 
-        const signature = signOrder(order, this.chainId, this.swap.address, addr0Wallet.getPrivateKey());
-        const signatureBackOrder = signOrder(backOrder, this.chainId, this.swap.address, addr1Wallet.getPrivateKey());
+        const signature = await signOrder(order, chainId, swap.address, addr);
+        const signatureBackOrder = await signOrder(backOrder, chainId, swap.address, addr1);
 
         const matchingParams =
-            this.matcher.address +
+            matcher.address +
             '01' +
-            web3.eth.abi
-                .encodeParameters(
+            abiCoder
+                .encode(
                     ['address[]', 'bytes[]'],
                     [
-                        [this.weth.address, this.dai.address],
+                        [weth.address, dai.address],
                         [
-                            this.weth.contract.methods.approve(this.swap.address, ether('0.11')).encodeABI(),
-                            this.dai.contract.methods.approve(this.swap.address, ether('100.00')).encodeABI(),
+                            weth.interface.encodeFunctionData('approve', [swap.address, ether('0.11')]),
+                            dai.interface.encodeFunctionData('approve', [swap.address, ether('100.00')]),
                         ],
                     ],
                 )
                 .substring(2);
 
         const interaction =
-            this.matcher.address +
+            matcher.address +
             '00' +
-            this.swap.contract.methods
-                .fillOrderTo(
+            swap.interface
+                .encodeFunctionData('fillOrderTo', [
                     backOrder,
                     signatureBackOrder,
                     matchingParams,
                     ether('0.11'),
                     0,
                     ether('100'),
-                    this.matcher.address,
-                )
-                .encodeABI()
+                    matcher.address,
+                ])
                 .substring(10);
 
-        const addr0weth = await this.weth.balanceOf(addr0);
-        const addr1weth = await this.weth.balanceOf(addr1);
-        const addr0dai = await this.dai.balanceOf(addr0);
-        const addr1dai = await this.dai.balanceOf(addr1);
+        const addrweth = await weth.balanceOf(addr.address);
+        const addr1weth = await weth.balanceOf(addr1.address);
+        const addrdai = await dai.balanceOf(addr.address);
+        const addr1dai = await dai.balanceOf(addr1.address);
 
-        await this.matcher.settleOrders(
-            this.swap.address,
+        await matcher.settleOrders(
+            swap.address,
             order,
             signature,
             interaction,
             ether('100'),
             0,
             ether('0.11'),
-            this.matcher.address,
+            matcher.address,
         );
 
-        assertRoughlyEqualValues(await this.weth.balanceOf(addr0), addr0weth.add(ether('0.11')), 1e-4);
+        assertRoughlyEqualValues(await weth.balanceOf(addr.address), addrweth.add(ether('0.11')), 1e-4);
         // TODO: 6e-5 WETH lost into LimitOrderProtocol contract
-        expect(await this.weth.balanceOf(addr1)).to.be.bignumber.equal(addr1weth.sub(ether('0.11')));
-        expect(await this.dai.balanceOf(addr0)).to.be.bignumber.equal(addr0dai.sub(ether('100')));
-        expect(await this.dai.balanceOf(addr1)).to.be.bignumber.equal(addr1dai.add(ether('100')));
+        expect(await weth.balanceOf(addr1.address)).to.equal(addr1weth.sub(ether('0.11')));
+        expect(await dai.balanceOf(addr.address)).to.equal(addrdai.sub(ether('100')));
+        expect(await dai.balanceOf(addr1.address)).to.equal(addr1dai.add(ether('100')));
     });
 
     it('unidirectional recursive swap', async () => {
+        const { dai, weth, swap, matcher } = await loadFixture(initContracts);
+
         const order = await buildOrder(
             {
-                makerAsset: this.dai.address,
-                takerAsset: this.weth.address,
+                makerAsset: dai.address,
+                takerAsset: weth.address,
                 makingAmount: ether('10'),
                 takingAmount: ether('0.01'),
                 salt: buildSalt({ orderStartTime: await time.latest() }),
-                from: addr1,
+                from: addr1.address,
             },
             {
-                predicate: this.swap.contract.methods.timestampBelow(0xff00000000).encodeABI(),
+                predicate: swap.interface.encodeFunctionData('timestampBelow', [0xff00000000]),
             },
         );
 
         const backOrder = await buildOrder(
             {
-                makerAsset: this.dai.address,
-                takerAsset: this.weth.address,
+                makerAsset: dai.address,
+                takerAsset: weth.address,
                 makingAmount: ether('15'),
                 takingAmount: ether('0.015'),
                 salt: buildSalt({ orderStartTime: await time.latest() }),
-                from: addr1,
+                from: addr1.address,
             },
             {
-                predicate: this.swap.contract.methods.timestampBelow(0xff00000000).encodeABI(),
+                predicate: swap.interface.encodeFunctionData('timestampBelow', [0xff00000000]),
             },
         );
 
-        const signature = signOrder(order, this.chainId, this.swap.address, addr1Wallet.getPrivateKey());
-        const signatureBackOrder = signOrder(backOrder, this.chainId, this.swap.address, addr1Wallet.getPrivateKey());
+        const signature = await signOrder(order, chainId, swap.address, addr1);
+        const signatureBackOrder = await signOrder(backOrder, chainId, swap.address, addr1);
 
         const matchingParams =
-            this.matcher.address +
+            matcher.address +
             '01' +
-            web3.eth.abi
-                .encodeParameters(
+            abiCoder
+                .encode(
                     ['address[]', 'bytes[]'],
                     [
-                        [this.weth.address, this.weth.address, this.dai.address],
+                        [weth.address, weth.address, dai.address],
                         [
-                            this.weth.contract.methods
-                                .transferFrom(addr0, this.matcher.address, ether('0.0275'))
-                                .encodeABI(),
-                            this.weth.contract.methods.approve(this.swap.address, ether('0.0275')).encodeABI(),
-                            this.dai.contract.methods.transfer(addr0, ether('25')).encodeABI(),
+                            weth.interface.encodeFunctionData('transferFrom', [
+                                addr.address,
+                                matcher.address,
+                                ether('0.0275'),
+                            ]),
+                            weth.interface.encodeFunctionData('approve', [swap.address, ether('0.0275')]),
+                            dai.interface.encodeFunctionData('transfer', [addr.address, ether('25')]),
                         ],
                     ],
                 )
                 .substring(2);
 
         const interaction =
-            this.matcher.address +
+            matcher.address +
             '00' +
-            this.swap.contract.methods
-                .fillOrderTo(
+            swap.interface
+                .encodeFunctionData('fillOrderTo', [
                     backOrder,
                     signatureBackOrder,
                     matchingParams,
                     ether('15'),
                     0,
                     ether('0.015'),
-                    this.matcher.address,
-                )
-                .encodeABI()
+                    matcher.address,
+                ])
                 .substring(10);
 
-        const addr0weth = await this.weth.balanceOf(addr0);
-        const addr1weth = await this.weth.balanceOf(addr1);
-        const addr0dai = await this.dai.balanceOf(addr0);
-        const addr1dai = await this.dai.balanceOf(addr1);
+        const addrweth = await weth.balanceOf(addr.address);
+        const addr1weth = await weth.balanceOf(addr1.address);
+        const addrdai = await dai.balanceOf(addr.address);
+        const addr1dai = await dai.balanceOf(addr1.address);
 
-        await this.weth.approve(this.matcher.address, ether('0.0275'));
-        await this.matcher.settleOrders(
-            this.swap.address,
+        await weth.approve(matcher.address, ether('0.0275'));
+        await matcher.settleOrders(
+            swap.address,
             order,
             signature,
             interaction,
             ether('10'),
             0,
             ether('0.01'),
-            this.matcher.address,
+            matcher.address,
         );
 
-        expect(await this.weth.balanceOf(addr0)).to.be.bignumber.equal(addr0weth.sub(ether('0.0275')));
-        assertRoughlyEqualValues(await this.weth.balanceOf(addr1), addr1weth.add(ether('0.0275')), 1e-4);
+        expect(await weth.balanceOf(addr.address)).to.equal(addrweth.sub(ether('0.0275')));
+        assertRoughlyEqualValues(await weth.balanceOf(addr1.address), addr1weth.add(ether('0.0275')), 1e-4);
         // TODO: 3e-5 WETH lost into LimitOrderProtocol contract
-        expect(await this.dai.balanceOf(addr0)).to.be.bignumber.equal(addr0dai.add(ether('25')));
-        expect(await this.dai.balanceOf(addr1)).to.be.bignumber.equal(addr1dai.sub(ether('25')));
+        expect(await dai.balanceOf(addr.address)).to.equal(addrdai.add(ether('25')));
+        expect(await dai.balanceOf(addr1.address)).to.equal(addr1dai.sub(ether('25')));
     });
 
     it('triple recursive swap', async () => {
+        const { dai, weth, swap, matcher } = await loadFixture(initContracts);
+
         const order1 = await buildOrder(
             {
-                makerAsset: this.dai.address,
-                takerAsset: this.weth.address,
+                makerAsset: dai.address,
+                takerAsset: weth.address,
                 makingAmount: ether('10'),
                 takingAmount: ether('0.01'),
                 salt: buildSalt({ orderStartTime: await time.latest() }),
-                from: addr1,
+                from: addr1.address,
             },
             {
-                predicate: this.swap.contract.methods.timestampBelow(0xff00000000).encodeABI(),
+                predicate: swap.interface.encodeFunctionData('timestampBelow', [0xff00000000]),
             },
         );
 
         const order2 = await buildOrder(
             {
-                makerAsset: this.dai.address,
-                takerAsset: this.weth.address,
+                makerAsset: dai.address,
+                takerAsset: weth.address,
                 makingAmount: ether('15'),
                 takingAmount: ether('0.015'),
                 salt: buildSalt({ orderStartTime: await time.latest() }),
-                from: addr1,
+                from: addr1.address,
             },
             {
-                predicate: this.swap.contract.methods.timestampBelow(0xff00000000).encodeABI(),
+                predicate: swap.interface.encodeFunctionData('timestampBelow', [0xff00000000]),
             },
         );
 
         const backOrder = await buildOrder(
             {
-                makerAsset: this.weth.address,
-                takerAsset: this.dai.address,
+                makerAsset: weth.address,
+                takerAsset: dai.address,
                 makingAmount: ether('0.0275'),
                 takingAmount: ether('25'),
-                from: addr0,
+                from: addr.address,
             },
             {
-                predicate: this.swap.contract.methods.timestampBelow(0xff00000000).encodeABI(),
+                predicate: swap.interface.encodeFunctionData('timestampBelow', [0xff00000000]),
             },
         );
 
-        const signature1 = signOrder(order1, this.chainId, this.swap.address, addr1Wallet.getPrivateKey());
-        const signature2 = signOrder(order2, this.chainId, this.swap.address, addr1Wallet.getPrivateKey());
-        const signatureBackOrder = signOrder(backOrder, this.chainId, this.swap.address, addr0Wallet.getPrivateKey());
+        const signature1 = await signOrder(order1, chainId, swap.address, addr1);
+        const signature2 = await signOrder(order2, chainId, swap.address, addr1);
+        const signatureBackOrder = await signOrder(backOrder, chainId, swap.address, addr);
 
         const matchingParams =
-            this.matcher.address +
+            matcher.address +
             '01' +
-            web3.eth.abi
-                .encodeParameters(
+            abiCoder
+                .encode(
                     ['address[]', 'bytes[]'],
                     [
-                        [this.weth.address, this.dai.address],
+                        [weth.address, dai.address],
                         [
-                            this.weth.contract.methods.approve(this.swap.address, ether('0.0275')).encodeABI(),
-                            this.dai.contract.methods.approve(this.swap.address, ether('25')).encodeABI(),
+                            weth.interface.encodeFunctionData('approve', [swap.address, ether('0.0275')]),
+                            dai.interface.encodeFunctionData('approve', [swap.address, ether('25')]),
                         ],
                     ],
                 )
                 .substring(2);
 
         const internalInteraction =
-            this.matcher.address +
+            matcher.address +
             '00' +
-            this.swap.contract.methods
-                .fillOrderTo(
+            swap.interface
+                .encodeFunctionData('fillOrderTo', [
                     backOrder,
                     signatureBackOrder,
                     matchingParams,
                     ether('0.0275'),
                     0,
                     ether('25'),
-                    this.matcher.address,
-                )
-                .encodeABI()
+                    matcher.address,
+                ])
                 .substring(10);
 
         const externalInteraction =
-            this.matcher.address +
+            matcher.address +
             '00' +
-            this.swap.contract.methods
-                .fillOrderTo(
+            swap.interface
+                .encodeFunctionData('fillOrderTo', [
                     order2,
                     signature2,
                     internalInteraction,
                     ether('15'),
                     0,
                     ether('0.015'),
-                    this.matcher.address,
-                )
-                .encodeABI()
+                    matcher.address,
+                ])
                 .substring(10);
 
-        const addr0weth = await this.weth.balanceOf(addr0);
-        const addr1weth = await this.weth.balanceOf(addr1);
-        const addr0dai = await this.dai.balanceOf(addr0);
-        const addr1dai = await this.dai.balanceOf(addr1);
+        const addrweth = await weth.balanceOf(addr.address);
+        const addr1weth = await weth.balanceOf(addr1.address);
+        const addrdai = await dai.balanceOf(addr.address);
+        const addr1dai = await dai.balanceOf(addr1.address);
 
-        await this.matcher.settleOrders(
-            this.swap.address,
+        await matcher.settleOrders(
+            swap.address,
             order1,
             signature1,
             externalInteraction,
             ether('10'),
             0,
             ether('0.01'),
-            this.matcher.address,
+            matcher.address,
         );
 
-        expect(await this.weth.balanceOf(addr0)).to.be.bignumber.equal(addr0weth.sub(ether('0.0275')));
-        assertRoughlyEqualValues(await this.weth.balanceOf(addr1), addr1weth.add(ether('0.0275')), 1e-4);
+        expect(await weth.balanceOf(addr.address)).to.equal(addrweth.sub(ether('0.0275')));
+        assertRoughlyEqualValues(await weth.balanceOf(addr1.address), addr1weth.add(ether('0.0275')), 1e-4);
         // TODO: 15e-6 WETH lost into LimitOrderProtocol contract
-        expect(await this.dai.balanceOf(addr0)).to.be.bignumber.equal(addr0dai.add(ether('25')));
-        expect(await this.dai.balanceOf(addr1)).to.be.bignumber.equal(addr1dai.sub(ether('25')));
+        expect(await dai.balanceOf(addr.address)).to.equal(addrdai.add(ether('25')));
+        expect(await dai.balanceOf(addr1.address)).to.equal(addr1dai.sub(ether('25')));
     });
 
     describe('dutch auction params', async () => {
-        const prerareSingleOrder = async (orderStartTime, initialStartRate = '1000', duration = '1800', salt = '1') => {
-            const makerAsset = this.dai.address;
-            const takerAsset = this.weth.address;
+        const prerareSingleOrder = async ({
+            orderStartTime,
+            initialStartRate = '1000',
+            duration = '1800',
+            salt = '1',
+            dai,
+            weth,
+            swap,
+            matcher,
+        }) => {
+            const makerAsset = dai.address;
+            const takerAsset = weth.address;
             const makingAmount = ether('100');
             const takingAmount = ether('0.1');
             const order = await buildOrder(
@@ -364,52 +379,52 @@ describe('Settlement', async () => {
                     takerAsset,
                     makingAmount,
                     takingAmount,
-                    from: addr1,
+                    from: addr1.address,
                 },
                 {
-                    predicate: this.swap.contract.methods.timestampBelow(0xff00000000).encodeABI(),
+                    predicate: swap.interface.encodeFunctionData('timestampBelow', [0xff00000000]),
                 },
             );
+            const signature = await signOrder(order, chainId, swap.address, addr1);
 
-            const signature = signOrder(order, this.chainId, this.swap.address, addr1Wallet.getPrivateKey());
-
-            let actualTakingAmount = takingAmount;
-            const ts = await time.latest();
-            if (ts.lt(orderStartTime.add(toBN(duration)))) {
+            let actualTakingAmount = BigInt(takingAmount.toString());
+            const ts = BigInt(await time.latest());
+            if (ts < orderStartTime + BigInt(duration)) {
                 // actualTakingAmount = actualTakingAmount * (
                 //    _BASE_POINTS + initialStartRate * (orderTime + duration - currentTimestamp) / duration
                 // ) / _BASE_POINTS
-                actualTakingAmount = actualTakingAmount
-                    .mul(
-                        toBN('10000').add(
-                            toBN(initialStartRate)
-                                .mul(BN.min(toBN(orderStartTime).add(toBN(duration)).sub(ts), toBN(duration)))
-                                .div(toBN(duration)),
-                        ),
-                    )
-                    .div(toBN('10000'));
+                const minDuration =
+                    orderStartTime + BigInt(duration) - ts > BigInt(duration)
+                        ? BigInt(duration)
+                        : orderStartTime + BigInt(duration) - ts;
+                actualTakingAmount =
+                    (actualTakingAmount *
+                        (BigInt('10000') + (BigInt(initialStartRate) * minDuration) / BigInt(duration))) /
+                    BigInt('10000');
             }
 
             const matchingParams =
-                this.matcher.address +
+                matcher.address +
                 '01' +
-                web3.eth.abi
-                    .encodeParameters(
+                abiCoder
+                    .encode(
                         ['address[]', 'bytes[]'],
                         [
-                            [this.weth.address, this.weth.address, this.dai.address],
+                            [weth.address, weth.address, dai.address],
                             [
-                                this.weth.contract.methods
-                                    .transferFrom(addr0, this.matcher.address, actualTakingAmount)
-                                    .encodeABI(),
-                                this.weth.contract.methods.approve(this.swap.address, actualTakingAmount).encodeABI(),
-                                this.dai.contract.methods.transfer(addr0, makingAmount).encodeABI(),
+                                weth.interface.encodeFunctionData('transferFrom', [
+                                    addr.address,
+                                    matcher.address,
+                                    actualTakingAmount,
+                                ]),
+                                weth.interface.encodeFunctionData('approve', [swap.address, actualTakingAmount]),
+                                dai.interface.encodeFunctionData('transfer', [addr.address, makingAmount]),
                             ],
                         ],
                     )
                     .substring(2);
 
-            await this.weth.approve(this.matcher.address, actualTakingAmount);
+            await weth.approve(matcher.address, actualTakingAmount);
             return {
                 order,
                 signature,
@@ -422,422 +437,447 @@ describe('Settlement', async () => {
         };
 
         it('matching order before orderTime has maximal rate bump', async () => {
-            const currentTimestamp = await time.latest();
-            const { order, signature, interaction, makingAmount, takingAmount } = await prerareSingleOrder(
-                currentTimestamp.addn(60),
-            );
+            const { dai, weth, swap, matcher } = await loadFixture(initContracts);
 
-            const addr0weth = await this.weth.balanceOf(addr0);
-            const addr1weth = await this.weth.balanceOf(addr1);
+            const currentTimestamp = BigInt(await time.latest());
+            const { order, signature, interaction, makingAmount, takingAmount } = await prerareSingleOrder({
+                orderStartTime: currentTimestamp + BigInt(60),
+                dai,
+                weth,
+                swap,
+                matcher,
+            });
 
-            await this.matcher.settleOrders(
-                this.swap.address,
+            const addrweth = await weth.balanceOf(addr.address);
+            const addr1weth = await weth.balanceOf(addr1.address);
+
+            await matcher.settleOrders(
+                swap.address,
                 order,
                 signature,
                 interaction,
                 makingAmount,
                 0,
                 takingAmount,
-                this.matcher.address,
+                matcher.address,
             );
 
-            expect(await this.weth.balanceOf(addr1)).to.be.bignumber.equal(addr1weth.add(ether('0.11')));
-            expect(await this.weth.balanceOf(addr0)).to.be.bignumber.equal(addr0weth.sub(ether('0.11')));
+            expect(await weth.balanceOf(addr1.address)).to.equal(addr1weth.add(ether('0.11')));
+            expect(await weth.balanceOf(addr.address)).to.equal(addrweth.sub(ether('0.11')));
         });
 
         it('set initial rate', async () => {
-            const currentTimestamp = await time.latest();
-            const { order, signature, interaction, makingAmount, takingAmount } = await prerareSingleOrder(
-                currentTimestamp,
-                '2000',
-            );
+            const { dai, weth, swap, matcher } = await loadFixture(initContracts);
 
-            const addr0weth = await this.weth.balanceOf(addr0);
-            const addr1weth = await this.weth.balanceOf(addr1);
-            await this.matcher.settleOrders(
-                this.swap.address,
+            const currentTimestamp = BigInt(await time.latest());
+            const { order, signature, interaction, makingAmount, takingAmount } = await prerareSingleOrder({
+                orderStartTime: currentTimestamp,
+                initialStartRate: '2000',
+                dai,
+                weth,
+                swap,
+                matcher,
+            });
+
+            const addrweth = await weth.balanceOf(addr.address);
+            const addr1weth = await weth.balanceOf(addr1.address);
+            await matcher.settleOrders(
+                swap.address,
                 order,
                 signature,
                 interaction,
                 makingAmount,
                 0,
                 takingAmount,
-                this.matcher.address,
+                matcher.address,
             );
 
-            expect(await this.weth.balanceOf(addr0)).to.be.bignumber.equal(addr0weth.sub(ether('0.12')));
-            assertRoughlyEqualValues(await this.weth.balanceOf(addr1), addr1weth.add(ether('0.12')), 1e-4);
+            expect(await weth.balanceOf(addr.address)).to.equal(addrweth.sub(ether('0.12')));
+            assertRoughlyEqualValues(await weth.balanceOf(addr1.address), addr1weth.add(ether('0.12')), 1e-4);
         });
 
         it('set duration', async () => {
-            const currentTimestamp = await time.latest();
-            const { order, signature, interaction, makingAmount, takingAmount } = await prerareSingleOrder(
-                currentTimestamp.subn(450),
-                '1000',
-                '900',
-            );
+            const { dai, weth, swap, matcher } = await loadFixture(initContracts);
 
-            const addr0weth = await this.weth.balanceOf(addr0);
-            const addr1weth = await this.weth.balanceOf(addr1);
-            await this.matcher.settleOrders(
-                this.swap.address,
+            const currentTimestamp = BigInt(await time.latest());
+            const { order, signature, interaction, makingAmount, takingAmount } = await prerareSingleOrder({
+                orderStartTime: currentTimestamp - BigInt(450),
+                initialStartRate: '1000',
+                duration: '900',
+                dai,
+                weth,
+                swap,
+                matcher,
+            });
+
+            const addrweth = await weth.balanceOf(addr.address);
+            const addr1weth = await weth.balanceOf(addr1.address);
+            await matcher.settleOrders(
+                swap.address,
                 order,
                 signature,
                 interaction,
                 makingAmount,
                 0,
                 takingAmount,
-                this.matcher.address,
+                matcher.address,
             );
 
-            expect(await this.weth.balanceOf(addr0)).to.be.bignumber.equal(addr0weth.sub(ether('0.105')));
-            assertRoughlyEqualValues(await this.weth.balanceOf(addr1), addr1weth.add(ether('0.105')), 1e-4);
+            expect(await weth.balanceOf(addr.address)).to.equal(addrweth.sub(ether('0.105')));
+            assertRoughlyEqualValues(await weth.balanceOf(addr1.address), addr1weth.add(ether('0.105')), 1e-4);
         });
     });
 
     it('should change creditAllowance with non-zero fee', async () => {
+        const { dai, weth, swap, matcher } = await loadFixture(initContracts);
+
         const orderFee = 100;
         const backOrderFee = 125;
         const order = await buildOrder({
             salt: buildSalt({ orderStartTime: await defaultExpiredAuctionTimestamp(), fee: orderFee }),
-            makerAsset: this.dai.address,
-            takerAsset: this.weth.address,
+            makerAsset: dai.address,
+            takerAsset: weth.address,
             makingAmount: ether('100'),
             takingAmount: ether('0.1'),
-            from: addr0,
+            from: addr.address,
         });
         const backOrder = await buildOrder({
             salt: buildSalt({ orderStartTime: await defaultExpiredAuctionTimestamp(), fee: backOrderFee }),
-            makerAsset: this.weth.address,
-            takerAsset: this.dai.address,
+            makerAsset: weth.address,
+            takerAsset: dai.address,
             makingAmount: ether('0.1'),
             takingAmount: ether('100'),
-            from: addr1,
+            from: addr1.address,
         });
-        const signature = signOrder(order, this.chainId, this.swap.address, addr0Wallet.getPrivateKey());
-        const signatureBackOrder = signOrder(backOrder, this.chainId, this.swap.address, addr1Wallet.getPrivateKey());
+        const signature = await signOrder(order, chainId, swap.address, addr);
+        const signatureBackOrder = await signOrder(backOrder, chainId, swap.address, addr1);
         const matchingParams =
-            this.matcher.address +
+            matcher.address +
             '01' +
-            web3.eth.abi
-                .encodeParameters(
+            abiCoder
+                .encode(
                     ['address[]', 'bytes[]'],
                     [
-                        [this.weth.address, this.dai.address],
+                        [weth.address, dai.address],
                         [
-                            this.weth.contract.methods.approve(this.swap.address, ether('0.1')).encodeABI(),
-                            this.dai.contract.methods.approve(this.swap.address, ether('100')).encodeABI(),
+                            weth.interface.encodeFunctionData('approve', [swap.address, ether('0.1')]),
+                            dai.interface.encodeFunctionData('approve', [swap.address, ether('100')]),
                         ],
                     ],
                 )
                 .substring(2);
         const interaction =
-            this.matcher.address +
+            matcher.address +
             '00' +
-            this.swap.contract.methods
-                .fillOrderTo(
+            swap.interface
+                .encodeFunctionData('fillOrderTo', [
                     backOrder,
                     signatureBackOrder,
                     matchingParams,
                     ether('0.1'),
                     0,
                     ether('100'),
-                    this.matcher.address,
-                )
-                .encodeABI()
+                    matcher.address,
+                ])
                 .substring(10);
-        const creditAllowanceBefore = await this.matcher.creditAllowance(addr0);
-        await this.matcher.settleOrdersEOA(
-            this.swap.address,
+        const creditAllowanceBefore = await matcher.creditAllowance(addr.address);
+        await matcher.settleOrdersEOA(
+            swap.address,
             order,
             signature,
             interaction,
             ether('100'),
             0,
             ether('0.1'),
-            this.matcher.address,
+            matcher.address,
         );
-        expect(await this.matcher.creditAllowance(addr0)).to.be.bignumber.eq(
-            creditAllowanceBefore.sub(basePoints.muln(orderFee)).sub(basePoints.muln(backOrderFee)),
+        expect(await matcher.creditAllowance(addr.address)).to.equal(
+            creditAllowanceBefore.sub(basePoints.mul(orderFee)).sub(basePoints.mul(backOrderFee)),
         );
     });
 
     it('should change creditAllowance with non-zero fee, msg.sender', async () => {
+        const { dai, weth, swap, matcher } = await loadFixture(initContracts);
+
         const orderFee = 100;
         const backOrderFee = 125;
         const order = await buildOrder({
             salt: buildSalt({ orderStartTime: await defaultExpiredAuctionTimestamp(), fee: orderFee }),
-            makerAsset: this.dai.address,
-            takerAsset: this.weth.address,
+            makerAsset: dai.address,
+            takerAsset: weth.address,
             makingAmount: ether('100'),
             takingAmount: ether('0.1'),
-            from: addr0,
+            from: addr.address,
         });
         const backOrder = await buildOrder({
             salt: buildSalt({ orderStartTime: await defaultExpiredAuctionTimestamp(), fee: backOrderFee }),
-            makerAsset: this.weth.address,
-            takerAsset: this.dai.address,
+            makerAsset: weth.address,
+            takerAsset: dai.address,
             makingAmount: ether('0.1'),
             takingAmount: ether('100'),
-            from: addr1,
+            from: addr1.address,
         });
-        const signature = signOrder(order, this.chainId, this.swap.address, addr0Wallet.getPrivateKey());
-        const signatureBackOrder = signOrder(backOrder, this.chainId, this.swap.address, addr1Wallet.getPrivateKey());
+        const signature = await signOrder(order, chainId, swap.address, addr);
+        const signatureBackOrder = await signOrder(backOrder, chainId, swap.address, addr1);
         const matchingParams =
-            this.matcher.address +
+            matcher.address +
             '01' +
-            web3.eth.abi
-                .encodeParameters(
+            abiCoder
+                .encode(
                     ['address[]', 'bytes[]'],
                     [
-                        [this.weth.address, this.dai.address],
+                        [weth.address, dai.address],
                         [
-                            this.weth.contract.methods.approve(this.swap.address, ether('0.1')).encodeABI(),
-                            this.dai.contract.methods.approve(this.swap.address, ether('100')).encodeABI(),
+                            weth.interface.encodeFunctionData('approve', [swap.address, ether('0.1')]),
+                            dai.interface.encodeFunctionData('approve', [swap.address, ether('100')]),
                         ],
                     ],
                 )
                 .substring(2);
         const interaction =
-            this.matcher.address +
+            matcher.address +
             '00' +
-            this.swap.contract.methods
-                .fillOrderTo(
+            swap.interface
+                .encodeFunctionData('fillOrderTo', [
                     backOrder,
                     signatureBackOrder,
                     matchingParams,
                     ether('0.1'),
                     0,
                     ether('100'),
-                    this.matcher.address,
-                )
-                .encodeABI()
+                    matcher.address,
+                ])
                 .substring(10);
-        const creditAllowanceBefore = await this.matcher.creditAllowance(addr0);
-        await this.matcher.settleOrders(
-            this.swap.address,
+        const creditAllowanceBefore = await matcher.creditAllowance(addr.address);
+        await matcher.settleOrders(
+            swap.address,
             order,
             signature,
             interaction,
             ether('100'),
             0,
             ether('0.1'),
-            this.matcher.address,
+            matcher.address,
         );
-        expect(await this.matcher.creditAllowance(addr0)).to.be.bignumber.eq(
-            creditAllowanceBefore.sub(basePoints.muln(orderFee)).sub(basePoints.muln(backOrderFee)),
+        expect(await matcher.creditAllowance(addr.address)).to.equal(
+            creditAllowanceBefore.sub(basePoints.mul(orderFee)).sub(basePoints.mul(backOrderFee)),
         );
     });
 
     it('should change creditAllowance with non-zero fee, proxy contract, tx.origin', async () => {
+        const { dai, weth, swap, matcher, proxy } = await loadFixture(initContracts);
+
         const orderFee = 100;
         const backOrderFee = 125;
         const order = await buildOrder({
             salt: buildSalt({ orderStartTime: await defaultExpiredAuctionTimestamp(), fee: orderFee }),
-            makerAsset: this.dai.address,
-            takerAsset: this.weth.address,
+            makerAsset: dai.address,
+            takerAsset: weth.address,
             makingAmount: ether('100'),
             takingAmount: ether('0.1'),
-            from: addr0,
+            from: addr.address,
         });
         const backOrder = await buildOrder({
             salt: buildSalt({ orderStartTime: await defaultExpiredAuctionTimestamp(), fee: backOrderFee }),
-            makerAsset: this.weth.address,
-            takerAsset: this.dai.address,
+            makerAsset: weth.address,
+            takerAsset: dai.address,
             makingAmount: ether('0.1'),
             takingAmount: ether('100'),
-            from: addr1,
+            from: addr1.address,
         });
-        const signature = signOrder(order, this.chainId, this.swap.address, addr0Wallet.getPrivateKey());
-        const signatureBackOrder = signOrder(backOrder, this.chainId, this.swap.address, addr1Wallet.getPrivateKey());
+        const signature = await signOrder(order, chainId, swap.address, addr);
+        const signatureBackOrder = await signOrder(backOrder, chainId, swap.address, addr1);
         const matchingParams =
-            this.matcher.address +
+            matcher.address +
             '01' +
-            web3.eth.abi
-                .encodeParameters(
+            abiCoder
+                .encode(
                     ['address[]', 'bytes[]'],
                     [
-                        [this.weth.address, this.dai.address],
+                        [weth.address, dai.address],
                         [
-                            this.weth.contract.methods.approve(this.swap.address, ether('0.1')).encodeABI(),
-                            this.dai.contract.methods.approve(this.swap.address, ether('100')).encodeABI(),
+                            weth.interface.encodeFunctionData('approve', [swap.address, ether('0.1')]),
+                            dai.interface.encodeFunctionData('approve', [swap.address, ether('100')]),
                         ],
                     ],
                 )
                 .substring(2);
         const interaction =
-            this.matcher.address +
+            matcher.address +
             '00' +
-            this.swap.contract.methods
-                .fillOrderTo(
+            swap.interface
+                .encodeFunctionData('fillOrderTo', [
                     backOrder,
                     signatureBackOrder,
                     matchingParams,
                     ether('0.1'),
                     0,
                     ether('100'),
-                    this.matcher.address,
-                )
-                .encodeABI()
+                    matcher.address,
+                ])
                 .substring(10);
-        const creditAllowanceBefore = await this.matcher.creditAllowance(addr0);
-        await this.proxy.settleOrdersEOA(
-            this.swap.address,
+        const creditAllowanceBefore = await matcher.creditAllowance(addr.address);
+        await proxy.settleOrdersEOA(
+            swap.address,
             order,
             signature,
             interaction,
             ether('100'),
             0,
             ether('0.1'),
-            this.matcher.address,
+            matcher.address,
         );
-        expect(await this.matcher.creditAllowance(addr0)).to.be.bignumber.eq(
-            creditAllowanceBefore.sub(basePoints.muln(orderFee)).sub(basePoints.muln(backOrderFee)),
+        expect(await matcher.creditAllowance(addr.address)).to.equal(
+            creditAllowanceBefore.sub(basePoints.mul(orderFee)).sub(basePoints.mul(backOrderFee)),
         );
     });
 
     it('should change creditAllowance with non-zero fee, proxy contract, msg.sender', async () => {
+        const { dai, weth, swap, matcher, proxy } = await loadFixture(initContracts);
+
         const orderFee = 100;
         const backOrderFee = 125;
         const order = await buildOrder({
             salt: buildSalt({ orderStartTime: await defaultExpiredAuctionTimestamp(), fee: orderFee }),
-            makerAsset: this.dai.address,
-            takerAsset: this.weth.address,
+            makerAsset: dai.address,
+            takerAsset: weth.address,
             makingAmount: ether('100'),
             takingAmount: ether('0.1'),
-            from: addr0,
+            from: addr.address,
         });
         const backOrder = await buildOrder({
             salt: buildSalt({ orderStartTime: await defaultExpiredAuctionTimestamp(), fee: backOrderFee }),
-            makerAsset: this.weth.address,
-            takerAsset: this.dai.address,
+            makerAsset: weth.address,
+            takerAsset: dai.address,
             makingAmount: ether('0.1'),
             takingAmount: ether('100'),
-            from: addr1,
+            from: addr1.address,
         });
-        const signature = signOrder(order, this.chainId, this.swap.address, addr0Wallet.getPrivateKey());
-        const signatureBackOrder = signOrder(backOrder, this.chainId, this.swap.address, addr1Wallet.getPrivateKey());
+        const signature = await signOrder(order, chainId, swap.address, addr);
+        const signatureBackOrder = await signOrder(backOrder, chainId, swap.address, addr1);
         const matchingParams =
-            this.matcher.address +
+            matcher.address +
             '01' +
-            web3.eth.abi
-                .encodeParameters(
+            abiCoder
+                .encode(
                     ['address[]', 'bytes[]'],
                     [
-                        [this.weth.address, this.dai.address],
+                        [weth.address, dai.address],
                         [
-                            this.weth.contract.methods.approve(this.swap.address, ether('0.1')).encodeABI(),
-                            this.dai.contract.methods.approve(this.swap.address, ether('100')).encodeABI(),
+                            weth.interface.encodeFunctionData('approve', [swap.address, ether('0.1')]),
+                            dai.interface.encodeFunctionData('approve', [swap.address, ether('100')]),
                         ],
                     ],
                 )
                 .substring(2);
         const interaction =
-            this.matcher.address +
+            matcher.address +
             '00' +
-            this.swap.contract.methods
-                .fillOrderTo(
+            swap.interface
+                .encodeFunctionData('fillOrderTo', [
                     backOrder,
                     signatureBackOrder,
                     matchingParams,
                     ether('0.1'),
                     0,
                     ether('100'),
-                    this.matcher.address,
-                )
-                .encodeABI()
+                    matcher.address,
+                ])
                 .substring(10);
-        await this.whitelistRegistrySimple.setStatus(this.proxy.address, Status.Verified);
-        await this.proxy.deposit(ether('100'));
-        const creditAllowanceBefore = await this.matcher.creditAllowance(this.proxy.address);
-        await this.proxy.settleOrders(
-            this.swap.address,
+        await whitelistRegistrySimple.setStatus(proxy.address, Status.Verified);
+        await proxy.deposit(ether('100'));
+        const creditAllowanceBefore = await matcher.creditAllowance(proxy.address);
+        await proxy.settleOrders(
+            swap.address,
             order,
             signature,
             interaction,
             ether('100'),
             0,
             ether('0.1'),
-            this.matcher.address,
+            matcher.address,
         );
-        expect(await this.matcher.creditAllowance(this.proxy.address)).to.be.bignumber.eq(
-            creditAllowanceBefore.sub(basePoints.muln(orderFee)).sub(basePoints.muln(backOrderFee)),
+        expect(await matcher.creditAllowance(proxy.address)).to.equal(
+            creditAllowanceBefore.sub(basePoints.mul(orderFee)).sub(basePoints.mul(backOrderFee)),
         );
     });
 
     it('should not change when creditAllowance is not enough', async () => {
+        const { dai, weth, swap, matcher } = await loadFixture(initContracts);
+
         const orderFee = ether('1000').toString();
         const backOrderFee = 125;
         const order = await buildOrder({
             salt: buildSalt({ orderStartTime: await defaultExpiredAuctionTimestamp(), fee: orderFee }),
-            makerAsset: this.dai.address,
-            takerAsset: this.weth.address,
+            makerAsset: dai.address,
+            takerAsset: weth.address,
             makingAmount: ether('100'),
             takingAmount: ether('0.1'),
-            from: addr0,
+            from: addr.address,
         });
         const backOrder = await buildOrder({
             salt: buildSalt({ orderStartTime: await defaultExpiredAuctionTimestamp(), fee: backOrderFee }),
-            makerAsset: this.weth.address,
-            takerAsset: this.dai.address,
+            makerAsset: weth.address,
+            takerAsset: dai.address,
             makingAmount: ether('0.1'),
             takingAmount: ether('100'),
-            from: addr1,
+            from: addr1.address,
         });
-        const signature = signOrder(order, this.chainId, this.swap.address, addr0Wallet.getPrivateKey());
-        const signatureBackOrder = signOrder(backOrder, this.chainId, this.swap.address, addr1Wallet.getPrivateKey());
+        const signature = await signOrder(order, chainId, swap.address, addr);
+        const signatureBackOrder = await signOrder(backOrder, chainId, swap.address, addr1);
         const matchingParams =
-            this.matcher.address +
+            matcher.address +
             '01' +
-            web3.eth.abi
-                .encodeParameters(
+            abiCoder
+                .encode(
                     ['address[]', 'bytes[]'],
                     [
-                        [this.weth.address, this.dai.address],
+                        [weth.address, dai.address],
                         [
-                            this.weth.contract.methods.approve(this.swap.address, ether('0.1')).encodeABI(),
-                            this.dai.contract.methods.approve(this.swap.address, ether('100')).encodeABI(),
+                            weth.interface.encodeFunctionData('approve', [swap.address, ether('0.1')]),
+                            dai.interface.encodeFunctionData('approve', [swap.address, ether('100')]),
                         ],
                     ],
                 )
                 .substring(2);
         const interaction =
-            this.matcher.address +
+            matcher.address +
             '00' +
-            this.swap.contract.methods
-                .fillOrderTo(
+            swap.interface
+                .encodeFunctionData('fillOrderTo', [
                     backOrder,
                     signatureBackOrder,
                     matchingParams,
                     ether('0.1'),
                     0,
                     ether('100'),
-                    this.matcher.address,
-                )
-                .encodeABI()
+                    matcher.address,
+                ])
                 .substring(10);
         await expect(
-            this.matcher.settleOrdersEOA(
-                this.swap.address,
+            matcher.settleOrdersEOA(
+                swap.address,
                 order,
                 signature,
                 interaction,
                 ether('100'),
                 0,
                 ether('0.1'),
-                this.matcher.address,
+                matcher.address,
             ),
-        ).to.eventually.be.rejectedWith('NotEnoughCredit()');
+        ).to.be.revertedWithCustomError(matcher, 'NotEnoughCredit');
     });
 
     describe('setFeeBank', async () => {
         it('should change feeBank', async () => {
-            expect(await this.matcher.feeBank()).to.be.not.equals(addr1);
-            await this.matcher.setFeeBank(addr1);
-            expect((await this.matcher.feeBank()).toLowerCase()).to.be.equals(addr1.toLowerCase());
+            const { matcher } = await loadFixture(initContracts);
+            expect(await matcher.feeBank()).to.not.equal(addr1.address);
+            await matcher.setFeeBank(addr1.address);
+            expect(await matcher.feeBank()).to.equal(addr1.address);
         });
         it('should not change feeBank by non-owner', async () => {
-            await expect(this.matcher.setFeeBank(addr1, { from: addr1 })).to.eventually.be.rejectedWith(
+            const { matcher } = await loadFixture(initContracts);
+            await expect(matcher.connect(addr1).setFeeBank(addr1.address)).to.be.revertedWith(
                 'Ownable: caller is not the owner',
             );
         });
@@ -845,35 +885,44 @@ describe('Settlement', async () => {
 
     describe('increaseCreditAllowance', async () => {
         it('should increase credit', async () => {
+            const { matcher } = await loadFixture(initContracts);
             const amount = ether('100');
-            expect(await this.matcher.creditAllowance(addr1)).to.be.bignumber.eq('0');
-            await this.matcher.setFeeBank(addr0);
-            await this.matcher.increaseCreditAllowance(addr1, amount);
-            expect(await this.matcher.creditAllowance(addr1)).to.be.bignumber.eq(amount);
+            expect(await matcher.creditAllowance(addr1.address)).to.equal('0');
+            await matcher.setFeeBank(addr.address);
+            await matcher.increaseCreditAllowance(addr1.address, amount);
+            expect(await matcher.creditAllowance(addr1.address)).to.equal(amount);
         });
         it('should not increase credit by non-feeBank address', async () => {
-            await expect(this.matcher.increaseCreditAllowance(addr1, ether('100'))).to.eventually.be.rejectedWith(
-                'OnlyFeeBankAccess()',
+            const { matcher } = await loadFixture(initContracts);
+            await expect(matcher.increaseCreditAllowance(addr1.address, ether('100'))).to.be.revertedWithCustomError(
+                matcher,
+                'OnlyFeeBankAccess',
             );
         });
     });
 
     describe('decreaseCreditAllowance', async () => {
-        beforeEach(async () => {
-            this.creditAmount = ether('100');
-            await this.matcher.setFeeBank(addr0);
-            await this.matcher.increaseCreditAllowance(addr1, this.creditAmount);
-        });
+        async function initContractsAndAllowance() {
+            const { matcher, feeBank } = await initContracts();
+            const creditAmount = ether('100');
+            await matcher.setFeeBank(addr.address);
+            await matcher.increaseCreditAllowance(addr1.address, creditAmount);
+            return { matcher, feeBank, creditAmount };
+        }
+
         it('should decrease credit', async () => {
+            const { matcher, creditAmount } = await loadFixture(initContractsAndAllowance);
             const amount = ether('10');
-            expect(await this.matcher.creditAllowance(addr1)).to.be.bignumber.eq(this.creditAmount);
-            await this.matcher.decreaseCreditAllowance(addr1, amount);
-            expect(await this.matcher.creditAllowance(addr1)).to.be.bignumber.eq(this.creditAmount.sub(amount));
+            expect(await matcher.creditAllowance(addr1.address)).to.equal(creditAmount);
+            await matcher.decreaseCreditAllowance(addr1.address, amount);
+            expect(await matcher.creditAllowance(addr1.address)).to.equal(creditAmount.sub(amount));
         });
         it('should not deccrease credit by non-feeBank address', async () => {
-            await this.matcher.setFeeBank(this.feeBank.address);
-            await expect(this.matcher.decreaseCreditAllowance(addr1, ether('10'))).to.eventually.be.rejectedWith(
-                'OnlyFeeBankAccess()',
+            const { matcher, feeBank } = await loadFixture(initContractsAndAllowance);
+            await matcher.setFeeBank(feeBank.address);
+            await expect(matcher.decreaseCreditAllowance(addr1.address, ether('10'))).to.be.revertedWithCustomError(
+                matcher,
+                'OnlyFeeBankAccess',
             );
         });
     });
