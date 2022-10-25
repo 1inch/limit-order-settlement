@@ -13,6 +13,7 @@ import "./helpers/VotingPowerCalculator.sol";
 contract WhitelistRegistry is IWhitelistRegistry, Ownable {
     using UniERC20 for IERC20;
     using AddressSet for AddressSet.Data;
+    using AddressArray for AddressArray.Data;
 
     error BalanceLessThanThreshold();
     error NotEnoughBalance();
@@ -20,10 +21,9 @@ contract WhitelistRegistry is IWhitelistRegistry, Ownable {
     event Registered(address addr);
     event SetResolverThreshold(uint256 threshold);
 
-    uint256 public immutable maxWhitelisted;
-
     AddressSet.Data private _whitelist;
 
+    uint256 public maxWhitelisted;
     uint256 public resolverThreshold;
     IVotable public immutable token;
 
@@ -85,6 +85,53 @@ contract WhitelistRegistry is IWhitelistRegistry, Ownable {
                     i++;
                 }
             }
+        }
+    }
+
+    function getWhitelist() public view returns (address[] memory) {
+        return _whitelist.items.get();
+    }
+
+    function setMaxWhitelisted(uint256 size) external onlyOwner {
+        uint256 whitelistLength = _whitelist.length();
+        if (size < whitelistLength) {
+            _shrinkPoorest(_whitelist, token, whitelistLength - size);
+        }
+        maxWhitelisted = size;
+    }
+
+    function _shrinkPoorest(AddressSet.Data storage set, IVotable vtoken, uint256 size) private {
+        uint256 richestIndex = 0;
+        address[] memory addresses = set.items.get();
+        uint256[] memory balances = new uint256[](addresses.length);
+        for (uint256 i = 0; i < addresses.length; i++) {
+            balances[i] = vtoken.balanceOf(addresses[i]);
+            if (balances[i] > balances[richestIndex]) {
+                richestIndex = i;
+            }
+        }
+
+        for (uint256 i = size; i < addresses.length; i++) {
+            if (balances[i] <= balances[richestIndex]) {
+                // Swap i-th and richest-th elements
+                (addresses[i], addresses[richestIndex]) = (addresses[richestIndex], addresses[i]);
+                (balances[i], balances[richestIndex]) = (balances[richestIndex], balances[i]);
+
+                // Find new richest in first size elements
+                if (i < addresses.length) {
+                    richestIndex = 0;
+                    for (uint256 j = 1; j < size; j++) {
+                        if (balances[j] > balances[richestIndex]) {
+                            richestIndex = j;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Remove poorest elements from set
+        for (uint256 i = 0; i < size; i++) {
+            set.remove(addresses[i]);
         }
     }
 }
