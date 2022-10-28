@@ -5,7 +5,7 @@ const { ether } = require('./helpers/orderUtils');
 const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
 const { getChainId } = require('./helpers/fixtures');
 
-describe('St1inch', async () => {
+describe('St1inch', function () {
     let addr, addr1;
     const baseExp = BN.from('999999981746377019');
     const votingPowerDivider = BN.from(10);
@@ -72,12 +72,12 @@ describe('St1inch', async () => {
         return { oneInch, st1inch };
     }
 
-    before(async () => {
+    before(async function () {
         [addr, addr1] = await ethers.getSigners();
         chainId = await getChainId();
     });
 
-    it('should take users deposit', async () => {
+    it('should take users deposit', async function () {
         const { st1inch } = await loadFixture(initContracts);
 
         expect(await st1inch.depositsAmount(addr.address)).to.equal(0);
@@ -89,7 +89,7 @@ describe('St1inch', async () => {
         await checkBalances(addr.address, ether('100'), time.duration.days('1'), st1inch);
     });
 
-    it('should take users deposit with permit', async () => {
+    it('should take users deposit with permit', async function () {
         const { oneInch, st1inch } = await loadFixture(initContracts);
 
         expect(await st1inch.depositsAmount(addr.address)).to.equal(0);
@@ -103,7 +103,7 @@ describe('St1inch', async () => {
         await checkBalances(addr.address, ether('100'), time.duration.days('1'), st1inch);
     });
 
-    it('should take users deposit for other account', async () => {
+    it('should take users deposit for other account', async function () {
         const { oneInch, st1inch } = await loadFixture(initContracts);
 
         expect(await st1inch.depositsAmount(addr1.address)).to.equal(0);
@@ -122,7 +122,7 @@ describe('St1inch', async () => {
         expect(await st1inch.votingPowerOf(addr.address)).to.equal(0);
     });
 
-    it('should take users deposit with permit for other account', async () => {
+    it('should take users deposit with permit for other account', async function () {
         const { oneInch, st1inch } = await loadFixture(initContracts);
 
         expect(await st1inch.depositsAmount(addr1.address)).to.equal(0);
@@ -143,7 +143,7 @@ describe('St1inch', async () => {
         expect(await st1inch.votingPowerOf(addr.address)).to.equal(0);
     });
 
-    it('should increase unlock time for deposit (call deposit)', async () => {
+    it('should increase unlock time for deposit (call deposit)', async function () {
         const { st1inch } = await loadFixture(initContracts);
         await st1inch.deposit(ether('100'), time.duration.days('1'));
         await timeIncreaseTo(await st1inch.unlockTime(addr.address));
@@ -152,7 +152,7 @@ describe('St1inch', async () => {
         await checkBalances(addr.address, ether('100'), time.duration.years('2'), st1inch);
     });
 
-    it('should increase unlock time for deposit (call increaseLockDuration)', async () => {
+    it('should increase unlock time for deposit (call increaseLockDuration)', async function () {
         const { st1inch } = await loadFixture(initContracts);
         await st1inch.deposit(ether('70'), time.duration.days('1'));
         await timeIncreaseTo(await st1inch.unlockTime(addr.address));
@@ -161,7 +161,7 @@ describe('St1inch', async () => {
         await checkBalances(addr.address, ether('70'), time.duration.days('10'), st1inch);
     });
 
-    it('should increase deposit amount (call deposit)', async () => {
+    it('should increase deposit amount (call deposit)', async function () {
         const { st1inch } = await loadFixture(initContracts);
         await st1inch.deposit(ether('20'), time.duration.days('10'));
 
@@ -172,63 +172,63 @@ describe('St1inch', async () => {
         await checkBalances(addr.address, ether('50'), unlockTime.sub(await time.latest()), st1inch);
     });
 
-    it('call deposit, 1 year lock, compare voting power against expected value', async () => {
+    it('call deposit, 1 year lock, compare voting power against expected value', async function () {
         const { st1inch } = await loadFixture(initContracts);
         const origin = await st1inch.origin();
         await st1inch.deposit(ether('1'), time.duration.days('365'));
         assertRoughlyEqualValues(await st1inch.votingPowerOfAt(addr.address, origin), ether('0.17782'), 1e-4);
     });
 
-    it('call deposit, 2 years lock, compare voting power against expected value', async () => {
+    it('call deposit, 2 years lock, compare voting power against expected value', async function () {
         const { st1inch } = await loadFixture(initContracts);
         const origin = await st1inch.origin();
         await st1inch.deposit(ether('1'), time.duration.days('730'));
         assertRoughlyEqualValues(await st1inch.votingPowerOfAt(addr.address, origin), ether('0.31622'), 1e-4);
     });
 
-    it('call deposit, 3 years lock, compare voting power against expected value', async () => {
+    it('call deposit, 3 years lock, compare voting power against expected value', async function () {
         const { st1inch } = await loadFixture(initContracts);
         const origin = await st1inch.origin();
         await st1inch.deposit(ether('1'), time.duration.days('1095'));
         assertRoughlyEqualValues(await st1inch.votingPowerOfAt(addr.address, origin), ether('0.56234'), 1e-4);
     });
 
-    it('call deposit, 4 years lock, compare voting power against expected value', async () => {
+    it('call deposit, 4 years lock, compare voting power against expected value', async function () {
         const { st1inch } = await loadFixture(initContracts);
         const origin = await st1inch.origin();
         await st1inch.deposit(ether('1'), time.duration.days('1460'));
         assertRoughlyEqualValues(await st1inch.votingPowerOfAt(addr.address, origin), ether('1'), 1e-4);
     });
 
-    it('call deposit, 1 year lock, compare voting power against expected value after the lock end', async () => {
+    it('call deposit, 1 year lock, compare voting power against expected value after the lock end', async function () {
         const { st1inch } = await loadFixture(initContracts);
         await st1inch.deposit(ether('1'), time.duration.days('365'));
         const unlockTime = await st1inch.unlockTime(addr.address);
         assertRoughlyEqualValues(await st1inch.votingPowerOfAt(addr.address, unlockTime), ether('0.1'), 1e-4);
     });
 
-    it('call deposit, 2 years lock, compare voting power against expected value after the lock end', async () => {
+    it('call deposit, 2 years lock, compare voting power against expected value after the lock end', async function () {
         const { st1inch } = await loadFixture(initContracts);
         await st1inch.deposit(ether('1'), time.duration.days('730'));
         const unlockTime = await st1inch.unlockTime(addr.address);
         assertRoughlyEqualValues(await st1inch.votingPowerOfAt(addr.address, unlockTime), ether('0.1'), 1e-4);
     });
 
-    it('call deposit, 3 years lock, compare voting power against expected value after the lock end', async () => {
+    it('call deposit, 3 years lock, compare voting power against expected value after the lock end', async function () {
         const { st1inch } = await loadFixture(initContracts);
         await st1inch.deposit(ether('1'), time.duration.days('1095'));
         const unlockTime = await st1inch.unlockTime(addr.address);
         assertRoughlyEqualValues(await st1inch.votingPowerOfAt(addr.address, unlockTime), ether('0.1'), 1e-4);
     });
 
-    it('call deposit, 4 years lock, compare voting power against expected value after the lock end', async () => {
+    it('call deposit, 4 years lock, compare voting power against expected value after the lock end', async function () {
         const { st1inch } = await loadFixture(initContracts);
         await st1inch.deposit(ether('1'), time.duration.days('1460'));
         const unlockTime = await st1inch.unlockTime(addr.address);
         assertRoughlyEqualValues(await st1inch.votingPowerOfAt(addr.address, unlockTime), ether('0.1'), 1e-4);
     });
 
-    it('should increase deposit amount (call increaseAmount)', async () => {
+    it('should increase deposit amount (call increaseAmount)', async function () {
         const { st1inch } = await loadFixture(initContracts);
         await st1inch.deposit(ether('70'), time.duration.days('100'));
 
@@ -239,7 +239,7 @@ describe('St1inch', async () => {
         await checkBalances(addr.address, ether('90'), unlockTime.sub(await time.latest()), st1inch);
     });
 
-    it('should withdraw users deposit', async () => {
+    it('should withdraw users deposit', async function () {
         const { oneInch, st1inch } = await loadFixture(initContracts);
         await st1inch.deposit(ether('100'), time.duration.days('50'));
 
@@ -255,7 +255,7 @@ describe('St1inch', async () => {
         expect(await st1inch.votingPowerOf(addr.address)).to.equal(0);
     });
 
-    it('should withdraw users deposit and send tokens to other address', async () => {
+    it('should withdraw users deposit and send tokens to other address', async function () {
         const { oneInch, st1inch } = await loadFixture(initContracts);
         await st1inch.deposit(ether('100'), time.duration.days('50'));
 
@@ -273,7 +273,7 @@ describe('St1inch', async () => {
         expect(await st1inch.votingPowerOf(addr.address)).to.equal(0);
     });
 
-    it('should not increase time and amount for existing deposit', async () => {
+    it('should not increase time and amount for existing deposit', async function () {
         const { st1inch } = await loadFixture(initContracts);
         await st1inch.deposit(ether('50'), time.duration.days('1'));
 
@@ -283,7 +283,7 @@ describe('St1inch', async () => {
         );
     });
 
-    it('should not take deposit with lock less then MIN_LOCK_PERIOD', async () => {
+    it('should not take deposit with lock less then MIN_LOCK_PERIOD', async function () {
         const { st1inch } = await loadFixture(initContracts);
         const MIN_LOCK_PERIOD = await st1inch.MIN_LOCK_PERIOD();
         await expect(st1inch.deposit(ether('50'), MIN_LOCK_PERIOD.sub(1))).to.be.revertedWithCustomError(
@@ -292,7 +292,7 @@ describe('St1inch', async () => {
         );
     });
 
-    it('should not take deposit with lock more then MAX_LOCK_PERIOD', async () => {
+    it('should not take deposit with lock more then MAX_LOCK_PERIOD', async function () {
         const { st1inch } = await loadFixture(initContracts);
         const MAX_LOCK_PERIOD = await st1inch.MAX_LOCK_PERIOD();
         await expect(st1inch.deposit(ether('50'), MAX_LOCK_PERIOD.add(1))).to.be.revertedWithCustomError(
@@ -301,14 +301,14 @@ describe('St1inch', async () => {
         );
     });
 
-    it('should withdraw before unlock time', async () => {
+    it('should withdraw before unlock time', async function () {
         const { st1inch } = await loadFixture(initContracts);
         await st1inch.deposit(ether('50'), time.duration.days('1'));
 
         await expect(st1inch.withdraw()).to.be.revertedWithCustomError(st1inch, 'UnlockTimeWasNotCome');
     });
 
-    it('should emergency withdraw', async () => {
+    it('should emergency withdraw', async function () {
         const { oneInch, st1inch } = await loadFixture(initContracts);
         await st1inch.deposit(ether('50'), time.duration.days('1'));
         const balanceaddr = await oneInch.balanceOf(addr.address);
@@ -321,7 +321,7 @@ describe('St1inch', async () => {
         expect(await oneInch.balanceOf(addr.address)).to.equal(balanceaddr.add(ether('50')));
     });
 
-    it("shouldn't call setEmergencyExit if caller isn't the owner", async () => {
+    it("shouldn't call setEmergencyExit if caller isn't the owner", async function () {
         const { st1inch } = await loadFixture(initContracts);
         await expect(st1inch.connect(addr1).setEmergencyExit(true)).to.be.revertedWith(
             'Ownable: caller is not the owner',

@@ -7,12 +7,12 @@ const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
 const { PANIC_CODES } = require('@nomicfoundation/hardhat-chai-matchers/panic');
 const { deploySwapTokens, deploySimpleRegistry, getChainId } = require('./helpers/fixtures');
 
-describe('FeeBank', async () => {
+describe('FeeBank', function () {
     let addr, addr1;
     let chainId;
     let whitelistRegistrySimple;
 
-    before(async () => {
+    before(async function () {
         [addr, addr1] = await ethers.getSigners();
         chainId = await getChainId();
         whitelistRegistrySimple = await deploySimpleRegistry();
@@ -39,8 +39,8 @@ describe('FeeBank', async () => {
         return { inch, feeBank, matcher };
     }
 
-    describe('deposits', async () => {
-        it('should increase accountDeposits and creditAllowance with deposit()', async () => {
+    describe('deposits', function () {
+        it('should increase accountDeposits and creditAllowance with deposit()', async function () {
             const { inch, feeBank, matcher } = await loadFixture(initContracts);
             const addrAmount = ether('1');
             const addr1Amount = ether('10');
@@ -58,7 +58,7 @@ describe('FeeBank', async () => {
             expect(await inch.balanceOf(addr1.address)).to.equal(addr1balanceBefore.sub(addr1Amount));
         });
 
-        it('should increase accountDeposits and creditAllowance with depositFor()', async () => {
+        it('should increase accountDeposits and creditAllowance with depositFor()', async function () {
             const { inch, feeBank, matcher } = await loadFixture(initContracts);
             const addrAmount = ether('1');
             const addr1Amount = ether('10');
@@ -76,7 +76,7 @@ describe('FeeBank', async () => {
             expect(await inch.balanceOf(addr1.address)).to.equal(addr1balanceBefore.sub(addrAmount));
         });
 
-        it('should increase accountDeposits and creditAllowance without approve with depositWithPermit()', async () => {
+        it('should increase accountDeposits and creditAllowance without approve with depositWithPermit()', async function () {
             const { inch, feeBank, matcher } = await loadFixture(initContracts);
             const addrAmount = ether('1');
             await inch.approve(feeBank.address, '0');
@@ -90,7 +90,7 @@ describe('FeeBank', async () => {
             expect(await inch.balanceOf(addr.address)).to.equal(addrbalanceBefore.sub(addrAmount));
         });
 
-        it('should increase accountDeposits and creditAllowance without approve with depositForWithPermit()', async () => {
+        it('should increase accountDeposits and creditAllowance without approve with depositForWithPermit()', async function () {
             const { inch, feeBank, matcher } = await loadFixture(initContracts);
             const addrAmount = ether('1');
             await inch.approve(feeBank.address, '0');
@@ -105,7 +105,7 @@ describe('FeeBank', async () => {
         });
     });
 
-    describe('withdrawals', async () => {
+    describe('withdrawals', function () {
         async function initContratsAndDeposit() {
             const { inch, feeBank, matcher } = await initContracts();
             const totalDepositAmount = ether('100');
@@ -113,7 +113,7 @@ describe('FeeBank', async () => {
             return { inch, feeBank, matcher, totalDepositAmount };
         }
 
-        it('should decrease accountDeposits and creditAllowance with withdraw()', async () => {
+        it('should decrease accountDeposits and creditAllowance with withdraw()', async function () {
             const { inch, feeBank, matcher, totalDepositAmount } = await loadFixture(initContratsAndDeposit);
             const amount = ether('10');
             const addrbalanceBefore = await inch.balanceOf(addr.address);
@@ -125,7 +125,7 @@ describe('FeeBank', async () => {
             expect(await inch.balanceOf(addr.address)).to.equal(addrbalanceBefore.add(amount));
         });
 
-        it('should decrease accountDeposits and creditAllowance with withdrawTo()', async () => {
+        it('should decrease accountDeposits and creditAllowance with withdrawTo()', async function () {
             const { inch, feeBank, matcher, totalDepositAmount } = await loadFixture(initContratsAndDeposit);
             const amount = ether('10');
             const addr1balanceBefore = await inch.balanceOf(addr1.address);
@@ -137,14 +137,14 @@ describe('FeeBank', async () => {
             expect(await inch.balanceOf(addr1.address)).to.equal(addr1balanceBefore.add(amount));
         });
 
-        it('should not withdrawal more than account have', async () => {
+        it('should not withdrawal more than account have', async function () {
             const { feeBank, totalDepositAmount } = await loadFixture(initContratsAndDeposit);
             await expect(feeBank.withdraw(totalDepositAmount.add(1))).to.be.revertedWithPanic(PANIC_CODES.UNDERFLOW);
         });
     });
 
-    describe('gatherFees', async () => {
-        it('should correct withdrawal fee for 1 account', async () => {
+    describe('gatherFees', function () {
+        it('should correct withdrawal fee for 1 account', async function () {
             const { inch, feeBank, matcher } = await loadFixture(initContracts);
             const amount = ether('10');
             const subCreditAmount = ether('2');
@@ -162,7 +162,7 @@ describe('FeeBank', async () => {
             expect(await inch.balanceOf(addr.address)).to.equal(balanceBefore.add(subCreditAmount));
         });
 
-        it('should correct withdrawal fee for 2 account', async () => {
+        it('should correct withdrawal fee for 2 account', async function () {
             const { inch, feeBank, matcher } = await loadFixture(initContracts);
             const addrAmount = ether('10');
             const addr1Amount = ether('25');
@@ -190,7 +190,7 @@ describe('FeeBank', async () => {
             );
         });
 
-        it('should correct withdrawal fee for several account', async () => {
+        it('should correct withdrawal fee for several account', async function () {
             const { inch, feeBank, matcher } = await loadFixture(initContracts);
             const accounts = [];
             const wallets = await ethers.getSigners();
@@ -225,7 +225,7 @@ describe('FeeBank', async () => {
             expect(await inch.balanceOf(addr.address)).to.equal(balanceBefore.add(totalSubCreditAmounts));
         });
 
-        it('should not work by non-owner', async () => {
+        it('should not work by non-owner', async function () {
             const { feeBank } = await loadFixture(initContracts);
             await expect(feeBank.connect(addr1).gatherFees([addr.address, addr1.address])).to.be.revertedWith(
                 'Ownable: caller is not the owner',

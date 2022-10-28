@@ -18,7 +18,7 @@ const ORDERSALT_WITH_FILLED_BOUNDARY_BITS = BigInt(
 );
 const ORDERSALT_WITH_FILLED_ALL_BITS = BigInt(constants.MAX_UINT256);
 
-describe('OrderSaltParserMock', async () => {
+describe('OrderSaltParserMock', function () {
     async function initContracts() {
         const OrderSaltParserMock = await ethers.getContractFactory('OrderSaltParserMock');
         const orderSaltParserMock = await OrderSaltParserMock.deploy();
@@ -26,10 +26,10 @@ describe('OrderSaltParserMock', async () => {
         return { orderSaltParserMock };
     }
 
-    describe('separate fields', async () => {
+    describe('separate fields', function () {
         for (const method of ['getStartTime', 'getDuration', 'getInitialRateBump', 'getFee', 'getSalt']) {
-            describe(method, async () => {
-                it('with specific values', async () => {
+            describe(method, async function () {
+                it('with specific values', async function () {
                     const { orderSaltParserMock } = await loadFixture(initContracts);
                     expect(
                         (
@@ -38,7 +38,7 @@ describe('OrderSaltParserMock', async () => {
                     ).to.equal(eval(method + '(ORDERSALT_WITH_SPECIFIC_VALUES)').toString()); // eslint-disable-line no-eval
                 });
 
-                it('with simple values', async () => {
+                it('with simple values', async function () {
                     const { orderSaltParserMock } = await loadFixture(initContracts);
                     expect(
                         (
@@ -49,7 +49,7 @@ describe('OrderSaltParserMock', async () => {
                     );
                 });
 
-                it('with filled bits on the value boundaries', async () => {
+                it('with filled bits on the value boundaries', async function () {
                     const { orderSaltParserMock } = await loadFixture(initContracts);
                     expect(
                         (
@@ -60,7 +60,7 @@ describe('OrderSaltParserMock', async () => {
                     ).to.equal(eval(method + '(ORDERSALT_WITH_FILLED_BOUNDARY_BITS)').toString()); // eslint-disable-line no-eval
                 });
 
-                it('with filled all bits', async () => {
+                it('with filled all bits', async function () {
                     const { orderSaltParserMock } = await loadFixture(initContracts);
                     expect(
                         (
@@ -72,8 +72,8 @@ describe('OrderSaltParserMock', async () => {
         }
     });
 
-    describe('encodeParameters', async () => {
-        it('with specific values', async () => {
+    describe('encodeParameters', function () {
+        it('with specific values', async function () {
             const parseObj = initSaltObj(ORDERSALT_WITH_SPECIFIC_VALUES);
             expect(
                 encodeParameters(
@@ -86,7 +86,7 @@ describe('OrderSaltParserMock', async () => {
             ).to.equal(ORDERSALT_WITH_SPECIFIC_VALUES);
         });
 
-        it('with simple values', async () => {
+        it('with simple values', async function () {
             const parseObj = initSaltObj(ORDERSALT_WITH_SIMPLE_VALUES);
             expect(
                 encodeParameters(
@@ -99,7 +99,7 @@ describe('OrderSaltParserMock', async () => {
             ).to.equal(ORDERSALT_WITH_SIMPLE_VALUES);
         });
 
-        it('with filled bits on the value boundaries', async () => {
+        it('with filled bits on the value boundaries', async function () {
             const parseObj = initSaltObj(ORDERSALT_WITH_FILLED_BOUNDARY_BITS);
             expect(
                 encodeParameters(
@@ -112,7 +112,7 @@ describe('OrderSaltParserMock', async () => {
             ).to.equal(ORDERSALT_WITH_FILLED_BOUNDARY_BITS);
         });
 
-        it('with filled all bits', async () => {
+        it('with filled all bits', async function () {
             const parseObj = initSaltObj(ORDERSALT_WITH_FILLED_ALL_BITS);
             expect(
                 encodeParameters(

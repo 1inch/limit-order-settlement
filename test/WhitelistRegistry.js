@@ -6,7 +6,7 @@ const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
 const THRESHOLD = ether('1');
 const VOTING_POWER_THRESHOLD = THRESHOLD.mul(2);
 const MAX_WHITELISTED = 10;
-const WHITELISTED_COUNT = MAX_WHITELISTED / 5
+const WHITELISTED_COUNT = MAX_WHITELISTED / 5;
 
 describe('WhitelistRegistry', function () {
     let addrs;
@@ -171,7 +171,7 @@ describe('WhitelistRegistry', function () {
     }
 
     describe('setMaxWhitelisted', function () {
-        async function expectAddrsInWhitelist (whitelistRegistry, indexFrom, indexTo, except = []) {
+        async function expectAddrsInWhitelist(whitelistRegistry, indexFrom, indexTo, except = []) {
             for (let i = indexFrom; i <= indexTo; i++) {
                 if (except.indexOf(i) !== -1) {
                     expect(await whitelistRegistry.isWhitelisted(addrs[i].address)).to.be.equal(false);
@@ -204,7 +204,7 @@ describe('WhitelistRegistry', function () {
                 // add to whitelist additional addrs, total more than NEW_MAX_WHITELISTED
                 await rewardDelegationTopic.mint(addrs[NEW_MAX_WHITELISTED + 1].address, VOTING_POWER_THRESHOLD);
                 await expect(
-                    whitelistRegistry.connect(addrs[NEW_MAX_WHITELISTED + 1]).register()
+                    whitelistRegistry.connect(addrs[NEW_MAX_WHITELISTED + 1]).register(),
                 ).to.eventually.be.rejectedWith('NotEnoughBalance()');
             });
         });
@@ -231,7 +231,7 @@ describe('WhitelistRegistry', function () {
                 // add to whitelist additional addrs, total more than NEW_MAX_WHITELISTED
                 await rewardDelegationTopic.mint(addrs[NEW_MAX_WHITELISTED + 1].address, VOTING_POWER_THRESHOLD);
                 await expect(
-                    whitelistRegistry.connect(addrs[NEW_MAX_WHITELISTED + 1]).register()
+                    whitelistRegistry.connect(addrs[NEW_MAX_WHITELISTED + 1]).register(),
                 ).to.be.revertedWithCustomError(whitelistRegistry, 'NotEnoughBalance');
             });
         });
@@ -262,7 +262,7 @@ describe('WhitelistRegistry', function () {
                 // add to whitelist additional addr
                 await rewardDelegationTopic.mint(addrs[WHITELISTED_COUNT + 1].address, VOTING_POWER_THRESHOLD);
                 await expect(
-                    whitelistRegistry.connect(addrs[NEW_MAX_WHITELISTED + 1]).register()
+                    whitelistRegistry.connect(addrs[NEW_MAX_WHITELISTED + 1]).register(),
                 ).to.be.revertedWithCustomError(whitelistRegistry, 'NotEnoughBalance');
             });
 

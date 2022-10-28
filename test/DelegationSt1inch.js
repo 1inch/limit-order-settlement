@@ -4,7 +4,7 @@ const { ethers } = require('hardhat');
 const { BigNumber: BN } = require('ethers');
 const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
 
-describe('Delegation st1inch', async () => {
+describe('Delegation st1inch', function () {
     let addr, addr1;
     let accounts;
     const baseExp = BN.from('999999981746377019');
@@ -58,19 +58,19 @@ describe('Delegation st1inch', async () => {
         return { st1inch, delegation, whitelistRegistry };
     }
 
-    before(async () => {
+    before(async function () {
         accounts = await ethers.getSigners();
         addr = accounts[0];
         addr1 = accounts[1];
     });
 
-    describe('For add to whitelist', async () => {
+    describe('For add to whitelist', function () {
         const depositAndDelegateTo = async (st1inch, delegation, from, to, amount, duration = commonLockDuration) => {
             await st1inch.connect(from).deposit(amount, duration);
             await st1inch.connect(from).delegate(delegation.address, to);
         };
 
-        it('should add account, when sum stacked st1inch and deposit st1inch is sufficient', async () => {
+        it('should add account, when sum stacked st1inch and deposit st1inch is sufficient', async function () {
             const { st1inch, delegation, whitelistRegistry } = await loadFixture(initContracts);
             // addr shouldn't register becouse his st1inch balance less that all of the whitelisted accounts
             await expect(whitelistRegistry.register()).to.be.revertedWithCustomError(
@@ -84,7 +84,7 @@ describe('Delegation st1inch', async () => {
             expect(await whitelistRegistry.isWhitelisted(addr.address)).to.equal(true);
         });
 
-        it('should add account, when sum stacked st1inch and deposit st1inch is sufficient (delegate before deposit)', async () => {
+        it('should add account, when sum stacked st1inch and deposit st1inch is sufficient (delegate before deposit)', async function () {
             const { st1inch, delegation, whitelistRegistry } = await loadFixture(initContracts);
             // delegate to addr and deposit 1inch
             await st1inch.connect(addr1).delegate(delegation.address, addr.address);
@@ -93,7 +93,7 @@ describe('Delegation st1inch', async () => {
             await whitelistRegistry.register();
         });
 
-        it('should accrue DelegateeToken token after delegate', async () => {
+        it('should accrue DelegateeToken token after delegate', async function () {
             const { st1inch, delegation } = await loadFixture(initContracts);
             const DelegateeToken = await ethers.getContractFactory('DelegateeToken');
             const delegateeToken = await DelegateeToken.attach(await delegation.registration(addr.address));
@@ -109,7 +109,7 @@ describe('Delegation st1inch', async () => {
             );
         });
 
-        it('should decrease delegatee balance, if delegator undelegate stake', async () => {
+        it('should decrease delegatee balance, if delegator undelegate stake', async function () {
             const { st1inch, delegation, whitelistRegistry } = await loadFixture(initContracts);
             await depositAndDelegateTo(st1inch, delegation, addr1, addr.address, ether('2'));
             await whitelistRegistry.register();
@@ -119,7 +119,7 @@ describe('Delegation st1inch', async () => {
             expect(await whitelistRegistry.isWhitelisted(addr.address)).to.equal(false);
         });
 
-        it('should decrease delegatee balance, if delegator delegate to other account', async () => {
+        it('should decrease delegatee balance, if delegator delegate to other account', async function () {
             const { st1inch, delegation, whitelistRegistry } = await loadFixture(initContracts);
             await depositAndDelegateTo(st1inch, delegation, addr1, addr.address, ether('2'));
             await whitelistRegistry.register();

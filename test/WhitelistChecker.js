@@ -5,12 +5,12 @@ const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
 const { deploySwapTokens, getChainId, deploySimpleRegistry } = require('./helpers/fixtures');
 const { buildOrder, signOrder } = require('./helpers/orderUtils');
 
-describe('WhitelistChecker', async () => {
+describe('WhitelistChecker', function () {
     let addr, addr1;
     let chainId;
     const abiCoder = ethers.utils.defaultAbiCoder;
 
-    before(async () => {
+    before(async function () {
         [addr, addr1] = await ethers.getSigners();
         chainId = await getChainId();
     });
@@ -93,8 +93,8 @@ describe('WhitelistChecker', async () => {
         );
     }
 
-    describe('should not work with non-whitelisted address', async () => {
-        it('onlyWhitelistedEOA modifier in settleOrdersEOA method', async () => {
+    describe('should not work with non-whitelisted address', function () {
+        it('onlyWhitelistedEOA modifier in settleOrdersEOA method', async function () {
             const { dai, weth, swap, matcher } = await loadFixture(initContracts);
             const order1 = await buildOrder({
                 makerAsset: dai.address,
@@ -117,7 +117,7 @@ describe('WhitelistChecker', async () => {
             ).to.be.revertedWithCustomError(matcher, 'AccessDenied');
         });
 
-        it('onlyWhitelisted modifier in settleOrders method', async () => {
+        it('onlyWhitelisted modifier in settleOrders method', async function () {
             const { dai, weth, swap, matcher } = await loadFixture(initContracts);
             const order1 = await buildOrder({
                 makerAsset: dai.address,
@@ -131,7 +131,7 @@ describe('WhitelistChecker', async () => {
             ).to.be.revertedWithCustomError(matcher, 'AccessDenied');
         });
 
-        it('onlyWhitelisted modifier in fillOrderInteraction method', async () => {
+        it('onlyWhitelisted modifier in fillOrderInteraction method', async function () {
             const { dai, weth, swap, matcher } = await loadFixture(initContracts);
             const order = await buildOrder({
                 makerAsset: dai.address,
@@ -150,7 +150,7 @@ describe('WhitelistChecker', async () => {
             ).to.be.revertedWithCustomError(swap, 'AccessDenied');
         });
 
-        it('onlyLimitOrderProtocol modifier', async () => {
+        it('onlyLimitOrderProtocol modifier', async function () {
             const { matcher } = await loadFixture(initContracts);
             await expect(matcher.fillOrderInteraction(addr.address, '0', '0', '0x')).to.be.revertedWithCustomError(
                 matcher,
@@ -159,14 +159,14 @@ describe('WhitelistChecker', async () => {
         });
     });
 
-    describe('should work with whitelisted address', async () => {
+    describe('should work with whitelisted address', function () {
         async function initContractsAndSetStatus() {
             const { dai, weth, swap, whitelistRegistrySimple, matcher } = await initContracts();
             await whitelistRegistrySimple.setStatus(addr.address, true);
             return { dai, weth, swap, matcher };
         }
 
-        it('onlyWhitelistedEOA modifier in settleOrdersEOA method', async () => {
+        it('onlyWhitelistedEOA modifier in settleOrdersEOA method', async function () {
             const { dai, weth, swap, matcher } = await loadFixture(initContractsAndSetStatus);
 
             const addrweth = await weth.balanceOf(addr.address);
@@ -182,7 +182,7 @@ describe('WhitelistChecker', async () => {
             expect(await dai.balanceOf(addr1.address)).to.equal(addr1dai.add(ether('100')));
         });
 
-        it('onlyWhitelisted modifier in settleOrders method', async () => {
+        it('onlyWhitelisted modifier in settleOrders method', async function () {
             const { dai, weth, swap, matcher } = await loadFixture(initContractsAndSetStatus);
 
             const addrweth = await weth.balanceOf(addr.address);
