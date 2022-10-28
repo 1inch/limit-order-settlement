@@ -1,13 +1,11 @@
-const { expect, time } = require('@1inch/solidity-utils');
-const { ether } = require('./helpers/orderUtils');
+const { expect, time, ether } = require('@1inch/solidity-utils');
 const { ethers } = require('hardhat');
-const { BigNumber: BN } = require('ethers');
 const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
 
 describe('Delegation st1inch', function () {
     let addr, addr1;
     let accounts;
-    const baseExp = BN.from('999999981746377019');
+    const baseExp = 999999981746377019n;
     const threshold = ether('0.1');
     const MAX_WHITELISTED = 3;
     const maxSt1inchFarms = 5;
@@ -50,7 +48,7 @@ describe('Delegation st1inch', function () {
         for (let i = 0; i < MAX_WHITELISTED; ++i) {
             const userIndex = i + 2;
             const user = accounts[userIndex];
-            await stakeAndRegisterInDelegation(st1inch, delegation, user, ether('2').mul(i + 1), userIndex);
+            await stakeAndRegisterInDelegation(st1inch, delegation, user, ether('2') * BigInt(i + 1), userIndex);
             await whitelistRegistry.connect(user).register();
         }
         await stakeAndRegisterInDelegation(st1inch, delegation, addr, ether('1'), 0);

@@ -1,5 +1,4 @@
 const { constants, trim0x, time } = require('@1inch/solidity-utils');
-const { utils } = require('ethers');
 
 const Order = [
     { name: 'salt', type: 'uint256' },
@@ -96,10 +95,10 @@ const buildSalt = ({
     salt = '1', // less than uint176
 }) =>
     (
-        (BigInt(orderStartTime) << BigInt(224)) +
-        (BigInt(duration) << BigInt(192)) +
-        (BigInt(initialStartRate) << BigInt(176)) +
-        (BigInt(fee) << BigInt(144)) +
+        (BigInt(orderStartTime) << 224n) +
+        (BigInt(duration) << 192n) +
+        (BigInt(initialStartRate) << 176n) +
+        (BigInt(fee) << 144n) +
         BigInt(salt)
     ).toString();
 
@@ -107,16 +106,11 @@ async function signOrder(order, chainId, target, wallet) {
     return await wallet._signTypedData({ name, version, chainId, verifyingContract: target }, { Order }, order);
 }
 
-function ether(num) {
-    return utils.parseUnits(num);
-}
-
 module.exports = {
     buildOrder,
     buildSalt,
     signOrder,
     defaultExpiredAuctionTimestamp,
-    ether,
     name,
     version,
 };

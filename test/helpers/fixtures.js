@@ -26,7 +26,7 @@ async function deploySwap(tokenAddress) {
     return swap;
 }
 
-async function deploySimpleRegistry(tokenAddress) {
+async function deploySimpleRegistry() {
     const WhitelistRegistrySimple = await ethers.getContractFactory('WhitelistRegistrySimple');
     const whitelistRegistrySimple = await WhitelistRegistrySimple.deploy();
     await whitelistRegistrySimple.deployed();

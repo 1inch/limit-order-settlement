@@ -1,7 +1,6 @@
-const { assertRoughlyEqualValues, time, expect } = require('@1inch/solidity-utils');
+const { assertRoughlyEqualValues, time, expect, ether } = require('@1inch/solidity-utils');
 const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
 const { ethers } = require('hardhat');
-const { ether } = require('./helpers/orderUtils');
 const { deploySwapTokens, deploySimpleRegistry, getChainId } = require('./helpers/fixtures');
 const { buildOrder, signOrder, buildSalt, defaultExpiredAuctionTimestamp } = require('./helpers/orderUtils');
 
@@ -12,6 +11,8 @@ const Status = Object.freeze({
 
 describe('Settlement', function () {
     const basePoints = ether('0.001'); // 1e15
+    const orderFee = 100n;
+    const backOrderFee = 125n;
     let addr, addr1;
     let chainId;
     let whitelistRegistrySimple;
@@ -531,8 +532,6 @@ describe('Settlement', function () {
     it('should change creditAllowance with non-zero fee', async function () {
         const { dai, weth, swap, matcher } = await loadFixture(initContracts);
 
-        const orderFee = 100;
-        const backOrderFee = 125;
         const order = await buildOrder({
             salt: buildSalt({ orderStartTime: await defaultExpiredAuctionTimestamp(), fee: orderFee }),
             makerAsset: dai.address,
@@ -592,15 +591,13 @@ describe('Settlement', function () {
             matcher.address,
         );
         expect(await matcher.creditAllowance(addr.address)).to.equal(
-            creditAllowanceBefore.sub(basePoints.mul(orderFee)).sub(basePoints.mul(backOrderFee)),
+            creditAllowanceBefore.toBigInt() - basePoints * (orderFee + backOrderFee),
         );
     });
 
     it('should change creditAllowance with non-zero fee, msg.sender', async function () {
         const { dai, weth, swap, matcher } = await loadFixture(initContracts);
 
-        const orderFee = 100;
-        const backOrderFee = 125;
         const order = await buildOrder({
             salt: buildSalt({ orderStartTime: await defaultExpiredAuctionTimestamp(), fee: orderFee }),
             makerAsset: dai.address,
@@ -660,15 +657,13 @@ describe('Settlement', function () {
             matcher.address,
         );
         expect(await matcher.creditAllowance(addr.address)).to.equal(
-            creditAllowanceBefore.sub(basePoints.mul(orderFee)).sub(basePoints.mul(backOrderFee)),
+            creditAllowanceBefore.toBigInt() - basePoints * (orderFee + backOrderFee),
         );
     });
 
     it('should change creditAllowance with non-zero fee, proxy contract, tx.origin', async function () {
         const { dai, weth, swap, matcher, proxy } = await loadFixture(initContracts);
 
-        const orderFee = 100;
-        const backOrderFee = 125;
         const order = await buildOrder({
             salt: buildSalt({ orderStartTime: await defaultExpiredAuctionTimestamp(), fee: orderFee }),
             makerAsset: dai.address,
@@ -728,15 +723,13 @@ describe('Settlement', function () {
             matcher.address,
         );
         expect(await matcher.creditAllowance(addr.address)).to.equal(
-            creditAllowanceBefore.sub(basePoints.mul(orderFee)).sub(basePoints.mul(backOrderFee)),
+            creditAllowanceBefore.toBigInt() - basePoints * (orderFee + backOrderFee),
         );
     });
 
     it('should change creditAllowance with non-zero fee, proxy contract, msg.sender', async function () {
         const { dai, weth, swap, matcher, proxy } = await loadFixture(initContracts);
 
-        const orderFee = 100;
-        const backOrderFee = 125;
         const order = await buildOrder({
             salt: buildSalt({ orderStartTime: await defaultExpiredAuctionTimestamp(), fee: orderFee }),
             makerAsset: dai.address,
@@ -798,17 +791,15 @@ describe('Settlement', function () {
             matcher.address,
         );
         expect(await matcher.creditAllowance(proxy.address)).to.equal(
-            creditAllowanceBefore.sub(basePoints.mul(orderFee)).sub(basePoints.mul(backOrderFee)),
+            creditAllowanceBefore.toBigInt() - basePoints * (orderFee + backOrderFee),
         );
     });
 
     it('should not change when creditAllowance is not enough', async function () {
         const { dai, weth, swap, matcher } = await loadFixture(initContracts);
 
-        const orderFee = ether('1000').toString();
-        const backOrderFee = 125;
         const order = await buildOrder({
-            salt: buildSalt({ orderStartTime: await defaultExpiredAuctionTimestamp(), fee: orderFee }),
+            salt: buildSalt({ orderStartTime: await defaultExpiredAuctionTimestamp(), fee: ether('1000') }),
             makerAsset: dai.address,
             takerAsset: weth.address,
             makingAmount: ether('100'),
@@ -915,7 +906,7 @@ describe('Settlement', function () {
             const amount = ether('10');
             expect(await matcher.creditAllowance(addr1.address)).to.equal(creditAmount);
             await matcher.decreaseCreditAllowance(addr1.address, amount);
-            expect(await matcher.creditAllowance(addr1.address)).to.equal(creditAmount.sub(amount));
+            expect(await matcher.creditAllowance(addr1.address)).to.equal(creditAmount - amount);
         });
         it('should not deccrease credit by non-feeBank address', async function () {
             const { matcher, feeBank } = await loadFixture(initContractsAndAllowance);

@@ -1,36 +1,35 @@
-const { expect, assertRoughlyEqualValues, timeIncreaseTo, time, getPermit } = require('@1inch/solidity-utils');
+const { expect, assertRoughlyEqualValues, timeIncreaseTo, time, getPermit, ether } = require('@1inch/solidity-utils');
 const { BigNumber: BN } = require('ethers');
 const { ethers } = require('hardhat');
-const { ether } = require('./helpers/orderUtils');
 const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
 const { getChainId } = require('./helpers/fixtures');
 
 describe('St1inch', function () {
     let addr, addr1;
-    const baseExp = BN.from('999999981746377019');
-    const votingPowerDivider = BN.from(10);
+    const baseExp = 999999981746377019n;
+    const votingPowerDivider = 10n;
     let chainId;
 
     const exp = (point, t) => {
         let base = baseExp;
-        while (t > BigInt(0)) {
-            if ((t & BigInt(1)) === BigInt(1)) {
-                point = point.mul(base).div(ether('1'));
+        while (t > 0n) {
+            if ((t & 1n) === 1n) {
+                point = point * base / ether('1');
             }
-            base = base.mul(base).div(ether('1'));
-            t = t >> BigInt(1);
+            base = base * base / ether('1');
+            t = t >> 1n;
         }
         return point;
     };
 
     const expInv = (point, t) => {
         let base = baseExp;
-        while (t > BigInt(0)) {
-            if ((t & BigInt(1)) === BigInt(1)) {
-                point = point.mul(ether('1')).div(base);
+        while (t > 0n) {
+            if ((t & 1n) === 1n) {
+                point = point * ether('1') / base;
             }
-            base = base.mul(base).div(ether('1'));
-            t = t >> BigInt(1);
+            base = base * base / ether('1');
+            t = t >> 1n;
         }
         return point;
     };
@@ -38,19 +37,15 @@ describe('St1inch', function () {
     const checkBalances = async (account, balance, lockDuration, st1inch) => {
         const origin = await st1inch.origin();
         expect(await st1inch.depositsAmount(account)).to.equal(balance);
-        const t = BigInt(
-            BN.from(await time.latest())
-                .add(lockDuration)
-                .sub(origin),
-        );
-        const originPower = expInv(balance, t).div(votingPowerDivider);
+        const t = BN.from(await time.latest()).add(lockDuration).sub(origin).toBigInt();
+        const originPower = expInv(balance, t) / votingPowerDivider;
         expect(await st1inch.balanceOf(account)).to.equal(originPower);
         expect(await st1inch.votingPowerOf(account)).to.equal(
-            exp(originPower, BigInt(BN.from(await time.latest()).sub(origin))),
+            exp(originPower, BN.from(await time.latest()).sub(origin).toBigInt()),
         );
         assertRoughlyEqualValues(
             await st1inch.votingPowerOfAt(account, await st1inch.unlockTime(account)),
-            balance.div(votingPowerDivider),
+            balance / votingPowerDivider,
             1e-10,
         );
     };

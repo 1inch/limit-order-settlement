@@ -1,10 +1,9 @@
-const { expect, constants } = require('@1inch/solidity-utils');
+const { expect, constants, ether } = require('@1inch/solidity-utils');
 const { ethers } = require('hardhat');
-const { ether } = require('./helpers/orderUtils');
 const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
 
 const THRESHOLD = ether('1');
-const VOTING_POWER_THRESHOLD = THRESHOLD.mul(2);
+const VOTING_POWER_THRESHOLD = THRESHOLD * 2n;
 const MAX_WHITELISTED = 10;
 const WHITELISTED_COUNT = MAX_WHITELISTED / 5;
 
@@ -123,7 +122,7 @@ describe('WhitelistRegistry', function () {
             for (let i = 1; i <= MAX_WHITELISTED + 9; ++i) {
                 await rewardDelegationTopic.mint(
                     addrs[i].address,
-                    i <= MAX_WHITELISTED ? VOTING_POWER_THRESHOLD : VOTING_POWER_THRESHOLD.add(1),
+                    i <= MAX_WHITELISTED ? VOTING_POWER_THRESHOLD : VOTING_POWER_THRESHOLD + 1n,
                 );
             }
             for (let i = 1; i <= MAX_WHITELISTED + 9; ++i) {
@@ -142,7 +141,7 @@ describe('WhitelistRegistry', function () {
         it('should remove from whitelist addresses which not enough staked balance', async function () {
             const { rewardDelegationTopic, whitelistRegistry } = await loadFixture(initContracts);
             for (let i = 0; i < MAX_WHITELISTED; ++i) {
-                await rewardDelegationTopic.mint(addrs[i].address, VOTING_POWER_THRESHOLD.add(1));
+                await rewardDelegationTopic.mint(addrs[i].address, VOTING_POWER_THRESHOLD + 1n);
                 await whitelistRegistry.connect(addrs[i]).register();
                 expect(await whitelistRegistry.isWhitelisted(addrs[i].address)).to.equal(true);
                 if (i % 2 === 1) {

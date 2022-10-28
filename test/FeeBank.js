@@ -1,8 +1,6 @@
-const { expect } = require('@1inch/solidity-utils');
+const { expect, ether, getPermit } = require('@1inch/solidity-utils');
 const { ethers } = require('hardhat');
-const { getPermit } = require('@1inch/solidity-utils');
 const { BigNumber: BN } = require('ethers');
-const { ether } = require('./helpers/orderUtils');
 const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
 const { PANIC_CODES } = require('@nomicfoundation/hardhat-chai-matchers/panic');
 const { deploySwapTokens, deploySimpleRegistry, getChainId } = require('./helpers/fixtures');
@@ -120,8 +118,8 @@ describe('FeeBank', function () {
 
             await feeBank.withdraw(amount);
 
-            expect(await feeBank.accountDeposits(addr.address)).to.equal(totalDepositAmount.sub(amount));
-            expect(await matcher.creditAllowance(addr.address)).to.equal(totalDepositAmount.sub(amount));
+            expect(await feeBank.accountDeposits(addr.address)).to.equal(totalDepositAmount - amount);
+            expect(await matcher.creditAllowance(addr.address)).to.equal(totalDepositAmount - amount);
             expect(await inch.balanceOf(addr.address)).to.equal(addrbalanceBefore.add(amount));
         });
 
@@ -132,14 +130,14 @@ describe('FeeBank', function () {
 
             await feeBank.withdrawTo(addr1.address, amount);
 
-            expect(await feeBank.accountDeposits(addr.address)).to.equal(totalDepositAmount.sub(amount));
-            expect(await matcher.creditAllowance(addr.address)).to.equal(totalDepositAmount.sub(amount));
+            expect(await feeBank.accountDeposits(addr.address)).to.equal(totalDepositAmount - amount);
+            expect(await matcher.creditAllowance(addr.address)).to.equal(totalDepositAmount - amount);
             expect(await inch.balanceOf(addr1.address)).to.equal(addr1balanceBefore.add(amount));
         });
 
         it('should not withdrawal more than account have', async function () {
             const { feeBank, totalDepositAmount } = await loadFixture(initContratsAndDeposit);
-            await expect(feeBank.withdraw(totalDepositAmount.add(1))).to.be.revertedWithPanic(PANIC_CODES.UNDERFLOW);
+            await expect(feeBank.withdraw(totalDepositAmount + 1n)).to.be.revertedWithPanic(PANIC_CODES.UNDERFLOW);
         });
     });
 
@@ -154,12 +152,12 @@ describe('FeeBank', function () {
 
             const balanceBefore = await inch.balanceOf(addr.address);
             expect(await feeBank.accountDeposits(addr1.address)).to.equal(amount);
-            expect(await matcher.creditAllowance(addr1.address)).to.equal(amount.sub(subCreditAmount));
+            expect(await matcher.creditAllowance(addr1.address)).to.equal(amount - subCreditAmount);
             await feeBank.gatherFees([addr1.address]);
 
-            expect(await feeBank.accountDeposits(addr1.address)).to.equal(amount.sub(subCreditAmount));
-            expect(await matcher.creditAllowance(addr1.address)).to.equal(amount.sub(subCreditAmount));
-            expect(await inch.balanceOf(addr.address)).to.equal(balanceBefore.add(subCreditAmount));
+            expect(await feeBank.accountDeposits(addr1.address)).to.equal(amount - subCreditAmount);
+            expect(await matcher.creditAllowance(addr1.address)).to.equal(amount - subCreditAmount);
+            expect(await inch.balanceOf(addr.address)).to.equal(balanceBefore.toBigInt() + subCreditAmount);
         });
 
         it('should correct withdrawal fee for 2 account', async function () {
@@ -177,14 +175,14 @@ describe('FeeBank', function () {
             const balanceBefore = await inch.balanceOf(addr.address);
             expect(await feeBank.accountDeposits(addr.address)).to.equal(addrAmount);
             expect(await feeBank.accountDeposits(addr1.address)).to.equal(addr1Amount);
-            expect(await matcher.creditAllowance(addr.address)).to.equal(addrAmount.sub(subCreditaddrAmount));
-            expect(await matcher.creditAllowance(addr1.address)).to.equal(addr1Amount.sub(subCreditAddr1Amount));
+            expect(await matcher.creditAllowance(addr.address)).to.equal(addrAmount - subCreditaddrAmount);
+            expect(await matcher.creditAllowance(addr1.address)).to.equal(addr1Amount - subCreditAddr1Amount);
             await feeBank.gatherFees([addr.address, addr1.address]);
 
-            expect(await feeBank.accountDeposits(addr.address)).to.equal(addrAmount.sub(subCreditaddrAmount));
-            expect(await feeBank.accountDeposits(addr1.address)).to.equal(addr1Amount.sub(subCreditAddr1Amount));
-            expect(await matcher.creditAllowance(addr.address)).to.equal(addrAmount.sub(subCreditaddrAmount));
-            expect(await matcher.creditAllowance(addr1.address)).to.equal(addr1Amount.sub(subCreditAddr1Amount));
+            expect(await feeBank.accountDeposits(addr.address)).to.equal(addrAmount - subCreditaddrAmount);
+            expect(await feeBank.accountDeposits(addr1.address)).to.equal(addr1Amount - subCreditAddr1Amount);
+            expect(await matcher.creditAllowance(addr.address)).to.equal(addrAmount - subCreditaddrAmount);
+            expect(await matcher.creditAllowance(addr1.address)).to.equal(addr1Amount - subCreditAddr1Amount);
             expect(await inch.balanceOf(addr.address)).to.equal(
                 balanceBefore.add(subCreditaddrAmount).add(subCreditAddr1Amount),
             );
@@ -202,8 +200,8 @@ describe('FeeBank', function () {
             let totalSubCreditAmounts = ether('0');
             for (let i = 1; i < accounts.length; i++) {
                 amounts[i] = BN.from(ethers.utils.randomBytes(8));
-                subCreditAmounts[i] = BN.from(ethers.utils.randomBytes(2));
-                totalSubCreditAmounts = totalSubCreditAmounts.add(subCreditAmounts[i]);
+                subCreditAmounts[i] = BN.from(ethers.utils.randomBytes(2)).toBigInt();
+                totalSubCreditAmounts = totalSubCreditAmounts + subCreditAmounts[i];
                 await feeBank.depositFor(accounts[i], amounts[i]);
             }
             await matcher.setFeeBank(addr.address);
