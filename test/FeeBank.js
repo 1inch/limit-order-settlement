@@ -1,236 +1,231 @@
-const { expect, ether, toBN } = require('@1inch/solidity-utils');
-const { artifacts } = require('hardhat');
-const { addr0Wallet, addr1Wallet } = require('./helpers/utils');
-const { getPermit } = require('@1inch/solidity-utils');
+const { expect, ether, getPermit } = require('@1inch/solidity-utils');
+const { ethers } = require('hardhat');
+const { BigNumber: BN } = require('ethers');
+const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
+const { PANIC_CODES } = require('@nomicfoundation/hardhat-chai-matchers/panic');
+const { deploySwapTokens, deploySimpleRegistry, getChainId } = require('./helpers/fixtures');
 
-const FeeBank = artifacts.require('FeeBank');
-const TokenPermitMock = artifacts.require('ERC20PermitMock');
-const WrappedTokenMock = artifacts.require('WrappedTokenMock');
-const LimitOrderProtocol = artifacts.require('LimitOrderProtocol');
-const WhitelistRegistrySimple = artifacts.require('WhitelistRegistrySimple');
-const Settlement = artifacts.require('Settlement');
+describe('FeeBank', function () {
+    let addr, addr1;
+    let chainId;
+    let whitelistRegistrySimple;
 
-describe('FeeBank', async () => {
-    const [addr0, addr1] = [addr0Wallet.getAddressString(), addr1Wallet.getAddressString()];
-
-    before(async () => {
-        this.chainId = await web3.eth.getChainId();
-        this.whitelistRegistrySimple = await WhitelistRegistrySimple.new();
+    before(async function () {
+        [addr, addr1] = await ethers.getSigners();
+        chainId = await getChainId();
+        whitelistRegistrySimple = await deploySimpleRegistry();
     });
 
-    beforeEach(async () => {
-        this.inch = await TokenPermitMock.new('1INCH', '1INCH', addr0, ether('1000'));
-        this.weth = await WrappedTokenMock.new('WETH', 'WETH');
+    async function initContracts() {
+        const TokenPermitMock = await ethers.getContractFactory('ERC20PermitMock');
+        const inch = await TokenPermitMock.deploy('1INCH', '1INCH', addr.address, ether('1000'));
+        await inch.deployed();
+        const { swap } = await deploySwapTokens();
+        const Settlement = await ethers.getContractFactory('Settlement');
+        const matcher = await Settlement.deploy(whitelistRegistrySimple.address, swap.address);
+        await matcher.deployed();
 
-        this.swap = await LimitOrderProtocol.new(this.weth.address);
-        this.matcher = await Settlement.new(this.whitelistRegistrySimple.address, this.swap.address);
-        this.feeBank = await FeeBank.new(this.matcher.address, this.inch.address);
+        const FeeBank = await ethers.getContractFactory('FeeBank');
+        const feeBank = await FeeBank.deploy(matcher.address, inch.address);
+        await feeBank.deployed();
 
-        await this.matcher.setFeeBank(this.feeBank.address);
-        await this.inch.transfer(addr1, ether('100'), { from: addr0 });
-        await this.inch.approve(this.feeBank.address, ether('1000'), { from: addr0 });
-        await this.inch.approve(this.feeBank.address, ether('1000'), { from: addr1 });
-    });
+        await matcher.setFeeBank(feeBank.address);
+        await inch.transfer(addr1.address, ether('100'));
+        await inch.approve(feeBank.address, ether('1000'));
+        await inch.connect(addr1).approve(feeBank.address, ether('1000'));
 
-    describe('deposits', async () => {
-        it('should increase accountDeposits and creditAllowance with deposit()', async () => {
-            const addr0Amount = ether('1');
+        return { inch, feeBank, matcher };
+    }
+
+    describe('deposits', function () {
+        it('should increase accountDeposits and creditAllowance with deposit()', async function () {
+            const { inch, feeBank, matcher } = await loadFixture(initContracts);
+            const addrAmount = ether('1');
             const addr1Amount = ether('10');
-            const addr0balanceBefore = await this.inch.balanceOf(addr0);
-            const addr1balanceBefore = await this.inch.balanceOf(addr1);
+            const addrbalanceBefore = await inch.balanceOf(addr.address);
+            const addr1balanceBefore = await inch.balanceOf(addr1.address);
 
-            await this.feeBank.deposit(addr0Amount, { from: addr0 });
-            await this.feeBank.deposit(addr1Amount, { from: addr1 });
+            await feeBank.deposit(addrAmount);
+            await feeBank.connect(addr1).deposit(addr1Amount);
 
-            expect(await this.feeBank.accountDeposits(addr0)).to.be.bignumber.eq(addr0Amount);
-            expect(await this.feeBank.accountDeposits(addr1)).to.be.bignumber.eq(addr1Amount);
-            expect(await this.matcher.creditAllowance(addr0)).to.be.bignumber.eq(addr0Amount);
-            expect(await this.matcher.creditAllowance(addr1)).to.be.bignumber.eq(addr1Amount);
-            expect(await this.inch.balanceOf(addr0)).to.be.bignumber.eq(addr0balanceBefore.sub(addr0Amount));
-            expect(await this.inch.balanceOf(addr1)).to.be.bignumber.eq(addr1balanceBefore.sub(addr1Amount));
+            expect(await feeBank.accountDeposits(addr.address)).to.equal(addrAmount);
+            expect(await feeBank.accountDeposits(addr1.address)).to.equal(addr1Amount);
+            expect(await matcher.creditAllowance(addr.address)).to.equal(addrAmount);
+            expect(await matcher.creditAllowance(addr1.address)).to.equal(addr1Amount);
+            expect(await inch.balanceOf(addr.address)).to.equal(addrbalanceBefore.sub(addrAmount));
+            expect(await inch.balanceOf(addr1.address)).to.equal(addr1balanceBefore.sub(addr1Amount));
         });
 
-        it('should increase accountDeposits and creditAllowance with depositFor()', async () => {
-            const addr0Amount = ether('1');
+        it('should increase accountDeposits and creditAllowance with depositFor()', async function () {
+            const { inch, feeBank, matcher } = await loadFixture(initContracts);
+            const addrAmount = ether('1');
             const addr1Amount = ether('10');
-            const addr0balanceBefore = await this.inch.balanceOf(addr0);
-            const addr1balanceBefore = await this.inch.balanceOf(addr1);
+            const addrbalanceBefore = await inch.balanceOf(addr.address);
+            const addr1balanceBefore = await inch.balanceOf(addr1.address);
 
-            await this.feeBank.depositFor(addr0, addr0Amount, { from: addr1 });
-            await this.feeBank.depositFor(addr1, addr1Amount, { from: addr0 });
+            await feeBank.connect(addr1).depositFor(addr.address, addrAmount);
+            await feeBank.depositFor(addr1.address, addr1Amount);
 
-            expect(await this.feeBank.accountDeposits(addr0)).to.be.bignumber.eq(addr0Amount);
-            expect(await this.feeBank.accountDeposits(addr1)).to.be.bignumber.eq(addr1Amount);
-            expect(await this.matcher.creditAllowance(addr0)).to.be.bignumber.eq(addr0Amount);
-            expect(await this.matcher.creditAllowance(addr1)).to.be.bignumber.eq(addr1Amount);
-            expect(await this.inch.balanceOf(addr0)).to.be.bignumber.eq(addr0balanceBefore.sub(addr1Amount));
-            expect(await this.inch.balanceOf(addr1)).to.be.bignumber.eq(addr1balanceBefore.sub(addr0Amount));
+            expect(await feeBank.accountDeposits(addr.address)).to.equal(addrAmount);
+            expect(await feeBank.accountDeposits(addr1.address)).to.equal(addr1Amount);
+            expect(await matcher.creditAllowance(addr.address)).to.equal(addrAmount);
+            expect(await matcher.creditAllowance(addr1.address)).to.equal(addr1Amount);
+            expect(await inch.balanceOf(addr.address)).to.equal(addrbalanceBefore.sub(addr1Amount));
+            expect(await inch.balanceOf(addr1.address)).to.equal(addr1balanceBefore.sub(addrAmount));
         });
 
-        it('should increase accountDeposits and creditAllowance without approve with depositWithPermit()', async () => {
-            const addr0Amount = ether('1');
-            await this.inch.approve(this.feeBank.address, '0', { from: addr0 });
-            const permit = await getPermit(
-                addr0,
-                addr0Wallet.getPrivateKey(),
-                this.inch,
-                '1',
-                this.chainId,
-                this.feeBank.address,
-                addr0Amount,
-            );
-            const addr0balanceBefore = await this.inch.balanceOf(addr0);
+        it('should increase accountDeposits and creditAllowance without approve with depositWithPermit()', async function () {
+            const { inch, feeBank, matcher } = await loadFixture(initContracts);
+            const addrAmount = ether('1');
+            await inch.approve(feeBank.address, '0');
+            const permit = await getPermit(addr, inch, '1', chainId, feeBank.address, addrAmount);
+            const addrbalanceBefore = await inch.balanceOf(addr.address);
 
-            await this.feeBank.depositWithPermit(addr0Amount, permit, { from: addr0 });
+            await feeBank.depositWithPermit(addrAmount, permit);
 
-            expect(await this.feeBank.accountDeposits(addr0)).to.be.bignumber.eq(addr0Amount);
-            expect(await this.matcher.creditAllowance(addr0)).to.be.bignumber.eq(addr0Amount);
-            expect(await this.inch.balanceOf(addr0)).to.be.bignumber.eq(addr0balanceBefore.sub(addr0Amount));
+            expect(await feeBank.accountDeposits(addr.address)).to.equal(addrAmount);
+            expect(await matcher.creditAllowance(addr.address)).to.equal(addrAmount);
+            expect(await inch.balanceOf(addr.address)).to.equal(addrbalanceBefore.sub(addrAmount));
         });
 
-        it('should increase accountDeposits and creditAllowance without approve with depositForWithPermit()', async () => {
-            const addr0Amount = ether('1');
-            await this.inch.approve(this.feeBank.address, '0', { from: addr0 });
-            const permit = await getPermit(
-                addr0,
-                addr0Wallet.getPrivateKey(),
-                this.inch,
-                '1',
-                this.chainId,
-                this.feeBank.address,
-                addr0Amount,
-            );
-            const addr0balanceBefore = await this.inch.balanceOf(addr0);
+        it('should increase accountDeposits and creditAllowance without approve with depositForWithPermit()', async function () {
+            const { inch, feeBank, matcher } = await loadFixture(initContracts);
+            const addrAmount = ether('1');
+            await inch.approve(feeBank.address, '0');
+            const permit = await getPermit(addr, inch, '1', chainId, feeBank.address, addrAmount);
+            const addrbalanceBefore = await inch.balanceOf(addr.address);
 
-            await this.feeBank.depositForWithPermit(addr1, addr0Amount, permit, { from: addr0 });
+            await feeBank.depositForWithPermit(addr1.address, addrAmount, permit);
 
-            expect(await this.feeBank.accountDeposits(addr1)).to.be.bignumber.eq(addr0Amount);
-            expect(await this.matcher.creditAllowance(addr1)).to.be.bignumber.eq(addr0Amount);
-            expect(await this.inch.balanceOf(addr0)).to.be.bignumber.eq(addr0balanceBefore.sub(addr0Amount));
+            expect(await feeBank.accountDeposits(addr1.address)).to.equal(addrAmount);
+            expect(await matcher.creditAllowance(addr1.address)).to.equal(addrAmount);
+            expect(await inch.balanceOf(addr.address)).to.equal(addrbalanceBefore.sub(addrAmount));
         });
     });
 
-    describe('withdrawals', async () => {
-        beforeEach(async () => {
-            this.totalDepositAmount = ether('100');
-            await this.feeBank.deposit(this.totalDepositAmount);
-        });
+    describe('withdrawals', function () {
+        async function initContratsAndDeposit() {
+            const { inch, feeBank, matcher } = await initContracts();
+            const totalDepositAmount = ether('100');
+            await feeBank.deposit(totalDepositAmount);
+            return { inch, feeBank, matcher, totalDepositAmount };
+        }
 
-        it('should decrease accountDeposits and creditAllowance with withdraw()', async () => {
+        it('should decrease accountDeposits and creditAllowance with withdraw()', async function () {
+            const { inch, feeBank, matcher, totalDepositAmount } = await loadFixture(initContratsAndDeposit);
             const amount = ether('10');
-            const addr0balanceBefore = await this.inch.balanceOf(addr0);
+            const addrbalanceBefore = await inch.balanceOf(addr.address);
 
-            await this.feeBank.withdraw(amount);
+            await feeBank.withdraw(amount);
 
-            expect(await this.feeBank.accountDeposits(addr0)).to.be.bignumber.eq(this.totalDepositAmount.sub(amount));
-            expect(await this.matcher.creditAllowance(addr0)).to.be.bignumber.eq(this.totalDepositAmount.sub(amount));
-            expect(await this.inch.balanceOf(addr0)).to.be.bignumber.eq(addr0balanceBefore.add(amount));
+            expect(await feeBank.accountDeposits(addr.address)).to.equal(totalDepositAmount - amount);
+            expect(await matcher.creditAllowance(addr.address)).to.equal(totalDepositAmount - amount);
+            expect(await inch.balanceOf(addr.address)).to.equal(addrbalanceBefore.add(amount));
         });
 
-        it('should decrease accountDeposits and creditAllowance with withdrawTo()', async () => {
+        it('should decrease accountDeposits and creditAllowance with withdrawTo()', async function () {
+            const { inch, feeBank, matcher, totalDepositAmount } = await loadFixture(initContratsAndDeposit);
             const amount = ether('10');
-            const addr1balanceBefore = await this.inch.balanceOf(addr1);
+            const addr1balanceBefore = await inch.balanceOf(addr1.address);
 
-            await this.feeBank.withdrawTo(addr1, amount);
+            await feeBank.withdrawTo(addr1.address, amount);
 
-            expect(await this.feeBank.accountDeposits(addr0)).to.be.bignumber.eq(this.totalDepositAmount.sub(amount));
-            expect(await this.matcher.creditAllowance(addr0)).to.be.bignumber.eq(this.totalDepositAmount.sub(amount));
-            expect(await this.inch.balanceOf(addr1)).to.be.bignumber.eq(addr1balanceBefore.add(amount));
+            expect(await feeBank.accountDeposits(addr.address)).to.equal(totalDepositAmount - amount);
+            expect(await matcher.creditAllowance(addr.address)).to.equal(totalDepositAmount - amount);
+            expect(await inch.balanceOf(addr1.address)).to.equal(addr1balanceBefore.add(amount));
         });
 
-        it('should not withdrawal more than account have', async () => {
-            // eslint-disable-next-line max-len
-            const ArithmeticOperationRevertMessage =
-                'VM Exception while processing transaction: reverted with panic code 0x11 (Arithmetic operation underflowed or overflowed outside of an unchecked block)';
-            await expect(this.feeBank.withdraw(this.totalDepositAmount.addn(1))).to.eventually.be.rejectedWith(
-                ArithmeticOperationRevertMessage,
-            );
+        it('should not withdrawal more than account have', async function () {
+            const { feeBank, totalDepositAmount } = await loadFixture(initContratsAndDeposit);
+            await expect(feeBank.withdraw(totalDepositAmount + 1n)).to.be.revertedWithPanic(PANIC_CODES.UNDERFLOW);
         });
     });
 
-    describe('gatherFees', async () => {
-        it('should correct withdrawal fee for 1 account', async () => {
+    describe('gatherFees', function () {
+        it('should correct withdrawal fee for 1 account', async function () {
+            const { inch, feeBank, matcher } = await loadFixture(initContracts);
             const amount = ether('10');
             const subCreditAmount = ether('2');
-            await this.feeBank.deposit(amount, { from: addr1 });
-            await this.matcher.setFeeBank(addr0);
-            await this.matcher.decreaseCreditAllowance(addr1, subCreditAmount);
+            await feeBank.connect(addr1).deposit(amount);
+            await matcher.setFeeBank(addr.address);
+            await matcher.decreaseCreditAllowance(addr1.address, subCreditAmount);
 
-            const balanceBefore = await this.inch.balanceOf(addr0);
-            expect(await this.feeBank.accountDeposits(addr1)).to.be.bignumber.eq(amount);
-            expect(await this.matcher.creditAllowance(addr1)).to.be.bignumber.eq(amount.sub(subCreditAmount));
-            await this.feeBank.gatherFees([addr1]);
+            const balanceBefore = await inch.balanceOf(addr.address);
+            expect(await feeBank.accountDeposits(addr1.address)).to.equal(amount);
+            expect(await matcher.creditAllowance(addr1.address)).to.equal(amount - subCreditAmount);
+            await feeBank.gatherFees([addr1.address]);
 
-            expect(await this.feeBank.accountDeposits(addr1)).to.be.bignumber.eq(amount.sub(subCreditAmount));
-            expect(await this.matcher.creditAllowance(addr1)).to.be.bignumber.eq(amount.sub(subCreditAmount));
-            expect(await this.inch.balanceOf(addr0)).to.be.bignumber.eq(balanceBefore.add(subCreditAmount));
+            expect(await feeBank.accountDeposits(addr1.address)).to.equal(amount - subCreditAmount);
+            expect(await matcher.creditAllowance(addr1.address)).to.equal(amount - subCreditAmount);
+            expect(await inch.balanceOf(addr.address)).to.equal(balanceBefore.toBigInt() + subCreditAmount);
         });
 
-        it('should correct withdrawal fee for 2 account', async () => {
-            const addr0Amount = ether('10');
+        it('should correct withdrawal fee for 2 account', async function () {
+            const { inch, feeBank, matcher } = await loadFixture(initContracts);
+            const addrAmount = ether('10');
             const addr1Amount = ether('25');
-            const subCreditAddr0Amount = ether('2');
+            const subCreditaddrAmount = ether('2');
             const subCreditAddr1Amount = ether('11');
-            await this.feeBank.deposit(addr0Amount, { from: addr0 });
-            await this.feeBank.deposit(addr1Amount, { from: addr1 });
-            await this.matcher.setFeeBank(addr0);
-            await this.matcher.decreaseCreditAllowance(addr0, subCreditAddr0Amount);
-            await this.matcher.decreaseCreditAllowance(addr1, subCreditAddr1Amount);
+            await feeBank.deposit(addrAmount);
+            await feeBank.connect(addr1).deposit(addr1Amount);
+            await matcher.setFeeBank(addr.address);
+            await matcher.decreaseCreditAllowance(addr.address, subCreditaddrAmount);
+            await matcher.decreaseCreditAllowance(addr1.address, subCreditAddr1Amount);
 
-            const balanceBefore = await this.inch.balanceOf(addr0);
-            expect(await this.feeBank.accountDeposits(addr0)).to.be.bignumber.eq(addr0Amount);
-            expect(await this.feeBank.accountDeposits(addr1)).to.be.bignumber.eq(addr1Amount);
-            expect(await this.matcher.creditAllowance(addr0)).to.be.bignumber.eq(addr0Amount.sub(subCreditAddr0Amount));
-            expect(await this.matcher.creditAllowance(addr1)).to.be.bignumber.eq(addr1Amount.sub(subCreditAddr1Amount));
-            await this.feeBank.gatherFees([addr0, addr1]);
+            const balanceBefore = await inch.balanceOf(addr.address);
+            expect(await feeBank.accountDeposits(addr.address)).to.equal(addrAmount);
+            expect(await feeBank.accountDeposits(addr1.address)).to.equal(addr1Amount);
+            expect(await matcher.creditAllowance(addr.address)).to.equal(addrAmount - subCreditaddrAmount);
+            expect(await matcher.creditAllowance(addr1.address)).to.equal(addr1Amount - subCreditAddr1Amount);
+            await feeBank.gatherFees([addr.address, addr1.address]);
 
-            expect(await this.feeBank.accountDeposits(addr0)).to.be.bignumber.eq(addr0Amount.sub(subCreditAddr0Amount));
-            expect(await this.feeBank.accountDeposits(addr1)).to.be.bignumber.eq(addr1Amount.sub(subCreditAddr1Amount));
-            expect(await this.matcher.creditAllowance(addr0)).to.be.bignumber.eq(addr0Amount.sub(subCreditAddr0Amount));
-            expect(await this.matcher.creditAllowance(addr1)).to.be.bignumber.eq(addr1Amount.sub(subCreditAddr1Amount));
-            expect(await this.inch.balanceOf(addr0)).to.be.bignumber.eq(
-                balanceBefore.add(subCreditAddr0Amount).add(subCreditAddr1Amount),
+            expect(await feeBank.accountDeposits(addr.address)).to.equal(addrAmount - subCreditaddrAmount);
+            expect(await feeBank.accountDeposits(addr1.address)).to.equal(addr1Amount - subCreditAddr1Amount);
+            expect(await matcher.creditAllowance(addr.address)).to.equal(addrAmount - subCreditaddrAmount);
+            expect(await matcher.creditAllowance(addr1.address)).to.equal(addr1Amount - subCreditAddr1Amount);
+            expect(await inch.balanceOf(addr.address)).to.equal(
+                balanceBefore.add(subCreditaddrAmount).add(subCreditAddr1Amount),
             );
         });
 
-        it('should correct withdrawal fee for several account', async () => {
-            const accounts = await web3.eth.getAccounts();
+        it('should correct withdrawal fee for several account', async function () {
+            const { inch, feeBank, matcher } = await loadFixture(initContracts);
+            const accounts = [];
+            const wallets = await ethers.getSigners();
+            for (const wallet of wallets) {
+                accounts.push(wallet.address);
+            }
             const amounts = [];
             const subCreditAmounts = [];
             let totalSubCreditAmounts = ether('0');
-            for (let i = 0; i < accounts.length; i++) {
-                amounts[i] = toBN(web3.utils.randomHex(8));
-                subCreditAmounts[i] = toBN(web3.utils.randomHex(2));
-                totalSubCreditAmounts = totalSubCreditAmounts.add(subCreditAmounts[i]);
-                await this.feeBank.depositFor(accounts[i], amounts[i]);
+            for (let i = 1; i < accounts.length; i++) {
+                amounts[i] = BN.from(ethers.utils.randomBytes(8));
+                subCreditAmounts[i] = BN.from(ethers.utils.randomBytes(2)).toBigInt();
+                totalSubCreditAmounts = totalSubCreditAmounts + subCreditAmounts[i];
+                await feeBank.depositFor(accounts[i], amounts[i]);
             }
-            await this.matcher.setFeeBank(addr0);
-            for (let i = 0; i < accounts.length; i++) {
-                await this.matcher.decreaseCreditAllowance(accounts[i], subCreditAmounts[i]);
-            }
-
-            const balanceBefore = await this.inch.balanceOf(addr0);
-            for (let i = 0; i < accounts.length; i++) {
-                expect(await this.feeBank.accountDeposits(accounts[i])).to.be.bignumber.eq(amounts[i]);
-                expect(await this.matcher.creditAllowance(accounts[i])).to.be.bignumber.eq(
-                    amounts[i].sub(subCreditAmounts[i]),
-                );
+            await matcher.setFeeBank(addr.address);
+            for (let i = 1; i < accounts.length; i++) {
+                await matcher.decreaseCreditAllowance(accounts[i], subCreditAmounts[i]);
             }
 
-            await this.feeBank.gatherFees(accounts);
-            for (let i = 0; i < accounts.length; i++) {
-                expect(await this.feeBank.accountDeposits(accounts[i])).to.be.bignumber.eq(
-                    amounts[i].sub(subCreditAmounts[i]),
-                );
-                expect(await this.matcher.creditAllowance(accounts[i])).to.be.bignumber.eq(
-                    amounts[i].sub(subCreditAmounts[i]),
-                );
+            const balanceBefore = await inch.balanceOf(addr.address);
+            for (let i = 1; i < accounts.length; i++) {
+                expect(await feeBank.accountDeposits(accounts[i])).to.equal(amounts[i]);
+                expect(await matcher.creditAllowance(accounts[i])).to.equal(amounts[i].sub(subCreditAmounts[i]));
             }
-            expect(await this.inch.balanceOf(addr0)).to.be.bignumber.eq(balanceBefore.add(totalSubCreditAmounts));
+
+            await feeBank.gatherFees(accounts);
+            for (let i = 1; i < accounts.length; i++) {
+                expect(await feeBank.accountDeposits(accounts[i])).to.equal(amounts[i].sub(subCreditAmounts[i]));
+                expect(await matcher.creditAllowance(accounts[i])).to.equal(amounts[i].sub(subCreditAmounts[i]));
+            }
+            expect(await inch.balanceOf(addr.address)).to.equal(balanceBefore.add(totalSubCreditAmounts));
         });
 
-        it('should not work by non-owner', async () => {
-            await expect(this.feeBank.gatherFees([addr0, addr1], { from: addr1 })).to.eventually.be.rejectedWith(
+        it('should not work by non-owner', async function () {
+            const { feeBank } = await loadFixture(initContracts);
+            await expect(feeBank.connect(addr1).gatherFees([addr.address, addr1.address])).to.be.revertedWith(
                 'Ownable: caller is not the owner',
             );
         });

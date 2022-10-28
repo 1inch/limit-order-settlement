@@ -1,195 +1,200 @@
 const { expect, ether } = require('@1inch/solidity-utils');
-const { addr0Wallet, addr1Wallet } = require('./helpers/utils');
-
-const TokenMock = artifacts.require('TokenMock');
-const WrappedTokenMock = artifacts.require('WrappedTokenMock');
-const LimitOrderProtocol = artifacts.require('LimitOrderProtocol');
-const WhitelistRegistrySimple = artifacts.require('WhitelistRegistrySimple');
-const Settlement = artifacts.require('Settlement');
-
+const { ethers } = require('hardhat');
+const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
+const { deploySwapTokens, getChainId, deploySimpleRegistry } = require('./helpers/fixtures');
 const { buildOrder, signOrder } = require('./helpers/orderUtils');
 
-describe('WhitelistChecker', async () => {
-    const [addr0, addr1] = [addr0Wallet.getAddressString(), addr1Wallet.getAddressString()];
+describe('WhitelistChecker', function () {
+    let addr, addr1;
+    let chainId;
+    const abiCoder = ethers.utils.defaultAbiCoder;
 
-    before(async () => {
-        this.chainId = await web3.eth.getChainId();
+    before(async function () {
+        [addr, addr1] = await ethers.getSigners();
+        chainId = await getChainId();
     });
 
-    beforeEach(async () => {
-        this.dai = await TokenMock.new('DAI', 'DAI');
-        this.weth = await WrappedTokenMock.new('WETH', 'WETH');
+    async function initContracts() {
+        const { dai, weth, swap } = await deploySwapTokens();
 
-        this.swap = await LimitOrderProtocol.new(this.weth.address);
+        await dai.mint(addr.address, ether('100'));
+        await dai.mint(addr1.address, ether('100'));
+        await weth.deposit({ value: ether('1') });
+        await weth.connect(addr1).deposit({ value: ether('1') });
 
-        await this.dai.mint(addr0, ether('100'));
-        await this.dai.mint(addr1, ether('100'));
-        await this.weth.deposit({ from: addr0, value: ether('1') });
-        await this.weth.deposit({ from: addr1, value: ether('1') });
+        await dai.approve(swap.address, ether('100'));
+        await dai.connect(addr1).approve(swap.address, ether('100'));
+        await weth.approve(swap.address, ether('1'));
+        await weth.connect(addr1).approve(swap.address, ether('1'));
 
-        await this.dai.approve(this.swap.address, ether('100'));
-        await this.dai.approve(this.swap.address, ether('100'), {
-            from: addr1,
-        });
-        await this.weth.approve(this.swap.address, ether('1'));
-        await this.weth.approve(this.swap.address, ether('1'), { from: addr1 });
+        const whitelistRegistrySimple = await deploySimpleRegistry();
+        const Settlement = await ethers.getContractFactory('Settlement');
+        const matcher = await Settlement.deploy(whitelistRegistrySimple.address, swap.address);
+        await matcher.deployed();
+        return { dai, weth, swap, whitelistRegistrySimple, matcher };
+    }
 
-        this.whitelistRegistrySimple = await WhitelistRegistrySimple.new();
-        this.matcher = await Settlement.new(this.whitelistRegistrySimple.address, this.swap.address);
-    });
-
-    const settleOrders = async (settleOrderMethod) => {
+    async function settleOrders(settleOrderMethod, dai, weth, swap, matcher) {
         const order0 = await buildOrder({
-            makerAsset: this.dai.address,
-            takerAsset: this.weth.address,
+            makerAsset: dai.address,
+            takerAsset: weth.address,
             makingAmount: ether('100'),
             takingAmount: ether('0.1'),
-            from: addr0,
+            from: addr.address,
         });
         const order1 = await buildOrder({
-            makerAsset: this.weth.address,
-            takerAsset: this.dai.address,
+            makerAsset: weth.address,
+            takerAsset: dai.address,
             makingAmount: ether('0.1'),
             takingAmount: ether('100'),
-            from: addr1,
+            from: addr1.address,
         });
-        const signature0 = signOrder(order0, this.chainId, this.swap.address, addr0Wallet.getPrivateKey());
-        const signature1 = signOrder(order1, this.chainId, this.swap.address, addr1Wallet.getPrivateKey());
+        const signature0 = await signOrder(order0, chainId, swap.address, addr);
+        const signature1 = await signOrder(order1, chainId, swap.address, addr1);
         const matchingParams =
-            this.matcher.address +
+            matcher.address +
             '01' +
-            web3.eth.abi
-                .encodeParameters(
+            abiCoder
+                .encode(
                     ['address[]', 'bytes[]'],
                     [
-                        [this.weth.address, this.dai.address],
+                        [weth.address, dai.address],
                         [
-                            this.weth.contract.methods.approve(this.swap.address, ether('0.1')).encodeABI(),
-                            this.dai.contract.methods.approve(this.swap.address, ether('100')).encodeABI(),
+                            weth.interface.encodeFunctionData('approve', [swap.address, ether('0.1')]),
+                            dai.interface.encodeFunctionData('approve', [swap.address, ether('100')]),
                         ],
                     ],
                 )
                 .substring(2);
         const interaction =
-            this.matcher.address +
+            matcher.address +
             '00' +
-            this.swap.contract.methods
-                .fillOrderTo(order1, signature1, matchingParams, ether('0.1'), 0, ether('100'), this.matcher.address)
-                .encodeABI()
+            swap.interface
+                .encodeFunctionData('fillOrderTo', [
+                    order1,
+                    signature1,
+                    matchingParams,
+                    ether('0.1'),
+                    0,
+                    ether('100'),
+                    matcher.address,
+                ])
                 .substring(10);
         await settleOrderMethod(
-            this.swap.address,
+            swap.address,
             order0,
             signature0,
             interaction,
             ether('100'),
             0,
             ether('0.1'),
-            this.matcher.address,
+            matcher.address,
         );
-    };
+    }
 
-    describe('should not work with non-whitelisted address', async () => {
-        it('onlyWhitelistedEOA modifier in settleOrdersEOA method', async () => {
+    describe('should not work with non-whitelisted address', function () {
+        it('onlyWhitelistedEOA modifier in settleOrdersEOA method', async function () {
+            const { dai, weth, swap, matcher } = await loadFixture(initContracts);
             const order1 = await buildOrder({
-                makerAsset: this.dai.address,
-                takerAsset: this.weth.address,
+                makerAsset: dai.address,
+                takerAsset: weth.address,
                 makingAmount: ether('10'),
                 takingAmount: ether('0.01'),
-                from: addr1,
+                from: addr1.address,
             });
             await expect(
-                this.matcher.settleOrdersEOA(
-                    this.swap.address,
+                matcher.settleOrdersEOA(
+                    swap.address,
                     order1,
                     '0x',
                     '0x',
                     ether('10'),
                     0,
                     ether('0.01'),
-                    this.matcher.address,
+                    matcher.address,
                 ),
-            ).to.eventually.be.rejectedWith('AccessDenied()');
+            ).to.be.revertedWithCustomError(matcher, 'AccessDenied');
         });
 
-        it('onlyWhitelisted modifier in settleOrders method', async () => {
+        it('onlyWhitelisted modifier in settleOrders method', async function () {
+            const { dai, weth, swap, matcher } = await loadFixture(initContracts);
             const order1 = await buildOrder({
-                makerAsset: this.dai.address,
-                takerAsset: this.weth.address,
+                makerAsset: dai.address,
+                takerAsset: weth.address,
                 makingAmount: ether('10'),
                 takingAmount: ether('0.01'),
-                from: addr1,
+                from: addr1.address,
             });
             await expect(
-                this.matcher.settleOrders(
-                    this.swap.address,
-                    order1,
-                    '0x',
-                    '0x',
-                    ether('10'),
-                    0,
-                    ether('0.01'),
-                    this.matcher.address,
-                ),
-            ).to.eventually.be.rejectedWith('AccessDenied()');
+                matcher.settleOrders(swap.address, order1, '0x', '0x', ether('10'), 0, ether('0.01'), matcher.address),
+            ).to.be.revertedWithCustomError(matcher, 'AccessDenied');
         });
 
-        it('onlyWhitelisted modifier in fillOrderInteraction method', async () => {
+        it('onlyWhitelisted modifier in fillOrderInteraction method', async function () {
+            const { dai, weth, swap, matcher } = await loadFixture(initContracts);
             const order = await buildOrder({
-                makerAsset: this.dai.address,
-                takerAsset: this.weth.address,
+                makerAsset: dai.address,
+                takerAsset: weth.address,
                 makingAmount: ether('100'),
                 takingAmount: ether('0.1'),
-                from: addr1,
+                from: addr1.address,
             });
-            const signature = signOrder(order, this.chainId, this.swap.address, addr1Wallet.getPrivateKey());
+            const signature = signOrder(order, chainId, swap.address, addr1);
             const interaction =
-                this.matcher.address +
+                matcher.address +
                 '01' +
-                web3.eth.abi.encodeParameters(['address[]', 'bytes[]'], [[this.matcher.address], ['0x']]).substring(2);
+                abiCoder.encode(['address[]', 'bytes[]'], [[matcher.address], ['0x']]).substring(2);
             await expect(
-                this.swap.fillOrder(order, signature, interaction, ether('10'), 0, ether('0.01')),
-            ).to.eventually.be.rejectedWith('AccessDenied()');
+                swap.fillOrder(order, signature, interaction, ether('10'), 0, ether('0.01')),
+            ).to.be.revertedWithCustomError(swap, 'AccessDenied');
         });
 
-        it('onlyLimitOrderProtocol modifier', async () => {
-            await expect(this.matcher.fillOrderInteraction(addr0, '0', '0', '0x')).to.eventually.be.rejectedWith(
-                'AccessDenied()',
+        it('onlyLimitOrderProtocol modifier', async function () {
+            const { matcher } = await loadFixture(initContracts);
+            await expect(matcher.fillOrderInteraction(addr.address, '0', '0', '0x')).to.be.revertedWithCustomError(
+                matcher,
+                'AccessDenied',
             );
         });
     });
 
-    describe('should work with whitelisted address', async () => {
-        beforeEach(async () => {
-            await this.whitelistRegistrySimple.setStatus(addr0, true);
+    describe('should work with whitelisted address', function () {
+        async function initContractsAndSetStatus() {
+            const { dai, weth, swap, whitelistRegistrySimple, matcher } = await initContracts();
+            await whitelistRegistrySimple.setStatus(addr.address, true);
+            return { dai, weth, swap, matcher };
+        }
+
+        it('onlyWhitelistedEOA modifier in settleOrdersEOA method', async function () {
+            const { dai, weth, swap, matcher } = await loadFixture(initContractsAndSetStatus);
+
+            const addrweth = await weth.balanceOf(addr.address);
+            const addr1weth = await weth.balanceOf(addr1.address);
+            const addrdai = await dai.balanceOf(addr.address);
+            const addr1dai = await dai.balanceOf(addr1.address);
+
+            await settleOrders(matcher.settleOrdersEOA, dai, weth, swap, matcher);
+
+            expect(await weth.balanceOf(addr.address)).to.equal(addrweth.add(ether('0.1')));
+            expect(await weth.balanceOf(addr1.address)).to.equal(addr1weth.sub(ether('0.1')));
+            expect(await dai.balanceOf(addr.address)).to.equal(addrdai.sub(ether('100')));
+            expect(await dai.balanceOf(addr1.address)).to.equal(addr1dai.add(ether('100')));
         });
 
-        it('onlyWhitelistedEOA modifier in settleOrdersEOA method', async () => {
-            const addr0weth = await this.weth.balanceOf(addr0);
-            const addr1weth = await this.weth.balanceOf(addr1);
-            const addr0dai = await this.dai.balanceOf(addr0);
-            const addr1dai = await this.dai.balanceOf(addr1);
+        it('onlyWhitelisted modifier in settleOrders method', async function () {
+            const { dai, weth, swap, matcher } = await loadFixture(initContractsAndSetStatus);
 
-            await settleOrders(this.matcher.settleOrdersEOA);
+            const addrweth = await weth.balanceOf(addr.address);
+            const addr1weth = await weth.balanceOf(addr1.address);
+            const addrdai = await dai.balanceOf(addr.address);
+            const addr1dai = await dai.balanceOf(addr1.address);
 
-            expect(await this.weth.balanceOf(addr0)).to.be.bignumber.equal(addr0weth.add(ether('0.1')));
-            expect(await this.weth.balanceOf(addr1)).to.be.bignumber.equal(addr1weth.sub(ether('0.1')));
-            expect(await this.dai.balanceOf(addr0)).to.be.bignumber.equal(addr0dai.sub(ether('100')));
-            expect(await this.dai.balanceOf(addr1)).to.be.bignumber.equal(addr1dai.add(ether('100')));
-        });
+            await settleOrders(matcher.settleOrders, dai, weth, swap, matcher);
 
-        it('onlyWhitelisted modifier in settleOrders method', async () => {
-            const addr0weth = await this.weth.balanceOf(addr0);
-            const addr1weth = await this.weth.balanceOf(addr1);
-            const addr0dai = await this.dai.balanceOf(addr0);
-            const addr1dai = await this.dai.balanceOf(addr1);
-
-            await settleOrders(this.matcher.settleOrders);
-
-            expect(await this.weth.balanceOf(addr0)).to.be.bignumber.equal(addr0weth.add(ether('0.1')));
-            expect(await this.weth.balanceOf(addr1)).to.be.bignumber.equal(addr1weth.sub(ether('0.1')));
-            expect(await this.dai.balanceOf(addr0)).to.be.bignumber.equal(addr0dai.sub(ether('100')));
-            expect(await this.dai.balanceOf(addr1)).to.be.bignumber.equal(addr1dai.add(ether('100')));
+            expect(await weth.balanceOf(addr.address)).to.equal(addrweth.add(ether('0.1')));
+            expect(await weth.balanceOf(addr1.address)).to.equal(addr1weth.sub(ether('0.1')));
+            expect(await dai.balanceOf(addr.address)).to.equal(addrdai.sub(ether('100')));
+            expect(await dai.balanceOf(addr1.address)).to.equal(addr1dai.add(ether('100')));
         });
     });
 });

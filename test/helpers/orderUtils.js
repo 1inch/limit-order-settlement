@@ -1,23 +1,4 @@
-const { constants, toBN, trim0x, TypedDataVersion, time } = require('@1inch/solidity-utils');
-const { signTypedData } = require('@metamask/eth-sig-util');
-const { EIP712Domain } = require('./eip712');
-
-const OrderRFQ = [
-    { name: 'info', type: 'uint256' },
-    { name: 'makerAsset', type: 'address' },
-    { name: 'takerAsset', type: 'address' },
-    { name: 'maker', type: 'address' },
-    { name: 'allowedSender', type: 'address' },
-    { name: 'makingAmount', type: 'uint256' },
-    { name: 'takingAmount', type: 'uint256' },
-];
-
-const ABIOrderRFQ = {
-    OrderRFQ: OrderRFQ.reduce((obj, item) => {
-        obj[item.name] = item.type;
-        return obj;
-    }, {}),
-};
+const { constants, trim0x, time } = require('@1inch/solidity-utils');
 
 const Order = [
     { name: 'salt', type: 'uint256' },
@@ -31,13 +12,6 @@ const Order = [
     { name: 'offsets', type: 'uint256' },
     { name: 'interactions', type: 'bytes' },
 ];
-
-const ABIOrder = {
-    Order: Order.reduce((obj, item) => {
-        obj[item.name] = item.type;
-        return obj;
-    }, {}),
-};
 
 const name = '1inch Limit Order Protocol';
 const version = '3';
@@ -95,7 +69,7 @@ const buildOrder = async (
     const offsets = allInteractions
         .map((a) => a.length / 2 - 1)
         .map(cumulativeSum)
-        .reduce((acc, a, i) => acc.add(toBN(a).shln(32 * i)), toBN('0'));
+        .reduce((acc, a, i) => acc + (BigInt(a) << BigInt(32 * i)), BigInt(0));
 
     return {
         salt,
@@ -111,27 +85,7 @@ const buildOrder = async (
     };
 };
 
-const buildOrderRFQ = (
-    info,
-    makerAsset,
-    takerAsset,
-    makingAmount,
-    takingAmount,
-    from,
-    allowedSender = constants.ZERO_ADDRESS,
-) => {
-    return {
-        info,
-        makerAsset,
-        takerAsset,
-        maker: from,
-        allowedSender,
-        makingAmount,
-        takingAmount,
-    };
-};
-
-const defaultExpiredAuctionTimestamp = async () => (await time.latest()).subn(1800);
+const defaultExpiredAuctionTimestamp = async () => BigInt(await time.latest()) - BigInt(1800);
 
 const buildSalt = ({
     orderStartTime,
@@ -140,79 +94,23 @@ const buildSalt = ({
     fee = 0, // in wei
     salt = '1', // less than uint176
 }) =>
-    toBN(orderStartTime)
-        .shln(224)
-        .add(toBN(duration).shln(192))
-        .add(toBN(initialStartRate).shln(176))
-        .add(toBN(fee).shln(144))
-        .add(toBN(salt))
-        .toString();
+    (
+        (BigInt(orderStartTime) << 224n) +
+        (BigInt(duration) << 192n) +
+        (BigInt(initialStartRate) << 176n) +
+        (BigInt(fee) << 144n) +
+        BigInt(salt)
+    ).toString();
 
-const buildOrderData = (chainId, verifyingContract, order) => {
-    return {
-        primaryType: 'Order',
-        types: { EIP712Domain, Order },
-        domain: { name, version, chainId, verifyingContract },
-        message: order,
-    };
-};
-
-const buildOrderRFQData = (chainId, verifyingContract, order) => {
-    return {
-        primaryType: 'OrderRFQ',
-        types: { EIP712Domain, OrderRFQ },
-        domain: { name, version, chainId, verifyingContract },
-        message: order,
-    };
-};
-
-const signOrder = (order, chainId, target, privateKey) => {
-    const data = buildOrderData(chainId, target, order);
-    return signTypedData({ privateKey, data, version: TypedDataVersion });
-};
-
-const signOrderRFQ = (order, chainId, target, privateKey) => {
-    const data = buildOrderRFQData(chainId, target, order);
-    return signTypedData({ privateKey, data, version: TypedDataVersion });
-};
-
-const compactSignature = (signature) => {
-    const r = toBN(signature.substring(2, 66), 'hex');
-    const s = toBN(signature.substring(66, 130), 'hex');
-    const v = toBN(signature.substring(130, 132), 'hex');
-    return {
-        r: '0x' + r.toString('hex').padStart(64, '0'),
-        vs: '0x' + v.subn(27).shln(255).add(s).toString('hex').padStart(64, '0'),
-    };
-};
-
-const unwrapWeth = (amount) => {
-    return toBN(amount).setn(252, 1).toString();
-};
-
-const makingAmount = (amount) => {
-    return toBN(amount).setn(255, 1).toString();
-};
-
-const takingAmount = (amount) => {
-    return toBN(amount).toString();
-};
+async function signOrder(order, chainId, target, wallet) {
+    return await wallet._signTypedData({ name, version, chainId, verifyingContract: target }, { Order }, order);
+}
 
 module.exports = {
-    ABIOrderRFQ,
-    ABIOrder,
     buildOrder,
-    buildOrderRFQ,
-    buildOrderData,
-    buildOrderRFQData,
     buildSalt,
-    defaultExpiredAuctionTimestamp,
     signOrder,
-    signOrderRFQ,
-    compactSignature,
-    makingAmount,
-    takingAmount,
-    unwrapWeth,
+    defaultExpiredAuctionTimestamp,
     name,
     version,
 };

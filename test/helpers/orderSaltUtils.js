@@ -1,57 +1,58 @@
-const { toBN } = require('@1inch/solidity-utils');
+const { ethers } = require('hardhat');
 
 /* eslint-disable no-multi-spaces */
-const TIME_START_MASK        = toBN('0xFFFFFFFF00000000000000000000000000000000000000000000000000000000'); // prettier-ignore
-const DURATION_MASK          = toBN('0x00000000FFFFFFFF000000000000000000000000000000000000000000000000'); // prettier-ignore
-const INITIAL_RATE_BUMP_MASK = toBN('0x0000000000000000FFFF00000000000000000000000000000000000000000000'); // prettier-ignore
-const FEE_MASK               = toBN('0x00000000000000000000FFFFFFFF000000000000000000000000000000000000'); // prettier-ignore
-const SALT_MASK              = toBN('0x0000000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF'); // prettier-ignore
+const TIME_START_MASK        = 0xFFFFFFFF00000000000000000000000000000000000000000000000000000000n; // prettier-ignore
+const DURATION_MASK          = 0x00000000FFFFFFFF000000000000000000000000000000000000000000000000n; // prettier-ignore
+const INITIAL_RATE_BUMP_MASK = 0x0000000000000000FFFF00000000000000000000000000000000000000000000n; // prettier-ignore
+const FEE_MASK               = 0x00000000000000000000FFFFFFFF000000000000000000000000000000000000n; // prettier-ignore
+const SALT_MASK              = 0x0000000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFn; // prettier-ignore
 /* eslint-enable no-multi-spaces */
 
-const TIME_START_SHIFT = 224; // orderTimeMask 224-255
-const DURATION_SHIFT = 192; // durationMask 192-223
-const INITIAL_RATE_BUMP_SHIFT = 176; // initialRateMask 176-191
-const FEE_SHIFT = 144; // orderFee 144-175
+const TIME_START_SHIFT = 224n; // orderTimeMask 224-255
+const DURATION_SHIFT = 192n; // durationMask 192-223
+const INITIAL_RATE_BUMP_SHIFT = 176n; // initialRateMask 176-191
+const FEE_SHIFT = 144n; // orderFee 144-175
 
 const initSaltObj = (orderSalt) => {
     return {
-        startTime: orderSalt.and(TIME_START_MASK).shrn(TIME_START_SHIFT),
-        duration: orderSalt.and(DURATION_MASK).shrn(DURATION_SHIFT),
-        initialRate: orderSalt.and(INITIAL_RATE_BUMP_MASK).shrn(INITIAL_RATE_BUMP_SHIFT),
-        fee: orderSalt.and(FEE_MASK).shrn(FEE_SHIFT),
-        salt: orderSalt.and(SALT_MASK),
+        startTime: (orderSalt & TIME_START_MASK) >> TIME_START_SHIFT,
+        duration: (orderSalt & DURATION_MASK) >> DURATION_SHIFT,
+        initialRate: (orderSalt & INITIAL_RATE_BUMP_MASK) >> INITIAL_RATE_BUMP_SHIFT,
+        fee: (orderSalt & FEE_MASK) >> FEE_SHIFT,
+        salt: orderSalt & SALT_MASK,
     };
 };
 
 const encodeParameters = (startTime, duration, initialRate, fee, salt) => {
+    const abiCoder = ethers.utils.defaultAbiCoder;
     return (
         '0x' +
-        web3.eth.abi.encodeParameter('uint32', startTime).substr(-8) +
-        web3.eth.abi.encodeParameter('uint32', duration).substr(-8) +
-        web3.eth.abi.encodeParameter('uint16', initialRate).substr(-4) +
-        web3.eth.abi.encodeParameter('uint32', fee).substr(-8) +
-        web3.eth.abi.encodeParameter('uint144', salt).substr(-36)
+        abiCoder.encode(['uint32'], [startTime]).slice(-8) +
+        abiCoder.encode(['uint32'], [duration]).slice(-8) +
+        abiCoder.encode(['uint16'], [initialRate]).slice(-4) +
+        abiCoder.encode(['uint32'], [fee]).slice(-8) +
+        abiCoder.encode(['uint144'], [salt]).slice(-36)
     );
 };
 
 const getStartTime = (orderSalt) => {
-    return orderSalt.and(TIME_START_MASK).shrn(TIME_START_SHIFT);
+    return (orderSalt & TIME_START_MASK) >> TIME_START_SHIFT;
 };
 
 const getDuration = (orderSalt) => {
-    return orderSalt.and(DURATION_MASK).shrn(DURATION_SHIFT);
+    return (orderSalt & DURATION_MASK) >> DURATION_SHIFT;
 };
 
 const getInitialRateBump = (orderSalt) => {
-    return orderSalt.and(INITIAL_RATE_BUMP_MASK).shrn(INITIAL_RATE_BUMP_SHIFT);
+    return (orderSalt & INITIAL_RATE_BUMP_MASK) >> INITIAL_RATE_BUMP_SHIFT;
 };
 
 const getFee = (orderSalt) => {
-    return orderSalt.and(FEE_MASK).shrn(FEE_SHIFT);
+    return (orderSalt & FEE_MASK) >> FEE_SHIFT;
 };
 
 const getSalt = (orderSalt) => {
-    return orderSalt.and(SALT_MASK);
+    return orderSalt & SALT_MASK;
 };
 
 module.exports = {
