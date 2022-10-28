@@ -18,7 +18,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         });
     }
 
-    const constructorArguments = ['0x521abad8E91e2126E66B018170184da26aeAbFc4', WhitelistRegistrySimple.address];
+    const constructorArguments = [WhitelistRegistrySimple.address, '0x9b934b33fef7a899f502bc191e820ae655797ed3'];
     const Settlement = await deploy('Settlement', {
         from: deployer,
         args: constructorArguments,
