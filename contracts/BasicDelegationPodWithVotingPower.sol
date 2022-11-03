@@ -2,14 +2,14 @@
 
 pragma solidity 0.8.17;
 
-import "@1inch/delegating/contracts/delegations/BasicDelegationTopic.sol";
+import "@1inch/delegating/contracts/BasicDelegationPod.sol";
 import "./helpers/VotingPowerCalculator.sol";
 import "./interfaces/IVotable.sol";
 import "./St1inch.sol";
 
-contract BasicDelegationTopicWithVotingPower is BasicDelegationTopic, VotingPowerCalculator, IVotable {
+contract BasicDelegationPodWithVotingPower is BasicDelegationPod, VotingPowerCalculator, IVotable {
     constructor(string memory name_, string memory symbol_, St1inch st1inch)
-        BasicDelegationTopic(name_, symbol_)
+        BasicDelegationPod(name_, symbol_, address(st1inch))
         VotingPowerCalculator(st1inch.expBase(), st1inch.origin())
     {} // solhint-disable-line no-empty-blocks
 

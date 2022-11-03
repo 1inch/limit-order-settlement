@@ -2,13 +2,13 @@
 # yarn lockfile v1
 
 
-"@1inch/delegating@0.0.1":
-  version "0.0.1"
-  resolved "https://registry.yarnpkg.com/@1inch/delegating/-/delegating-0.0.1.tgz#1b57e0c63f724676e054d6e8ce4349620702972b"
-  integrity sha512-dbCaA/CXh4xIgebnbXU4VgafyZ9+IK6FV2E/HRkHt2LvQaApeU5SulGgHLB2ekW5dKio59lyLzuxKVUAJLBp4w==
+"@1inch/delegating@0.0.6":
+  version "0.0.6"
+  resolved "https://registry.yarnpkg.com/@1inch/delegating/-/delegating-0.0.6.tgz#c3ba14c8e8e397ed2096a28e14dad51397d6fcb0"
+  integrity sha512-k4OB6HWf5BndgKnnmvU1DcM3xhy/Ff1qXYpVIsRTMzjLP3UnTomxH6+EfCCXYrHASQTkQ+ygFPsJBsOnEd1m3w==
   dependencies:
     "@1inch/erc20-pods" "0.0.4"
-    "@1inch/farming" "1.0.4"
+    "@1inch/farming" "1.1.0"
     "@1inch/solidity-utils" "2.2.0"
     "@openzeppelin/contracts" "4.7.3"
     hardhat-dependency-compiler "1.1.3"
@@ -21,11 +21,12 @@
     "@1inch/solidity-utils" "2.2.0"
     "@openzeppelin/contracts" "4.7.3"
 
-"@1inch/farming@1.0.4":
-  version "1.0.4"
-  resolved "https://registry.yarnpkg.com/@1inch/farming/-/farming-1.0.4.tgz#078e4b2448d56e83481fafb44b31bde791d59435"
-  integrity sha512-mjbDqFifrW3xDprQ2VQ2QaNtqvt/AR0j3xB+jADX+bEN6qkNu4TvVaGVdcmpBPclRBbLAa6pPvb1DeZJI95mVA==
+"@1inch/farming@1.1.0":
+  version "1.1.0"
+  resolved "https://registry.yarnpkg.com/@1inch/farming/-/farming-1.1.0.tgz#8e41ad0fadeb282985a1a69c79d6597a19b59139"
+  integrity sha512-o7wfdwT2B5CLesBcllCK18g384NBebDdsqNCIM+nQrvNnwaHbk7Iwdl3zG/OqRX8O5Up9J/mamsz83ZnlAZphQ==
   dependencies:
+    "@1inch/erc20-pods" "0.0.4"
     "@1inch/solidity-utils" "2.2.0"
     "@openzeppelin/contracts" "4.7.3"
 

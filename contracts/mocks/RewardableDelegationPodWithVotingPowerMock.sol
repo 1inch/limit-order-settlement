@@ -3,19 +3,19 @@
 pragma solidity ^0.8.0;
 pragma abicoder v1;
 
-import "../RewardableDelegationTopicWithVotingPower.sol";
+import "../RewardableDelegationPodWithVotingPower.sol";
 import "../St1inch.sol";
 
-contract RewardableDelegationTopicWithVotingPowerMock is RewardableDelegationTopicWithVotingPower {
+contract RewardableDelegationPodWithVotingPowerMock is RewardableDelegationPodWithVotingPower {
     constructor(string memory name, string memory symbol, St1inch st1inch)
-        RewardableDelegationTopicWithVotingPower(name, symbol, st1inch)
+        RewardableDelegationPodWithVotingPower(name, symbol, st1inch)
     {} // solhint-disable-line no-empty-blocks
 
-    function mint(address account, uint256 amount) external onlyOwner {
+    function mint(address account, uint256 amount) external {
         _mint(account, amount);
     }
 
-    function burn(address account, uint256 amount) external onlyOwner {
+    function burn(address account, uint256 amount) external {
         _burn(account, amount);
     }
 

@@ -5,13 +5,12 @@ pragma solidity 0.8.17;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@1inch/farming/contracts/ERC20Farmable.sol";
-import "@1inch/delegating/contracts/ERC20Delegatable.sol";
+import "@1inch/erc20-pods/contracts/ERC20Pods.sol";
 import "@1inch/solidity-utils/contracts/libraries/SafeERC20.sol";
 import "./helpers/VotingPowerCalculator.sol";
 import "./interfaces/IVotable.sol";
 
-contract St1inch is ERC20Farmable, ERC20Delegatable, Ownable, VotingPowerCalculator, IVotable {
+contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
     using SafeERC20 for IERC20;
 
     error ZeroAddress();
@@ -42,11 +41,9 @@ contract St1inch is ERC20Farmable, ERC20Delegatable, Ownable, VotingPowerCalcula
     constructor(
         IERC20 _oneInch,
         uint256 _expBase,
-        uint256 maxUserFarms,
-        uint256 maxUserDelegations
+        uint256 podsLimit
     )
-        ERC20Farmable(maxUserFarms)
-        ERC20Delegatable(maxUserDelegations)
+        ERC20Pods(podsLimit)
         ERC20("Staking 1inch", "st1inch")
         VotingPowerCalculator(_expBase, origin)
     {
@@ -183,14 +180,5 @@ contract St1inch is ERC20Farmable, ERC20Delegatable, Ownable, VotingPowerCalcula
         _burn(msg.sender, balanceOf(msg.sender));
 
         oneInch.transfer(to, balance);
-    }
-
-    // ERC20 overrides
-    function _beforeTokenTransfer(
-        address from,
-        address to,
-        uint256 amount
-    ) internal virtual override(ERC20Farmable, ERC20Delegatable) {
-        super._beforeTokenTransfer(from, to, amount);
     }
 }
