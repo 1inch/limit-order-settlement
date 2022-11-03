@@ -24,7 +24,7 @@
     "lint:fix": "yarn lint:js:fix && yarn lint:sol:fix"
   },
   "dependencies": {
-    "@1inch/delegating": "https://github.com/1inch/delegating",
+    "@1inch/delegating": "0.0.1",
     "@1inch/farming": "1.0.4",
     "@1inch/limit-order-protocol": "0.3.0-prerelease",
     "@openzeppelin/contracts": "4.7.3"
