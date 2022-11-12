@@ -13,8 +13,6 @@ import "./interfaces/IVotable.sol";
 contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
     using SafeERC20 for IERC20;
 
-    error ZeroAddress();
-    error BurnAmountExceedsBalance();
     error ApproveDisabled();
     error TransferDisabled();
     error TransferFromDisabled();
