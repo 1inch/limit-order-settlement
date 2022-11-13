@@ -57,22 +57,20 @@ contract WhitelistRegistry is IWhitelistRegistry, Ownable {
     function register() external {
         if (token.votingPowerOf(msg.sender) < resolverThreshold) revert BalanceLessThanThreshold();
         uint256 whitelistLength = _whitelist.length();
-        if (whitelistLength < whitelistLimit) {
-            _whitelist.add(msg.sender);
-            return;
-        }
-        address minResolver = msg.sender;
-        uint256 minBalance = token.balanceOf(msg.sender);
-        for (uint256 i = 0; i < whitelistLength; ++i) {
-            address curWhitelisted = _whitelist.at(i);
-            uint256 balance = token.balanceOf(curWhitelisted);
-            if (balance < minBalance) {
-                minResolver = curWhitelisted;
-                minBalance = balance;
+        if (whitelistLength == whitelistLimit) {
+            address minResolver = msg.sender;
+            uint256 minBalance = token.balanceOf(msg.sender);
+            for (uint256 i = 0; i < whitelistLength; ++i) {
+                address curWhitelisted = _whitelist.at(i);
+                uint256 balance = token.balanceOf(curWhitelisted);
+                if (balance < minBalance) {
+                    minResolver = curWhitelisted;
+                    minBalance = balance;
+                }
             }
+            if (minResolver == msg.sender) revert NotEnoughBalance();
+            _whitelist.remove(minResolver);
         }
-        if (minResolver == msg.sender) revert NotEnoughBalance();
-        _whitelist.remove(minResolver);
         _whitelist.add(msg.sender);
         emit Registered(msg.sender);
     }
@@ -103,15 +101,16 @@ contract WhitelistRegistry is IWhitelistRegistry, Ownable {
     function _shrinkPoorest(AddressSet.Data storage set, IVotable vtoken, uint256 size) private {
         uint256 richestIndex = 0;
         address[] memory addresses = set.items.get();
-        uint256[] memory balances = new uint256[](addresses.length);
-        for (uint256 i = 0; i < addresses.length; i++) {
+        uint256 addressesLength = addresses.length;
+        uint256[] memory balances = new uint256[](addressesLength);
+        for (uint256 i = 0; i < addressesLength; i++) {
             balances[i] = vtoken.balanceOf(addresses[i]);
             if (balances[i] > balances[richestIndex]) {
                 richestIndex = i;
             }
         }
 
-        for (uint256 i = size; i < addresses.length; i++) {
+        for (uint256 i = size; i < addressesLength; i++) {
             if (balances[i] <= balances[richestIndex]) {
                 // Swap i-th and richest-th elements
                 (addresses[i], addresses[richestIndex]) = (addresses[richestIndex], addresses[i]);
