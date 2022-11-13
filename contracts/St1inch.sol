@@ -13,8 +13,6 @@ import "./interfaces/IVotable.sol";
 contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
     using SafeERC20 for IERC20;
 
-    error ZeroAddress();
-    error BurnAmountExceedsBalance();
     error ApproveDisabled();
     error TransferDisabled();
     error TransferFromDisabled();
@@ -150,7 +148,7 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
         if (_deposits[account] > 0 && amount > 0 && duration > 0) revert ChangeAmountAndUnlockTimeForExistingAccount();
 
         if (amount > 0) {
-            oneInch.transferFrom(msg.sender, address(this), amount);
+            oneInch.safeTransferFrom(msg.sender, address(this), amount);
             _deposits[account] += amount;
             totalDeposits += amount;
         }
@@ -179,6 +177,6 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
         _deposits[msg.sender] = 0;
         _burn(msg.sender, balanceOf(msg.sender));
 
-        oneInch.transfer(to, balance);
+        oneInch.safeTransfer(to, balance);
     }
 }
