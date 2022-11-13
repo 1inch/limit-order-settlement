@@ -15,7 +15,6 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
 
     error ApproveDisabled();
     error TransferDisabled();
-    error TransferFromDisabled();
     error LockTimeMoreMaxLock();
     error LockTimeLessMinLock();
     error ChangeAmountAndUnlockTimeForExistingAccount();
@@ -98,7 +97,21 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
         address, /* to */
         uint256 /* amount */
     ) public pure override(IERC20, ERC20) returns (bool) {
-        revert TransferFromDisabled();
+        revert TransferDisabled();
+    }
+
+    function increaseAllowance(
+        address, /* spender */
+        uint256 /* addedValue */
+    ) public pure override returns (bool) {
+        revert ApproveDisabled();
+    }
+
+    function decreaseAllowance(
+        address, /* spender */
+        uint256 /* subtractedValue */
+    ) public pure override returns (bool) {
+        revert ApproveDisabled();
     }
 
     function deposit(uint256 amount, uint256 duration) external {
