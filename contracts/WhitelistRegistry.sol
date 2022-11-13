@@ -118,12 +118,10 @@ contract WhitelistRegistry is IWhitelistRegistry, Ownable {
                 (balances[i], balances[richestIndex]) = (balances[richestIndex], balances[i]);
 
                 // Find new richest in first size elements
-                if (i < addresses.length) {
-                    richestIndex = 0;
-                    for (uint256 j = 1; j < size; j++) {
-                        if (balances[j] > balances[richestIndex]) {
-                            richestIndex = j;
-                        }
+                richestIndex = 0;
+                for (uint256 j = 1; j < size; j++) {
+                    if (balances[j] > balances[richestIndex]) {
+                        richestIndex = j;
                     }
                 }
             }
