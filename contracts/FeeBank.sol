@@ -87,7 +87,8 @@ contract FeeBank is Ownable {
      * @return totalAccountFees The total amount of accounts commissions.
      */
     function gatherFees(address[] memory accounts) external onlyOwner returns (uint256 totalAccountFees) {
-        for (uint256 i = 0; i < accounts.length; i++) {
+        uint256 accountsLength = accounts.length;
+        for (uint256 i = 0; i < accountsLength; i++) {
             uint256 accountFee = accountDeposits[accounts[i]] - _settlement.creditAllowance(accounts[i]);
             accountDeposits[accounts[i]] -= accountFee;
             totalAccountFees += accountFee;

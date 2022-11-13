@@ -101,15 +101,16 @@ contract WhitelistRegistry is IWhitelistRegistry, Ownable {
     function _shrinkPoorest(AddressSet.Data storage set, IVotable vtoken, uint256 size) private {
         uint256 richestIndex = 0;
         address[] memory addresses = set.items.get();
-        uint256[] memory balances = new uint256[](addresses.length);
-        for (uint256 i = 0; i < addresses.length; i++) {
+        uint256 addressesLength = addresses.length;
+        uint256[] memory balances = new uint256[](addressesLength);
+        for (uint256 i = 0; i < addressesLength; i++) {
             balances[i] = vtoken.balanceOf(addresses[i]);
             if (balances[i] > balances[richestIndex]) {
                 richestIndex = i;
             }
         }
 
-        for (uint256 i = size; i < addresses.length; i++) {
+        for (uint256 i = size; i < addressesLength; i++) {
             if (balances[i] <= balances[richestIndex]) {
                 // Swap i-th and richest-th elements
                 (addresses[i], addresses[richestIndex]) = (addresses[richestIndex], addresses[i]);
