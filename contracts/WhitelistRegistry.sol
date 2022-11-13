@@ -19,37 +19,45 @@ contract WhitelistRegistry is IWhitelistRegistry, Ownable {
     error NotEnoughBalance();
 
     event Registered(address addr);
-    event SetResolverThreshold(uint256 threshold);
+    event SetResolverThreshold(uint256 resolverThreshold);
+    event SetWhitelistLimit(uint256 whitelistLimit);
 
     AddressSet.Data private _whitelist;
 
-    uint256 public maxWhitelisted;
     uint256 public resolverThreshold;
+    uint256 public whitelistLimit;
     IVotable public immutable token;
 
     constructor(
         IVotable token_,
         uint256 resolverThreshold_,
-        uint256 maxWhitelisted_
+        uint256 whitelistLimit_
     ) {
         token = token_;
-        resolverThreshold = resolverThreshold_;
-        maxWhitelisted = maxWhitelisted_;
+        _setResolverThreshold(resolverThreshold_);
+        _setWhitelistLimit(whitelistLimit_);
     }
 
     function rescueFunds(IERC20 token_, uint256 amount) external onlyOwner {
         token_.uniTransfer(payable(msg.sender), amount);
     }
 
-    function setResolverThreshold(uint256 threshold) external onlyOwner {
-        resolverThreshold = threshold;
-        emit SetResolverThreshold(threshold);
+    function setResolverThreshold(uint256 resolverThreshold_) external onlyOwner {
+        _setResolverThreshold(resolverThreshold_);
+    }
+
+    function setWhitelistLimit(uint256 whitelistLimit_) external onlyOwner {
+        uint256 whitelistLength = _whitelist.length();
+        if (whitelistLimit_ < whitelistLength) {
+            _shrinkPoorest(_whitelist, token, whitelistLength - whitelistLimit_);
+        }
+        _setWhitelistLimit(whitelistLimit_);
     }
 
     function register() external {
         if (token.votingPowerOf(msg.sender) < resolverThreshold) revert BalanceLessThanThreshold();
         uint256 whitelistLength = _whitelist.length();
-        if (whitelistLength < maxWhitelisted) {
+        if (whitelistLength < whitelistLimit) {
             _whitelist.add(msg.sender);
             return;
         }
@@ -92,14 +100,6 @@ contract WhitelistRegistry is IWhitelistRegistry, Ownable {
         return _whitelist.items.get();
     }
 
-    function setMaxWhitelisted(uint256 size) external onlyOwner {
-        uint256 whitelistLength = _whitelist.length();
-        if (size < whitelistLength) {
-            _shrinkPoorest(_whitelist, token, whitelistLength - size);
-        }
-        maxWhitelisted = size;
-    }
-
     function _shrinkPoorest(AddressSet.Data storage set, IVotable vtoken, uint256 size) private {
         uint256 richestIndex = 0;
         address[] memory addresses = set.items.get();
@@ -133,5 +133,15 @@ contract WhitelistRegistry is IWhitelistRegistry, Ownable {
         for (uint256 i = 0; i < size; i++) {
             set.remove(addresses[i]);
         }
+    }
+
+    function _setResolverThreshold(uint256 resolverThreshold_) private {
+        resolverThreshold = resolverThreshold_;
+        emit SetResolverThreshold(resolverThreshold_);
+    }
+
+    function _setWhitelistLimit(uint256 whitelistLimit_) private {
+        whitelistLimit = whitelistLimit_;
+        emit SetWhitelistLimit(whitelistLimit_);
     }
 }
