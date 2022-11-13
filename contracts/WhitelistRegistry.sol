@@ -57,22 +57,20 @@ contract WhitelistRegistry is IWhitelistRegistry, Ownable {
     function register() external {
         if (token.votingPowerOf(msg.sender) < resolverThreshold) revert BalanceLessThanThreshold();
         uint256 whitelistLength = _whitelist.length();
-        if (whitelistLength < whitelistLimit) {
-            _whitelist.add(msg.sender);
-            return;
-        }
-        address minResolver = msg.sender;
-        uint256 minBalance = token.balanceOf(msg.sender);
-        for (uint256 i = 0; i < whitelistLength; ++i) {
-            address curWhitelisted = _whitelist.at(i);
-            uint256 balance = token.balanceOf(curWhitelisted);
-            if (balance < minBalance) {
-                minResolver = curWhitelisted;
-                minBalance = balance;
+        if (whitelistLength == whitelistLimit) {
+            address minResolver = msg.sender;
+            uint256 minBalance = token.balanceOf(msg.sender);
+            for (uint256 i = 0; i < whitelistLength; ++i) {
+                address curWhitelisted = _whitelist.at(i);
+                uint256 balance = token.balanceOf(curWhitelisted);
+                if (balance < minBalance) {
+                    minResolver = curWhitelisted;
+                    minBalance = balance;
+                }
             }
+            if (minResolver == msg.sender) revert NotEnoughBalance();
+            _whitelist.remove(minResolver);
         }
-        if (minResolver == msg.sender) revert NotEnoughBalance();
-        _whitelist.remove(minResolver);
         _whitelist.add(msg.sender);
         emit Registered(msg.sender);
     }
