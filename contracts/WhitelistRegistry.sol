@@ -17,6 +17,7 @@ contract WhitelistRegistry is IWhitelistRegistry, Ownable {
 
     error BalanceLessThanThreshold();
     error NotEnoughBalance();
+    error AlreadyRegistered();
 
     event Registered(address addr);
     event SetResolverThreshold(uint256 resolverThreshold);
@@ -71,7 +72,7 @@ contract WhitelistRegistry is IWhitelistRegistry, Ownable {
             if (minResolver == msg.sender) revert NotEnoughBalance();
             _whitelist.remove(minResolver);
         }
-        _whitelist.add(msg.sender);
+        if (!_whitelist.add(msg.sender)) revert AlreadyRegistered();
         emit Registered(msg.sender);
     }
 
