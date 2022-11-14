@@ -40,8 +40,8 @@ describe('Settlement', function () {
         await weth.approve(swap.address, ether('1'));
         await weth.connect(addr1).approve(swap.address, ether('1'));
 
-        const Settlement = await ethers.getContractFactory('Settlement');
-        const matcher = await Settlement.deploy(whitelistRegistrySimple.address, swap.address, inch.address);
+        const SettlementMock = await ethers.getContractFactory('SettlementMock');
+        const matcher = await SettlementMock.deploy(whitelistRegistrySimple.address, swap.address, inch.address);
         await matcher.deployed();
 
         const FeeBank = await ethers.getContractFactory('FeeBank');
@@ -730,8 +730,7 @@ describe('Settlement', function () {
             const { matcher } = await loadFixture(initContracts);
             const amount = ether('100');
             expect(await matcher.availableCredit(addr1.address)).to.equal('0');
-            await matcher.setFeeBank(addr.address);
-            await matcher.increaseAvailableCredit(addr1.address, amount);
+            await matcher.increaseAvailableCreditMock(addr1.address, amount);
             expect(await matcher.availableCredit(addr1.address)).to.equal(amount);
         });
 
@@ -748,8 +747,7 @@ describe('Settlement', function () {
         async function initContractsAndAllowance() {
             const { matcher, feeBank } = await initContracts();
             const creditAmount = ether('100');
-            await matcher.setFeeBank(addr.address);
-            await matcher.increaseAvailableCredit(addr1.address, creditAmount);
+            await matcher.increaseAvailableCreditMock(addr1.address, creditAmount);
             return { matcher, feeBank, creditAmount };
         }
 
@@ -757,13 +755,12 @@ describe('Settlement', function () {
             const { matcher, creditAmount } = await loadFixture(initContractsAndAllowance);
             const amount = ether('10');
             expect(await matcher.availableCredit(addr1.address)).to.equal(creditAmount);
-            await matcher.decreaseAvailableCredit(addr1.address, amount);
+            await matcher.decreaseAvailableCreditMock(addr1.address, amount);
             expect(await matcher.availableCredit(addr1.address)).to.equal(creditAmount - amount);
         });
 
         it('should not deccrease credit by non-feeBank address', async function () {
-            const { matcher, feeBank } = await loadFixture(initContractsAndAllowance);
-            await matcher.setFeeBank(feeBank.address);
+            const { matcher } = await loadFixture(initContractsAndAllowance);
             await expect(matcher.decreaseAvailableCredit(addr1.address, ether('10'))).to.be.revertedWithCustomError(
                 matcher,
                 'OnlyFeeBankAccess',

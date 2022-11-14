@@ -21,8 +21,8 @@ describe('FeeBank', function () {
         const inch = await TokenPermitMock.deploy('1INCH', '1INCH', addr.address, ether('1000'));
         await inch.deployed();
         const { swap } = await deploySwapTokens();
-        const Settlement = await ethers.getContractFactory('Settlement');
-        const matcher = await Settlement.deploy(whitelistRegistrySimple.address, swap.address, inch.address);
+        const SettlementMock = await ethers.getContractFactory('SettlementMock');
+        const matcher = await SettlementMock.deploy(whitelistRegistrySimple.address, swap.address, inch.address);
         await matcher.deployed();
 
         const FeeBank = await ethers.getContractFactory('FeeBank');
@@ -137,8 +137,7 @@ describe('FeeBank', function () {
             const amount = ether('10');
             const subCreditAmount = ether('2');
             await feeBank.connect(addr1).deposit(amount);
-            await matcher.setFeeBank(addr.address);
-            await matcher.decreaseAvailableCredit(addr1.address, subCreditAmount);
+            await matcher.decreaseAvailableCreditMock(addr1.address, subCreditAmount);
 
             const balanceBefore = await inch.balanceOf(addr.address);
             expect(await feeBank.availableCredit(addr1.address)).to.equal(amount - subCreditAmount);
@@ -156,9 +155,8 @@ describe('FeeBank', function () {
             const subCreditAddr1Amount = ether('11');
             await feeBank.deposit(addrAmount);
             await feeBank.connect(addr1).deposit(addr1Amount);
-            await matcher.setFeeBank(addr.address);
-            await matcher.decreaseAvailableCredit(addr.address, subCreditaddrAmount);
-            await matcher.decreaseAvailableCredit(addr1.address, subCreditAddr1Amount);
+            await matcher.decreaseAvailableCreditMock(addr.address, subCreditaddrAmount);
+            await matcher.decreaseAvailableCreditMock(addr1.address, subCreditAddr1Amount);
 
             const balanceBefore = await inch.balanceOf(addr.address);
             expect(await feeBank.availableCredit(addr.address)).to.equal(addrAmount - subCreditaddrAmount);
@@ -188,9 +186,8 @@ describe('FeeBank', function () {
                 totalSubCreditAmounts = totalSubCreditAmounts + subCreditAmounts[i];
                 await feeBank.depositFor(accounts[i], amounts[i]);
             }
-            await matcher.setFeeBank(addr.address);
             for (let i = 1; i < accounts.length; i++) {
-                await matcher.decreaseAvailableCredit(accounts[i], subCreditAmounts[i]);
+                await matcher.decreaseAvailableCreditMock(accounts[i], subCreditAmounts[i]);
             }
 
             const balanceBefore = await inch.balanceOf(addr.address);

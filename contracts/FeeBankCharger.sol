@@ -11,7 +11,7 @@ contract FeeBankCharger is IFeeBankCharger {
     error NotEnoughCredit();
 
     address public immutable feeBank;
-    mapping(address => uint256) private _creditAllowance;
+    mapping(address => uint256) internal _creditAllowance;
 
     modifier onlyFeeBank() {
         if (msg.sender != feeBank) revert OnlyFeeBankAccess();
@@ -19,7 +19,7 @@ contract FeeBankCharger is IFeeBankCharger {
     }
 
     constructor(IERC20 token) {
-        feeBank = address(new FeeBank(this, token));
+        feeBank = address(new FeeBank(this, token, msg.sender));
     }
 
     function availableCredit(address account) external view returns (uint256) {
