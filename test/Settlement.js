@@ -527,7 +527,7 @@ describe('Settlement', function () {
         });
     });
 
-    it('should change creditAllowance with non-zero fee', async function () {
+    it('should change availableCredit with non-zero fee', async function () {
         const { dai, weth, swap, matcher } = await loadFixture(initContracts);
 
         const order = await buildOrder({
@@ -577,7 +577,7 @@ describe('Settlement', function () {
                     matcher.address,
                 ])
                 .substring(10);
-        const creditAllowanceBefore = await matcher.creditAllowance(addr.address);
+        const availableCreditBefore = await matcher.availableCredit(addr.address);
         await matcher.settleOrders(
             swap.address,
             order,
@@ -588,12 +588,12 @@ describe('Settlement', function () {
             ether('0.1'),
             matcher.address,
         );
-        expect(await matcher.creditAllowance(addr.address)).to.equal(
-            creditAllowanceBefore.toBigInt() - basePoints * (orderFee + backOrderFee),
+        expect(await matcher.availableCredit(addr.address)).to.equal(
+            availableCreditBefore.toBigInt() - basePoints * (orderFee + backOrderFee),
         );
     });
 
-    it('should change creditAllowance with non-zero fee, proxy contract', async function () {
+    it('should change availableCredit with non-zero fee, proxy contract', async function () {
         const { dai, weth, swap, matcher, proxy } = await loadFixture(initContracts);
 
         const order = await buildOrder({
@@ -645,7 +645,7 @@ describe('Settlement', function () {
                 .substring(10);
         await whitelistRegistrySimple.setStatus(proxy.address, Status.Verified);
         await proxy.deposit(ether('100'));
-        const creditAllowanceBefore = await matcher.creditAllowance(proxy.address);
+        const availableCreditBefore = await matcher.availableCredit(proxy.address);
         await proxy.settleOrders(
             swap.address,
             order,
@@ -656,12 +656,12 @@ describe('Settlement', function () {
             ether('0.1'),
             matcher.address,
         );
-        expect(await matcher.creditAllowance(proxy.address)).to.equal(
-            creditAllowanceBefore.toBigInt() - basePoints * (orderFee + backOrderFee),
+        expect(await matcher.availableCredit(proxy.address)).to.equal(
+            availableCreditBefore.toBigInt() - basePoints * (orderFee + backOrderFee),
         );
     });
 
-    it('should not change when creditAllowance is not enough', async function () {
+    it('should not change when availableCredit is not enough', async function () {
         const { dai, weth, swap, matcher } = await loadFixture(initContracts);
 
         const order = await buildOrder({
@@ -725,46 +725,46 @@ describe('Settlement', function () {
         ).to.be.revertedWithCustomError(matcher, 'NotEnoughCredit');
     });
 
-    describe('increaseCreditAllowance', function () {
+    describe('increaseAvailableCredit', function () {
         it('should increase credit', async function () {
             const { matcher } = await loadFixture(initContracts);
             const amount = ether('100');
-            expect(await matcher.creditAllowance(addr1.address)).to.equal('0');
+            expect(await matcher.availableCredit(addr1.address)).to.equal('0');
             await matcher.setFeeBank(addr.address);
-            await matcher.increaseCreditAllowance(addr1.address, amount);
-            expect(await matcher.creditAllowance(addr1.address)).to.equal(amount);
+            await matcher.increaseAvailableCredit(addr1.address, amount);
+            expect(await matcher.availableCredit(addr1.address)).to.equal(amount);
         });
 
         it('should not increase credit by non-feeBank address', async function () {
             const { matcher } = await loadFixture(initContracts);
-            await expect(matcher.increaseCreditAllowance(addr1.address, ether('100'))).to.be.revertedWithCustomError(
+            await expect(matcher.increaseAvailableCredit(addr1.address, ether('100'))).to.be.revertedWithCustomError(
                 matcher,
                 'OnlyFeeBankAccess',
             );
         });
     });
 
-    describe('decreaseCreditAllowance', function () {
+    describe('decreaseAvailableCredit', function () {
         async function initContractsAndAllowance() {
             const { matcher, feeBank } = await initContracts();
             const creditAmount = ether('100');
             await matcher.setFeeBank(addr.address);
-            await matcher.increaseCreditAllowance(addr1.address, creditAmount);
+            await matcher.increaseAvailableCredit(addr1.address, creditAmount);
             return { matcher, feeBank, creditAmount };
         }
 
         it('should decrease credit', async function () {
             const { matcher, creditAmount } = await loadFixture(initContractsAndAllowance);
             const amount = ether('10');
-            expect(await matcher.creditAllowance(addr1.address)).to.equal(creditAmount);
-            await matcher.decreaseCreditAllowance(addr1.address, amount);
-            expect(await matcher.creditAllowance(addr1.address)).to.equal(creditAmount - amount);
+            expect(await matcher.availableCredit(addr1.address)).to.equal(creditAmount);
+            await matcher.decreaseAvailableCredit(addr1.address, amount);
+            expect(await matcher.availableCredit(addr1.address)).to.equal(creditAmount - amount);
         });
 
         it('should not deccrease credit by non-feeBank address', async function () {
             const { matcher, feeBank } = await loadFixture(initContractsAndAllowance);
             await matcher.setFeeBank(feeBank.address);
-            await expect(matcher.decreaseCreditAllowance(addr1.address, ether('10'))).to.be.revertedWithCustomError(
+            await expect(matcher.decreaseAvailableCredit(addr1.address, ether('10'))).to.be.revertedWithCustomError(
                 matcher,
                 'OnlyFeeBankAccess',
             );

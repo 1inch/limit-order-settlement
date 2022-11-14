@@ -10,9 +10,9 @@ import "./helpers/WhitelistChecker.sol";
 import "./libraries/OrderSaltParser.sol";
 import "./interfaces/IWhitelistRegistry.sol";
 import "./interfaces/ISettlement.sol";
-import "./FeeBank.sol";
+import "./FeeBankCharger.sol";
 
-contract Settlement is ISettlement, Ownable, WhitelistChecker {
+contract Settlement is ISettlement, Ownable, WhitelistChecker, FeeBankCharger {
     using OrderSaltParser for uint256;
 
     bytes1 private constant _FINALIZE_INTERACTION = 0x01;
@@ -23,22 +23,10 @@ contract Settlement is ISettlement, Ownable, WhitelistChecker {
 
     error IncorrectCalldataParams();
     error FailedExternalCall();
-    error OnlyFeeBankAccess();
-    error NotEnoughCredit();
-
-    address public immutable feeBank;
-    mapping(address => uint256) public creditAllowance;
-
-    modifier onlyFeeBank() {
-        if (msg.sender != feeBank) revert OnlyFeeBankAccess();
-        _;
-    }
 
     constructor(IWhitelistRegistry whitelist, address limitOrderProtocol, IERC20 token)
-        WhitelistChecker(whitelist, limitOrderProtocol)
-    {
-        feeBank = address(new FeeBank(this, token));
-    }
+        WhitelistChecker(whitelist, limitOrderProtocol) FeeBankCharger(token)
+    {}  // solhint-disable-line no-empty-blocks
 
     function settleOrders(
         IOrderMixin orderMixin,
@@ -144,12 +132,7 @@ contract Settlement is ISettlement, Ownable, WhitelistChecker {
         uint256 thresholdAmount,
         address target
     ) private {
-        uint256 orderFee = order.salt.getFee() * _ORDER_FEE_BASE_POINTS;
-        uint256 currentAllowance = creditAllowance[interactor];
-        if (currentAllowance < orderFee) revert NotEnoughCredit();
-        unchecked {
-            creditAllowance[interactor] = currentAllowance - orderFee;
-        }
+        _chargeFee(interactor, order.salt.getFee() * _ORDER_FEE_BASE_POINTS);
         bytes memory patchedInteraction = abi.encodePacked(interaction, order.salt);
         orderMixin.fillOrderTo(
             order,
@@ -160,18 +143,6 @@ contract Settlement is ISettlement, Ownable, WhitelistChecker {
             thresholdAmount,
             target
         );
-    }
-
-    function increaseCreditAllowance(address account, uint256 amount) external onlyFeeBank returns (uint256 allowance) {
-        allowance = creditAllowance[account];
-        allowance += amount;
-        creditAllowance[account] = allowance;
-    }
-
-    function decreaseCreditAllowance(address account, uint256 amount) external onlyFeeBank returns (uint256 allowance) {
-        allowance = creditAllowance[account];
-        allowance -= amount;
-        creditAllowance[account] = allowance;
     }
 
     function _abiDecodeFinal(bytes calldata cd)

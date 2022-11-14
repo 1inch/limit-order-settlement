@@ -4,8 +4,9 @@ pragma solidity 0.8.17;
 
 import "@1inch/limit-order-protocol/contracts/interfaces/NotificationReceiver.sol";
 import "@1inch/limit-order-protocol/contracts/interfaces/IOrderMixin.sol";
+import "./IFeeBankCharger.sol";
 
-interface ISettlement is InteractionNotificationReceiver {
+interface ISettlement is InteractionNotificationReceiver, IFeeBankCharger {
     function settleOrders(
         IOrderMixin orderMixin,
         OrderLib.Order calldata order,
@@ -16,10 +17,4 @@ interface ISettlement is InteractionNotificationReceiver {
         uint256 thresholdAmount,
         address target
     ) external;
-
-    function creditAllowance(address account) external view returns (uint256);
-
-    function increaseCreditAllowance(address account, uint256 amount) external returns (uint256);
-
-    function decreaseCreditAllowance(address account, uint256 amount) external returns (uint256);
 }

@@ -36,8 +36,8 @@ describe('FeeBank', function () {
     }
 
     describe('deposits', function () {
-        it('should increase accountDeposits and creditAllowance with deposit()', async function () {
-            const { inch, feeBank, matcher } = await loadFixture(initContracts);
+        it('should increase accountDeposits and availableCredit with deposit()', async function () {
+            const { inch, feeBank } = await loadFixture(initContracts);
             const addrAmount = ether('1');
             const addr1Amount = ether('10');
             const addrbalanceBefore = await inch.balanceOf(addr.address);
@@ -52,8 +52,8 @@ describe('FeeBank', function () {
             expect(await inch.balanceOf(addr1.address)).to.equal(addr1balanceBefore.sub(addr1Amount));
         });
 
-        it('should increase accountDeposits and creditAllowance with depositFor()', async function () {
-            const { inch, feeBank, matcher } = await loadFixture(initContracts);
+        it('should increase accountDeposits and availableCredit with depositFor()', async function () {
+            const { inch, feeBank } = await loadFixture(initContracts);
             const addrAmount = ether('1');
             const addr1Amount = ether('10');
             const addrbalanceBefore = await inch.balanceOf(addr.address);
@@ -68,8 +68,8 @@ describe('FeeBank', function () {
             expect(await inch.balanceOf(addr1.address)).to.equal(addr1balanceBefore.sub(addrAmount));
         });
 
-        it('should increase accountDeposits and creditAllowance without approve with depositWithPermit()', async function () {
-            const { inch, feeBank, matcher } = await loadFixture(initContracts);
+        it('should increase accountDeposits and availableCredit without approve with depositWithPermit()', async function () {
+            const { inch, feeBank } = await loadFixture(initContracts);
             const addrAmount = ether('1');
             await inch.approve(feeBank.address, '0');
             const permit = await getPermit(addr, inch, '1', chainId, feeBank.address, addrAmount);
@@ -81,8 +81,8 @@ describe('FeeBank', function () {
             expect(await inch.balanceOf(addr.address)).to.equal(addrbalanceBefore.sub(addrAmount));
         });
 
-        it('should increase accountDeposits and creditAllowance without approve with depositForWithPermit()', async function () {
-            const { inch, feeBank, matcher } = await loadFixture(initContracts);
+        it('should increase accountDeposits and availableCredit without approve with depositForWithPermit()', async function () {
+            const { inch, feeBank } = await loadFixture(initContracts);
             const addrAmount = ether('1');
             await inch.approve(feeBank.address, '0');
             const permit = await getPermit(addr, inch, '1', chainId, feeBank.address, addrAmount);
@@ -103,8 +103,8 @@ describe('FeeBank', function () {
             return { inch, feeBank, matcher, totalDepositAmount };
         }
 
-        it('should decrease accountDeposits and creditAllowance with withdraw()', async function () {
-            const { inch, feeBank, matcher, totalDepositAmount } = await loadFixture(initContratsAndDeposit);
+        it('should decrease accountDeposits and availableCredit with withdraw()', async function () {
+            const { inch, feeBank, totalDepositAmount } = await loadFixture(initContratsAndDeposit);
             const amount = ether('10');
             const addrbalanceBefore = await inch.balanceOf(addr.address);
 
@@ -114,7 +114,7 @@ describe('FeeBank', function () {
             expect(await inch.balanceOf(addr.address)).to.equal(addrbalanceBefore.add(amount));
         });
 
-        it('should decrease accountDeposits and creditAllowance with withdrawTo()', async function () {
+        it('should decrease accountDeposits and availableCredit with withdrawTo()', async function () {
             const { inch, feeBank, totalDepositAmount } = await loadFixture(initContratsAndDeposit);
             const amount = ether('10');
             const addr1balanceBefore = await inch.balanceOf(addr1.address);
@@ -138,7 +138,7 @@ describe('FeeBank', function () {
             const subCreditAmount = ether('2');
             await feeBank.connect(addr1).deposit(amount);
             await matcher.setFeeBank(addr.address);
-            await matcher.decreaseCreditAllowance(addr1.address, subCreditAmount);
+            await matcher.decreaseAvailableCredit(addr1.address, subCreditAmount);
 
             const balanceBefore = await inch.balanceOf(addr.address);
             expect(await feeBank.availableCredit(addr1.address)).to.equal(amount - subCreditAmount);
@@ -157,8 +157,8 @@ describe('FeeBank', function () {
             await feeBank.deposit(addrAmount);
             await feeBank.connect(addr1).deposit(addr1Amount);
             await matcher.setFeeBank(addr.address);
-            await matcher.decreaseCreditAllowance(addr.address, subCreditaddrAmount);
-            await matcher.decreaseCreditAllowance(addr1.address, subCreditAddr1Amount);
+            await matcher.decreaseAvailableCredit(addr.address, subCreditaddrAmount);
+            await matcher.decreaseAvailableCredit(addr1.address, subCreditAddr1Amount);
 
             const balanceBefore = await inch.balanceOf(addr.address);
             expect(await feeBank.availableCredit(addr.address)).to.equal(addrAmount - subCreditaddrAmount);
@@ -190,7 +190,7 @@ describe('FeeBank', function () {
             }
             await matcher.setFeeBank(addr.address);
             for (let i = 1; i < accounts.length; i++) {
-                await matcher.decreaseCreditAllowance(accounts[i], subCreditAmounts[i]);
+                await matcher.decreaseAvailableCredit(accounts[i], subCreditAmounts[i]);
             }
 
             const balanceBefore = await inch.balanceOf(addr.address);
