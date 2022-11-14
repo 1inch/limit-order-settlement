@@ -78,42 +78,6 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
         return _votingPowerAt(balance, timestamp);
     }
 
-    function approve(
-        address, /* spender */
-        uint256 /* amount */
-    ) public pure override(IERC20, ERC20) returns (bool) {
-        revert ApproveDisabled();
-    }
-
-    function transfer(
-        address, /* to */
-        uint256 /* amount */
-    ) public pure override(IERC20, ERC20) returns (bool) {
-        revert TransferDisabled();
-    }
-
-    function transferFrom(
-        address, /* from */
-        address, /* to */
-        uint256 /* amount */
-    ) public pure override(IERC20, ERC20) returns (bool) {
-        revert TransferDisabled();
-    }
-
-    function increaseAllowance(
-        address, /* spender */
-        uint256 /* addedValue */
-    ) public pure override returns (bool) {
-        revert ApproveDisabled();
-    }
-
-    function decreaseAllowance(
-        address, /* spender */
-        uint256 /* subtractedValue */
-    ) public pure override returns (bool) {
-        revert ApproveDisabled();
-    }
-
     function deposit(uint256 amount, uint256 duration) external {
         _deposit(msg.sender, amount, duration);
     }
@@ -191,5 +155,27 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
         _burn(msg.sender, balanceOf(msg.sender));
 
         oneInch.safeTransfer(to, balance);
+    }
+
+    // ERC20 methods disablers
+
+    function approve(address, uint256) public pure override(IERC20, ERC20) returns (bool) {
+        revert ApproveDisabled();
+    }
+
+    function transfer(address, uint256) public pure override(IERC20, ERC20) returns (bool) {
+        revert TransferDisabled();
+    }
+
+    function transferFrom(address, address, uint256) public pure override(IERC20, ERC20) returns (bool) {
+        revert TransferDisabled();
+    }
+
+    function increaseAllowance(address, uint256) public pure override returns (bool) {
+        revert ApproveDisabled();
+    }
+
+    function decreaseAllowance(address, uint256) public pure override returns (bool) {
+        revert ApproveDisabled();
     }
 }
