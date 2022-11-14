@@ -27,7 +27,6 @@ contract ProxySettlement {
     }
 
     function settleOrders(
-        IOrderMixin orderMixin,
         OrderLib.Order calldata order,
         bytes calldata signature,
         bytes calldata interaction,
@@ -37,7 +36,6 @@ contract ProxySettlement {
         address target
     ) external {
         _settlement.settleOrders(
-            orderMixin,
             order,
             signature,
             interaction,

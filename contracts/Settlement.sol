@@ -6,14 +6,20 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@1inch/limit-order-protocol/contracts/interfaces/NotificationReceiver.sol";
 import "@1inch/limit-order-protocol/contracts/interfaces/IOrderMixin.sol";
+import "@1inch/solidity-utils/contracts/libraries/SafeERC20.sol";
 import "./helpers/WhitelistChecker.sol";
 import "./libraries/OrderSaltParser.sol";
 import "./interfaces/IWhitelistRegistry.sol";
 import "./interfaces/ISettlement.sol";
+import "./interfaces/IResolver.sol";
 import "./FeeBankCharger.sol";
 
 contract Settlement is ISettlement, Ownable, WhitelistChecker, FeeBankCharger {
+    using SafeERC20 for IERC20;
     using OrderSaltParser for uint256;
+
+    error IncorrectCalldataParams();
+    error FailedExternalCall();
 
     bytes1 private constant _FINALIZE_INTERACTION = 0x01;
     uint256 private constant _ORDER_FEE_BASE_POINTS = 1e15;
@@ -21,15 +27,20 @@ contract Settlement is ISettlement, Ownable, WhitelistChecker, FeeBankCharger {
     uint16 private constant _DEFAULT_INITIAL_RATE_BUMP = 1000; // 10%
     uint32 private constant _DEFAULT_DURATION = 30 minutes;
 
-    error IncorrectCalldataParams();
-    error FailedExternalCall();
+    IOrderMixin internal immutable _limitOrderProtocol;
 
-    constructor(IWhitelistRegistry whitelist, address limitOrderProtocol, IERC20 token)
-        WhitelistChecker(whitelist, limitOrderProtocol) FeeBankCharger(token)
-    {}  // solhint-disable-line no-empty-blocks
+    modifier onlyThisCalledByLimitOrderProtocol(address account) {
+        if (msg.sender != address(_limitOrderProtocol) || account != address(this)) revert AccessDenied();
+        _;
+    }
+
+    constructor(IWhitelistRegistry whitelist, IOrderMixin limitOrderProtocol, IERC20 token)
+        WhitelistChecker(whitelist) FeeBankCharger(token)
+    {
+        _limitOrderProtocol = limitOrderProtocol;
+    }
 
     function settleOrders(
-        IOrderMixin orderMixin,
         OrderLib.Order calldata order,
         bytes calldata signature,
         bytes calldata interaction,
@@ -39,7 +50,6 @@ contract Settlement is ISettlement, Ownable, WhitelistChecker, FeeBankCharger {
         address target
     ) external onlyWhitelisted(msg.sender) {
         _settleOrder(
-            orderMixin,
             order,
             msg.sender,
             signature,
@@ -52,22 +62,16 @@ contract Settlement is ISettlement, Ownable, WhitelistChecker, FeeBankCharger {
     }
 
     function fillOrderInteraction(
-        address, /* taker */
+        address taker,
         uint256, /* makingAmount */
         uint256 takingAmount,
         bytes calldata interactiveData
-    ) external returns (uint256) {
-        address interactor = _interactionAuth();
-        if (interactiveData[0] == _FINALIZE_INTERACTION) {
-            (address[] calldata targets, bytes[] calldata calldatas) = _abiDecodeFinal(interactiveData[1:]);
+    ) external onlyThisCalledByLimitOrderProtocol(taker) returns (uint256 result) {
+        (address resolver,,) = _abiDecodeResolverTokenSaltFromTail(interactiveData);
 
-            uint256 length = targets.length;
-            if (length != calldatas.length) revert IncorrectCalldataParams();
-            for (uint256 i = 0; i < length; i++) {
-                // solhint-disable-next-line avoid-low-level-calls
-                (bool success, ) = targets[i].call(calldatas[i]);
-                if (!success) revert FailedExternalCall();
-            }
+        if (interactiveData[0] == _FINALIZE_INTERACTION) {
+            (address target, bytes calldata data) = _abiDecodeTargetAndCalldata(interactiveData[1:interactiveData.length - 0x60]);
+            IResolver(target).resolveOrders(data);
         } else {
             (
                 OrderLib.Order calldata order,
@@ -80,9 +84,8 @@ contract Settlement is ISettlement, Ownable, WhitelistChecker, FeeBankCharger {
             ) = _abiDecodeIteration(interactiveData[1:]);
 
             _settleOrder(
-                IOrderMixin(msg.sender),
                 order,
-                interactor,
+                resolver,
                 signature,
                 interaction,
                 makingOrderAmount,
@@ -91,8 +94,12 @@ contract Settlement is ISettlement, Ownable, WhitelistChecker, FeeBankCharger {
                 target
             );
         }
-        uint256 salt = uint256(bytes32(interactiveData[interactiveData.length - 32:]));
-        return (takingAmount * _calculateRateBump(salt)) / _BASE_POINTS;
+
+        (, IERC20 token, uint256 salt) = _abiDecodeResolverTokenSaltFromTail(interactiveData);
+
+        _chargeFee(resolver, salt.getFee() * _ORDER_FEE_BASE_POINTS);
+        result = (takingAmount * _calculateRateBump(salt)) / _BASE_POINTS;
+        token.forceApprove(address(_limitOrderProtocol), result);
     }
 
     function _calculateRateBump(uint256 salt) internal view returns (uint256) {
@@ -122,9 +129,8 @@ contract Settlement is ISettlement, Ownable, WhitelistChecker, FeeBankCharger {
     }
 
     function _settleOrder(
-        IOrderMixin orderMixin,
         OrderLib.Order calldata order,
-        address interactor,
+        address resolver,
         bytes calldata signature,
         bytes calldata interaction,
         uint256 makingAmount,
@@ -132,9 +138,13 @@ contract Settlement is ISettlement, Ownable, WhitelistChecker, FeeBankCharger {
         uint256 thresholdAmount,
         address target
     ) private {
-        _chargeFee(interactor, order.salt.getFee() * _ORDER_FEE_BASE_POINTS);
-        bytes memory patchedInteraction = abi.encodePacked(interaction, order.salt);
-        orderMixin.fillOrderTo(
+        bytes memory patchedInteraction = abi.encodePacked(
+            interaction,
+            uint256(uint160(resolver)),
+            uint256(uint160(order.takerAsset)),
+            order.salt
+        );
+        _limitOrderProtocol.fillOrderTo(
             order,
             signature,
             patchedInteraction,
@@ -145,20 +155,20 @@ contract Settlement is ISettlement, Ownable, WhitelistChecker, FeeBankCharger {
         );
     }
 
-    function _abiDecodeFinal(bytes calldata cd)
-        private
-        pure
-        returns (address[] calldata targets, bytes[] calldata calldatas)
-    {
-        // solhint-disable-next-line no-inline-assembly
-        assembly {
-            let ptr := add(cd.offset, calldataload(cd.offset))
-            targets.offset := add(ptr, 0x20)
-            targets.length := calldataload(ptr)
+    function _abiDecodeTargetAndCalldata(bytes calldata cd) private pure returns (address target, bytes calldata data) {
+        assembly {  // solhint-disable-line no-inline-assembly
+            target := shr(96, calldataload(cd.offset))
+            data.offset := add(cd.offset, 20)
+            data.length := sub(cd.length, 20)
+        }
+    }
 
-            ptr := add(cd.offset, calldataload(add(cd.offset, 0x20)))
-            calldatas.offset := add(ptr, 0x20)
-            calldatas.length := calldataload(ptr)
+    function _abiDecodeResolverTokenSaltFromTail(bytes calldata cd) private pure returns (address resolver, IERC20 token, uint256 salt) {
+        assembly {  // solhint-disable-line no-inline-assembly
+            let endOffset := add(cd.offset, cd.length)
+            resolver := calldataload(sub(endOffset, 0x60))
+            token := calldataload(sub(endOffset, 0x40))
+            salt := calldataload(sub(endOffset, 0x20))
         }
     }
 

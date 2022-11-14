@@ -8,7 +8,6 @@ import "./IFeeBankCharger.sol";
 
 interface ISettlement is InteractionNotificationReceiver, IFeeBankCharger {
     function settleOrders(
-        IOrderMixin orderMixin,
         OrderLib.Order calldata order,
         bytes calldata signature,
         bytes calldata interaction,

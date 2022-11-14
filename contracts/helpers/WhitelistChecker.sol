@@ -8,31 +8,26 @@ import "../interfaces/IWhitelistRegistry.sol";
 contract WhitelistChecker {
     error AccessDenied();
 
-    address private constant _NOT_CHECKED = address(1);
+    uint256 private constant _NOT_CHECKED = 1;
+    uint256 private constant _CHECKED = 2;
 
     IWhitelistRegistry private immutable _whitelist;
-    address private _limitOrderProtocol;
-    address private _checked = _NOT_CHECKED;
+    uint256 private _checked = _NOT_CHECKED;
 
-    constructor(IWhitelistRegistry whitelist, address limitOrderProtocol) {
+    constructor(IWhitelistRegistry whitelist) {
         _whitelist = whitelist;
-        _limitOrderProtocol = limitOrderProtocol;
     }
 
     modifier onlyWhitelisted(address account) {
         if (!_whitelist.isWhitelisted(account)) revert AccessDenied();
+
+        // TODO: check bytecode size when avoided doube _
         if (_checked == _NOT_CHECKED) {
-            _checked = account;
+            _checked = _CHECKED;
             _;
             _checked = _NOT_CHECKED;
         } else {
             _;
         }
-    }
-
-    function _interactionAuth() internal view returns (address checked) {
-        if (msg.sender != _limitOrderProtocol) revert AccessDenied();
-        checked = _checked;
-        if (checked == _NOT_CHECKED) revert AccessDenied();
     }
 }
