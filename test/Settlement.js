@@ -725,7 +725,7 @@ describe('Settlement', function () {
         ).to.be.revertedWithCustomError(matcher, 'NotEnoughCredit');
     });
 
-    describe('increaseAvailableCredit', function () {
+    describe.skip('increaseAvailableCredit', function () {
         it('should increase credit', async function () {
             const { matcher } = await loadFixture(initContracts);
             const amount = ether('100');
@@ -743,7 +743,7 @@ describe('Settlement', function () {
         });
     });
 
-    describe('decreaseAvailableCredit', function () {
+    describe.skip('decreaseAvailableCredit', function () {
         async function initContractsAndAllowance() {
             const { matcher, feeBank } = await initContracts();
             const creditAmount = ether('100');

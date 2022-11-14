@@ -11,7 +11,7 @@ contract FeeBankCharger is IFeeBankCharger {
     error NotEnoughCredit();
 
     address public immutable feeBank;
-    mapping(address => uint256) internal _creditAllowance;
+    mapping(address => uint256) private _creditAllowance;
 
     modifier onlyFeeBank() {
         if (msg.sender != feeBank) revert OnlyFeeBankAccess();
