@@ -85,7 +85,7 @@ describe('WhitelistChecker', function () {
 
     describe('should not work with non-whitelisted address', function () {
         it('onlyWhitelisted modifier in settleOrders method', async function () {
-            const { dai, weth, swap, matcher } = await loadFixture(initContracts);
+            const { dai, weth, matcher } = await loadFixture(initContracts);
             const order1 = await buildOrder({
                 makerAsset: dai.address,
                 takerAsset: weth.address,

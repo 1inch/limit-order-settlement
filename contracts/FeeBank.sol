@@ -16,9 +16,10 @@ contract FeeBank is Ownable {
 
     mapping(address => uint256) private _accountDeposits;
 
-    constructor(IFeeBankCharger charger, IERC20 inch) {
+    constructor(IFeeBankCharger charger, IERC20 inch, address owner) {
         _charger = charger;
         _token = inch;
+        transferOwnership(owner);
     }
 
     function availableCredit(address account) external view returns (uint256) {

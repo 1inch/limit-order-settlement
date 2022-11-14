@@ -19,7 +19,7 @@ contract FeeBankCharger is IFeeBankCharger {
     }
 
     constructor(IERC20 token) {
-        feeBank = address(new FeeBank(this, token));
+        feeBank = address(new FeeBank(this, token, msg.sender));
     }
 
     function availableCredit(address account) external view returns (uint256) {

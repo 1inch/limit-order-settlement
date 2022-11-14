@@ -40,8 +40,8 @@ describe('Settlement', function () {
         await weth.approve(swap.address, ether('1'));
         await weth.connect(addr1).approve(swap.address, ether('1'));
 
-        const Settlement = await ethers.getContractFactory('Settlement');
-        const matcher = await Settlement.deploy(whitelistRegistrySimple.address, swap.address, inch.address);
+        const SettlementMock = await ethers.getContractFactory('SettlementMock');
+        const matcher = await SettlementMock.deploy(whitelistRegistrySimple.address, swap.address, inch.address);
         await matcher.deployed();
 
         const FeeBank = await ethers.getContractFactory('FeeBank');
@@ -123,7 +123,7 @@ describe('Settlement', function () {
             ether('100'),
             0,
             ether('0.11'),
-            matcher.address
+            matcher.address,
         );
 
         assertRoughlyEqualValues(await weth.balanceOf(addr.address), addrweth.add(ether('0.11')), 1e-4);
@@ -183,7 +183,7 @@ describe('Settlement', function () {
                         addr.address,
                         ether('25'),
                     ]),
-                ]
+                ],
             ]));
 
         const interaction =
@@ -336,7 +336,7 @@ describe('Settlement', function () {
             weth,
             swap,
             matcher,
-            resolver
+            resolver,
         }) => {
             const makerAsset = dai.address;
             const takerAsset = weth.address;
@@ -386,7 +386,7 @@ describe('Settlement', function () {
                             actualTakingAmount,
                         ]),
                         dai.interface.encodeFunctionData('transfer', [addr.address, makingAmount]),
-                    ]
+                    ],
                 ]));
 
             await weth.approve(resolver.address, actualTakingAmount);
@@ -664,51 +664,5 @@ describe('Settlement', function () {
                 matcher.address,
             ),
         ).to.be.revertedWithCustomError(matcher, 'NotEnoughCredit');
-    });
-
-    describe('increaseAvailableCredit', function () {
-        it.skip('should increase credit', async function () {
-            const { matcher } = await loadFixture(initContracts);
-            const amount = ether('100');
-            expect(await matcher.availableCredit(addr1.address)).to.equal('0');
-            await matcher.setFeeBank(addr.address);
-            await matcher.increaseAvailableCredit(addr1.address, amount);
-            expect(await matcher.availableCredit(addr1.address)).to.equal(amount);
-        });
-
-        it('should not increase credit by non-feeBank address', async function () {
-            const { matcher } = await loadFixture(initContracts);
-            await expect(matcher.increaseAvailableCredit(addr1.address, ether('100'))).to.be.revertedWithCustomError(
-                matcher,
-                'OnlyFeeBankAccess',
-            );
-        });
-    });
-
-    describe('decreaseAvailableCredit', function () {
-        async function initContractsAndAllowance() {
-            const { matcher, feeBank } = await initContracts();
-            const creditAmount = ether('100');
-            await matcher.setFeeBank(addr.address);
-            await matcher.increaseAvailableCredit(addr1.address, creditAmount);
-            return { matcher, feeBank, creditAmount };
-        }
-
-        it('should decrease credit', async function () {
-            const { matcher, creditAmount } = await loadFixture(initContractsAndAllowance);
-            const amount = ether('10');
-            expect(await matcher.availableCredit(addr1.address)).to.equal(creditAmount);
-            await matcher.decreaseAvailableCredit(addr1.address, amount);
-            expect(await matcher.availableCredit(addr1.address)).to.equal(creditAmount - amount);
-        });
-
-        it('should not deccrease credit by non-feeBank address', async function () {
-            const { matcher, feeBank } = await loadFixture(initContractsAndAllowance);
-            await matcher.setFeeBank(feeBank.address);
-            await expect(matcher.decreaseAvailableCredit(addr1.address, ether('10'))).to.be.revertedWithCustomError(
-                matcher,
-                'OnlyFeeBankAccess',
-            );
-        });
     });
 });
