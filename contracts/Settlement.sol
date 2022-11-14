@@ -7,17 +7,18 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@1inch/limit-order-protocol/contracts/interfaces/NotificationReceiver.sol";
 import "@1inch/limit-order-protocol/contracts/interfaces/IOrderMixin.sol";
 import "@1inch/solidity-utils/contracts/libraries/SafeERC20.sol";
-import "./helpers/WhitelistChecker.sol";
 import "./libraries/OrderSaltParser.sol";
 import "./interfaces/IWhitelistRegistry.sol";
 import "./interfaces/ISettlement.sol";
 import "./interfaces/IResolver.sol";
+import "./interfaces/IWhitelistRegistry.sol";
 import "./FeeBankCharger.sol";
 
-contract Settlement is ISettlement, Ownable, WhitelistChecker, FeeBankCharger {
+contract Settlement is ISettlement, Ownable, FeeBankCharger {
     using SafeERC20 for IERC20;
     using OrderSaltParser for uint256;
 
+    error AccessDenied();
     error IncorrectCalldataParams();
     error FailedExternalCall();
 
@@ -27,16 +28,28 @@ contract Settlement is ISettlement, Ownable, WhitelistChecker, FeeBankCharger {
     uint16 private constant _DEFAULT_INITIAL_RATE_BUMP = 1000; // 10%
     uint32 private constant _DEFAULT_DURATION = 30 minutes;
 
-    IOrderMixin internal immutable _limitOrderProtocol;
+    IWhitelistRegistry private immutable _whitelist;
+    IOrderMixin private immutable _limitOrderProtocol;
 
-    modifier onlyThisCalledByLimitOrderProtocol(address account) {
-        if (msg.sender != address(_limitOrderProtocol) || account != address(this)) revert AccessDenied();
+    modifier onlyWhitelisted(address account) {
+        if (!_whitelist.isWhitelisted(account)) revert AccessDenied();
+        _;
+    }
+
+    modifier onlyThis(address account) {
+        if (account != address(this)) revert AccessDenied();
+        _;
+    }
+
+    modifier onlyLimitOrderProtocol {
+        if (msg.sender != address(_limitOrderProtocol)) revert AccessDenied();
         _;
     }
 
     constructor(IWhitelistRegistry whitelist, IOrderMixin limitOrderProtocol, IERC20 token)
-        WhitelistChecker(whitelist) FeeBankCharger(token)
+        FeeBankCharger(token)
     {
+        _whitelist = whitelist;
         _limitOrderProtocol = limitOrderProtocol;
     }
 
@@ -66,7 +79,7 @@ contract Settlement is ISettlement, Ownable, WhitelistChecker, FeeBankCharger {
         uint256, /* makingAmount */
         uint256 takingAmount,
         bytes calldata interactiveData
-    ) external onlyThisCalledByLimitOrderProtocol(taker) returns (uint256 result) {
+    ) external onlyThis(taker) onlyLimitOrderProtocol returns (uint256 result) {
         (address resolver,,) = _abiDecodeResolverTokenSaltFromTail(interactiveData);
 
         if (interactiveData[0] == _FINALIZE_INTERACTION) {
