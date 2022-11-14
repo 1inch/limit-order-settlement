@@ -14,9 +14,31 @@ import "./interfaces/IResolver.sol";
 import "./interfaces/IWhitelistRegistry.sol";
 import "./FeeBankCharger.sol";
 
+import "hardhat/console.sol";
+
+library DynamicSuffix {
+    struct Data {
+        uint256 totalFee;
+        uint256 _resolver;
+        uint256 _token;
+        uint256 salt;
+    }
+
+    uint256 internal constant _DATA_SIZE = 0x80;
+
+    function resolver(Data calldata self) internal pure returns (address) {
+        return address(uint160(self._resolver));
+    }
+
+    function token(Data calldata self) internal pure returns (IERC20) {
+        return IERC20(address(uint160(self._token)));
+    }
+}
+
 contract Settlement is ISettlement, Ownable, FeeBankCharger {
     using SafeERC20 for IERC20;
     using OrderSaltParser for uint256;
+    using DynamicSuffix for DynamicSuffix.Data;
 
     error AccessDenied();
     error IncorrectCalldataParams();
@@ -65,6 +87,7 @@ contract Settlement is ISettlement, Ownable, FeeBankCharger {
         _settleOrder(
             order,
             msg.sender,
+            0,
             signature,
             interaction,
             makingAmount,
@@ -80,10 +103,11 @@ contract Settlement is ISettlement, Ownable, FeeBankCharger {
         uint256 takingAmount,
         bytes calldata interactiveData
     ) external onlyThis(taker) onlyLimitOrderProtocol returns (uint256 result) {
-        (address resolver,,) = _abiDecodeResolverTokenSaltFromTail(interactiveData);
+        DynamicSuffix.Data calldata suffix = _abiDecodeResolverTokenSaltFromTail(interactiveData);
 
         if (interactiveData[0] == _FINALIZE_INTERACTION) {
-            (address target, bytes calldata data) = _abiDecodeTargetAndCalldata(interactiveData[1:interactiveData.length - 0x60]);
+            _chargeFee(suffix.resolver(), suffix.totalFee);
+            (address target, bytes calldata data) = _abiDecodeTargetAndCalldata(interactiveData[1:interactiveData.length - DynamicSuffix._DATA_SIZE]);
             IResolver(target).resolveOrders(data);
         } else {
             (
@@ -98,7 +122,8 @@ contract Settlement is ISettlement, Ownable, FeeBankCharger {
 
             _settleOrder(
                 order,
-                resolver,
+                suffix.resolver(),
+                suffix.totalFee,
                 signature,
                 interaction,
                 makingOrderAmount,
@@ -108,11 +133,8 @@ contract Settlement is ISettlement, Ownable, FeeBankCharger {
             );
         }
 
-        (, IERC20 token, uint256 salt) = _abiDecodeResolverTokenSaltFromTail(interactiveData);
-
-        _chargeFee(resolver, salt.getFee() * _ORDER_FEE_BASE_POINTS);
-        result = (takingAmount * _calculateRateBump(salt)) / _BASE_POINTS;
-        token.forceApprove(address(_limitOrderProtocol), result);
+        result = (takingAmount * _calculateRateBump(suffix.salt)) / _BASE_POINTS;
+        suffix.token().forceApprove(address(_limitOrderProtocol), result);
     }
 
     function _calculateRateBump(uint256 salt) internal view returns (uint256) {
@@ -144,6 +166,7 @@ contract Settlement is ISettlement, Ownable, FeeBankCharger {
     function _settleOrder(
         OrderLib.Order calldata order,
         address resolver,
+        uint256 totalFee,
         bytes calldata signature,
         bytes calldata interaction,
         uint256 makingAmount,
@@ -151,14 +174,18 @@ contract Settlement is ISettlement, Ownable, FeeBankCharger {
         uint256 thresholdAmount,
         address target
     ) private {
+        OrderLib.Order calldata order2 = order;
+        totalFee += order.salt.getFee() * _ORDER_FEE_BASE_POINTS;
+
         bytes memory patchedInteraction = abi.encodePacked(
             interaction,
+            totalFee,
             uint256(uint160(resolver)),
-            uint256(uint160(order.takerAsset)),
-            order.salt
+            uint256(uint160(order2.takerAsset)),
+            order2.salt
         );
         _limitOrderProtocol.fillOrderTo(
-            order,
+            order2,
             signature,
             patchedInteraction,
             makingAmount,
@@ -176,12 +203,10 @@ contract Settlement is ISettlement, Ownable, FeeBankCharger {
         }
     }
 
-    function _abiDecodeResolverTokenSaltFromTail(bytes calldata cd) private pure returns (address resolver, IERC20 token, uint256 salt) {
+    function _abiDecodeResolverTokenSaltFromTail(bytes calldata cd) private pure returns (DynamicSuffix.Data calldata suffix) {
+        uint256 suffixSize = DynamicSuffix._DATA_SIZE;
         assembly {  // solhint-disable-line no-inline-assembly
-            let endOffset := add(cd.offset, cd.length)
-            resolver := calldataload(sub(endOffset, 0x60))
-            token := calldataload(sub(endOffset, 0x40))
-            salt := calldataload(sub(endOffset, 0x20))
+            suffix := sub(add(cd.offset, cd.length), suffixSize)
         }
     }
 
