@@ -724,47 +724,4 @@ describe('Settlement', function () {
             ),
         ).to.be.revertedWithCustomError(matcher, 'NotEnoughCredit');
     });
-
-    describe.skip('increaseAvailableCredit', function () {
-        it('should increase credit', async function () {
-            const { matcher } = await loadFixture(initContracts);
-            const amount = ether('100');
-            expect(await matcher.availableCredit(addr1.address)).to.equal('0');
-            await matcher.increaseAvailableCreditMock(addr1.address, amount);
-            expect(await matcher.availableCredit(addr1.address)).to.equal(amount);
-        });
-
-        it('should not increase credit by non-feeBank address', async function () {
-            const { matcher } = await loadFixture(initContracts);
-            await expect(matcher.increaseAvailableCredit(addr1.address, ether('100'))).to.be.revertedWithCustomError(
-                matcher,
-                'OnlyFeeBankAccess',
-            );
-        });
-    });
-
-    describe.skip('decreaseAvailableCredit', function () {
-        async function initContractsAndAllowance() {
-            const { matcher, feeBank } = await initContracts();
-            const creditAmount = ether('100');
-            await matcher.increaseAvailableCreditMock(addr1.address, creditAmount);
-            return { matcher, feeBank, creditAmount };
-        }
-
-        it('should decrease credit', async function () {
-            const { matcher, creditAmount } = await loadFixture(initContractsAndAllowance);
-            const amount = ether('10');
-            expect(await matcher.availableCredit(addr1.address)).to.equal(creditAmount);
-            await matcher.decreaseAvailableCreditMock(addr1.address, amount);
-            expect(await matcher.availableCredit(addr1.address)).to.equal(creditAmount - amount);
-        });
-
-        it('should not deccrease credit by non-feeBank address', async function () {
-            const { matcher } = await loadFixture(initContractsAndAllowance);
-            await expect(matcher.decreaseAvailableCredit(addr1.address, ether('10'))).to.be.revertedWithCustomError(
-                matcher,
-                'OnlyFeeBankAccess',
-            );
-        });
-    });
 });

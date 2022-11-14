@@ -9,7 +9,7 @@ contract SettlementMock is Settlement {
         Settlement(whitelist, limitOrderProtocol, token)
     {}  // solhint-disable-line no-empty-blocks
 
-    function decreaseAvailableCreditMock(address account, uint256 amount) external onlyOwner returns (uint256 allowance) {
+    function decreaseAvailableCreditMock(address account, uint256 amount) external {
         _chargeFee(account, amount);
     }
 }
