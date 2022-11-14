@@ -46,10 +46,8 @@ describe('FeeBank', function () {
             await feeBank.deposit(addrAmount);
             await feeBank.connect(addr1).deposit(addr1Amount);
 
-            expect(await feeBank.accountDeposits(addr.address)).to.equal(addrAmount);
-            expect(await feeBank.accountDeposits(addr1.address)).to.equal(addr1Amount);
-            expect(await matcher.creditAllowance(addr.address)).to.equal(addrAmount);
-            expect(await matcher.creditAllowance(addr1.address)).to.equal(addr1Amount);
+            expect(await feeBank.availableCredit(addr.address)).to.equal(addrAmount);
+            expect(await feeBank.availableCredit(addr1.address)).to.equal(addr1Amount);
             expect(await inch.balanceOf(addr.address)).to.equal(addrbalanceBefore.sub(addrAmount));
             expect(await inch.balanceOf(addr1.address)).to.equal(addr1balanceBefore.sub(addr1Amount));
         });
@@ -64,10 +62,8 @@ describe('FeeBank', function () {
             await feeBank.connect(addr1).depositFor(addr.address, addrAmount);
             await feeBank.depositFor(addr1.address, addr1Amount);
 
-            expect(await feeBank.accountDeposits(addr.address)).to.equal(addrAmount);
-            expect(await feeBank.accountDeposits(addr1.address)).to.equal(addr1Amount);
-            expect(await matcher.creditAllowance(addr.address)).to.equal(addrAmount);
-            expect(await matcher.creditAllowance(addr1.address)).to.equal(addr1Amount);
+            expect(await feeBank.availableCredit(addr.address)).to.equal(addrAmount);
+            expect(await feeBank.availableCredit(addr1.address)).to.equal(addr1Amount);
             expect(await inch.balanceOf(addr.address)).to.equal(addrbalanceBefore.sub(addr1Amount));
             expect(await inch.balanceOf(addr1.address)).to.equal(addr1balanceBefore.sub(addrAmount));
         });
@@ -81,8 +77,7 @@ describe('FeeBank', function () {
 
             await feeBank.depositWithPermit(addrAmount, permit);
 
-            expect(await feeBank.accountDeposits(addr.address)).to.equal(addrAmount);
-            expect(await matcher.creditAllowance(addr.address)).to.equal(addrAmount);
+            expect(await feeBank.availableCredit(addr.address)).to.equal(addrAmount);
             expect(await inch.balanceOf(addr.address)).to.equal(addrbalanceBefore.sub(addrAmount));
         });
 
@@ -95,8 +90,7 @@ describe('FeeBank', function () {
 
             await feeBank.depositForWithPermit(addr1.address, addrAmount, permit);
 
-            expect(await feeBank.accountDeposits(addr1.address)).to.equal(addrAmount);
-            expect(await matcher.creditAllowance(addr1.address)).to.equal(addrAmount);
+            expect(await feeBank.availableCredit(addr1.address)).to.equal(addrAmount);
             expect(await inch.balanceOf(addr.address)).to.equal(addrbalanceBefore.sub(addrAmount));
         });
     });
@@ -116,20 +110,18 @@ describe('FeeBank', function () {
 
             await feeBank.withdraw(amount);
 
-            expect(await feeBank.accountDeposits(addr.address)).to.equal(totalDepositAmount - amount);
-            expect(await matcher.creditAllowance(addr.address)).to.equal(totalDepositAmount - amount);
+            expect(await feeBank.availableCredit(addr.address)).to.equal(totalDepositAmount - amount);
             expect(await inch.balanceOf(addr.address)).to.equal(addrbalanceBefore.add(amount));
         });
 
         it('should decrease accountDeposits and creditAllowance with withdrawTo()', async function () {
-            const { inch, feeBank, matcher, totalDepositAmount } = await loadFixture(initContratsAndDeposit);
+            const { inch, feeBank, totalDepositAmount } = await loadFixture(initContratsAndDeposit);
             const amount = ether('10');
             const addr1balanceBefore = await inch.balanceOf(addr1.address);
 
             await feeBank.withdrawTo(addr1.address, amount);
 
-            expect(await feeBank.accountDeposits(addr.address)).to.equal(totalDepositAmount - amount);
-            expect(await matcher.creditAllowance(addr.address)).to.equal(totalDepositAmount - amount);
+            expect(await feeBank.availableCredit(addr.address)).to.equal(totalDepositAmount - amount);
             expect(await inch.balanceOf(addr1.address)).to.equal(addr1balanceBefore.add(amount));
         });
 
@@ -149,12 +141,10 @@ describe('FeeBank', function () {
             await matcher.decreaseCreditAllowance(addr1.address, subCreditAmount);
 
             const balanceBefore = await inch.balanceOf(addr.address);
-            expect(await feeBank.accountDeposits(addr1.address)).to.equal(amount);
-            expect(await matcher.creditAllowance(addr1.address)).to.equal(amount - subCreditAmount);
+            expect(await feeBank.availableCredit(addr1.address)).to.equal(amount - subCreditAmount);
             await feeBank.gatherFees([addr1.address]);
 
-            expect(await feeBank.accountDeposits(addr1.address)).to.equal(amount - subCreditAmount);
-            expect(await matcher.creditAllowance(addr1.address)).to.equal(amount - subCreditAmount);
+            expect(await feeBank.availableCredit(addr1.address)).to.equal(amount - subCreditAmount);
             expect(await inch.balanceOf(addr.address)).to.equal(balanceBefore.toBigInt() + subCreditAmount);
         });
 
@@ -171,16 +161,12 @@ describe('FeeBank', function () {
             await matcher.decreaseCreditAllowance(addr1.address, subCreditAddr1Amount);
 
             const balanceBefore = await inch.balanceOf(addr.address);
-            expect(await feeBank.accountDeposits(addr.address)).to.equal(addrAmount);
-            expect(await feeBank.accountDeposits(addr1.address)).to.equal(addr1Amount);
-            expect(await matcher.creditAllowance(addr.address)).to.equal(addrAmount - subCreditaddrAmount);
-            expect(await matcher.creditAllowance(addr1.address)).to.equal(addr1Amount - subCreditAddr1Amount);
+            expect(await feeBank.availableCredit(addr.address)).to.equal(addrAmount - subCreditaddrAmount);
+            expect(await feeBank.availableCredit(addr1.address)).to.equal(addr1Amount - subCreditAddr1Amount);
             await feeBank.gatherFees([addr.address, addr1.address]);
 
-            expect(await feeBank.accountDeposits(addr.address)).to.equal(addrAmount - subCreditaddrAmount);
-            expect(await feeBank.accountDeposits(addr1.address)).to.equal(addr1Amount - subCreditAddr1Amount);
-            expect(await matcher.creditAllowance(addr.address)).to.equal(addrAmount - subCreditaddrAmount);
-            expect(await matcher.creditAllowance(addr1.address)).to.equal(addr1Amount - subCreditAddr1Amount);
+            expect(await feeBank.availableCredit(addr.address)).to.equal(addrAmount - subCreditaddrAmount);
+            expect(await feeBank.availableCredit(addr1.address)).to.equal(addr1Amount - subCreditAddr1Amount);
             expect(await inch.balanceOf(addr.address)).to.equal(
                 balanceBefore.add(subCreditaddrAmount).add(subCreditAddr1Amount),
             );
@@ -209,14 +195,12 @@ describe('FeeBank', function () {
 
             const balanceBefore = await inch.balanceOf(addr.address);
             for (let i = 1; i < accounts.length; i++) {
-                expect(await feeBank.accountDeposits(accounts[i])).to.equal(amounts[i]);
-                expect(await matcher.creditAllowance(accounts[i])).to.equal(amounts[i].sub(subCreditAmounts[i]));
+                expect(await feeBank.availableCredit(accounts[i])).to.equal(amounts[i].sub(subCreditAmounts[i]));
             }
 
             await feeBank.gatherFees(accounts);
             for (let i = 1; i < accounts.length; i++) {
-                expect(await feeBank.accountDeposits(accounts[i])).to.equal(amounts[i].sub(subCreditAmounts[i]));
-                expect(await matcher.creditAllowance(accounts[i])).to.equal(amounts[i].sub(subCreditAmounts[i]));
+                expect(await feeBank.availableCredit(accounts[i])).to.equal(amounts[i].sub(subCreditAmounts[i]));
             }
             expect(await inch.balanceOf(addr.address)).to.equal(balanceBefore.add(totalSubCreditAmounts));
         });

@@ -14,11 +14,15 @@ contract FeeBank is Ownable {
     IERC20 private immutable _token;
     ISettlement private immutable _settlement;
 
-    mapping(address => uint256) public accountDeposits;
+    mapping(address => uint256) private _accountDeposits;
 
     constructor(ISettlement settlement, IERC20 inch) {
         _settlement = settlement;
         _token = inch;
+    }
+
+    function availableCredit(address account) external view returns (uint256) {
+        return _settlement.creditAllowance(account);
     }
 
     /**
@@ -89,8 +93,8 @@ contract FeeBank is Ownable {
     function gatherFees(address[] memory accounts) external onlyOwner returns (uint256 totalAccountFees) {
         uint256 accountsLength = accounts.length;
         for (uint256 i = 0; i < accountsLength; i++) {
-            uint256 accountFee = accountDeposits[accounts[i]] - _settlement.creditAllowance(accounts[i]);
-            accountDeposits[accounts[i]] -= accountFee;
+            uint256 accountFee = _accountDeposits[accounts[i]] - _settlement.creditAllowance(accounts[i]);
+            _accountDeposits[accounts[i]] -= accountFee;
             totalAccountFees += accountFee;
         }
         _token.safeTransfer(msg.sender, totalAccountFees);
@@ -98,13 +102,13 @@ contract FeeBank is Ownable {
 
     function _depositFor(address account, uint256 amount) internal returns (uint256 totalCreditAllowance) {
         _token.safeTransferFrom(msg.sender, address(this), amount);
-        accountDeposits[account] += amount;
+        _accountDeposits[account] += amount;
         totalCreditAllowance = _settlement.increaseCreditAllowance(account, amount);
     }
 
     function _withdrawTo(address account, uint256 amount) internal returns (uint256 totalCreditAllowance) {
         totalCreditAllowance = _settlement.decreaseCreditAllowance(msg.sender, amount);
-        accountDeposits[msg.sender] -= amount;
+        _accountDeposits[msg.sender] -= amount;
         _token.safeTransfer(account, amount);
     }
 }
