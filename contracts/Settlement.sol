@@ -10,6 +10,7 @@ import "./helpers/WhitelistChecker.sol";
 import "./libraries/OrderSaltParser.sol";
 import "./interfaces/IWhitelistRegistry.sol";
 import "./interfaces/ISettlement.sol";
+import "./FeeBank.sol";
 
 contract Settlement is ISettlement, Ownable, WhitelistChecker {
     using OrderSaltParser for uint256;
@@ -25,7 +26,7 @@ contract Settlement is ISettlement, Ownable, WhitelistChecker {
     error OnlyFeeBankAccess();
     error NotEnoughCredit();
 
-    address public feeBank;
+    address public immutable feeBank;
     mapping(address => uint256) public creditAllowance;
 
     modifier onlyFeeBank() {
@@ -33,9 +34,11 @@ contract Settlement is ISettlement, Ownable, WhitelistChecker {
         _;
     }
 
-    constructor(IWhitelistRegistry whitelist, address limitOrderProtocol)
+    constructor(IWhitelistRegistry whitelist, address limitOrderProtocol, IERC20 token)
         WhitelistChecker(whitelist, limitOrderProtocol)
-    {} // solhint-disable-line no-empty-blocks
+    {
+        feeBank = address(new FeeBank(this, token));
+    }
 
     function settleOrders(
         IOrderMixin orderMixin,
@@ -169,10 +172,6 @@ contract Settlement is ISettlement, Ownable, WhitelistChecker {
         allowance = creditAllowance[account];
         allowance -= amount;
         creditAllowance[account] = allowance;
-    }
-
-    function setFeeBank(address newFeeBank) external onlyOwner {
-        feeBank = newFeeBank;
     }
 
     function _abiDecodeFinal(bytes calldata cd)

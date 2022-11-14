@@ -41,14 +41,12 @@ describe('Settlement', function () {
         await weth.connect(addr1).approve(swap.address, ether('1'));
 
         const Settlement = await ethers.getContractFactory('Settlement');
-        const matcher = await Settlement.deploy(whitelistRegistrySimple.address, swap.address);
+        const matcher = await Settlement.deploy(whitelistRegistrySimple.address, swap.address, inch.address);
         await matcher.deployed();
 
         const FeeBank = await ethers.getContractFactory('FeeBank');
-        const feeBank = await FeeBank.deploy(matcher.address, inch.address);
-        await feeBank.deployed();
+        const feeBank = await FeeBank.attach(await matcher.feeBank());
 
-        await matcher.setFeeBank(feeBank.address);
         await inch.approve(feeBank.address, ether('100'));
         await feeBank.deposit(ether('100'));
 
@@ -727,21 +725,6 @@ describe('Settlement', function () {
         ).to.be.revertedWithCustomError(matcher, 'NotEnoughCredit');
     });
 
-    describe('setFeeBank', function () {
-        it('should change feeBank', async function () {
-            const { matcher } = await loadFixture(initContracts);
-            expect(await matcher.feeBank()).to.not.equal(addr1.address);
-            await matcher.setFeeBank(addr1.address);
-            expect(await matcher.feeBank()).to.equal(addr1.address);
-        });
-        it('should not change feeBank by non-owner', async function () {
-            const { matcher } = await loadFixture(initContracts);
-            await expect(matcher.connect(addr1).setFeeBank(addr1.address)).to.be.revertedWith(
-                'Ownable: caller is not the owner',
-            );
-        });
-    });
-
     describe('increaseCreditAllowance', function () {
         it('should increase credit', async function () {
             const { matcher } = await loadFixture(initContracts);
@@ -751,6 +734,7 @@ describe('Settlement', function () {
             await matcher.increaseCreditAllowance(addr1.address, amount);
             expect(await matcher.creditAllowance(addr1.address)).to.equal(amount);
         });
+
         it('should not increase credit by non-feeBank address', async function () {
             const { matcher } = await loadFixture(initContracts);
             await expect(matcher.increaseCreditAllowance(addr1.address, ether('100'))).to.be.revertedWithCustomError(
@@ -776,6 +760,7 @@ describe('Settlement', function () {
             await matcher.decreaseCreditAllowance(addr1.address, amount);
             expect(await matcher.creditAllowance(addr1.address)).to.equal(creditAmount - amount);
         });
+
         it('should not deccrease credit by non-feeBank address', async function () {
             const { matcher, feeBank } = await loadFixture(initContractsAndAllowance);
             await matcher.setFeeBank(feeBank.address);

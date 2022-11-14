@@ -22,14 +22,12 @@ describe('FeeBank', function () {
         await inch.deployed();
         const { swap } = await deploySwapTokens();
         const Settlement = await ethers.getContractFactory('Settlement');
-        const matcher = await Settlement.deploy(whitelistRegistrySimple.address, swap.address);
+        const matcher = await Settlement.deploy(whitelistRegistrySimple.address, swap.address, inch.address);
         await matcher.deployed();
 
         const FeeBank = await ethers.getContractFactory('FeeBank');
-        const feeBank = await FeeBank.deploy(matcher.address, inch.address);
-        await feeBank.deployed();
+        const feeBank = await FeeBank.attach(await matcher.feeBank());
 
-        await matcher.setFeeBank(feeBank.address);
         await inch.transfer(addr1.address, ether('100'));
         await inch.approve(feeBank.address, ether('1000'));
         await inch.connect(addr1).approve(feeBank.address, ether('1000'));
