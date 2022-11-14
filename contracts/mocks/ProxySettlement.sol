@@ -47,26 +47,4 @@ contract ProxySettlement {
             target
         );
     }
-
-    function settleOrdersEOA(
-        IOrderMixin orderMixin,
-        OrderLib.Order calldata order,
-        bytes calldata signature,
-        bytes calldata interaction,
-        uint256 makingAmount,
-        uint256 takingAmount,
-        uint256 thresholdAmount,
-        address target
-    ) external {
-        _settlement.settleOrdersEOA(
-            orderMixin,
-            order,
-            signature,
-            interaction,
-            makingAmount,
-            takingAmount,
-            thresholdAmount,
-            target
-        );
-    }
 }

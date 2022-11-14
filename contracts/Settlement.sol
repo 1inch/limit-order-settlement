@@ -60,36 +60,13 @@ contract Settlement is ISettlement, Ownable, WhitelistChecker {
         );
     }
 
-    function settleOrdersEOA(
-        IOrderMixin orderMixin,
-        OrderLib.Order calldata order,
-        bytes calldata signature,
-        bytes calldata interaction,
-        uint256 makingAmount,
-        uint256 takingAmount,
-        uint256 thresholdAmount,
-        address target
-    ) external onlyWhitelistedEOA {
-        _settleOrder(
-            orderMixin,
-            order,
-            tx.origin, // solhint-disable-line avoid-tx-origin
-            signature,
-            interaction,
-            makingAmount,
-            takingAmount,
-            thresholdAmount,
-            target
-        );
-    }
-
     function fillOrderInteraction(
         address, /* taker */
         uint256, /* makingAmount */
         uint256 takingAmount,
         bytes calldata interactiveData
     ) external returns (uint256) {
-        address interactor = _onlyLimitOrderProtocol();
+        address interactor = _interactionAuth();
         if (interactiveData[0] == _FINALIZE_INTERACTION) {
             (address[] calldata targets, bytes[] calldata calldatas) = _abiDecodeFinal(interactiveData[1:]);
 

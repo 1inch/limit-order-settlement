@@ -93,29 +93,6 @@ describe('WhitelistChecker', function () {
     }
 
     describe('should not work with non-whitelisted address', function () {
-        it('onlyWhitelistedEOA modifier in settleOrdersEOA method', async function () {
-            const { dai, weth, swap, matcher } = await loadFixture(initContracts);
-            const order1 = await buildOrder({
-                makerAsset: dai.address,
-                takerAsset: weth.address,
-                makingAmount: ether('10'),
-                takingAmount: ether('0.01'),
-                from: addr1.address,
-            });
-            await expect(
-                matcher.settleOrdersEOA(
-                    swap.address,
-                    order1,
-                    '0x',
-                    '0x',
-                    ether('10'),
-                    0,
-                    ether('0.01'),
-                    matcher.address,
-                ),
-            ).to.be.revertedWithCustomError(matcher, 'AccessDenied');
-        });
-
         it('onlyWhitelisted modifier in settleOrders method', async function () {
             const { dai, weth, swap, matcher } = await loadFixture(initContracts);
             const order1 = await buildOrder({
@@ -164,22 +141,6 @@ describe('WhitelistChecker', function () {
             await whitelistRegistrySimple.setStatus(addr.address, true);
             return { dai, weth, swap, matcher };
         }
-
-        it('onlyWhitelistedEOA modifier in settleOrdersEOA method', async function () {
-            const { dai, weth, swap, matcher } = await loadFixture(initContractsAndSetStatus);
-
-            const addrweth = await weth.balanceOf(addr.address);
-            const addr1weth = await weth.balanceOf(addr1.address);
-            const addrdai = await dai.balanceOf(addr.address);
-            const addr1dai = await dai.balanceOf(addr1.address);
-
-            await settleOrders(matcher.settleOrdersEOA, dai, weth, swap, matcher);
-
-            expect(await weth.balanceOf(addr.address)).to.equal(addrweth.add(ether('0.1')));
-            expect(await weth.balanceOf(addr1.address)).to.equal(addr1weth.sub(ether('0.1')));
-            expect(await dai.balanceOf(addr.address)).to.equal(addrdai.sub(ether('100')));
-            expect(await dai.balanceOf(addr1.address)).to.equal(addr1dai.add(ether('100')));
-        });
 
         it('onlyWhitelisted modifier in settleOrders method', async function () {
             const { dai, weth, swap, matcher } = await loadFixture(initContractsAndSetStatus);

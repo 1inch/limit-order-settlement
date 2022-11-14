@@ -19,13 +19,8 @@ contract WhitelistChecker {
         _limitOrderProtocol = limitOrderProtocol;
     }
 
-    modifier onlyWhitelistedEOA() {
-        _enforceWhitelist(tx.origin); // solhint-disable-line avoid-tx-origin
-        _;
-    }
-
     modifier onlyWhitelisted(address account) {
-        _enforceWhitelist(account);
+        if (!_whitelist.isWhitelisted(account)) revert AccessDenied();
         if (_checked == _NOT_CHECKED) {
             _checked = account;
             _;
@@ -35,16 +30,9 @@ contract WhitelistChecker {
         }
     }
 
-    function _onlyLimitOrderProtocol() internal view returns (address checked) {
+    function _interactionAuth() internal view returns (address checked) {
         if (msg.sender != _limitOrderProtocol) revert AccessDenied();
         checked = _checked;
-        if (checked == _NOT_CHECKED) {
-            checked = tx.origin; // solhint-disable-line avoid-tx-origin
-            if (!_whitelist.isWhitelisted(checked)) revert AccessDenied();
-        }
-    }
-
-    function _enforceWhitelist(address account) private view {
-        if (!_whitelist.isWhitelisted(account)) revert AccessDenied();
+        if (checked == _NOT_CHECKED) revert AccessDenied();
     }
 }
