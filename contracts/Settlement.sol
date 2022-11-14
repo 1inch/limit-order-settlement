@@ -75,26 +75,8 @@ contract Settlement is ISettlement, Ownable, FeeBankCharger {
         _limitOrderProtocol = limitOrderProtocol;
     }
 
-    function settleOrders(
-        OrderLib.Order calldata order,
-        bytes calldata signature,
-        bytes calldata interaction,
-        uint256 makingAmount,
-        uint256 takingAmount,
-        uint256 thresholdAmount,
-        address target
-    ) external onlyWhitelisted(msg.sender) {
-        _settleOrder(
-            order,
-            msg.sender,
-            0,
-            signature,
-            interaction,
-            makingAmount,
-            takingAmount,
-            thresholdAmount,
-            target
-        );
+    function settleOrders(bytes calldata data) external onlyWhitelisted(msg.sender) {
+        _settleOrder(data, msg.sender, 0);
     }
 
     function fillOrderInteraction(
@@ -110,26 +92,10 @@ contract Settlement is ISettlement, Ownable, FeeBankCharger {
             (address target, bytes calldata data) = _abiDecodeTargetAndCalldata(interactiveData[1:interactiveData.length - DynamicSuffix._DATA_SIZE]);
             IResolver(target).resolveOrders(data);
         } else {
-            (
-                OrderLib.Order calldata order,
-                bytes calldata signature,
-                bytes calldata interaction,
-                uint256 makingOrderAmount,
-                uint256 takingOrderAmount,
-                uint256 thresholdAmount,
-                address target
-            ) = _abiDecodeIteration(interactiveData[1:]);
-
             _settleOrder(
-                order,
+                interactiveData[1:interactiveData.length - DynamicSuffix._DATA_SIZE],
                 suffix.resolver(),
-                suffix.totalFee,
-                signature,
-                interaction,
-                makingOrderAmount,
-                takingOrderAmount,
-                thresholdAmount,
-                target
+                suffix.totalFee
             );
         }
 
@@ -163,36 +129,43 @@ contract Settlement is ISettlement, Ownable, FeeBankCharger {
         }
     }
 
-    function _settleOrder(
-        OrderLib.Order calldata order,
-        address resolver,
-        uint256 totalFee,
-        bytes calldata signature,
-        bytes calldata interaction,
-        uint256 makingAmount,
-        uint256 takingAmount,
-        uint256 thresholdAmount,
-        address target
-    ) private {
-        OrderLib.Order calldata order2 = order;
-        totalFee += order.salt.getFee() * _ORDER_FEE_BASE_POINTS;
+    function _settleOrder(bytes calldata data, address resolver, uint256 totalFee) private {
+        uint256 orderSalt;
+        IERC20 orderToken;
+        assembly {  // solhint-disable-line no-inline-assembly
+            let orderOffset := add(data.offset, calldataload(data.offset))
+            orderSalt := calldataload(orderOffset)
+            orderToken := calldataload(add(orderOffset, 0x40))
+        }
+        totalFee += orderSalt.getFee() * _ORDER_FEE_BASE_POINTS;
 
-        bytes memory patchedInteraction = abi.encodePacked(
-            interaction,
-            totalFee,
-            uint256(uint160(resolver)),
-            uint256(uint160(order2.takerAsset)),
-            order2.salt
-        );
-        _limitOrderProtocol.fillOrderTo(
-            order2,
-            signature,
-            patchedInteraction,
-            makingAmount,
-            takingAmount,
-            thresholdAmount,
-            target
-        );
+        bytes4 selector = IOrderMixin.fillOrderTo.selector;
+        uint256 suffixLength = DynamicSuffix._DATA_SIZE;
+        IOrderMixin limitOrderProtocol = _limitOrderProtocol;
+        assembly {  // solhint-disable-line no-inline-assembly
+            let interactionLengthOffset := calldataload(add(data.offset, 0x40))
+            let interactionOffset := add(interactionLengthOffset, 0x20)
+            let interactionLength := calldataload(add(data.offset, interactionLengthOffset))
+
+            // Copy calldata and patch interaction.length
+            let ptr := mload(0x40)
+            mstore(ptr, selector)
+            calldatacopy(add(ptr, 4), data.offset, data.length)
+            mstore(add(add(ptr, interactionLengthOffset), 4), add(interactionLength, suffixLength))
+
+            // Append suffix fields
+            let offset := add(add(ptr, interactionOffset), interactionLength)
+            mstore(add(offset, 0x04), totalFee)
+            mstore(add(offset, 0x24), resolver)
+            mstore(add(offset, 0x44), orderToken)
+            mstore(add(offset, 0x64), orderSalt)
+
+            // Call fillOrderTo
+            if iszero(call(gas(), limitOrderProtocol, 0, ptr, add(0x84, data.length), ptr, 0)) {
+                returndatacopy(ptr, 0, returndatasize())
+                revert(ptr, returndatasize())
+            }
+        }
     }
 
     function _abiDecodeTargetAndCalldata(bytes calldata cd) private pure returns (address target, bytes calldata data) {
@@ -207,38 +180,6 @@ contract Settlement is ISettlement, Ownable, FeeBankCharger {
         uint256 suffixSize = DynamicSuffix._DATA_SIZE;
         assembly {  // solhint-disable-line no-inline-assembly
             suffix := sub(add(cd.offset, cd.length), suffixSize)
-        }
-    }
-
-    function _abiDecodeIteration(bytes calldata cd)
-        private
-        pure
-        returns (
-            OrderLib.Order calldata order,
-            bytes calldata signature,
-            bytes calldata interaction,
-            uint256 makingOrderAmount,
-            uint256 takingOrderAmount,
-            uint256 thresholdAmount,
-            address target
-        )
-    {
-        // solhint-disable-next-line no-inline-assembly
-        assembly {
-            order := add(cd.offset, calldataload(cd.offset))
-
-            let ptr := add(cd.offset, calldataload(add(cd.offset, 0x20)))
-            signature.offset := add(ptr, 0x20)
-            signature.length := calldataload(ptr)
-
-            ptr := add(cd.offset, calldataload(add(cd.offset, 0x40)))
-            interaction.offset := add(ptr, 0x20)
-            interaction.length := calldataload(ptr)
-
-            makingOrderAmount := calldataload(add(cd.offset, 0x60))
-            takingOrderAmount := calldataload(add(cd.offset, 0x80))
-            thresholdAmount := calldataload(add(cd.offset, 0xa0))
-            target := calldataload(add(cd.offset, 0xc0))
         }
     }
 }

@@ -73,19 +73,21 @@ describe('WhitelistChecker', function () {
                 ])
                 .substring(10);
         await settleOrderMethod(
-            order0,
-            signature0,
-            interaction,
-            ether('100'),
-            0,
-            ether('0.1'),
-            matcher.address,
+            '0x' + swap.interface.encodeFunctionData('fillOrderTo', [
+                order0,
+                signature0,
+                interaction,
+                ether('100'),
+                0,
+                ether('0.1'),
+                matcher.address,
+            ]).substring(10),
         );
     }
 
     describe('should not work with non-whitelisted address', function () {
         it('onlyWhitelisted modifier in settleOrders method', async function () {
-            const { dai, weth, matcher } = await loadFixture(initContracts);
+            const { dai, weth, swap, matcher } = await loadFixture(initContracts);
             const order1 = await buildOrder({
                 makerAsset: dai.address,
                 takerAsset: weth.address,
@@ -94,7 +96,11 @@ describe('WhitelistChecker', function () {
                 from: addr1.address,
             });
             await expect(
-                matcher.settleOrders(order1, '0x', '0x', ether('10'), 0, ether('0.01'), matcher.address),
+                matcher.settleOrders(
+                    '0x' + swap.interface.encodeFunctionData('fillOrderTo', [
+                        order1, '0x', '0x', ether('10'), 0, ether('0.01'), matcher.address,
+                    ]).substring(10),
+                ),
             ).to.be.revertedWithCustomError(matcher, 'AccessDenied');
         });
 
