@@ -18,16 +18,23 @@ contract WhitelistRegistry is IWhitelistRegistry, Ownable {
     error BalanceLessThanThreshold();
     error NotEnoughBalance();
     error AlreadyRegistered();
+    error NotWhitelisted();
+    error ZeroPromoteeAddress();
 
     event Registered(address addr);
+    event Unregistered(address addr);
     event SetResolverThreshold(uint256 resolverThreshold);
     event SetWhitelistLimit(uint256 whitelistLimit);
+    event Promotion(address promoter, address promotee);
 
-    AddressSet.Data private _whitelist;
+    IVotable public immutable token;
 
+    mapping(address => address) public promotion;
     uint256 public resolverThreshold;
     uint256 public whitelistLimit;
-    IVotable public immutable token;
+
+    AddressSet.Data private _whitelist;
+    mapping(address => uint256) private _promotingsCount;
 
     constructor(
         IVotable token_,
@@ -50,12 +57,16 @@ contract WhitelistRegistry is IWhitelistRegistry, Ownable {
     function setWhitelistLimit(uint256 whitelistLimit_) external onlyOwner {
         uint256 whitelistLength = _whitelist.length();
         if (whitelistLimit_ < whitelistLength) {
-            _shrinkPoorest(_whitelist, token, whitelistLength - whitelistLimit_);
+            _shrinkPoorest(_whitelist, whitelistLength - whitelistLimit_);
         }
         _setWhitelistLimit(whitelistLimit_);
     }
 
     function register() external {
+        registerAndPromote(msg.sender);
+    }
+
+    function registerAndPromote(address promotee) public {
         if (token.votingPowerOf(msg.sender) < resolverThreshold) revert BalanceLessThanThreshold();
         uint256 whitelistLength = _whitelist.length();
         if (whitelistLength == whitelistLimit) {
@@ -70,14 +81,26 @@ contract WhitelistRegistry is IWhitelistRegistry, Ownable {
                 }
             }
             if (minResolver == msg.sender) revert NotEnoughBalance();
-            _whitelist.remove(minResolver);
+            _removeFromWhitelist(minResolver);
         }
-        if (!_whitelist.add(msg.sender)) revert AlreadyRegistered();
-        emit Registered(msg.sender);
+        _addToWhitelist(msg.sender, promotee);
+    }
+
+    function promote(address promotee) external {
+        if (promotee == address(0)) revert ZeroPromoteeAddress();
+        if (!_whitelist.contains(msg.sender)) revert NotWhitelisted();
+
+        address oldPromotee = promotion[msg.sender];
+        promotion[msg.sender] = promotee;
+        unchecked {
+            _promotingsCount[oldPromotee]--;
+            _promotingsCount[promotee]++;
+        }
+        emit Promotion(msg.sender, promotee);
     }
 
     function isWhitelisted(address addr) external view returns (bool) {
-        return _whitelist.contains(addr);
+        return _promotingsCount[addr] > 0;
     }
 
     function clean() external {
@@ -86,7 +109,7 @@ contract WhitelistRegistry is IWhitelistRegistry, Ownable {
             for (uint256 i = 0; i < whitelistLength; ) {
                 address curWhitelisted = _whitelist.at(i);
                 if (token.votingPowerOf(curWhitelisted) < resolverThreshold) {
-                    _whitelist.remove(curWhitelisted);
+                    _removeFromWhitelist(curWhitelisted);
                     whitelistLength--;
                 } else {
                     i++;
@@ -99,13 +122,13 @@ contract WhitelistRegistry is IWhitelistRegistry, Ownable {
         return _whitelist.items.get();
     }
 
-    function _shrinkPoorest(AddressSet.Data storage set, IVotable vtoken, uint256 size) private {
+    function _shrinkPoorest(AddressSet.Data storage set, uint256 size) private {
         uint256 richestIndex = 0;
         address[] memory addresses = set.items.get();
         uint256 addressesLength = addresses.length;
         uint256[] memory balances = new uint256[](addressesLength);
         for (uint256 i = 0; i < addressesLength; i++) {
-            balances[i] = vtoken.balanceOf(addresses[i]);
+            balances[i] = token.balanceOf(addresses[i]);
             if (balances[i] > balances[richestIndex]) {
                 richestIndex = i;
             }
@@ -129,7 +152,7 @@ contract WhitelistRegistry is IWhitelistRegistry, Ownable {
 
         // Remove poorest elements from set
         for (uint256 i = 0; i < size; i++) {
-            set.remove(addresses[i]);
+            _removeFromWhitelist(addresses[i]);
         }
     }
 
@@ -141,5 +164,27 @@ contract WhitelistRegistry is IWhitelistRegistry, Ownable {
     function _setWhitelistLimit(uint256 whitelistLimit_) private {
         whitelistLimit = whitelistLimit_;
         emit SetWhitelistLimit(whitelistLimit_);
+    }
+
+    function _addToWhitelist(address account, address promotee) private {
+        if (!_whitelist.add(account)) revert AlreadyRegistered();
+        emit Registered(account);
+
+        promotion[account] = promotee;
+        unchecked {
+            _promotingsCount[promotee]++;
+        }
+        emit Promotion(account, promotee);
+    }
+
+    function _removeFromWhitelist(address account) private {
+        _whitelist.remove(account);
+        emit Unregistered(account);
+
+        unchecked {
+            _promotingsCount[promotion[account]]--;
+        }
+        promotion[account] = address(0);
+        emit Promotion(account, address(0));
     }
 }
