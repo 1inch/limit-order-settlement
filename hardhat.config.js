@@ -33,8 +33,8 @@ module.exports = {
         paths: [
             '@1inch/solidity-utils/contracts/mocks/TokenMock.sol',
             '@1inch/solidity-utils/contracts/mocks/ERC20PermitMock.sol',
-            '@1inch/limit-order-protocol/contracts/LimitOrderProtocol.sol',
-            '@1inch/limit-order-protocol/contracts/mocks/WrappedTokenMock.sol',
+            '@1inch/limit-order-protocol-contract/contracts/LimitOrderProtocol.sol',
+            '@1inch/limit-order-protocol-contract/contracts/mocks/WrappedTokenMock.sol',
             '@openzeppelin/contracts/token/ERC20/extensions/draft-ERC20Permit',
         ],
     },
