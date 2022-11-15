@@ -3,39 +3,16 @@
 pragma solidity 0.8.17;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@1inch/limit-order-protocol/contracts/interfaces/NotificationReceiver.sol";
 import "@1inch/limit-order-protocol/contracts/interfaces/IOrderMixin.sol";
 import "@1inch/solidity-utils/contracts/libraries/SafeERC20.sol";
-import "./libraries/OrderSaltParser.sol";
 import "./interfaces/IWhitelistRegistry.sol";
 import "./interfaces/ISettlement.sol";
 import "./interfaces/IResolver.sol";
-import "./interfaces/IWhitelistRegistry.sol";
+import "./libraries/DynamicSuffix.sol";
+import "./libraries/OrderSaltParser.sol";
 import "./FeeBankCharger.sol";
 
-import "hardhat/console.sol";
-
-library DynamicSuffix {
-    struct Data {
-        uint256 totalFee;
-        uint256 _resolver;
-        uint256 _token;
-        uint256 salt;
-    }
-
-    uint256 internal constant _DATA_SIZE = 0x80;
-
-    function resolver(Data calldata self) internal pure returns (address) {
-        return address(uint160(self._resolver));
-    }
-
-    function token(Data calldata self) internal pure returns (IERC20) {
-        return IERC20(address(uint160(self._token)));
-    }
-}
-
-contract Settlement is ISettlement, Ownable, FeeBankCharger {
+contract Settlement is ISettlement, FeeBankCharger {
     using SafeERC20 for IERC20;
     using OrderSaltParser for uint256;
     using DynamicSuffix for DynamicSuffix.Data;
@@ -85,11 +62,11 @@ contract Settlement is ISettlement, Ownable, FeeBankCharger {
         uint256 takingAmount,
         bytes calldata interactiveData
     ) external onlyThis(taker) onlyLimitOrderProtocol returns (uint256 result) {
-        DynamicSuffix.Data calldata suffix = _abiDecodeResolverTokenSaltFromTail(interactiveData);
+        DynamicSuffix.Data calldata suffix = _decodeSuffix(interactiveData);
 
         if (interactiveData[0] == _FINALIZE_INTERACTION) {
             _chargeFee(suffix.resolver(), suffix.totalFee);
-            (address target, bytes calldata data) = _abiDecodeTargetAndCalldata(interactiveData[1:interactiveData.length - DynamicSuffix._DATA_SIZE]);
+            (address target, bytes calldata data) = _decodeTargetAndCalldata(interactiveData[1:interactiveData.length - DynamicSuffix._DATA_SIZE]);
             IResolver(target).resolveOrders(data);
         } else {
             _settleOrder(
@@ -168,7 +145,7 @@ contract Settlement is ISettlement, Ownable, FeeBankCharger {
         }
     }
 
-    function _abiDecodeTargetAndCalldata(bytes calldata cd) private pure returns (address target, bytes calldata data) {
+    function _decodeTargetAndCalldata(bytes calldata cd) private pure returns (address target, bytes calldata data) {
         assembly {  // solhint-disable-line no-inline-assembly
             target := shr(96, calldataload(cd.offset))
             data.offset := add(cd.offset, 20)
@@ -176,7 +153,7 @@ contract Settlement is ISettlement, Ownable, FeeBankCharger {
         }
     }
 
-    function _abiDecodeResolverTokenSaltFromTail(bytes calldata cd) private pure returns (DynamicSuffix.Data calldata suffix) {
+    function _decodeSuffix(bytes calldata cd) private pure returns (DynamicSuffix.Data calldata suffix) {
         uint256 suffixSize = DynamicSuffix._DATA_SIZE;
         assembly {  // solhint-disable-line no-inline-assembly
             suffix := sub(add(cd.offset, cd.length), suffixSize)
