@@ -1,0 +1,286 @@
+{
+  "address": "0x25B230b5B39270f79522335FeE992719FE086521",
+  "abi": [
+    {
+      "inputs": [],
+      "name": "ArraysLengthsDoNotMatch",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "ETHTransferFailed",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "InsufficientBalance",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "SafeTransferFailed",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "SameStatus",
+      "type": "error"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "previousOwner",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "newOwner",
+          "type": "address"
+        }
+      ],
+      "name": "OwnershipTransferred",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "addr",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "bool",
+          "name": "status",
+          "type": "bool"
+        }
+      ],
+      "name": "StatusUpdate",
+      "type": "event"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address[]",
+          "name": "addresses",
+          "type": "address[]"
+        },
+        {
+          "internalType": "bool[]",
+          "name": "statuses",
+          "type": "bool[]"
+        }
+      ],
+      "name": "batchSetStatus",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "name": "isWhitelisted",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "owner",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "renounceOwnership",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "contract IERC20",
+          "name": "token",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        }
+      ],
+      "name": "rescueFunds",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_address",
+          "type": "address"
+        },
+        {
+          "internalType": "bool",
+          "name": "_status",
+          "type": "bool"
+        }
+      ],
+      "name": "setStatus",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "newOwner",
+          "type": "address"
+        }
+      ],
+      "name": "transferOwnership",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ],
+  "transactionHash": "0xb71c16976bf3cf7710ee145add373659e9663173f34a22b72999f795cbf21262",
+  "receipt": {
+    "to": null,
+    "from": "0x11799622F4D98A24514011E8527B969f7488eF47",
+    "contractAddress": "0x25B230b5B39270f79522335FeE992719FE086521",
+    "transactionIndex": 68,
+    "gasUsed": "592160",
+    "logsBloom": "0x00000100000000000000000000000000000000000000000000800000000000000000000000020000000000000000000000008000000000000000000000000000000001000000000000000000000000800001000000000000000100000000000000000000020000000000000000000800000000000000000080000000000000400000000000200000000000000000000000000000000000000000000000000000200000000000000800000000000000000000000000000000000000000000004000000000000000000001000000000000080000000000000000100000000028000000000000000000000000000000000000000000000004000000000000100020",
+    "blockHash": "0xec952cefcd2a65234119a4a107959bbcf174cf0d0bb8911e45fc9f6acbdb2135",
+    "transactionHash": "0xb71c16976bf3cf7710ee145add373659e9663173f34a22b72999f795cbf21262",
+    "logs": [
+      {
+        "transactionIndex": 68,
+        "blockNumber": 35630589,
+        "transactionHash": "0xb71c16976bf3cf7710ee145add373659e9663173f34a22b72999f795cbf21262",
+        "address": "0x25B230b5B39270f79522335FeE992719FE086521",
+        "topics": [
+          "0x8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0",
+          "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "0x00000000000000000000000011799622f4d98a24514011e8527b969f7488ef47"
+        ],
+        "data": "0x",
+        "logIndex": 218,
+        "blockHash": "0xec952cefcd2a65234119a4a107959bbcf174cf0d0bb8911e45fc9f6acbdb2135"
+      },
+      {
+        "transactionIndex": 68,
+        "blockNumber": 35630589,
+        "transactionHash": "0xb71c16976bf3cf7710ee145add373659e9663173f34a22b72999f795cbf21262",
+        "address": "0x0000000000000000000000000000000000001010",
+        "topics": [
+          "0x4dfe1bbbcf077ddc3e01291eea2d5c70c2b422b415d95645b9adcfd678cb1d63",
+          "0x0000000000000000000000000000000000000000000000000000000000001010",
+          "0x00000000000000000000000011799622f4d98a24514011e8527b969f7488ef47",
+          "0x000000000000000000000000127685d6dd6683085da4b6a041efcef1681e5c9c"
+        ],
+        "data": "0x000000000000000000000000000000000000000000000000003f936438cdd4c0000000000000000000000000000000000000000000000029728eeaa21881c9550000000000000000000000000000000000000000000011d897e4e69bd66f4e25000000000000000000000000000000000000000000000029724f573ddfb3f4950000000000000000000000000000000000000000000011d898247a000f3d22e5",
+        "logIndex": 219,
+        "blockHash": "0xec952cefcd2a65234119a4a107959bbcf174cf0d0bb8911e45fc9f6acbdb2135"
+      }
+    ],
+    "blockNumber": 35630589,
+    "cumulativeGasUsed": "8289663",
+    "status": 1,
+    "byzantium": true
+  },
+  "args": [],
+  "numDeployments": 1,
+  "solcInputHash": "2a07a2bd61f10fe9d013f8801c9bcad6",
+  "metadata": "{\"compiler\":{\"version\":\"0.8.17+commit.8df45f5f\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[],\"name\":\"ArraysLengthsDoNotMatch\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"ETHTransferFailed\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InsufficientBalance\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"SafeTransferFailed\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"SameStatus\",\"type\":\"error\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipTransferred\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"status\",\"type\":\"bool\"}],\"name\":\"StatusUpdate\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"addresses\",\"type\":\"address[]\"},{\"internalType\":\"bool[]\",\"name\":\"statuses\",\"type\":\"bool[]\"}],\"name\":\"batchSetStatus\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"name\":\"isWhitelisted\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"renounceOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"contract IERC20\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"rescueFunds\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_address\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"_status\",\"type\":\"bool\"}],\"name\":\"setStatus\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}],\"devdoc\":{\"kind\":\"dev\",\"methods\":{\"owner()\":{\"details\":\"Returns the address of the current owner.\"},\"renounceOwnership()\":{\"details\":\"Leaves the contract without owner. It will not be possible to call `onlyOwner` functions anymore. Can only be called by the current owner. NOTE: Renouncing ownership will leave the contract without an owner, thereby removing any functionality that is only available to the owner.\"},\"transferOwnership(address)\":{\"details\":\"Transfers ownership of the contract to a new account (`newOwner`). Can only be called by the current owner.\"}},\"title\":\"Contract with simple whitelist\",\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{},\"version\":1}},\"settings\":{\"compilationTarget\":{\"contracts/mocks/WhitelistRegistrySimple.sol\":\"WhitelistRegistrySimple\"},\"evmVersion\":\"london\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\",\"useLiteralContent\":true},\"optimizer\":{\"enabled\":true,\"runs\":1000000},\"remappings\":[]},\"sources\":{\"@1inch/solidity-utils/contracts/interfaces/IDaiLikePermit.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\n\\npragma solidity ^0.8.0;\\npragma abicoder v1;\\n\\ninterface IDaiLikePermit {\\n    function permit(\\n        address holder,\\n        address spender,\\n        uint256 nonce,\\n        uint256 expiry,\\n        bool allowed,\\n        uint8 v,\\n        bytes32 r,\\n        bytes32 s\\n    ) external;\\n}\\n\",\"keccak256\":\"0x10105446e709abf11b13721a516ffa24d3c5bec39c7925a367968a6a7519579f\",\"license\":\"MIT\"},\"@1inch/solidity-utils/contracts/interfaces/IERC20MetadataUppercase.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\n\\npragma solidity ^0.8.0;\\npragma abicoder v1;\\n\\ninterface IERC20MetadataUppercase {\\n    function NAME() external view returns (string memory); // solhint-disable-line func-name-mixedcase\\n\\n    function SYMBOL() external view returns (string memory); // solhint-disable-line func-name-mixedcase\\n}\\n\",\"keccak256\":\"0x4c991ad35b1c2e52accbdebd652f4e7ca394600aff92485ac8298981f9735018\",\"license\":\"MIT\"},\"@1inch/solidity-utils/contracts/libraries/RevertReasonForwarder.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\n\\npragma solidity ^0.8.0;\\npragma abicoder v1;\\n\\n/// @title Revert reason forwarder.\\nlibrary RevertReasonForwarder {\\n    /// @dev Forwards latest externall call revert.\\n    function reRevert() internal pure {\\n        // bubble up revert reason from latest external call\\n        /// @solidity memory-safe-assembly\\n        assembly { // solhint-disable-line no-inline-assembly\\n            let ptr := mload(0x40)\\n            returndatacopy(ptr, 0, returndatasize())\\n            revert(ptr, returndatasize())\\n        }\\n    }\\n}\\n\",\"keccak256\":\"0x990c989e0ffba370a27b90b917a1cf86db79e370b9ba2b0f9076895b232744f8\",\"license\":\"MIT\"},\"@1inch/solidity-utils/contracts/libraries/SafeERC20.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\n\\npragma solidity ^0.8.0;\\npragma abicoder v1;\\n\\nimport \\\"@openzeppelin/contracts/token/ERC20/IERC20.sol\\\";\\nimport \\\"@openzeppelin/contracts/token/ERC20/extensions/draft-IERC20Permit.sol\\\";\\nimport \\\"../interfaces/IDaiLikePermit.sol\\\";\\nimport \\\"../libraries/RevertReasonForwarder.sol\\\";\\n\\n/// @title Implements efficient safe methods for ERC20 interface.\\nlibrary SafeERC20 {\\n    error SafeTransferFailed();\\n    error SafeTransferFromFailed();\\n    error ForceApproveFailed();\\n    error SafeIncreaseAllowanceFailed();\\n    error SafeDecreaseAllowanceFailed();\\n    error SafePermitBadLength();\\n\\n    /// @dev Ensures method do not revert or return boolean `true`, admits call to non-smart-contract.\\n    function safeTransferFrom(\\n        IERC20 token,\\n        address from,\\n        address to,\\n        uint256 amount\\n    ) internal {\\n        bytes4 selector = token.transferFrom.selector;\\n        bool success;\\n        /// @solidity memory-safe-assembly\\n        assembly { // solhint-disable-line no-inline-assembly\\n            let data := mload(0x40)\\n\\n            mstore(data, selector)\\n            mstore(add(data, 0x04), from)\\n            mstore(add(data, 0x24), to)\\n            mstore(add(data, 0x44), amount)\\n            success := call(gas(), token, 0, data, 100, 0x0, 0x20)\\n            if success {\\n                switch returndatasize()\\n                case 0 {\\n                    success := gt(extcodesize(token), 0)\\n                }\\n                default {\\n                    success := and(gt(returndatasize(), 31), eq(mload(0), 1))\\n                }\\n            }\\n        }\\n        if (!success) revert SafeTransferFromFailed();\\n    }\\n\\n    /// @dev Ensures method do not revert or return boolean `true`, admits call to non-smart-contract.\\n    function safeTransfer(\\n        IERC20 token,\\n        address to,\\n        uint256 value\\n    ) internal {\\n        if (!_makeCall(token, token.transfer.selector, to, value)) {\\n            revert SafeTransferFailed();\\n        }\\n    }\\n\\n    /// @dev If `approve(from, to, amount)` fails, try to `approve(from, to, 0)` before retry.\\n    function forceApprove(\\n        IERC20 token,\\n        address spender,\\n        uint256 value\\n    ) internal {\\n        if (!_makeCall(token, token.approve.selector, spender, value)) {\\n            if (\\n                !_makeCall(token, token.approve.selector, spender, 0) ||\\n                !_makeCall(token, token.approve.selector, spender, value)\\n            ) {\\n                revert ForceApproveFailed();\\n            }\\n        }\\n    }\\n\\n    /// @dev Allowance increase with safe math check.\\n    function safeIncreaseAllowance(\\n        IERC20 token,\\n        address spender,\\n        uint256 value\\n    ) internal {\\n        uint256 allowance = token.allowance(address(this), spender);\\n        if (value > type(uint256).max - allowance) revert SafeIncreaseAllowanceFailed();\\n        forceApprove(token, spender, allowance + value);\\n    }\\n\\n    /// @dev Allowance decrease with safe math check.\\n    function safeDecreaseAllowance(\\n        IERC20 token,\\n        address spender,\\n        uint256 value\\n    ) internal {\\n        uint256 allowance = token.allowance(address(this), spender);\\n        if (value > allowance) revert SafeDecreaseAllowanceFailed();\\n        forceApprove(token, spender, allowance - value);\\n    }\\n\\n    /// @dev Calls either ERC20 or Dai `permit` for `token`, if unsuccessful forwards revert from external call.\\n    function safePermit(IERC20 token, bytes calldata permit) internal {\\n        bool success;\\n        if (permit.length == 32 * 7) {\\n            success = _makeCalldataCall(token, IERC20Permit.permit.selector, permit);\\n        } else if (permit.length == 32 * 8) {\\n            success = _makeCalldataCall(token, IDaiLikePermit.permit.selector, permit);\\n        } else {\\n            revert SafePermitBadLength();\\n        }\\n        if (!success) RevertReasonForwarder.reRevert();\\n    }\\n\\n    function _makeCall(\\n        IERC20 token,\\n        bytes4 selector,\\n        address to,\\n        uint256 amount\\n    ) private returns (bool success) {\\n        /// @solidity memory-safe-assembly\\n        assembly { // solhint-disable-line no-inline-assembly\\n            let data := mload(0x40)\\n\\n            mstore(data, selector)\\n            mstore(add(data, 0x04), to)\\n            mstore(add(data, 0x24), amount)\\n            success := call(gas(), token, 0, data, 0x44, 0x0, 0x20)\\n            if success {\\n                switch returndatasize()\\n                case 0 {\\n                    success := gt(extcodesize(token), 0)\\n                }\\n                default {\\n                    success := and(gt(returndatasize(), 31), eq(mload(0), 1))\\n                }\\n            }\\n        }\\n    }\\n\\n    function _makeCalldataCall(\\n        IERC20 token,\\n        bytes4 selector,\\n        bytes calldata args\\n    ) private returns (bool success) {\\n        /// @solidity memory-safe-assembly\\n        assembly { // solhint-disable-line no-inline-assembly\\n            let len := add(4, args.length)\\n            let data := mload(0x40)\\n\\n            mstore(data, selector)\\n            calldatacopy(add(data, 0x04), args.offset, args.length)\\n            success := call(gas(), token, 0, data, len, 0x0, 0x20)\\n            if success {\\n                switch returndatasize()\\n                case 0 {\\n                    success := gt(extcodesize(token), 0)\\n                }\\n                default {\\n                    success := and(gt(returndatasize(), 31), eq(mload(0), 1))\\n                }\\n            }\\n        }\\n    }\\n}\\n\",\"keccak256\":\"0x8992248e2aa34f930c3ae9ac38fe2c9897d56fd1ca07558de6cd7e4102f6d61f\",\"license\":\"MIT\"},\"@1inch/solidity-utils/contracts/libraries/StringUtil.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\n\\npragma solidity ^0.8.0;\\npragma abicoder v1;\\n\\n/// @title Library with gas-efficient string operations\\nlibrary StringUtil {\\n    function toHex(uint256 value) internal pure returns (string memory) {\\n        return toHex(abi.encodePacked(value));\\n    }\\n\\n    function toHex(address value) internal pure returns (string memory) {\\n        return toHex(abi.encodePacked(value));\\n    }\\n\\n    /// @dev this is the assembly adaptation of highly optimized toHex16 code from Mikhail Vladimirov\\n    /// https://stackoverflow.com/a/69266989\\n    function toHex(bytes memory data) internal pure returns (string memory result) {\\n        /// @solidity memory-safe-assembly\\n        assembly { // solhint-disable-line no-inline-assembly\\n            function _toHex16(input) -> output {\\n                output := or(\\n                    and(input, 0xFFFFFFFFFFFFFFFF000000000000000000000000000000000000000000000000),\\n                    shr(64, and(input, 0x0000000000000000FFFFFFFFFFFFFFFF00000000000000000000000000000000))\\n                )\\n                output := or(\\n                    and(output, 0xFFFFFFFF000000000000000000000000FFFFFFFF000000000000000000000000),\\n                    shr(32, and(output, 0x00000000FFFFFFFF000000000000000000000000FFFFFFFF0000000000000000))\\n                )\\n                output := or(\\n                    and(output, 0xFFFF000000000000FFFF000000000000FFFF000000000000FFFF000000000000),\\n                    shr(16, and(output, 0x0000FFFF000000000000FFFF000000000000FFFF000000000000FFFF00000000))\\n                )\\n                output := or(\\n                    and(output, 0xFF000000FF000000FF000000FF000000FF000000FF000000FF000000FF000000),\\n                    shr(8, and(output, 0x00FF000000FF000000FF000000FF000000FF000000FF000000FF000000FF0000))\\n                )\\n                output := or(\\n                    shr(4, and(output, 0xF000F000F000F000F000F000F000F000F000F000F000F000F000F000F000F000)),\\n                    shr(8, and(output, 0x0F000F000F000F000F000F000F000F000F000F000F000F000F000F000F000F00))\\n                )\\n                output := add(\\n                    add(0x3030303030303030303030303030303030303030303030303030303030303030, output),\\n                    mul(\\n                        and(\\n                            shr(4, add(output, 0x0606060606060606060606060606060606060606060606060606060606060606)),\\n                            0x0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F0F\\n                        ),\\n                        7 // Change 7 to 39 for lower case output\\n                    )\\n                )\\n            }\\n\\n            result := mload(0x40)\\n            let length := mload(data)\\n            let resultLength := shl(1, length)\\n            let toPtr := add(result, 0x22) // 32 bytes for length + 2 bytes for '0x'\\n            mstore(0x40, add(toPtr, resultLength)) // move free memory pointer\\n            mstore(add(result, 2), 0x3078) // 0x3078 is right aligned so we write to `result + 2`\\n            // to store the last 2 bytes in the beginning of the string\\n            mstore(result, add(resultLength, 2)) // extra 2 bytes for '0x'\\n\\n            for {\\n                let fromPtr := add(data, 0x20)\\n                let endPtr := add(fromPtr, length)\\n            } lt(fromPtr, endPtr) {\\n                fromPtr := add(fromPtr, 0x20)\\n            } {\\n                let rawData := mload(fromPtr)\\n                let hexData := _toHex16(rawData)\\n                mstore(toPtr, hexData)\\n                toPtr := add(toPtr, 0x20)\\n                hexData := _toHex16(shl(128, rawData))\\n                mstore(toPtr, hexData)\\n                toPtr := add(toPtr, 0x20)\\n            }\\n        }\\n    }\\n}\\n\",\"keccak256\":\"0x321975807ed40e33789614b6f9df80748a6d128962ac9af863af50327a0580bf\",\"license\":\"MIT\"},\"@1inch/solidity-utils/contracts/libraries/UniERC20.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\n\\npragma solidity ^0.8.0;\\npragma abicoder v1;\\n\\nimport \\\"@openzeppelin/contracts/token/ERC20/IERC20.sol\\\";\\nimport \\\"@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol\\\";\\nimport \\\"../interfaces/IERC20MetadataUppercase.sol\\\";\\nimport \\\"./SafeERC20.sol\\\";\\nimport \\\"./StringUtil.sol\\\";\\n\\n/// @title Library, which allows usage of ETH as ERC20 and ERC20 itself. Uses SafeERC20 library for ERC20 interface.\\nlibrary UniERC20 {\\n    using SafeERC20 for IERC20;\\n\\n    error InsufficientBalance();\\n    error ApproveCalledOnETH();\\n    error NotEnoughValue();\\n    error FromIsNotSender();\\n    error ToIsNotThis();\\n    error ETHTransferFailed();\\n\\n    uint256 private constant _RAW_CALL_GAS_LIMIT = 5000;\\n    IERC20 private constant _ETH_ADDRESS = IERC20(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);\\n    IERC20 private constant _ZERO_ADDRESS = IERC20(address(0));\\n\\n    /// @dev Returns true if `token` is ETH.\\n    function isETH(IERC20 token) internal pure returns (bool) {\\n        return (token == _ZERO_ADDRESS || token == _ETH_ADDRESS);\\n    }\\n\\n    /// @dev Returns `account` ERC20 `token` balance.\\n    function uniBalanceOf(IERC20 token, address account) internal view returns (uint256) {\\n        if (isETH(token)) {\\n            return account.balance;\\n        } else {\\n            return token.balanceOf(account);\\n        }\\n    }\\n\\n    /// @dev `token` transfer `to` `amount`.\\n    /// Note that this function does nothing in case of zero amount.\\n    function uniTransfer(\\n        IERC20 token,\\n        address payable to,\\n        uint256 amount\\n    ) internal {\\n        if (amount > 0) {\\n            if (isETH(token)) {\\n                if (address(this).balance < amount) revert InsufficientBalance();\\n                // solhint-disable-next-line avoid-low-level-calls\\n                (bool success, ) = to.call{value: amount, gas: _RAW_CALL_GAS_LIMIT}(\\\"\\\");\\n                if (!success) revert ETHTransferFailed();\\n            } else {\\n                token.safeTransfer(to, amount);\\n            }\\n        }\\n    }\\n\\n    /// @dev `token` transfer `from` `to` `amount`.\\n    /// Note that this function does nothing in case of zero amount.\\n    function uniTransferFrom(\\n        IERC20 token,\\n        address payable from,\\n        address to,\\n        uint256 amount\\n    ) internal {\\n        if (amount > 0) {\\n            if (isETH(token)) {\\n                if (msg.value < amount) revert NotEnoughValue();\\n                if (from != msg.sender) revert FromIsNotSender();\\n                if (to != address(this)) revert ToIsNotThis();\\n                if (msg.value > amount) {\\n                    // Return remainder if exist\\n                    unchecked {\\n                        // solhint-disable-next-line avoid-low-level-calls\\n                        (bool success, ) = from.call{value: msg.value - amount, gas: _RAW_CALL_GAS_LIMIT}(\\\"\\\");\\n                        if (!success) revert ETHTransferFailed();\\n                    }\\n                }\\n            } else {\\n                token.safeTransferFrom(from, to, amount);\\n            }\\n        }\\n    }\\n\\n    /// @dev Returns `token` symbol from ERC20 metadata.\\n    function uniSymbol(IERC20 token) internal view returns (string memory) {\\n        return _uniDecode(token, IERC20Metadata.symbol.selector, IERC20MetadataUppercase.SYMBOL.selector);\\n    }\\n\\n    /// @dev Returns `token` name from ERC20 metadata.\\n    function uniName(IERC20 token) internal view returns (string memory) {\\n        return _uniDecode(token, IERC20Metadata.name.selector, IERC20MetadataUppercase.NAME.selector);\\n    }\\n\\n    /// @dev Reverts if `token` is ETH, otherwise performs ERC20 forceApprove.\\n    function uniApprove(\\n        IERC20 token,\\n        address to,\\n        uint256 amount\\n    ) internal {\\n        if (isETH(token)) revert ApproveCalledOnETH();\\n\\n        token.forceApprove(to, amount);\\n    }\\n\\n    /// @dev 20K gas is provided to account for possible implementations of name/symbol\\n    /// (token implementation might be behind proxy or store the value in storage)\\n    function _uniDecode(\\n        IERC20 token,\\n        bytes4 lowerCaseSelector,\\n        bytes4 upperCaseSelector\\n    ) private view returns (string memory result) {\\n        if (isETH(token)) {\\n            return \\\"ETH\\\";\\n        }\\n\\n        (bool success, bytes memory data) = address(token).staticcall{gas: 20000}(\\n            abi.encodeWithSelector(lowerCaseSelector)\\n        );\\n        if (!success) {\\n            (success, data) = address(token).staticcall{gas: 20000}(abi.encodeWithSelector(upperCaseSelector));\\n        }\\n\\n        if (success && data.length >= 0x40) {\\n            (uint256 offset, uint256 len) = abi.decode(data, (uint256, uint256));\\n            /*\\n                return data is padded up to 32 bytes with ABI encoder also sometimes\\n                there is extra 32 bytes of zeros padded in the end:\\n                https://github.com/ethereum/solidity/issues/10170\\n                because of that we can't check for equality and instead check\\n                that overall data length is greater or equal than string length + extra 64 bytes\\n            */\\n            if (offset == 0x20 && data.length >= 0x40 + len) {\\n                /// @solidity memory-safe-assembly\\n                assembly { // solhint-disable-line no-inline-assembly\\n                    result := add(data, 0x40)\\n                }\\n                return result;\\n            }\\n        }\\n        if (success && data.length == 32) {\\n            uint256 len = 0;\\n            while (len < data.length && data[len] >= 0x20 && data[len] <= 0x7E) {\\n                unchecked {\\n                    len++;\\n                }\\n            }\\n\\n            if (len > 0) {\\n                /// @solidity memory-safe-assembly\\n                assembly { // solhint-disable-line no-inline-assembly\\n                    mstore(data, len)\\n                }\\n                return string(data);\\n            }\\n        }\\n\\n        return StringUtil.toHex(address(token));\\n    }\\n}\\n\",\"keccak256\":\"0xd522fae89807f76121fbd4bdac8c6c8c5ba595a407494116b54061c054ed9a87\",\"license\":\"MIT\"},\"@openzeppelin/contracts/access/Ownable.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\n// OpenZeppelin Contracts (last updated v4.7.0) (access/Ownable.sol)\\n\\npragma solidity ^0.8.0;\\n\\nimport \\\"../utils/Context.sol\\\";\\n\\n/**\\n * @dev Contract module which provides a basic access control mechanism, where\\n * there is an account (an owner) that can be granted exclusive access to\\n * specific functions.\\n *\\n * By default, the owner account will be the one that deploys the contract. This\\n * can later be changed with {transferOwnership}.\\n *\\n * This module is used through inheritance. It will make available the modifier\\n * `onlyOwner`, which can be applied to your functions to restrict their use to\\n * the owner.\\n */\\nabstract contract Ownable is Context {\\n    address private _owner;\\n\\n    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);\\n\\n    /**\\n     * @dev Initializes the contract setting the deployer as the initial owner.\\n     */\\n    constructor() {\\n        _transferOwnership(_msgSender());\\n    }\\n\\n    /**\\n     * @dev Throws if called by any account other than the owner.\\n     */\\n    modifier onlyOwner() {\\n        _checkOwner();\\n        _;\\n    }\\n\\n    /**\\n     * @dev Returns the address of the current owner.\\n     */\\n    function owner() public view virtual returns (address) {\\n        return _owner;\\n    }\\n\\n    /**\\n     * @dev Throws if the sender is not the owner.\\n     */\\n    function _checkOwner() internal view virtual {\\n        require(owner() == _msgSender(), \\\"Ownable: caller is not the owner\\\");\\n    }\\n\\n    /**\\n     * @dev Leaves the contract without owner. It will not be possible to call\\n     * `onlyOwner` functions anymore. Can only be called by the current owner.\\n     *\\n     * NOTE: Renouncing ownership will leave the contract without an owner,\\n     * thereby removing any functionality that is only available to the owner.\\n     */\\n    function renounceOwnership() public virtual onlyOwner {\\n        _transferOwnership(address(0));\\n    }\\n\\n    /**\\n     * @dev Transfers ownership of the contract to a new account (`newOwner`).\\n     * Can only be called by the current owner.\\n     */\\n    function transferOwnership(address newOwner) public virtual onlyOwner {\\n        require(newOwner != address(0), \\\"Ownable: new owner is the zero address\\\");\\n        _transferOwnership(newOwner);\\n    }\\n\\n    /**\\n     * @dev Transfers ownership of the contract to a new account (`newOwner`).\\n     * Internal function without access restriction.\\n     */\\n    function _transferOwnership(address newOwner) internal virtual {\\n        address oldOwner = _owner;\\n        _owner = newOwner;\\n        emit OwnershipTransferred(oldOwner, newOwner);\\n    }\\n}\\n\",\"keccak256\":\"0xa94b34880e3c1b0b931662cb1c09e5dfa6662f31cba80e07c5ee71cd135c9673\",\"license\":\"MIT\"},\"@openzeppelin/contracts/token/ERC20/IERC20.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\n// OpenZeppelin Contracts (last updated v4.6.0) (token/ERC20/IERC20.sol)\\n\\npragma solidity ^0.8.0;\\n\\n/**\\n * @dev Interface of the ERC20 standard as defined in the EIP.\\n */\\ninterface IERC20 {\\n    /**\\n     * @dev Emitted when `value` tokens are moved from one account (`from`) to\\n     * another (`to`).\\n     *\\n     * Note that `value` may be zero.\\n     */\\n    event Transfer(address indexed from, address indexed to, uint256 value);\\n\\n    /**\\n     * @dev Emitted when the allowance of a `spender` for an `owner` is set by\\n     * a call to {approve}. `value` is the new allowance.\\n     */\\n    event Approval(address indexed owner, address indexed spender, uint256 value);\\n\\n    /**\\n     * @dev Returns the amount of tokens in existence.\\n     */\\n    function totalSupply() external view returns (uint256);\\n\\n    /**\\n     * @dev Returns the amount of tokens owned by `account`.\\n     */\\n    function balanceOf(address account) external view returns (uint256);\\n\\n    /**\\n     * @dev Moves `amount` tokens from the caller's account to `to`.\\n     *\\n     * Returns a boolean value indicating whether the operation succeeded.\\n     *\\n     * Emits a {Transfer} event.\\n     */\\n    function transfer(address to, uint256 amount) external returns (bool);\\n\\n    /**\\n     * @dev Returns the remaining number of tokens that `spender` will be\\n     * allowed to spend on behalf of `owner` through {transferFrom}. This is\\n     * zero by default.\\n     *\\n     * This value changes when {approve} or {transferFrom} are called.\\n     */\\n    function allowance(address owner, address spender) external view returns (uint256);\\n\\n    /**\\n     * @dev Sets `amount` as the allowance of `spender` over the caller's tokens.\\n     *\\n     * Returns a boolean value indicating whether the operation succeeded.\\n     *\\n     * IMPORTANT: Beware that changing an allowance with this method brings the risk\\n     * that someone may use both the old and the new allowance by unfortunate\\n     * transaction ordering. One possible solution to mitigate this race\\n     * condition is to first reduce the spender's allowance to 0 and set the\\n     * desired value afterwards:\\n     * https://github.com/ethereum/EIPs/issues/20#issuecomment-263524729\\n     *\\n     * Emits an {Approval} event.\\n     */\\n    function approve(address spender, uint256 amount) external returns (bool);\\n\\n    /**\\n     * @dev Moves `amount` tokens from `from` to `to` using the\\n     * allowance mechanism. `amount` is then deducted from the caller's\\n     * allowance.\\n     *\\n     * Returns a boolean value indicating whether the operation succeeded.\\n     *\\n     * Emits a {Transfer} event.\\n     */\\n    function transferFrom(\\n        address from,\\n        address to,\\n        uint256 amount\\n    ) external returns (bool);\\n}\\n\",\"keccak256\":\"0x9750c6b834f7b43000631af5cc30001c5f547b3ceb3635488f140f60e897ea6b\",\"license\":\"MIT\"},\"@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\n// OpenZeppelin Contracts v4.4.1 (token/ERC20/extensions/IERC20Metadata.sol)\\n\\npragma solidity ^0.8.0;\\n\\nimport \\\"../IERC20.sol\\\";\\n\\n/**\\n * @dev Interface for the optional metadata functions from the ERC20 standard.\\n *\\n * _Available since v4.1._\\n */\\ninterface IERC20Metadata is IERC20 {\\n    /**\\n     * @dev Returns the name of the token.\\n     */\\n    function name() external view returns (string memory);\\n\\n    /**\\n     * @dev Returns the symbol of the token.\\n     */\\n    function symbol() external view returns (string memory);\\n\\n    /**\\n     * @dev Returns the decimals places of the token.\\n     */\\n    function decimals() external view returns (uint8);\\n}\\n\",\"keccak256\":\"0x8de418a5503946cabe331f35fe242d3201a73f67f77aaeb7110acb1f30423aca\",\"license\":\"MIT\"},\"@openzeppelin/contracts/token/ERC20/extensions/draft-IERC20Permit.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\n// OpenZeppelin Contracts v4.4.1 (token/ERC20/extensions/draft-IERC20Permit.sol)\\n\\npragma solidity ^0.8.0;\\n\\n/**\\n * @dev Interface of the ERC20 Permit extension allowing approvals to be made via signatures, as defined in\\n * https://eips.ethereum.org/EIPS/eip-2612[EIP-2612].\\n *\\n * Adds the {permit} method, which can be used to change an account's ERC20 allowance (see {IERC20-allowance}) by\\n * presenting a message signed by the account. By not relying on {IERC20-approve}, the token holder account doesn't\\n * need to send a transaction, and thus is not required to hold Ether at all.\\n */\\ninterface IERC20Permit {\\n    /**\\n     * @dev Sets `value` as the allowance of `spender` over ``owner``'s tokens,\\n     * given ``owner``'s signed approval.\\n     *\\n     * IMPORTANT: The same issues {IERC20-approve} has related to transaction\\n     * ordering also apply here.\\n     *\\n     * Emits an {Approval} event.\\n     *\\n     * Requirements:\\n     *\\n     * - `spender` cannot be the zero address.\\n     * - `deadline` must be a timestamp in the future.\\n     * - `v`, `r` and `s` must be a valid `secp256k1` signature from `owner`\\n     * over the EIP712-formatted function arguments.\\n     * - the signature must use ``owner``'s current nonce (see {nonces}).\\n     *\\n     * For more information on the signature format, see the\\n     * https://eips.ethereum.org/EIPS/eip-2612#specification[relevant EIP\\n     * section].\\n     */\\n    function permit(\\n        address owner,\\n        address spender,\\n        uint256 value,\\n        uint256 deadline,\\n        uint8 v,\\n        bytes32 r,\\n        bytes32 s\\n    ) external;\\n\\n    /**\\n     * @dev Returns the current nonce for `owner`. This value must be\\n     * included whenever a signature is generated for {permit}.\\n     *\\n     * Every successful call to {permit} increases ``owner``'s nonce by one. This\\n     * prevents a signature from being used multiple times.\\n     */\\n    function nonces(address owner) external view returns (uint256);\\n\\n    /**\\n     * @dev Returns the domain separator used in the encoding of the signature for {permit}, as defined by {EIP712}.\\n     */\\n    // solhint-disable-next-line func-name-mixedcase\\n    function DOMAIN_SEPARATOR() external view returns (bytes32);\\n}\\n\",\"keccak256\":\"0xf41ca991f30855bf80ffd11e9347856a517b977f0a6c2d52e6421a99b7840329\",\"license\":\"MIT\"},\"@openzeppelin/contracts/utils/Context.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\n// OpenZeppelin Contracts v4.4.1 (utils/Context.sol)\\n\\npragma solidity ^0.8.0;\\n\\n/**\\n * @dev Provides information about the current execution context, including the\\n * sender of the transaction and its data. While these are generally available\\n * via msg.sender and msg.data, they should not be accessed in such a direct\\n * manner, since when dealing with meta-transactions the account sending and\\n * paying for execution may not be the actual sender (as far as an application\\n * is concerned).\\n *\\n * This contract is only required for intermediate, library-like contracts.\\n */\\nabstract contract Context {\\n    function _msgSender() internal view virtual returns (address) {\\n        return msg.sender;\\n    }\\n\\n    function _msgData() internal view virtual returns (bytes calldata) {\\n        return msg.data;\\n    }\\n}\\n\",\"keccak256\":\"0xe2e337e6dde9ef6b680e07338c493ebea1b5fd09b43424112868e9cc1706bca7\",\"license\":\"MIT\"},\"contracts/interfaces/IWhitelistRegistry.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\n\\npragma solidity 0.8.17;\\npragma abicoder v1;\\n\\ninterface IWhitelistRegistry {\\n    function isWhitelisted(address addr) external view returns (bool);\\n}\\n\",\"keccak256\":\"0x7fb9855c83b2fc2fc3cf2ddcb1290c0b4203d11e4c8b73d63f7551d50c771e30\",\"license\":\"MIT\"},\"contracts/mocks/WhitelistRegistrySimple.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\n\\npragma solidity 0.8.17;\\n\\nimport \\\"@1inch/solidity-utils/contracts/libraries/UniERC20.sol\\\";\\nimport \\\"@openzeppelin/contracts/access/Ownable.sol\\\";\\nimport \\\"../interfaces/IWhitelistRegistry.sol\\\";\\n\\n/// @title Contract with simple whitelist\\ncontract WhitelistRegistrySimple is IWhitelistRegistry, Ownable {\\n    using UniERC20 for IERC20;\\n\\n    error ArraysLengthsDoNotMatch();\\n    error SameStatus();\\n\\n    event StatusUpdate(address indexed addr, bool status);\\n\\n    mapping(address => bool) public isWhitelisted;\\n\\n    function batchSetStatus(address[] calldata addresses, bool[] calldata statuses) external onlyOwner {\\n        uint256 length = addresses.length;\\n        if (length != statuses.length) revert ArraysLengthsDoNotMatch();\\n        for (uint256 i = 0; i < length; ++i) {\\n            _setStatus(addresses[i], statuses[i]);\\n        }\\n    }\\n\\n    function setStatus(address _address, bool _status) external onlyOwner {\\n        _setStatus(_address, _status);\\n    }\\n\\n    function _setStatus(address _address, bool _status) private {\\n        if (isWhitelisted[_address] == _status) revert SameStatus();\\n        isWhitelisted[_address] = _status;\\n        emit StatusUpdate(_address, _status);\\n    }\\n\\n    function rescueFunds(IERC20 token, uint256 amount) external onlyOwner {\\n        token.uniTransfer(payable(msg.sender), amount);\\n    }\\n}\\n\",\"keccak256\":\"0xfbeafcba9461bb03d8e73631174c126a4eed1c4c6b54d0191490e958ee0d2082\",\"license\":\"MIT\"}},\"version\":1}",
+  "bytecode": "0x608060405234801561001057600080fd5b5061001a3361001f565b61006f565b600080546001600160a01b038381166001600160a01b0319831681178455604051919092169283917f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e09190a35050565b61095d8061007e6000396000f3fe608060405234801561001057600080fd5b506004361061007d5760003560e01c806378e3214f1161005b57806378e3214f146100d75780638da5cb5b146100ea578063b304f21c14610112578063f2fde38b1461012557600080fd5b80633af32abf1461008257806340faf32c146100ba578063715018a6146100cf575b600080fd5b6100a561009036600461072c565b60016020526000908152604090205460ff1681565b60405190151581526020015b60405180910390f35b6100cd6100c836600461079c565b610138565b005b6100cd6101f3565b6100cd6100e5366004610808565b610207565b60005460405173ffffffffffffffffffffffffffffffffffffffff90911681526020016100b1565b6100cd610120366004610849565b610234565b6100cd61013336600461072c565b610246565b610140610302565b8281811461017a576040517f9f0513c400000000000000000000000000000000000000000000000000000000815260040160405180910390fd5b60005b818110156101eb576101db86868381811061019a5761019a61087e565b90506020020160208101906101af919061072c565b8585848181106101c1576101c161087e565b90506020020160208101906101d691906108ad565b610383565b6101e4816108c8565b905061017d565b505050505050565b6101fb610302565b6102056000610474565b565b61020f610302565b61023073ffffffffffffffffffffffffffffffffffffffff831633836104e9565b5050565b61023c610302565b6102308282610383565b61024e610302565b73ffffffffffffffffffffffffffffffffffffffff81166102f6576040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152602660248201527f4f776e61626c653a206e6577206f776e657220697320746865207a65726f206160448201527f646472657373000000000000000000000000000000000000000000000000000060648201526084015b60405180910390fd5b6102ff81610474565b50565b60005473ffffffffffffffffffffffffffffffffffffffff163314610205576040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820181905260248201527f4f776e61626c653a2063616c6c6572206973206e6f7420746865206f776e657260448201526064016102ed565b73ffffffffffffffffffffffffffffffffffffffff821660009081526001602052604090205481151560ff9091161515036103ea576040517f24904fe500000000000000000000000000000000000000000000000000000000815260040160405180910390fd5b73ffffffffffffffffffffffffffffffffffffffff821660008181526001602090815260409182902080547fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff001685151590811790915591519182527fed2767fb6072eed701bd9068813762521f067d7f870d6e36a4dd4b2bd1a8c0ce910160405180910390a25050565b6000805473ffffffffffffffffffffffffffffffffffffffff8381167fffffffffffffffffffffffff0000000000000000000000000000000000000000831681178455604051919092169283917f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e09190a35050565b80156105fb576104f883610600565b156105da5780471015610537576040517ff4d678b800000000000000000000000000000000000000000000000000000000815260040160405180910390fd5b60405160009073ffffffffffffffffffffffffffffffffffffffff84169061138890849084818181858888f193505050503d8060008114610594576040519150601f19603f3d011682016040523d82523d6000602084013e610599565b606091505b50509050806105d4576040517fb12d13eb00000000000000000000000000000000000000000000000000000000815260040160405180910390fd5b50505050565b6105fb73ffffffffffffffffffffffffffffffffffffffff84168383610654565b505050565b600073ffffffffffffffffffffffffffffffffffffffff8216158061064e575073ffffffffffffffffffffffffffffffffffffffff821673eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee145b92915050565b610680837fa9059cbb0000000000000000000000000000000000000000000000000000000084846106b6565b6105fb576040517ffb7f507900000000000000000000000000000000000000000000000000000000815260040160405180910390fd5b60006040518481528360048201528260248201526020600060448360008a5af19150508015610702573d80156106f857600160005114601f3d11169150610700565b6000863b1191505b505b949350505050565b73ffffffffffffffffffffffffffffffffffffffff811681146102ff57600080fd5b60006020828403121561073e57600080fd5b81356107498161070a565b9392505050565b60008083601f84011261076257600080fd5b50813567ffffffffffffffff81111561077a57600080fd5b6020830191508360208260051b850101111561079557600080fd5b9250929050565b600080600080604085870312156107b257600080fd5b843567ffffffffffffffff808211156107ca57600080fd5b6107d688838901610750565b909650945060208701359150808211156107ef57600080fd5b506107fc87828801610750565b95989497509550505050565b6000806040838503121561081b57600080fd5b82356108268161070a565b946020939093013593505050565b8035801515811461084457600080fd5b919050565b6000806040838503121561085c57600080fd5b82356108678161070a565b915061087560208401610834565b90509250929050565b7f4e487b7100000000000000000000000000000000000000000000000000000000600052603260045260246000fd5b6000602082840312156108bf57600080fd5b61074982610834565b60007fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff8203610920577f4e487b7100000000000000000000000000000000000000000000000000000000600052601160045260246000fd5b506001019056fea26469706673582212201f6fdc91f02052118545f478f9d33fd0c4b80e41bca545503a009392b173262864736f6c63430008110033",
+  "deployedBytecode": "0x608060405234801561001057600080fd5b506004361061007d5760003560e01c806378e3214f1161005b57806378e3214f146100d75780638da5cb5b146100ea578063b304f21c14610112578063f2fde38b1461012557600080fd5b80633af32abf1461008257806340faf32c146100ba578063715018a6146100cf575b600080fd5b6100a561009036600461072c565b60016020526000908152604090205460ff1681565b60405190151581526020015b60405180910390f35b6100cd6100c836600461079c565b610138565b005b6100cd6101f3565b6100cd6100e5366004610808565b610207565b60005460405173ffffffffffffffffffffffffffffffffffffffff90911681526020016100b1565b6100cd610120366004610849565b610234565b6100cd61013336600461072c565b610246565b610140610302565b8281811461017a576040517f9f0513c400000000000000000000000000000000000000000000000000000000815260040160405180910390fd5b60005b818110156101eb576101db86868381811061019a5761019a61087e565b90506020020160208101906101af919061072c565b8585848181106101c1576101c161087e565b90506020020160208101906101d691906108ad565b610383565b6101e4816108c8565b905061017d565b505050505050565b6101fb610302565b6102056000610474565b565b61020f610302565b61023073ffffffffffffffffffffffffffffffffffffffff831633836104e9565b5050565b61023c610302565b6102308282610383565b61024e610302565b73ffffffffffffffffffffffffffffffffffffffff81166102f6576040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820152602660248201527f4f776e61626c653a206e6577206f776e657220697320746865207a65726f206160448201527f646472657373000000000000000000000000000000000000000000000000000060648201526084015b60405180910390fd5b6102ff81610474565b50565b60005473ffffffffffffffffffffffffffffffffffffffff163314610205576040517f08c379a000000000000000000000000000000000000000000000000000000000815260206004820181905260248201527f4f776e61626c653a2063616c6c6572206973206e6f7420746865206f776e657260448201526064016102ed565b73ffffffffffffffffffffffffffffffffffffffff821660009081526001602052604090205481151560ff9091161515036103ea576040517f24904fe500000000000000000000000000000000000000000000000000000000815260040160405180910390fd5b73ffffffffffffffffffffffffffffffffffffffff821660008181526001602090815260409182902080547fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff001685151590811790915591519182527fed2767fb6072eed701bd9068813762521f067d7f870d6e36a4dd4b2bd1a8c0ce910160405180910390a25050565b6000805473ffffffffffffffffffffffffffffffffffffffff8381167fffffffffffffffffffffffff0000000000000000000000000000000000000000831681178455604051919092169283917f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e09190a35050565b80156105fb576104f883610600565b156105da5780471015610537576040517ff4d678b800000000000000000000000000000000000000000000000000000000815260040160405180910390fd5b60405160009073ffffffffffffffffffffffffffffffffffffffff84169061138890849084818181858888f193505050503d8060008114610594576040519150601f19603f3d011682016040523d82523d6000602084013e610599565b606091505b50509050806105d4576040517fb12d13eb00000000000000000000000000000000000000000000000000000000815260040160405180910390fd5b50505050565b6105fb73ffffffffffffffffffffffffffffffffffffffff84168383610654565b505050565b600073ffffffffffffffffffffffffffffffffffffffff8216158061064e575073ffffffffffffffffffffffffffffffffffffffff821673eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee145b92915050565b610680837fa9059cbb0000000000000000000000000000000000000000000000000000000084846106b6565b6105fb576040517ffb7f507900000000000000000000000000000000000000000000000000000000815260040160405180910390fd5b60006040518481528360048201528260248201526020600060448360008a5af19150508015610702573d80156106f857600160005114601f3d11169150610700565b6000863b1191505b505b949350505050565b73ffffffffffffffffffffffffffffffffffffffff811681146102ff57600080fd5b60006020828403121561073e57600080fd5b81356107498161070a565b9392505050565b60008083601f84011261076257600080fd5b50813567ffffffffffffffff81111561077a57600080fd5b6020830191508360208260051b850101111561079557600080fd5b9250929050565b600080600080604085870312156107b257600080fd5b843567ffffffffffffffff808211156107ca57600080fd5b6107d688838901610750565b909650945060208701359150808211156107ef57600080fd5b506107fc87828801610750565b95989497509550505050565b6000806040838503121561081b57600080fd5b82356108268161070a565b946020939093013593505050565b8035801515811461084457600080fd5b919050565b6000806040838503121561085c57600080fd5b82356108678161070a565b915061087560208401610834565b90509250929050565b7f4e487b7100000000000000000000000000000000000000000000000000000000600052603260045260246000fd5b6000602082840312156108bf57600080fd5b61074982610834565b60007fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff8203610920577f4e487b7100000000000000000000000000000000000000000000000000000000600052601160045260246000fd5b506001019056fea26469706673582212201f6fdc91f02052118545f478f9d33fd0c4b80e41bca545503a009392b173262864736f6c63430008110033",
+  "devdoc": {
+    "kind": "dev",
+    "methods": {
+      "owner()": {
+        "details": "Returns the address of the current owner."
+      },
+      "renounceOwnership()": {
+        "details": "Leaves the contract without owner. It will not be possible to call `onlyOwner` functions anymore. Can only be called by the current owner. NOTE: Renouncing ownership will leave the contract without an owner, thereby removing any functionality that is only available to the owner."
+      },
+      "transferOwnership(address)": {
+        "details": "Transfers ownership of the contract to a new account (`newOwner`). Can only be called by the current owner."
+      }
+    },
+    "title": "Contract with simple whitelist",
+    "version": 1
+  },
+  "userdoc": {
+    "kind": "user",
+    "methods": {},
+    "version": 1
+  },
+  "storageLayout": {
+    "storage": [
+      {
+        "astId": 6916,
+        "contract": "contracts/mocks/WhitelistRegistrySimple.sol:WhitelistRegistrySimple",
+        "label": "_owner",
+        "offset": 0,
+        "slot": "0",
+        "type": "t_address"
+      },
+      {
+        "astId": 13281,
+        "contract": "contracts/mocks/WhitelistRegistrySimple.sol:WhitelistRegistrySimple",
+        "label": "isWhitelisted",
+        "offset": 0,
+        "slot": "1",
+        "type": "t_mapping(t_address,t_bool)"
+      }
+    ],
+    "types": {
+      "t_address": {
+        "encoding": "inplace",
+        "label": "address",
+        "numberOfBytes": "20"
+      },
+      "t_bool": {
+        "encoding": "inplace",
+        "label": "bool",
+        "numberOfBytes": "1"
+      },
+      "t_mapping(t_address,t_bool)": {
+        "encoding": "mapping",
+        "key": "t_address",
+        "label": "mapping(address => bool)",
+        "numberOfBytes": "32",
+        "value": "t_bool"
+      }
+    }
+  }
+}
