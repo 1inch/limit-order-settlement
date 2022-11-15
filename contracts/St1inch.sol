@@ -87,25 +87,24 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
         uint256 duration,
         bytes calldata permit
     ) external {
-        depositForWithPermit(msg.sender, amount, duration, permit);
+        oneInch.safePermit(permit);
+        _deposit(msg.sender, amount, duration);
     }
 
     function depositFor(
         address account,
-        uint256 amount,
-        uint256 duration
+        uint256 amount
     ) external {
-        _deposit(account, amount, duration);
+        _deposit(account, amount, 0);
     }
 
     function depositForWithPermit(
         address account,
         uint256 amount,
-        uint256 duration,
         bytes calldata permit
-    ) public {
+    ) external {
         oneInch.safePermit(permit);
-        _deposit(account, amount, duration);
+        _deposit(account, amount, 0);
     }
 
     function increaseLockDuration(uint256 duration) external {

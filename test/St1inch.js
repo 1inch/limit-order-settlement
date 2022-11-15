@@ -106,7 +106,8 @@ describe('St1inch', function () {
         const balanceaddr = await oneInch.balanceOf(addr.address);
         const balanceAddr1 = await oneInch.balanceOf(addr1.address);
 
-        await st1inch.depositFor(addr1.address, ether('100'), time.duration.days('1'));
+        await st1inch.connect(addr1).increaseLockDuration(time.duration.days('1') + 1);
+        await st1inch.depositFor(addr1.address, ether('100'));
 
         expect(await oneInch.balanceOf(addr.address)).to.equal(balanceaddr.sub(ether('100')));
         expect(await oneInch.balanceOf(addr1.address)).to.equal(balanceAddr1);
@@ -127,7 +128,8 @@ describe('St1inch', function () {
         await oneInch.approve(st1inch.address, '0');
         const permit = await getPermit(addr, oneInch, '1', chainId, st1inch.address, ether('100'));
 
-        await st1inch.depositForWithPermit(addr1.address, ether('100'), time.duration.days('1'), permit);
+        await st1inch.connect(addr1).increaseLockDuration(time.duration.days('1') + 1);
+        await st1inch.depositForWithPermit(addr1.address, ether('100'), permit);
 
         expect(await oneInch.balanceOf(addr.address)).to.equal(balanceaddr.sub(ether('100')));
         expect(await oneInch.balanceOf(addr1.address)).to.equal(balanceAddr1);
