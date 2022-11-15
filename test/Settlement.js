@@ -1,4 +1,4 @@
-const { assertRoughlyEqualValues, time, expect, ether } = require('@1inch/solidity-utils');
+const { assertRoughlyEqualValues, time, expect, ether, trim0x } = require('@1inch/solidity-utils');
 const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
 const { ethers } = require('hardhat');
 const { deploySwapTokens, deploySimpleRegistry, getChainId } = require('./helpers/fixtures');
@@ -40,15 +40,13 @@ describe('Settlement', function () {
         await weth.approve(swap.address, ether('1'));
         await weth.connect(addr1).approve(swap.address, ether('1'));
 
-        const Settlement = await ethers.getContractFactory('Settlement');
-        const matcher = await Settlement.deploy(whitelistRegistrySimple.address, swap.address);
+        const SettlementMock = await ethers.getContractFactory('SettlementMock');
+        const matcher = await SettlementMock.deploy(whitelistRegistrySimple.address, swap.address, inch.address);
         await matcher.deployed();
 
         const FeeBank = await ethers.getContractFactory('FeeBank');
-        const feeBank = await FeeBank.deploy(matcher.address, inch.address);
-        await feeBank.deployed();
+        const feeBank = await FeeBank.attach(await matcher.feeBank());
 
-        await matcher.setFeeBank(feeBank.address);
         await inch.approve(feeBank.address, ether('100'));
         await feeBank.deposit(ether('100'));
 
@@ -57,11 +55,14 @@ describe('Settlement', function () {
         await proxy.deployed();
         await inch.mint(proxy.address, ether('100'));
 
-        return { dai, weth, swap, matcher, feeBank, proxy };
+        const ResolverMock = await ethers.getContractFactory('ResolverMock');
+        const resolver = await ResolverMock.deploy();
+
+        return { dai, weth, swap, matcher, feeBank, proxy, resolver };
     }
 
     it('opposite direction recursive swap', async function () {
-        const { dai, weth, swap, matcher } = await loadFixture(initContracts);
+        const { dai, weth, swap, matcher, resolver } = await loadFixture(initContracts);
 
         const order = await buildOrder(
             {
@@ -93,21 +94,7 @@ describe('Settlement', function () {
         const signature = await signOrder(order, chainId, swap.address, addr);
         const signatureBackOrder = await signOrder(backOrder, chainId, swap.address, addr1);
 
-        const matchingParams =
-            matcher.address +
-            '01' +
-            abiCoder
-                .encode(
-                    ['address[]', 'bytes[]'],
-                    [
-                        [weth.address, dai.address],
-                        [
-                            weth.interface.encodeFunctionData('approve', [swap.address, ether('0.11')]),
-                            dai.interface.encodeFunctionData('approve', [swap.address, ether('100.00')]),
-                        ],
-                    ],
-                )
-                .substring(2);
+        const matchingParams = matcher.address + '01' + trim0x(resolver.address);
 
         const interaction =
             matcher.address +
@@ -130,14 +117,15 @@ describe('Settlement', function () {
         const addr1dai = await dai.balanceOf(addr1.address);
 
         await matcher.settleOrders(
-            swap.address,
-            order,
-            signature,
-            interaction,
-            ether('100'),
-            0,
-            ether('0.11'),
-            matcher.address,
+            '0x' + swap.interface.encodeFunctionData('fillOrderTo', [
+                order,
+                signature,
+                interaction,
+                ether('100'),
+                0,
+                ether('0.11'),
+                matcher.address,
+            ]).substring(10),
         );
 
         assertRoughlyEqualValues(await weth.balanceOf(addr.address), addrweth.add(ether('0.11')), 1e-4);
@@ -148,7 +136,7 @@ describe('Settlement', function () {
     });
 
     it('unidirectional recursive swap', async function () {
-        const { dai, weth, swap, matcher } = await loadFixture(initContracts);
+        const { dai, weth, swap, matcher, resolver } = await loadFixture(initContracts);
 
         const order = await buildOrder(
             {
@@ -184,23 +172,21 @@ describe('Settlement', function () {
         const matchingParams =
             matcher.address +
             '01' +
-            abiCoder
-                .encode(
-                    ['address[]', 'bytes[]'],
-                    [
-                        [weth.address, weth.address, dai.address],
-                        [
-                            weth.interface.encodeFunctionData('transferFrom', [
-                                addr.address,
-                                matcher.address,
-                                ether('0.0275'),
-                            ]),
-                            weth.interface.encodeFunctionData('approve', [swap.address, ether('0.0275')]),
-                            dai.interface.encodeFunctionData('transfer', [addr.address, ether('25')]),
-                        ],
-                    ],
-                )
-                .substring(2);
+            trim0x(resolver.address) +
+            trim0x(abiCoder.encode(['address[]', 'bytes[]'], [
+                [weth.address, dai.address],
+                [
+                    weth.interface.encodeFunctionData('transferFrom', [
+                        addr.address,
+                        matcher.address,
+                        ether('0.0275'),
+                    ]),
+                    dai.interface.encodeFunctionData('transfer', [
+                        addr.address,
+                        ether('25'),
+                    ]),
+                ],
+            ]));
 
         const interaction =
             matcher.address +
@@ -213,7 +199,7 @@ describe('Settlement', function () {
                     ether('15'),
                     0,
                     ether('0.015'),
-                    matcher.address,
+                    resolver.address,
                 ])
                 .substring(10);
 
@@ -222,16 +208,17 @@ describe('Settlement', function () {
         const addrdai = await dai.balanceOf(addr.address);
         const addr1dai = await dai.balanceOf(addr1.address);
 
-        await weth.approve(matcher.address, ether('0.0275'));
+        await weth.approve(resolver.address, ether('0.0275'));
         await matcher.settleOrders(
-            swap.address,
-            order,
-            signature,
-            interaction,
-            ether('10'),
-            0,
-            ether('0.01'),
-            matcher.address,
+            '0x' + swap.interface.encodeFunctionData('fillOrderTo', [
+                order,
+                signature,
+                interaction,
+                ether('10'),
+                0,
+                ether('0.01'),
+                resolver.address,
+            ]).substring(10),
         );
 
         expect(await weth.balanceOf(addr.address)).to.equal(addrweth.sub(ether('0.0275')));
@@ -242,7 +229,7 @@ describe('Settlement', function () {
     });
 
     it('triple recursive swap', async function () {
-        const { dai, weth, swap, matcher } = await loadFixture(initContracts);
+        const { dai, weth, swap, matcher, resolver } = await loadFixture(initContracts);
 
         const order1 = await buildOrder(
             {
@@ -289,21 +276,7 @@ describe('Settlement', function () {
         const signature2 = await signOrder(order2, chainId, swap.address, addr1);
         const signatureBackOrder = await signOrder(backOrder, chainId, swap.address, addr);
 
-        const matchingParams =
-            matcher.address +
-            '01' +
-            abiCoder
-                .encode(
-                    ['address[]', 'bytes[]'],
-                    [
-                        [weth.address, dai.address],
-                        [
-                            weth.interface.encodeFunctionData('approve', [swap.address, ether('0.0275')]),
-                            dai.interface.encodeFunctionData('approve', [swap.address, ether('25')]),
-                        ],
-                    ],
-                )
-                .substring(2);
+        const matchingParams = matcher.address + '01' + trim0x(resolver.address);
 
         const internalInteraction =
             matcher.address +
@@ -341,14 +314,15 @@ describe('Settlement', function () {
         const addr1dai = await dai.balanceOf(addr1.address);
 
         await matcher.settleOrders(
-            swap.address,
-            order1,
-            signature1,
-            externalInteraction,
-            ether('10'),
-            0,
-            ether('0.01'),
-            matcher.address,
+            '0x' + swap.interface.encodeFunctionData('fillOrderTo', [
+                order1,
+                signature1,
+                externalInteraction,
+                ether('10'),
+                0,
+                ether('0.01'),
+                matcher.address,
+            ]).substring(10),
         );
 
         expect(await weth.balanceOf(addr.address)).to.equal(addrweth.sub(ether('0.0275')));
@@ -368,6 +342,7 @@ describe('Settlement', function () {
             weth,
             swap,
             matcher,
+            resolver,
         }) => {
             const makerAsset = dai.address;
             const takerAsset = weth.address;
@@ -407,25 +382,20 @@ describe('Settlement', function () {
             const matchingParams =
                 matcher.address +
                 '01' +
-                abiCoder
-                    .encode(
-                        ['address[]', 'bytes[]'],
-                        [
-                            [weth.address, weth.address, dai.address],
-                            [
-                                weth.interface.encodeFunctionData('transferFrom', [
-                                    addr.address,
-                                    matcher.address,
-                                    actualTakingAmount,
-                                ]),
-                                weth.interface.encodeFunctionData('approve', [swap.address, actualTakingAmount]),
-                                dai.interface.encodeFunctionData('transfer', [addr.address, makingAmount]),
-                            ],
-                        ],
-                    )
-                    .substring(2);
+                trim0x(resolver.address) +
+                trim0x(abiCoder.encode(['address[]', 'bytes[]'], [
+                    [weth.address, dai.address],
+                    [
+                        weth.interface.encodeFunctionData('transferFrom', [
+                            addr.address,
+                            matcher.address,
+                            actualTakingAmount,
+                        ]),
+                        dai.interface.encodeFunctionData('transfer', [addr.address, makingAmount]),
+                    ],
+                ]));
 
-            await weth.approve(matcher.address, actualTakingAmount);
+            await weth.approve(resolver.address, actualTakingAmount);
             return {
                 order,
                 signature,
@@ -438,7 +408,7 @@ describe('Settlement', function () {
         };
 
         it('matching order before orderTime has maximal rate bump', async function () {
-            const { dai, weth, swap, matcher } = await loadFixture(initContracts);
+            const { dai, weth, swap, matcher, resolver } = await loadFixture(initContracts);
 
             const currentTimestamp = BigInt(await time.latest());
             const { order, signature, interaction, makingAmount, takingAmount } = await prerareSingleOrder({
@@ -447,28 +417,34 @@ describe('Settlement', function () {
                 weth,
                 swap,
                 matcher,
+                resolver,
             });
 
             const addrweth = await weth.balanceOf(addr.address);
             const addr1weth = await weth.balanceOf(addr1.address);
+            const addrDai = await dai.balanceOf(addr.address);
+            const addr1Dai = await dai.balanceOf(addr1.address);
 
             await matcher.settleOrders(
-                swap.address,
-                order,
-                signature,
-                interaction,
-                makingAmount,
-                0,
-                takingAmount,
-                matcher.address,
+                '0x' + swap.interface.encodeFunctionData('fillOrderTo', [
+                    order,
+                    signature,
+                    interaction,
+                    makingAmount,
+                    0,
+                    takingAmount,
+                    resolver.address,
+                ]).substring(10),
             );
 
             expect(await weth.balanceOf(addr1.address)).to.equal(addr1weth.add(ether('0.11')));
             expect(await weth.balanceOf(addr.address)).to.equal(addrweth.sub(ether('0.11')));
+            expect(await dai.balanceOf(addr1.address)).to.equal(addr1Dai.sub(ether('100')));
+            expect(await dai.balanceOf(addr.address)).to.equal(addrDai.add(ether('100')));
         });
 
         it('set initial rate', async function () {
-            const { dai, weth, swap, matcher } = await loadFixture(initContracts);
+            const { dai, weth, swap, matcher, resolver } = await loadFixture(initContracts);
 
             const currentTimestamp = BigInt(await time.latest());
             const { order, signature, interaction, makingAmount, takingAmount } = await prerareSingleOrder({
@@ -478,27 +454,34 @@ describe('Settlement', function () {
                 weth,
                 swap,
                 matcher,
+                resolver,
             });
 
             const addrweth = await weth.balanceOf(addr.address);
             const addr1weth = await weth.balanceOf(addr1.address);
+            const addrDai = await dai.balanceOf(addr.address);
+            const addr1Dai = await dai.balanceOf(addr1.address);
+
             await matcher.settleOrders(
-                swap.address,
-                order,
-                signature,
-                interaction,
-                makingAmount,
-                0,
-                takingAmount,
-                matcher.address,
+                '0x' + swap.interface.encodeFunctionData('fillOrderTo', [
+                    order,
+                    signature,
+                    interaction,
+                    makingAmount,
+                    0,
+                    takingAmount,
+                    resolver.address,
+                ]).substring(10),
             );
 
             expect(await weth.balanceOf(addr.address)).to.equal(addrweth.sub(ether('0.12')));
             assertRoughlyEqualValues(await weth.balanceOf(addr1.address), addr1weth.add(ether('0.12')), 1e-4);
+            expect(await dai.balanceOf(addr1.address)).to.equal(addr1Dai.sub(ether('100')));
+            expect(await dai.balanceOf(addr.address)).to.equal(addrDai.add(ether('100')));
         });
 
         it('set duration', async function () {
-            const { dai, weth, swap, matcher } = await loadFixture(initContracts);
+            const { dai, weth, swap, matcher, resolver } = await loadFixture(initContracts);
 
             const currentTimestamp = BigInt(await time.latest());
             const { order, signature, interaction, makingAmount, takingAmount } = await prerareSingleOrder({
@@ -509,28 +492,35 @@ describe('Settlement', function () {
                 weth,
                 swap,
                 matcher,
+                resolver,
             });
 
             const addrweth = await weth.balanceOf(addr.address);
             const addr1weth = await weth.balanceOf(addr1.address);
+            const addrDai = await dai.balanceOf(addr.address);
+            const addr1Dai = await dai.balanceOf(addr1.address);
+
             await matcher.settleOrders(
-                swap.address,
-                order,
-                signature,
-                interaction,
-                makingAmount,
-                0,
-                takingAmount,
-                matcher.address,
+                '0x' + swap.interface.encodeFunctionData('fillOrderTo', [
+                    order,
+                    signature,
+                    interaction,
+                    makingAmount,
+                    0,
+                    takingAmount,
+                    resolver.address,
+                ]).substring(10),
             );
 
             expect(await weth.balanceOf(addr.address)).to.equal(addrweth.sub(ether('0.105')));
             assertRoughlyEqualValues(await weth.balanceOf(addr1.address), addr1weth.add(ether('0.105')), 1e-4);
+            expect(await dai.balanceOf(addr1.address)).to.equal(addr1Dai.sub(ether('100')));
+            expect(await dai.balanceOf(addr.address)).to.equal(addrDai.add(ether('100')));
         });
     });
 
-    it('should change creditAllowance with non-zero fee', async function () {
-        const { dai, weth, swap, matcher } = await loadFixture(initContracts);
+    it('should change availableCredit with non-zero fee', async function () {
+        const { dai, weth, swap, matcher, resolver } = await loadFixture(initContracts);
 
         const order = await buildOrder({
             salt: buildSalt({ orderStartTime: await defaultExpiredAuctionTimestamp(), fee: orderFee }),
@@ -550,21 +540,9 @@ describe('Settlement', function () {
         });
         const signature = await signOrder(order, chainId, swap.address, addr);
         const signatureBackOrder = await signOrder(backOrder, chainId, swap.address, addr1);
-        const matchingParams =
-            matcher.address +
-            '01' +
-            abiCoder
-                .encode(
-                    ['address[]', 'bytes[]'],
-                    [
-                        [weth.address, dai.address],
-                        [
-                            weth.interface.encodeFunctionData('approve', [swap.address, ether('0.1')]),
-                            dai.interface.encodeFunctionData('approve', [swap.address, ether('100')]),
-                        ],
-                    ],
-                )
-                .substring(2);
+
+        const matchingParams = matcher.address + '01' + trim0x(resolver.address);
+
         const interaction =
             matcher.address +
             '00' +
@@ -579,90 +557,25 @@ describe('Settlement', function () {
                     matcher.address,
                 ])
                 .substring(10);
-        const creditAllowanceBefore = await matcher.creditAllowance(addr.address);
-        await matcher.settleOrdersEOA(
-            swap.address,
-            order,
-            signature,
-            interaction,
-            ether('100'),
-            0,
-            ether('0.1'),
-            matcher.address,
-        );
-        expect(await matcher.creditAllowance(addr.address)).to.equal(
-            creditAllowanceBefore.toBigInt() - basePoints * (orderFee + backOrderFee),
-        );
-    });
-
-    it('should change creditAllowance with non-zero fee, msg.sender', async function () {
-        const { dai, weth, swap, matcher } = await loadFixture(initContracts);
-
-        const order = await buildOrder({
-            salt: buildSalt({ orderStartTime: await defaultExpiredAuctionTimestamp(), fee: orderFee }),
-            makerAsset: dai.address,
-            takerAsset: weth.address,
-            makingAmount: ether('100'),
-            takingAmount: ether('0.1'),
-            from: addr.address,
-        });
-        const backOrder = await buildOrder({
-            salt: buildSalt({ orderStartTime: await defaultExpiredAuctionTimestamp(), fee: backOrderFee }),
-            makerAsset: weth.address,
-            takerAsset: dai.address,
-            makingAmount: ether('0.1'),
-            takingAmount: ether('100'),
-            from: addr1.address,
-        });
-        const signature = await signOrder(order, chainId, swap.address, addr);
-        const signatureBackOrder = await signOrder(backOrder, chainId, swap.address, addr1);
-        const matchingParams =
-            matcher.address +
-            '01' +
-            abiCoder
-                .encode(
-                    ['address[]', 'bytes[]'],
-                    [
-                        [weth.address, dai.address],
-                        [
-                            weth.interface.encodeFunctionData('approve', [swap.address, ether('0.1')]),
-                            dai.interface.encodeFunctionData('approve', [swap.address, ether('100')]),
-                        ],
-                    ],
-                )
-                .substring(2);
-        const interaction =
-            matcher.address +
-            '00' +
-            swap.interface
-                .encodeFunctionData('fillOrderTo', [
-                    backOrder,
-                    signatureBackOrder,
-                    matchingParams,
-                    ether('0.1'),
-                    0,
-                    ether('100'),
-                    matcher.address,
-                ])
-                .substring(10);
-        const creditAllowanceBefore = await matcher.creditAllowance(addr.address);
+        const availableCreditBefore = await matcher.availableCredit(addr.address);
         await matcher.settleOrders(
-            swap.address,
-            order,
-            signature,
-            interaction,
-            ether('100'),
-            0,
-            ether('0.1'),
-            matcher.address,
+            '0x' + swap.interface.encodeFunctionData('fillOrderTo', [
+                order,
+                signature,
+                interaction,
+                ether('100'),
+                0,
+                ether('0.1'),
+                matcher.address,
+            ]).substring(10),
         );
-        expect(await matcher.creditAllowance(addr.address)).to.equal(
-            creditAllowanceBefore.toBigInt() - basePoints * (orderFee + backOrderFee),
+        expect(await matcher.availableCredit(addr.address)).to.equal(
+            availableCreditBefore.toBigInt() - basePoints * (orderFee + backOrderFee),
         );
     });
 
-    it('should change creditAllowance with non-zero fee, proxy contract, tx.origin', async function () {
-        const { dai, weth, swap, matcher, proxy } = await loadFixture(initContracts);
+    it('should change availableCredit with non-zero fee, proxy contract', async function () {
+        const { dai, weth, swap, matcher, proxy, resolver } = await loadFixture(initContracts);
 
         const order = await buildOrder({
             salt: buildSalt({ orderStartTime: await defaultExpiredAuctionTimestamp(), fee: orderFee }),
@@ -682,87 +595,9 @@ describe('Settlement', function () {
         });
         const signature = await signOrder(order, chainId, swap.address, addr);
         const signatureBackOrder = await signOrder(backOrder, chainId, swap.address, addr1);
-        const matchingParams =
-            matcher.address +
-            '01' +
-            abiCoder
-                .encode(
-                    ['address[]', 'bytes[]'],
-                    [
-                        [weth.address, dai.address],
-                        [
-                            weth.interface.encodeFunctionData('approve', [swap.address, ether('0.1')]),
-                            dai.interface.encodeFunctionData('approve', [swap.address, ether('100')]),
-                        ],
-                    ],
-                )
-                .substring(2);
-        const interaction =
-            matcher.address +
-            '00' +
-            swap.interface
-                .encodeFunctionData('fillOrderTo', [
-                    backOrder,
-                    signatureBackOrder,
-                    matchingParams,
-                    ether('0.1'),
-                    0,
-                    ether('100'),
-                    matcher.address,
-                ])
-                .substring(10);
-        const creditAllowanceBefore = await matcher.creditAllowance(addr.address);
-        await proxy.settleOrdersEOA(
-            swap.address,
-            order,
-            signature,
-            interaction,
-            ether('100'),
-            0,
-            ether('0.1'),
-            matcher.address,
-        );
-        expect(await matcher.creditAllowance(addr.address)).to.equal(
-            creditAllowanceBefore.toBigInt() - basePoints * (orderFee + backOrderFee),
-        );
-    });
 
-    it('should change creditAllowance with non-zero fee, proxy contract, msg.sender', async function () {
-        const { dai, weth, swap, matcher, proxy } = await loadFixture(initContracts);
+        const matchingParams = matcher.address + '01' + trim0x(resolver.address);
 
-        const order = await buildOrder({
-            salt: buildSalt({ orderStartTime: await defaultExpiredAuctionTimestamp(), fee: orderFee }),
-            makerAsset: dai.address,
-            takerAsset: weth.address,
-            makingAmount: ether('100'),
-            takingAmount: ether('0.1'),
-            from: addr.address,
-        });
-        const backOrder = await buildOrder({
-            salt: buildSalt({ orderStartTime: await defaultExpiredAuctionTimestamp(), fee: backOrderFee }),
-            makerAsset: weth.address,
-            takerAsset: dai.address,
-            makingAmount: ether('0.1'),
-            takingAmount: ether('100'),
-            from: addr1.address,
-        });
-        const signature = await signOrder(order, chainId, swap.address, addr);
-        const signatureBackOrder = await signOrder(backOrder, chainId, swap.address, addr1);
-        const matchingParams =
-            matcher.address +
-            '01' +
-            abiCoder
-                .encode(
-                    ['address[]', 'bytes[]'],
-                    [
-                        [weth.address, dai.address],
-                        [
-                            weth.interface.encodeFunctionData('approve', [swap.address, ether('0.1')]),
-                            dai.interface.encodeFunctionData('approve', [swap.address, ether('100')]),
-                        ],
-                    ],
-                )
-                .substring(2);
         const interaction =
             matcher.address +
             '00' +
@@ -779,24 +614,25 @@ describe('Settlement', function () {
                 .substring(10);
         await whitelistRegistrySimple.setStatus(proxy.address, Status.Verified);
         await proxy.deposit(ether('100'));
-        const creditAllowanceBefore = await matcher.creditAllowance(proxy.address);
+        const availableCreditBefore = await matcher.availableCredit(proxy.address);
         await proxy.settleOrders(
-            swap.address,
-            order,
-            signature,
-            interaction,
-            ether('100'),
-            0,
-            ether('0.1'),
-            matcher.address,
+            '0x' + swap.interface.encodeFunctionData('fillOrderTo', [
+                order,
+                signature,
+                interaction,
+                ether('100'),
+                0,
+                ether('0.1'),
+                matcher.address,
+            ]).substring(10),
         );
-        expect(await matcher.creditAllowance(proxy.address)).to.equal(
-            creditAllowanceBefore.toBigInt() - basePoints * (orderFee + backOrderFee),
+        expect(await matcher.availableCredit(proxy.address)).to.equal(
+            availableCreditBefore.toBigInt() - basePoints * (orderFee + backOrderFee),
         );
     });
 
-    it('should not change when creditAllowance is not enough', async function () {
-        const { dai, weth, swap, matcher } = await loadFixture(initContracts);
+    it('should not change when availableCredit is not enough', async function () {
+        const { dai, weth, swap, matcher, resolver } = await loadFixture(initContracts);
 
         const order = await buildOrder({
             salt: buildSalt({ orderStartTime: await defaultExpiredAuctionTimestamp(), fee: ether('1000') }),
@@ -816,21 +652,9 @@ describe('Settlement', function () {
         });
         const signature = await signOrder(order, chainId, swap.address, addr);
         const signatureBackOrder = await signOrder(backOrder, chainId, swap.address, addr1);
-        const matchingParams =
-            matcher.address +
-            '01' +
-            abiCoder
-                .encode(
-                    ['address[]', 'bytes[]'],
-                    [
-                        [weth.address, dai.address],
-                        [
-                            weth.interface.encodeFunctionData('approve', [swap.address, ether('0.1')]),
-                            dai.interface.encodeFunctionData('approve', [swap.address, ether('100')]),
-                        ],
-                    ],
-                )
-                .substring(2);
+
+        const matchingParams = matcher.address + '01' + trim0x(resolver.address);
+
         const interaction =
             matcher.address +
             '00' +
@@ -846,75 +670,17 @@ describe('Settlement', function () {
                 ])
                 .substring(10);
         await expect(
-            matcher.settleOrdersEOA(
-                swap.address,
-                order,
-                signature,
-                interaction,
-                ether('100'),
-                0,
-                ether('0.1'),
-                matcher.address,
+            matcher.settleOrders(
+                '0x' + swap.interface.encodeFunctionData('fillOrderTo', [
+                    order,
+                    signature,
+                    interaction,
+                    ether('100'),
+                    0,
+                    ether('0.1'),
+                    matcher.address,
+                ]).substring(10),
             ),
         ).to.be.revertedWithCustomError(matcher, 'NotEnoughCredit');
-    });
-
-    describe('setFeeBank', function () {
-        it('should change feeBank', async function () {
-            const { matcher } = await loadFixture(initContracts);
-            expect(await matcher.feeBank()).to.not.equal(addr1.address);
-            await matcher.setFeeBank(addr1.address);
-            expect(await matcher.feeBank()).to.equal(addr1.address);
-        });
-        it('should not change feeBank by non-owner', async function () {
-            const { matcher } = await loadFixture(initContracts);
-            await expect(matcher.connect(addr1).setFeeBank(addr1.address)).to.be.revertedWith(
-                'Ownable: caller is not the owner',
-            );
-        });
-    });
-
-    describe('increaseCreditAllowance', function () {
-        it('should increase credit', async function () {
-            const { matcher } = await loadFixture(initContracts);
-            const amount = ether('100');
-            expect(await matcher.creditAllowance(addr1.address)).to.equal('0');
-            await matcher.setFeeBank(addr.address);
-            await matcher.increaseCreditAllowance(addr1.address, amount);
-            expect(await matcher.creditAllowance(addr1.address)).to.equal(amount);
-        });
-        it('should not increase credit by non-feeBank address', async function () {
-            const { matcher } = await loadFixture(initContracts);
-            await expect(matcher.increaseCreditAllowance(addr1.address, ether('100'))).to.be.revertedWithCustomError(
-                matcher,
-                'OnlyFeeBankAccess',
-            );
-        });
-    });
-
-    describe('decreaseCreditAllowance', function () {
-        async function initContractsAndAllowance() {
-            const { matcher, feeBank } = await initContracts();
-            const creditAmount = ether('100');
-            await matcher.setFeeBank(addr.address);
-            await matcher.increaseCreditAllowance(addr1.address, creditAmount);
-            return { matcher, feeBank, creditAmount };
-        }
-
-        it('should decrease credit', async function () {
-            const { matcher, creditAmount } = await loadFixture(initContractsAndAllowance);
-            const amount = ether('10');
-            expect(await matcher.creditAllowance(addr1.address)).to.equal(creditAmount);
-            await matcher.decreaseCreditAllowance(addr1.address, amount);
-            expect(await matcher.creditAllowance(addr1.address)).to.equal(creditAmount - amount);
-        });
-        it('should not deccrease credit by non-feeBank address', async function () {
-            const { matcher, feeBank } = await loadFixture(initContractsAndAllowance);
-            await matcher.setFeeBank(feeBank.address);
-            await expect(matcher.decreaseCreditAllowance(addr1.address, ether('10'))).to.be.revertedWithCustomError(
-                matcher,
-                'OnlyFeeBankAccess',
-            );
-        });
     });
 });
