@@ -9,7 +9,6 @@
   "license": "MIT",
   "scripts": {
     "clean": "rimraf artifacts cache coverage contracts/hardhat-dependency-compiler",
-    "test": "hardhat test",
     "deploy": "hardhat deploy --network",
     "coverage": "hardhat coverage",
     "docify": "npx solidity-utils-docify",
@@ -21,7 +20,9 @@
     "lint:sol": "solhint --max-warnings 0 \"contracts/**/*.sol\"",
     "lint:sol:fix": "solhint --max-warnings 0 \"contracts/**/*.sol\" --fix",
     "lint": "yarn lint:js && yarn lint:sol",
-    "lint:fix": "yarn lint:js:fix && yarn lint:sol:fix"
+    "lint:fix": "yarn lint:js:fix && yarn lint:sol:fix",
+    "test": "hardhat test --parallel",
+    "test:ci": "hardhat test"
   },
   "dependencies": {
     "@1inch/delegating": "0.0.8",
