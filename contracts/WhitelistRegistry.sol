@@ -23,7 +23,7 @@ contract WhitelistRegistry is IWhitelistRegistry, Ownable {
 
     event Registered(address addr);
     event Unregistered(address addr);
-    event SetResolverThreshold(uint256 resolverThreshold);
+    event ResolverThresholdSet(uint256 resolverThreshold);
     event SetWhitelistLimit(uint256 whitelistLimit);
     event Promotion(address promoter, address promotee);
 
@@ -158,7 +158,7 @@ contract WhitelistRegistry is IWhitelistRegistry, Ownable {
 
     function _setResolverThreshold(uint256 resolverThreshold_) private {
         resolverThreshold = resolverThreshold_;
-        emit SetResolverThreshold(resolverThreshold_);
+        emit ResolverThresholdSet(resolverThreshold_);
     }
 
     function _setWhitelistLimit(uint256 whitelistLimit_) private {

@@ -18,7 +18,7 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
     error LockTimeMoreMaxLock();
     error LockTimeLessMinLock();
     error ChangeAmountAndUnlockTimeForExistingAccount();
-    error UnlockTimeWasNotCome();
+    error UnlockTimeHasNotCome();
 
     uint256 public constant MIN_LOCK_PERIOD = 1 days;
     uint256 public constant MAX_LOCK_PERIOD = 4 * 365 days;
@@ -146,7 +146,7 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
 
     function withdrawTo(address to) public {
         // solhint-disable-next-line not-rely-on-time
-        if (!emergencyExit && block.timestamp < _unlockTime[msg.sender]) revert UnlockTimeWasNotCome();
+        if (!emergencyExit && block.timestamp < _unlockTime[msg.sender]) revert UnlockTimeHasNotCome();
 
         uint256 balance = _deposits[msg.sender];
         totalDeposits -= balance;

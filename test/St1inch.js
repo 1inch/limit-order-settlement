@@ -301,7 +301,7 @@ describe('St1inch', function () {
         const { st1inch } = await loadFixture(initContracts);
         await st1inch.deposit(ether('50'), time.duration.days('1'));
 
-        await expect(st1inch.withdraw()).to.be.revertedWithCustomError(st1inch, 'UnlockTimeWasNotCome');
+        await expect(st1inch.withdraw()).to.be.revertedWithCustomError(st1inch, 'UnlockTimeHasNotCome');
     });
 
     it('should emergency withdraw', async function () {
