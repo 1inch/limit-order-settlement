@@ -269,16 +269,6 @@ describe('St1inch', function () {
         expect(await st1inch.votingPowerOf(addr.address)).to.equal(0);
     });
 
-    it('should not increase time and amount for existing deposit', async function () {
-        const { st1inch } = await loadFixture(initContracts);
-        await st1inch.deposit(ether('50'), time.duration.days('1'));
-
-        await expect(st1inch.deposit(ether('50'), time.duration.days('1'))).to.be.revertedWithCustomError(
-            st1inch,
-            'ChangeAmountAndUnlockTimeForExistingAccount',
-        );
-    });
-
     it('should not take deposit with lock less then MIN_LOCK_PERIOD', async function () {
         const { st1inch } = await loadFixture(initContracts);
         const MIN_LOCK_PERIOD = await st1inch.MIN_LOCK_PERIOD();

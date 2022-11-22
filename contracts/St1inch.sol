@@ -17,7 +17,6 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
     error TransferDisabled();
     error LockTimeMoreMaxLock();
     error LockTimeLessMinLock();
-    error ChangeAmountAndUnlockTimeForExistingAccount();
     error UnlockTimeHasNotCome();
 
     uint256 public constant MIN_LOCK_PERIOD = 1 days;
@@ -121,8 +120,6 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
         uint256 amount,
         uint256 duration
     ) private {
-        if (_deposits[account] > 0 && amount > 0 && duration > 0) revert ChangeAmountAndUnlockTimeForExistingAccount();
-
         if (amount > 0) {
             oneInch.safeTransferFrom(msg.sender, address(this), amount);
             _deposits[account] += amount;
