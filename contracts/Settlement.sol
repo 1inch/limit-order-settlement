@@ -5,7 +5,6 @@ pragma solidity 0.8.17;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@1inch/limit-order-protocol-contract/contracts/interfaces/IOrderMixin.sol";
 import "@1inch/solidity-utils/contracts/libraries/SafeERC20.sol";
-import "./interfaces/IWhitelistRegistry.sol";
 import "./interfaces/ISettlement.sol";
 import "./interfaces/IResolver.sol";
 import "./libraries/DynamicSuffix.sol";
@@ -27,13 +26,7 @@ contract Settlement is ISettlement, FeeBankCharger {
     uint256 private constant _DEFAULT_INITIAL_RATE_BUMP = 1000; // 10%
     uint256 private constant _DEFAULT_DURATION = 30 minutes;
 
-    IWhitelistRegistry private immutable _whitelist;
     IOrderMixin private immutable _limitOrderProtocol;
-
-    modifier onlyWhitelisted(address account) {
-        if (!_whitelist.isWhitelisted(account)) revert AccessDenied();
-        _;
-    }
 
     modifier onlyThis(address account) {
         if (account != address(this)) revert AccessDenied();
@@ -45,14 +38,13 @@ contract Settlement is ISettlement, FeeBankCharger {
         _;
     }
 
-    constructor(IWhitelistRegistry whitelist, IOrderMixin limitOrderProtocol, IERC20 token)
+    constructor(IOrderMixin limitOrderProtocol, IERC20 token)
         FeeBankCharger(token)
     {
-        _whitelist = whitelist;
         _limitOrderProtocol = limitOrderProtocol;
     }
 
-    function settleOrders(bytes calldata data) external onlyWhitelisted(msg.sender) {
+    function settleOrders(bytes calldata data) external {
         _settleOrder(data, msg.sender, 0);
     }
 
