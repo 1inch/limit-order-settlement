@@ -5,12 +5,11 @@ pragma solidity 0.8.17;
 import "@1inch/solidity-utils/contracts/libraries/UniERC20.sol";
 import "@1inch/solidity-utils/contracts/libraries/AddressSet.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "./interfaces/IWhitelistRegistry.sol";
 import "./interfaces/IVotable.sol";
 import "./helpers/VotingPowerCalculator.sol";
 
 /// @title Contract with trades resolvers whitelist
-contract WhitelistRegistry is IWhitelistRegistry, Ownable {
+contract WhitelistRegistry is Ownable {
     using UniERC20 for IERC20;
     using AddressSet for AddressSet.Data;
     using AddressArray for AddressArray.Data;
@@ -19,22 +18,20 @@ contract WhitelistRegistry is IWhitelistRegistry, Ownable {
     error NotEnoughBalance();
     error AlreadyRegistered();
     error NotWhitelisted();
-    error ZeroPromoteeAddress();
 
     event Registered(address addr);
     event Unregistered(address addr);
     event ResolverThresholdSet(uint256 resolverThreshold);
-    event SetWhitelistLimit(uint256 whitelistLimit);
-    event Promotion(address promoter, address promotee);
+    event WhitelistLimitSet(uint256 whitelistLimit);
+    event Promotion(address promoter, uint256 chainId, address promotee);
 
     IVotable public immutable token;
 
-    mapping(address => address) public promotion;
+    mapping(address => mapping(uint256 => address)) public promotions;
     uint256 public resolverThreshold;
     uint256 public whitelistLimit;
 
     AddressSet.Data private _whitelist;
-    mapping(address => uint256) private _promotingsCount;
 
     constructor(
         IVotable token_,
@@ -63,10 +60,6 @@ contract WhitelistRegistry is IWhitelistRegistry, Ownable {
     }
 
     function register() external {
-        registerAndPromote(msg.sender);
-    }
-
-    function registerAndPromote(address promotee) public {
         if (token.votingPowerOf(msg.sender) < resolverThreshold) revert BalanceLessThanThreshold();
         uint256 whitelistLength = _whitelist.length();
         if (whitelistLength == whitelistLimit) {
@@ -83,24 +76,13 @@ contract WhitelistRegistry is IWhitelistRegistry, Ownable {
             if (minResolver == msg.sender) revert NotEnoughBalance();
             _removeFromWhitelist(minResolver);
         }
-        _addToWhitelist(msg.sender, promotee);
+        if (!_whitelist.add(msg.sender)) revert AlreadyRegistered();
+        emit Registered(msg.sender);
     }
 
-    function promote(address promotee) external {
-        if (promotee == address(0)) revert ZeroPromoteeAddress();
-        if (!_whitelist.contains(msg.sender)) revert NotWhitelisted();
-
-        address oldPromotee = promotion[msg.sender];
-        promotion[msg.sender] = promotee;
-        unchecked {
-            _promotingsCount[oldPromotee]--;
-            _promotingsCount[promotee]++;
-        }
-        emit Promotion(msg.sender, promotee);
-    }
-
-    function isWhitelisted(address addr) external view returns (bool) {
-        return _promotingsCount[addr] > 0;
+    function promote(uint256 chainId, address promotee) external {
+        promotions[msg.sender][chainId] = promotee;
+        emit Promotion(msg.sender, chainId, promotee);
     }
 
     function clean() external {
@@ -122,12 +104,12 @@ contract WhitelistRegistry is IWhitelistRegistry, Ownable {
         return _whitelist.items.get();
     }
 
-    function getPromotees() external view returns (address[] memory promotees) {
+    function getPromotees(uint256 chainId) external view returns (address[] memory promotees) {
         promotees = _whitelist.items.get();
         unchecked {
             uint256 len = promotees.length;
             for (uint256 i = 0; i < len; ++i) {
-                promotees[i] = promotion[promotees[i]];
+                promotees[i] = promotions[promotees[i]][chainId];
             }
         }
     }
@@ -173,28 +155,11 @@ contract WhitelistRegistry is IWhitelistRegistry, Ownable {
 
     function _setWhitelistLimit(uint256 whitelistLimit_) private {
         whitelistLimit = whitelistLimit_;
-        emit SetWhitelistLimit(whitelistLimit_);
-    }
-
-    function _addToWhitelist(address account, address promotee) private {
-        if (!_whitelist.add(account)) revert AlreadyRegistered();
-        emit Registered(account);
-
-        promotion[account] = promotee;
-        unchecked {
-            _promotingsCount[promotee]++;
-        }
-        emit Promotion(account, promotee);
+        emit WhitelistLimitSet(whitelistLimit_);
     }
 
     function _removeFromWhitelist(address account) private {
         _whitelist.remove(account);
         emit Unregistered(account);
-
-        unchecked {
-            _promotingsCount[promotion[account]]--;
-        }
-        promotion[account] = address(0);
-        emit Promotion(account, address(0));
     }
 }

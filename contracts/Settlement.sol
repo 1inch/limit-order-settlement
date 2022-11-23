@@ -5,7 +5,6 @@ pragma solidity 0.8.17;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@1inch/limit-order-protocol-contract/contracts/interfaces/IOrderMixin.sol";
 import "@1inch/solidity-utils/contracts/libraries/SafeERC20.sol";
-import "./interfaces/IWhitelistRegistry.sol";
 import "./interfaces/ISettlement.sol";
 import "./interfaces/IResolver.sol";
 import "./libraries/DynamicSuffix.sol";
@@ -20,6 +19,8 @@ contract Settlement is ISettlement, FeeBankCharger {
     error AccessDenied();
     error IncorrectCalldataParams();
     error FailedExternalCall();
+    error ResolverIsNotWhitelisted();
+    error WrongInteractionTarget();
 
     bytes32 private constant _FINALIZE_INTERACTION = bytes1(0x01);
     uint256 private constant _ORDER_FEE_BASE_POINTS = 1e15;
@@ -27,13 +28,7 @@ contract Settlement is ISettlement, FeeBankCharger {
     uint256 private constant _DEFAULT_INITIAL_RATE_BUMP = 1000; // 10%
     uint256 private constant _DEFAULT_DURATION = 30 minutes;
 
-    IWhitelistRegistry private immutable _whitelist;
     IOrderMixin private immutable _limitOrderProtocol;
-
-    modifier onlyWhitelisted(address account) {
-        if (!_whitelist.isWhitelisted(account)) revert AccessDenied();
-        _;
-    }
 
     modifier onlyThis(address account) {
         if (account != address(this)) revert AccessDenied();
@@ -45,14 +40,13 @@ contract Settlement is ISettlement, FeeBankCharger {
         _;
     }
 
-    constructor(IWhitelistRegistry whitelist, IOrderMixin limitOrderProtocol, IERC20 token)
+    constructor(IOrderMixin limitOrderProtocol, IERC20 token)
         FeeBankCharger(token)
     {
-        _whitelist = whitelist;
         _limitOrderProtocol = limitOrderProtocol;
     }
 
-    function settleOrders(bytes calldata data) external onlyWhitelisted(msg.sender) {
+    function settleOrders(bytes calldata data) external {
         _settleOrder(data, msg.sender, 0);
     }
 
@@ -67,7 +61,7 @@ contract Settlement is ISettlement, FeeBankCharger {
         if (interactiveData[0] == _FINALIZE_INTERACTION) {
             _chargeFee(suffix.resolver(), suffix.totalFee);
             (address target, bytes calldata data) = _decodeTargetAndCalldata(interactiveData[1:interactiveData.length - DynamicSuffix._DATA_SIZE]);
-            IResolver(target).resolveOrders(data);
+            IResolver(target).resolveOrders(suffix.resolver(), data);
         } else {
             _settleOrder(
                 interactiveData[1:interactiveData.length - DynamicSuffix._DATA_SIZE],
@@ -92,9 +86,7 @@ contract Settlement is ISettlement, FeeBankCharger {
         }
 
         unchecked {
-            // solhint-disable-next-line not-rely-on-time
             if (block.timestamp > orderStartTime) {
-                // solhint-disable-next-line not-rely-on-time
                 uint256 timePassed = block.timestamp - orderStartTime;
                 return
                     timePassed < duration
@@ -107,22 +99,39 @@ contract Settlement is ISettlement, FeeBankCharger {
     }
 
     function _settleOrder(bytes calldata data, address resolver, uint256 totalFee) private {
-        uint256 orderSalt;
         IERC20 orderToken;
-        assembly {  // solhint-disable-line no-inline-assembly
-            let orderOffset := add(data.offset, calldataload(data.offset))
-            orderSalt := calldataload(orderOffset)
-            orderToken := calldataload(add(orderOffset, 0x40))
+        uint256 orderSalt;
+        {  // stack too deep
+            bytes calldata orderInteractions;
+            assembly {
+                let orderOffset := add(data.offset, calldataload(data.offset))
+                orderSalt := calldataload(orderOffset)
+                orderToken := calldataload(add(orderOffset, 0x40))
+
+                orderInteractions.offset := add(orderOffset, calldataload(add(orderOffset, 0x120)))
+                orderInteractions.length := calldataload(orderInteractions.offset)
+                orderInteractions.offset := add(orderInteractions.offset, 0x20)
+            }
+            totalFee += orderSalt.getFee() * _ORDER_FEE_BASE_POINTS;
+            if (!_checkResolver(resolver, orderInteractions)) revert ResolverIsNotWhitelisted();
         }
-        totalFee += orderSalt.getFee() * _ORDER_FEE_BASE_POINTS;
 
         bytes4 selector = IOrderMixin.fillOrderTo.selector;
+        bytes4 errorSelector = WrongInteractionTarget.selector;
         uint256 suffixLength = DynamicSuffix._DATA_SIZE;
         IOrderMixin limitOrderProtocol = _limitOrderProtocol;
-        assembly {  // solhint-disable-line no-inline-assembly
+        assembly {
             let interactionLengthOffset := calldataload(add(data.offset, 0x40))
             let interactionOffset := add(interactionLengthOffset, 0x20)
             let interactionLength := calldataload(add(data.offset, interactionLengthOffset))
+
+            { // stack too deep
+                let target := shr(96, calldataload(add(data.offset, interactionOffset)))
+                if iszero(eq(target, address())) {
+                    mstore(0, errorSelector)
+                    revert(0, 4)
+                }
+            }
 
             // Copy calldata and patch interaction.length
             let ptr := mload(0x40)
@@ -145,8 +154,33 @@ contract Settlement is ISettlement, FeeBankCharger {
         }
     }
 
+    // suffix of orderInteractions is constructed as follows:
+    // [20 bytes * N, 1 byte, 4 bytes] = [allowed resolvers, allowed resolvers length, public avaliability timestamp]
+    function _checkResolver(address resolver, bytes calldata orderInteractions) private view returns(bool result) {
+        assembly {
+            let ptr := sub(add(orderInteractions.offset, orderInteractions.length), 4)
+            let deadline := shr(224, calldataload(ptr))
+            switch gt(deadline, timestamp())
+            case 1 {
+                ptr := sub(ptr, 1)
+                let count := shr(248, calldataload(ptr))
+                ptr := sub(ptr, 20)
+                for { let end := sub(ptr, mul(count, 20)) } gt(ptr, end) { ptr := sub(ptr, 20) } {
+                    let account := shr(96, calldataload(ptr))
+                    if eq(account, resolver) {
+                        result := 1
+                        break
+                    }
+                }
+            }
+            default {
+                result := 1
+            }
+        }
+    }
+
     function _decodeTargetAndCalldata(bytes calldata cd) private pure returns (address target, bytes calldata data) {
-        assembly {  // solhint-disable-line no-inline-assembly
+        assembly {
             target := shr(96, calldataload(cd.offset))
             data.offset := add(cd.offset, 20)
             data.length := sub(cd.length, 20)
@@ -155,7 +189,7 @@ contract Settlement is ISettlement, FeeBankCharger {
 
     function _decodeSuffix(bytes calldata cd) private pure returns (DynamicSuffix.Data calldata suffix) {
         uint256 suffixSize = DynamicSuffix._DATA_SIZE;
-        assembly {  // solhint-disable-line no-inline-assembly
+        assembly {
             suffix := sub(add(cd.offset, cd.length), suffixSize)
         }
     }

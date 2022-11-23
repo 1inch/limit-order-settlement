@@ -25,17 +25,18 @@
     "test:ci": "hardhat test"
   },
   "dependencies": {
-    "@1inch/delegating": "0.0.9",
-    "@1inch/erc20-pods": "0.0.8",
+    "@1inch/delegating": "0.0.13",
+    "@1inch/erc20-pods": "0.0.13",
     "@1inch/limit-order-protocol-contract": "3.0.0",
+    "@1inch/solidity-utils": "2.2.3",
     "@openzeppelin/contracts": "4.8.0"
   },
   "devDependencies": {
-    "@1inch/solidity-utils": "2.2.2",
-    "@nomiclabs/hardhat-etherscan": "3.1.2",
-    "@nomiclabs/hardhat-ethers": "2.2.1",
+    "@1inch/farming": "1.1.3",
     "@nomicfoundation/hardhat-chai-matchers": "1.0.4",
     "@nomicfoundation/hardhat-network-helpers": "1.0.6",
+    "@nomiclabs/hardhat-ethers": "2.2.1",
+    "@nomiclabs/hardhat-etherscan": "3.1.2",
     "chai": "4.3.7",
     "dotenv": "16.0.3",
     "eslint": "8.27.0",

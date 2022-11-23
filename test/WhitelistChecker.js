@@ -29,7 +29,7 @@ describe('WhitelistChecker', function () {
 
         const whitelistRegistrySimple = await deploySimpleRegistry();
         const Settlement = await ethers.getContractFactory('Settlement');
-        const matcher = await Settlement.deploy(whitelistRegistrySimple.address, swap.address, constants.ZERO_ADDRESS);
+        const matcher = await Settlement.deploy(swap.address, constants.ZERO_ADDRESS);
         await matcher.deployed();
 
         const ResolverMock = await ethers.getContractFactory('ResolverMock');
@@ -39,20 +39,30 @@ describe('WhitelistChecker', function () {
     }
 
     async function settleOrders(settleOrderMethod, dai, weth, swap, matcher, resolver) {
-        const order0 = await buildOrder({
-            makerAsset: dai.address,
-            takerAsset: weth.address,
-            makingAmount: ether('100'),
-            takingAmount: ether('0.1'),
-            from: addr.address,
-        });
-        const order1 = await buildOrder({
-            makerAsset: weth.address,
-            takerAsset: dai.address,
-            makingAmount: ether('0.1'),
-            takingAmount: ether('100'),
-            from: addr1.address,
-        });
+        const order0 = await buildOrder(
+            {
+                makerAsset: dai.address,
+                takerAsset: weth.address,
+                makingAmount: ether('100'),
+                takingAmount: ether('0.1'),
+                from: addr.address,
+            },
+            {
+                whitelistedAddrs: [addr.address],
+            },
+        );
+        const order1 = await buildOrder(
+            {
+                makerAsset: weth.address,
+                takerAsset: dai.address,
+                makingAmount: ether('0.1'),
+                takingAmount: ether('100'),
+                from: addr1.address,
+            },
+            {
+                whitelistedAddrs: [addr.address],
+            },
+        );
         const signature0 = await signOrder(order0, chainId, swap.address, addr);
         const signature1 = await signOrder(order1, chainId, swap.address, addr1);
 
@@ -86,7 +96,7 @@ describe('WhitelistChecker', function () {
     }
 
     describe('should not work with non-whitelisted address', function () {
-        it('onlyWhitelisted modifier in settleOrders method', async function () {
+        it('whitelist check in settleOrders method', async function () {
             const { dai, weth, swap, matcher } = await loadFixture(initContracts);
             const order1 = await buildOrder({
                 makerAsset: dai.address,
@@ -101,10 +111,10 @@ describe('WhitelistChecker', function () {
                         order1, '0x', '0x', ether('10'), 0, ether('0.01'), matcher.address,
                     ]).substring(10),
                 ),
-            ).to.be.revertedWithCustomError(matcher, 'AccessDenied');
+            ).to.be.revertedWithCustomError(matcher, 'ResolverIsNotWhitelisted');
         });
 
-        it('onlyWhitelisted modifier in fillOrderInteraction method', async function () {
+        it('onlyThis modifier in fillOrderInteraction method', async function () {
             const { dai, weth, swap, matcher } = await loadFixture(initContracts);
             const order = await buildOrder({
                 makerAsset: dai.address,
@@ -139,7 +149,7 @@ describe('WhitelistChecker', function () {
             return { dai, weth, swap, matcher, resolver };
         }
 
-        it('onlyWhitelisted modifier in settleOrders method', async function () {
+        it('whitelist check in settleOrders method', async function () {
             const { dai, weth, swap, matcher, resolver } = await loadFixture(initContractsAndSetStatus);
 
             const addrweth = await weth.balanceOf(addr.address);

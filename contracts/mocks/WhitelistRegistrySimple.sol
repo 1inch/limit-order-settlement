@@ -4,10 +4,9 @@ pragma solidity 0.8.17;
 
 import "@1inch/solidity-utils/contracts/libraries/UniERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "../interfaces/IWhitelistRegistry.sol";
 
 /// @title Contract with simple whitelist
-contract WhitelistRegistrySimple is IWhitelistRegistry, Ownable {
+contract WhitelistRegistrySimple is Ownable {
     using UniERC20 for IERC20;
 
     error ArraysLengthsDoNotMatch();

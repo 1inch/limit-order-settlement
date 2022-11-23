@@ -5,14 +5,14 @@ const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
 describe('Delegation st1inch', function () {
     let addr, addr1;
     let accounts;
-    const baseExp = 999999981746377019n;
+    const baseExp = 999999981746376586n; // 0.1^(1/(4 years)) means 90% value loss over 4 years
     const threshold = ether('0.1');
     const MAX_WHITELISTED = 3;
     const maxPods = 5;
     const commonLockDuration = time.duration.days('10');
 
     const stakeAndRegisterInDelegation = async (st1inch, delegation, user, amount, userIndex) => {
-        await st1inch.connect(user).increaseLockDuration(commonLockDuration);
+        await st1inch.connect(user).deposit(0, commonLockDuration);
         await st1inch.depositFor(user.address, amount);
         await st1inch.connect(user).addPod(delegation.address);
         await delegation
@@ -79,7 +79,7 @@ describe('Delegation st1inch', function () {
             await depositAndDelegateTo(st1inch, delegation, addr1, addr.address, ether('2'));
             // register addr into whitelistRegistry and chack that
             await whitelistRegistry.register();
-            expect(await whitelistRegistry.isWhitelisted(addr.address)).to.equal(true);
+            expect(await whitelistRegistry.getWhitelist()).to.contain(addr.address);
         });
 
         it('should add account, when sum stacked st1inch and deposit st1inch is sufficient (delegate before deposit)', async function () {
@@ -115,7 +115,7 @@ describe('Delegation st1inch', function () {
 
             await delegation.connect(addr1).delegate(constants.ZERO_ADDRESS);
             await whitelistRegistry.connect(accounts[2]).register();
-            expect(await whitelistRegistry.isWhitelisted(addr.address)).to.equal(false);
+            expect(await whitelistRegistry.getWhitelist()).to.not.contain(addr.address);
         });
 
         it('should decrease delegatee balance, if delegator delegate to other account', async function () {
@@ -125,7 +125,7 @@ describe('Delegation st1inch', function () {
 
             await delegation.connect(addr1).delegate(accounts[2].address);
             await whitelistRegistry.connect(accounts[2]).register();
-            expect(await whitelistRegistry.isWhitelisted(addr.address)).to.equal(false);
+            expect(await whitelistRegistry.getWhitelist()).to.not.contain(addr.address);
         });
     });
 });

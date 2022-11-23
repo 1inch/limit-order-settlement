@@ -1,6 +1,7 @@
 build
 artifacts
 cache
+**/solcInputs
 
 node_modules
 

@@ -1,13 +1,8 @@
 const { assertRoughlyEqualValues, time, expect, ether, trim0x } = require('@1inch/solidity-utils');
 const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
 const { ethers } = require('hardhat');
-const { deploySwapTokens, deploySimpleRegistry, getChainId } = require('./helpers/fixtures');
+const { deploySwapTokens, getChainId } = require('./helpers/fixtures');
 const { buildOrder, signOrder, buildSalt, defaultExpiredAuctionTimestamp } = require('./helpers/orderUtils');
-
-const Status = Object.freeze({
-    Unverified: 0,
-    Verified: 1,
-});
 
 describe('Settlement', function () {
     const basePoints = ether('0.001'); // 1e15
@@ -15,15 +10,11 @@ describe('Settlement', function () {
     const backOrderFee = 125n;
     let addr, addr1;
     let chainId;
-    let whitelistRegistrySimple;
     const abiCoder = ethers.utils.defaultAbiCoder;
 
     before(async function () {
         chainId = await getChainId();
-        whitelistRegistrySimple = await deploySimpleRegistry();
         [addr, addr1] = await ethers.getSigners();
-        await whitelistRegistrySimple.setStatus(addr.address, Status.Verified);
-        await whitelistRegistrySimple.setStatus(addr1.address, Status.Verified);
     });
 
     async function initContracts() {
@@ -41,7 +32,7 @@ describe('Settlement', function () {
         await weth.connect(addr1).approve(swap.address, ether('1'));
 
         const SettlementMock = await ethers.getContractFactory('SettlementMock');
-        const matcher = await SettlementMock.deploy(whitelistRegistrySimple.address, swap.address, inch.address);
+        const matcher = await SettlementMock.deploy(swap.address, inch.address);
         await matcher.deployed();
 
         const FeeBank = await ethers.getContractFactory('FeeBank');
@@ -75,6 +66,7 @@ describe('Settlement', function () {
             },
             {
                 predicate: swap.interface.encodeFunctionData('timestampBelow', [0xff00000000]),
+                whitelistedAddrs: [addr.address],
             },
         );
 
@@ -88,6 +80,7 @@ describe('Settlement', function () {
             },
             {
                 predicate: swap.interface.encodeFunctionData('timestampBelow', [0xff00000000]),
+                whitelistedAddrs: [addr.address],
             },
         );
 
@@ -149,6 +142,7 @@ describe('Settlement', function () {
             },
             {
                 predicate: swap.interface.encodeFunctionData('timestampBelow', [0xff00000000]),
+                whitelistedAddrs: [addr.address],
             },
         );
 
@@ -163,6 +157,7 @@ describe('Settlement', function () {
             },
             {
                 predicate: swap.interface.encodeFunctionData('timestampBelow', [0xff00000000]),
+                whitelistedAddrs: [addr.address],
             },
         );
 
@@ -242,6 +237,7 @@ describe('Settlement', function () {
             },
             {
                 predicate: swap.interface.encodeFunctionData('timestampBelow', [0xff00000000]),
+                whitelistedAddrs: [addr.address],
             },
         );
 
@@ -256,6 +252,7 @@ describe('Settlement', function () {
             },
             {
                 predicate: swap.interface.encodeFunctionData('timestampBelow', [0xff00000000]),
+                whitelistedAddrs: [addr.address],
             },
         );
 
@@ -269,6 +266,7 @@ describe('Settlement', function () {
             },
             {
                 predicate: swap.interface.encodeFunctionData('timestampBelow', [0xff00000000]),
+                whitelistedAddrs: [addr.address],
             },
         );
 
@@ -359,6 +357,7 @@ describe('Settlement', function () {
                 },
                 {
                     predicate: swap.interface.encodeFunctionData('timestampBelow', [0xff00000000]),
+                    whitelistedAddrs: [addr.address],
                 },
             );
             const signature = await signOrder(order, chainId, swap.address, addr1);
@@ -522,22 +521,32 @@ describe('Settlement', function () {
     it('should change availableCredit with non-zero fee', async function () {
         const { dai, weth, swap, matcher, resolver } = await loadFixture(initContracts);
 
-        const order = await buildOrder({
-            salt: buildSalt({ orderStartTime: await defaultExpiredAuctionTimestamp(), fee: orderFee }),
-            makerAsset: dai.address,
-            takerAsset: weth.address,
-            makingAmount: ether('100'),
-            takingAmount: ether('0.1'),
-            from: addr.address,
-        });
-        const backOrder = await buildOrder({
-            salt: buildSalt({ orderStartTime: await defaultExpiredAuctionTimestamp(), fee: backOrderFee }),
-            makerAsset: weth.address,
-            takerAsset: dai.address,
-            makingAmount: ether('0.1'),
-            takingAmount: ether('100'),
-            from: addr1.address,
-        });
+        const order = await buildOrder(
+            {
+                salt: buildSalt({ orderStartTime: await defaultExpiredAuctionTimestamp(), fee: orderFee }),
+                makerAsset: dai.address,
+                takerAsset: weth.address,
+                makingAmount: ether('100'),
+                takingAmount: ether('0.1'),
+                from: addr.address,
+            },
+            {
+                whitelistedAddrs: [addr.address],
+            },
+        );
+        const backOrder = await buildOrder(
+            {
+                salt: buildSalt({ orderStartTime: await defaultExpiredAuctionTimestamp(), fee: backOrderFee }),
+                makerAsset: weth.address,
+                takerAsset: dai.address,
+                makingAmount: ether('0.1'),
+                takingAmount: ether('100'),
+                from: addr1.address,
+            },
+            {
+                whitelistedAddrs: [addr.address],
+            },
+        );
         const signature = await signOrder(order, chainId, swap.address, addr);
         const signatureBackOrder = await signOrder(backOrder, chainId, swap.address, addr1);
 
@@ -577,22 +586,32 @@ describe('Settlement', function () {
     it('should change availableCredit with non-zero fee, proxy contract', async function () {
         const { dai, weth, swap, matcher, proxy, resolver } = await loadFixture(initContracts);
 
-        const order = await buildOrder({
-            salt: buildSalt({ orderStartTime: await defaultExpiredAuctionTimestamp(), fee: orderFee }),
-            makerAsset: dai.address,
-            takerAsset: weth.address,
-            makingAmount: ether('100'),
-            takingAmount: ether('0.1'),
-            from: addr.address,
-        });
-        const backOrder = await buildOrder({
-            salt: buildSalt({ orderStartTime: await defaultExpiredAuctionTimestamp(), fee: backOrderFee }),
-            makerAsset: weth.address,
-            takerAsset: dai.address,
-            makingAmount: ether('0.1'),
-            takingAmount: ether('100'),
-            from: addr1.address,
-        });
+        const order = await buildOrder(
+            {
+                salt: buildSalt({ orderStartTime: await defaultExpiredAuctionTimestamp(), fee: orderFee }),
+                makerAsset: dai.address,
+                takerAsset: weth.address,
+                makingAmount: ether('100'),
+                takingAmount: ether('0.1'),
+                from: addr.address,
+            },
+            {
+                whitelistedAddrs: [proxy.address],
+            },
+        );
+        const backOrder = await buildOrder(
+            {
+                salt: buildSalt({ orderStartTime: await defaultExpiredAuctionTimestamp(), fee: backOrderFee }),
+                makerAsset: weth.address,
+                takerAsset: dai.address,
+                makingAmount: ether('0.1'),
+                takingAmount: ether('100'),
+                from: addr1.address,
+            },
+            {
+                whitelistedAddrs: [proxy.address],
+            },
+        );
         const signature = await signOrder(order, chainId, swap.address, addr);
         const signatureBackOrder = await signOrder(backOrder, chainId, swap.address, addr1);
 
@@ -612,7 +631,6 @@ describe('Settlement', function () {
                     matcher.address,
                 ])
                 .substring(10);
-        await whitelistRegistrySimple.setStatus(proxy.address, Status.Verified);
         await proxy.deposit(ether('100'));
         const availableCreditBefore = await matcher.availableCredit(proxy.address);
         await proxy.settleOrders(
@@ -634,22 +652,32 @@ describe('Settlement', function () {
     it('should not change when availableCredit is not enough', async function () {
         const { dai, weth, swap, matcher, resolver } = await loadFixture(initContracts);
 
-        const order = await buildOrder({
-            salt: buildSalt({ orderStartTime: await defaultExpiredAuctionTimestamp(), fee: ether('1000') }),
-            makerAsset: dai.address,
-            takerAsset: weth.address,
-            makingAmount: ether('100'),
-            takingAmount: ether('0.1'),
-            from: addr.address,
-        });
-        const backOrder = await buildOrder({
-            salt: buildSalt({ orderStartTime: await defaultExpiredAuctionTimestamp(), fee: backOrderFee }),
-            makerAsset: weth.address,
-            takerAsset: dai.address,
-            makingAmount: ether('0.1'),
-            takingAmount: ether('100'),
-            from: addr1.address,
-        });
+        const order = await buildOrder(
+            {
+                salt: buildSalt({ orderStartTime: await defaultExpiredAuctionTimestamp(), fee: ether('1000') }),
+                makerAsset: dai.address,
+                takerAsset: weth.address,
+                makingAmount: ether('100'),
+                takingAmount: ether('0.1'),
+                from: addr.address,
+            },
+            {
+                whitelistedAddrs: [addr.address],
+            },
+        );
+        const backOrder = await buildOrder(
+            {
+                salt: buildSalt({ orderStartTime: await defaultExpiredAuctionTimestamp(), fee: backOrderFee }),
+                makerAsset: weth.address,
+                takerAsset: dai.address,
+                makingAmount: ether('0.1'),
+                takingAmount: ether('100'),
+                from: addr1.address,
+            },
+            {
+                whitelistedAddrs: [addr.address],
+            },
+        );
         const signature = await signOrder(order, chainId, swap.address, addr);
         const signatureBackOrder = await signOrder(backOrder, chainId, swap.address, addr1);
 

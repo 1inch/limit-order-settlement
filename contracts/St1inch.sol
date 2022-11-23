@@ -4,6 +4,7 @@ pragma solidity 0.8.17;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
+import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@1inch/erc20-pods/contracts/ERC20Pods.sol";
 import "@1inch/solidity-utils/contracts/libraries/SafeERC20.sol";
@@ -14,39 +15,58 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
     using SafeERC20 for IERC20;
 
     event EmergencyExitSet(bool status);
+    event MaxLossRatioSet(uint256 ratio);
+    event FeeReceiverSet(address receiver);
 
     error ApproveDisabled();
     error TransferDisabled();
     error LockTimeMoreMaxLock();
     error LockTimeLessMinLock();
     error UnlockTimeHasNotCome();
+    error StakeUnlocked();
+    error MinReturnIsNotMet();
+    error MaxLossIsNotMet();
+    error MaxLossOverflow();
+    error LossIsTooBig();
+    error RescueAmountIsTooLarge();
 
     uint256 public constant MIN_LOCK_PERIOD = 1 days;
     uint256 public constant MAX_LOCK_PERIOD = 4 * 365 days;
     uint256 private constant _VOTING_POWER_DIVIDER = 10;
+    uint256 private constant _POD_CALL_GAS_LIMIT = 200_000;
+    uint256 private constant _ONE = 1e9;
 
     IERC20 public immutable oneInch;
 
-    mapping(address => uint256) private _unlockTime;
-    mapping(address => uint256) private _deposits;
+    struct Depositor {
+        uint40 unlockTime;
+        uint216 amount;
+    }
+
+    mapping(address => Depositor) public depositors;
 
     uint256 public totalDeposits;
     bool public emergencyExit;
-    uint256 public immutable expBase;
-    // solhint-disable-next-line not-rely-on-time
-    uint256 public immutable origin = block.timestamp;
+    uint256 public maxLossRatio;
+    address public feeReceiver;
 
-    constructor(
-        IERC20 _oneInch,
-        uint256 _expBase,
-        uint256 podsLimit
-    )
-        ERC20Pods(podsLimit)
-        ERC20("Staking 1inch", "st1inch")
-        VotingPowerCalculator(_expBase, origin)
+    constructor(IERC20 oneInch_, uint256 expBase_, uint256 podsLimit)
+        ERC20Pods(podsLimit, _POD_CALL_GAS_LIMIT)
+        ERC20("Staking 1INCH", "st1INCH")
+        VotingPowerCalculator(expBase_, block.timestamp)  // solhint-disable-line not-rely-on-time
     {
-        oneInch = _oneInch;
-        expBase = _expBase;
+        oneInch = oneInch_;
+    }
+
+    function setFeeReceiver(address feeReceiver_) external onlyOwner {
+        feeReceiver = feeReceiver_;
+        emit FeeReceiverSet(feeReceiver_);
+    }
+
+    function setMaxLossRatio(uint256 maxLossRatio_) external onlyOwner {
+        if (maxLossRatio_ > _ONE) revert MaxLossOverflow();
+        maxLossRatio = maxLossRatio_;
+        emit MaxLossRatioSet(maxLossRatio_);
     }
 
     function setEmergencyExit(bool _emergencyExit) external onlyOwner {
@@ -54,16 +74,7 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
         emit EmergencyExitSet(_emergencyExit);
     }
 
-    function depositsAmount(address account) external view returns (uint256) {
-        return _deposits[account];
-    }
-
-    function unlockTime(address account) external view returns (uint256) {
-        return _unlockTime[account];
-    }
-
     function votingPowerOf(address account) external view returns (uint256) {
-        // solhint-disable-next-line not-rely-on-time
         return _votingPowerAt(balanceOf(account), block.timestamp);
     }
 
@@ -72,7 +83,6 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
     }
 
     function votingPower(uint256 balance) external view returns (uint256) {
-        // solhint-disable-next-line not-rely-on-time
         return _votingPowerAt(balance, block.timestamp);
     }
 
@@ -84,76 +94,81 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
         _deposit(msg.sender, amount, duration);
     }
 
-    function depositWithPermit(
-        uint256 amount,
-        uint256 duration,
-        bytes calldata permit
-    ) external {
+    function depositWithPermit(uint256 amount, uint256 duration, bytes calldata permit) external {
         oneInch.safePermit(permit);
         _deposit(msg.sender, amount, duration);
     }
 
-    function depositFor(
-        address account,
-        uint256 amount
-    ) external {
+    function depositFor(address account, uint256 amount) external {
         _deposit(account, amount, 0);
     }
 
-    function depositForWithPermit(
-        address account,
-        uint256 amount,
-        bytes calldata permit
-    ) external {
+    function depositForWithPermit(address account, uint256 amount, bytes calldata permit) external {
         oneInch.safePermit(permit);
         _deposit(account, amount, 0);
     }
 
-    function increaseLockDuration(uint256 duration) external {
-        _deposit(msg.sender, 0, duration);
-    }
+    function _deposit(address account, uint256 amount, uint256 duration) private {
+        Depositor memory depositor = depositors[account]; // SLOAD
 
-    function increaseAmount(uint256 amount) external {
-        _deposit(msg.sender, amount, 0);
-    }
+        uint256 lockedTill = Math.max(depositor.unlockTime, block.timestamp) + duration;
+        uint256 lockLeft = lockedTill - block.timestamp;
+        if (lockLeft < MIN_LOCK_PERIOD) revert LockTimeLessMinLock();
+        if (lockLeft > MAX_LOCK_PERIOD) revert LockTimeMoreMaxLock();
+        uint256 balanceDiff = _balanceAt(depositor.amount + amount, lockedTill) / _VOTING_POWER_DIVIDER - balanceOf(account);
 
-    /* solhint-disable not-rely-on-time */
-    function _deposit(
-        address account,
-        uint256 amount,
-        uint256 duration
-    ) private {
+        depositor.unlockTime = uint40(lockedTill);
+        depositor.amount += uint216(amount);
+        depositors[account] = depositor; // SSTORE
+        totalDeposits += amount;
+        _mint(account, balanceDiff);
+
         if (amount > 0) {
             oneInch.safeTransferFrom(msg.sender, address(this), amount);
-            _deposits[account] += amount;
-            totalDeposits += amount;
         }
-
-        uint256 lockedTill = Math.max(_unlockTime[account], block.timestamp) + duration;
-        uint256 lockedPeriod = lockedTill - block.timestamp;
-        if (lockedPeriod < MIN_LOCK_PERIOD) revert LockTimeLessMinLock();
-        if (lockedPeriod > MAX_LOCK_PERIOD) revert LockTimeMoreMaxLock();
-        _unlockTime[account] = lockedTill;
-
-        _mint(account, _balanceAt(_deposits[account], lockedTill) / _VOTING_POWER_DIVIDER - balanceOf(account));
     }
 
-    /* solhint-enable not-rely-on-time */
+    // ret(balance) = (deposit - vp(balance)) / 0.9
+    function earlyWithdrawTo(address to, uint256 minReturn, uint256 maxLoss) external {
+        Depositor memory depositor = depositors[msg.sender]; // SLOAD
+        if (emergencyExit || block.timestamp >= depositor.unlockTime) revert StakeUnlocked();
+        uint256 amount = depositor.amount;
+        if (amount > 0) {
+            uint256 balance = balanceOf(msg.sender);
+            (uint256 loss, uint256 ret) = _earlyWithdrawLoss(amount, balance);
+            if (ret < minReturn) revert MinReturnIsNotMet();
+            if (loss > maxLoss) revert MaxLossIsNotMet();
+            if (loss > amount * maxLossRatio / _ONE) revert LossIsTooBig();
+
+            _withdraw(depositor, amount, balance);
+            oneInch.safeTransfer(to, ret);
+            oneInch.safeTransfer(feeReceiver, loss);
+        }
+    }
+
+    function earlyWithdrawLoss(address account) external view returns (uint256 loss, uint256 ret) {
+        return _earlyWithdrawLoss(depositors[account].amount, balanceOf(account));
+    }
+
+    function _earlyWithdrawLoss(uint256 depAmount, uint256 stBalance) private view returns (uint256 loss, uint256 ret) {
+        // TODO: it's failed if stake for 4 years and immediately call it, because `VP > depAmount`
+        ret = (depAmount - _votingPowerAt(stBalance, block.timestamp)) * 10 / 9;
+        loss = depAmount - ret;
+    }
 
     function withdraw() external {
         withdrawTo(msg.sender);
     }
 
     function withdrawTo(address to) public {
-        // solhint-disable-next-line not-rely-on-time
-        if (!emergencyExit && block.timestamp < _unlockTime[msg.sender]) revert UnlockTimeHasNotCome();
+        Depositor memory depositor = depositors[msg.sender]; // SLOAD
+        if (!emergencyExit && block.timestamp < depositor.unlockTime) revert UnlockTimeHasNotCome();
 
-        uint256 balance = _deposits[msg.sender];
-        totalDeposits -= balance;
-        _deposits[msg.sender] = 0;
-        _burn(msg.sender, balanceOf(msg.sender));
-
-        oneInch.safeTransfer(to, balance);
+        uint256 amount = depositor.amount;
+        if (amount > 0) {
+            _withdraw(depositor, amount, balanceOf(msg.sender));
+            oneInch.safeTransfer(to, amount);
+        }
     }
 
     // ERC20 methods disablers
