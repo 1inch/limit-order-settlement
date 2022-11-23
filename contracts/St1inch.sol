@@ -13,6 +13,8 @@ import "./interfaces/IVotable.sol";
 contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
     using SafeERC20 for IERC20;
 
+    event EmergencyExitSet(bool status);
+
     error ApproveDisabled();
     error TransferDisabled();
     error LockTimeMoreMaxLock();
@@ -49,6 +51,7 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
 
     function setEmergencyExit(bool _emergencyExit) external onlyOwner {
         emergencyExit = _emergencyExit;
+        emit EmergencyExitSet(_emergencyExit);
     }
 
     function depositsAmount(address account) external view returns (uint256) {
