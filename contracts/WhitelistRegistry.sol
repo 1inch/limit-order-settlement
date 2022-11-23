@@ -118,8 +118,18 @@ contract WhitelistRegistry is IWhitelistRegistry, Ownable {
         }
     }
 
-    function getWhitelist() public view returns (address[] memory) {
+    function getWhitelist() external view returns (address[] memory) {
         return _whitelist.items.get();
+    }
+
+    function getPromotees() external view returns (address[] memory promotees) {
+        promotees = _whitelist.items.get();
+        unchecked {
+            uint256 len = promotees.length;
+            for (uint256 i = 0; i < len; ++i) {
+                promotees[i] = promotion[promotees[i]];
+            }
+        }
     }
 
     function _shrinkPoorest(AddressSet.Data storage set, uint256 size) private {
