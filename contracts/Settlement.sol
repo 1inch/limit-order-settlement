@@ -19,6 +19,7 @@ contract Settlement is ISettlement, FeeBankCharger {
     error AccessDenied();
     error IncorrectCalldataParams();
     error FailedExternalCall();
+    error ResolverIsNotWhitelisted();
 
     bytes32 private constant _FINALIZE_INTERACTION = bytes1(0x01);
     uint256 private constant _ORDER_FEE_BASE_POINTS = 1e15;
@@ -101,12 +102,18 @@ contract Settlement is ISettlement, FeeBankCharger {
     function _settleOrder(bytes calldata data, address resolver, uint256 totalFee) private {
         uint256 orderSalt;
         IERC20 orderToken;
+        bytes calldata orderInteractions;
         assembly {  // solhint-disable-line no-inline-assembly
             let orderOffset := add(data.offset, calldataload(data.offset))
             orderSalt := calldataload(orderOffset)
             orderToken := calldataload(add(orderOffset, 0x40))
+
+            orderInteractions.offset := add(orderOffset, calldataload(add(orderOffset, 0x120)))
+            orderInteractions.length := calldataload(orderInteractions.offset)
+            orderInteractions.offset := add(orderInteractions.offset, 0x20)
         }
         totalFee += orderSalt.getFee() * _ORDER_FEE_BASE_POINTS;
+        if (!_checkResolver(resolver, orderInteractions)) revert ResolverIsNotWhitelisted();
 
         bytes4 selector = IOrderMixin.fillOrderTo.selector;
         uint256 suffixLength = DynamicSuffix._DATA_SIZE;
@@ -133,6 +140,21 @@ contract Settlement is ISettlement, FeeBankCharger {
             if iszero(call(gas(), limitOrderProtocol, 0, ptr, add(0x84, data.length), ptr, 0)) {
                 returndatacopy(ptr, 0, returndatasize())
                 revert(ptr, returndatasize())
+            }
+        }
+    }
+
+    function _checkResolver(address resolver, bytes calldata orderInteractions) private pure returns(bool result) {
+        assembly {
+            let ptr := sub(add(orderInteractions.offset, orderInteractions.length), 1)
+            let count := shr(248, calldataload(ptr))
+            ptr := sub(ptr, 1)
+            for { let end := sub(ptr, mul(count, 20)) } gt(ptr, end) { ptr := sub(ptr, 20) } {
+                let account := shr(96, calldataload(ptr))
+                if eq(account, resolver) {
+                    result := true
+                    break
+                }
             }
         }
     }
