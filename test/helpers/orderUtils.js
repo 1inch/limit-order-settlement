@@ -36,6 +36,7 @@ const buildOrder = async (
         permit = '0x',
         preInteraction = '0x',
         postInteraction = '0x',
+        whitelistedAddrs = [],
     } = {},
 ) => {
     if (getMakingAmount === '') {
@@ -71,6 +72,8 @@ const buildOrder = async (
         .map(cumulativeSum)
         .reduce((acc, a, i) => acc + (BigInt(a) << BigInt(32 * i)), BigInt(0));
 
+    const whitelist = whitelistedAddrs.map(trim0x).join('') + whitelistedAddrs.length.toString(16).padStart(2, '0');
+
     return {
         salt,
         makerAsset,
@@ -81,7 +84,7 @@ const buildOrder = async (
         makingAmount: makingAmount.toString(),
         takingAmount: takingAmount.toString(),
         offsets: offsets.toString(),
-        interactions,
+        interactions: interactions + whitelist,
     };
 };
 

@@ -3,17 +3,15 @@ const { ethers } = require('hardhat');
 const { BigNumber: BN } = require('ethers');
 const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
 const { PANIC_CODES } = require('@nomicfoundation/hardhat-chai-matchers/panic');
-const { deploySwapTokens, deploySimpleRegistry, getChainId } = require('./helpers/fixtures');
+const { deploySwapTokens, getChainId } = require('./helpers/fixtures');
 
 describe('FeeBank', function () {
     let addr, addr1;
     let chainId;
-    let whitelistRegistrySimple;
 
     before(async function () {
         [addr, addr1] = await ethers.getSigners();
         chainId = await getChainId();
-        whitelistRegistrySimple = await deploySimpleRegistry();
     });
 
     async function initContracts() {
@@ -22,7 +20,7 @@ describe('FeeBank', function () {
         await inch.deployed();
         const { swap } = await deploySwapTokens();
         const SettlementMock = await ethers.getContractFactory('SettlementMock');
-        const matcher = await SettlementMock.deploy(whitelistRegistrySimple.address, swap.address, inch.address);
+        const matcher = await SettlementMock.deploy(swap.address, inch.address);
         await matcher.deployed();
 
         const FeeBank = await ethers.getContractFactory('FeeBank');

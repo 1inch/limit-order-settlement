@@ -145,14 +145,14 @@ contract Settlement is ISettlement, FeeBankCharger {
     }
 
     function _checkResolver(address resolver, bytes calldata orderInteractions) private pure returns(bool result) {
-        assembly {
+        assembly {  // solhint-disable-line no-inline-assembly
             let ptr := sub(add(orderInteractions.offset, orderInteractions.length), 1)
             let count := shr(248, calldataload(ptr))
-            ptr := sub(ptr, 1)
+            ptr := sub(ptr, 20)
             for { let end := sub(ptr, mul(count, 20)) } gt(ptr, end) { ptr := sub(ptr, 20) } {
                 let account := shr(96, calldataload(ptr))
                 if eq(account, resolver) {
-                    result := true
+                    result := 1
                     break
                 }
             }
