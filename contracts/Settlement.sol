@@ -100,20 +100,22 @@ contract Settlement is ISettlement, FeeBankCharger {
     }
 
     function _settleOrder(bytes calldata data, address resolver, uint256 totalFee) private {
-        uint256 orderSalt;
         IERC20 orderToken;
-        bytes calldata orderInteractions;
-        assembly {  // solhint-disable-line no-inline-assembly
-            let orderOffset := add(data.offset, calldataload(data.offset))
-            orderSalt := calldataload(orderOffset)
-            orderToken := calldataload(add(orderOffset, 0x40))
+        uint256 orderSalt;
+        {  // stack too deep
+            bytes calldata orderInteractions;
+            assembly {  // solhint-disable-line no-inline-assembly
+                let orderOffset := add(data.offset, calldataload(data.offset))
+                orderSalt := calldataload(orderOffset)
+                orderToken := calldataload(add(orderOffset, 0x40))
 
-            orderInteractions.offset := add(orderOffset, calldataload(add(orderOffset, 0x120)))
-            orderInteractions.length := calldataload(orderInteractions.offset)
-            orderInteractions.offset := add(orderInteractions.offset, 0x20)
+                orderInteractions.offset := add(orderOffset, calldataload(add(orderOffset, 0x120)))
+                orderInteractions.length := calldataload(orderInteractions.offset)
+                orderInteractions.offset := add(orderInteractions.offset, 0x20)
+            }
+            totalFee += orderSalt.getFee() * _ORDER_FEE_BASE_POINTS;
+            if (!_checkResolver(resolver, orderInteractions)) revert ResolverIsNotWhitelisted();
         }
-        totalFee += orderSalt.getFee() * _ORDER_FEE_BASE_POINTS;
-        if (!_checkResolver(resolver, orderInteractions)) revert ResolverIsNotWhitelisted();
 
         bytes4 selector = IOrderMixin.fillOrderTo.selector;
         uint256 suffixLength = DynamicSuffix._DATA_SIZE;
