@@ -5,7 +5,6 @@ pragma solidity 0.8.17;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@1inch/limit-order-protocol-contract/contracts/interfaces/IOrderMixin.sol";
 import "@1inch/solidity-utils/contracts/libraries/SafeERC20.sol";
-import "./interfaces/IWhitelistRegistry.sol";
 import "./interfaces/ISettlement.sol";
 import "./interfaces/IResolver.sol";
 import "./libraries/DynamicSuffix.sol";
@@ -20,6 +19,7 @@ contract Settlement is ISettlement, FeeBankCharger {
     error AccessDenied();
     error IncorrectCalldataParams();
     error FailedExternalCall();
+    error ResolverIsNotWhitelisted();
 
     bytes32 private constant _FINALIZE_INTERACTION = bytes1(0x01);
     uint256 private constant _ORDER_FEE_BASE_POINTS = 1e15;
@@ -27,13 +27,7 @@ contract Settlement is ISettlement, FeeBankCharger {
     uint256 private constant _DEFAULT_INITIAL_RATE_BUMP = 1000; // 10%
     uint256 private constant _DEFAULT_DURATION = 30 minutes;
 
-    IWhitelistRegistry private immutable _whitelist;
     IOrderMixin private immutable _limitOrderProtocol;
-
-    modifier onlyWhitelisted(address account) {
-        if (!_whitelist.isWhitelisted(account)) revert AccessDenied();
-        _;
-    }
 
     modifier onlyThis(address account) {
         if (account != address(this)) revert AccessDenied();
@@ -45,14 +39,13 @@ contract Settlement is ISettlement, FeeBankCharger {
         _;
     }
 
-    constructor(IWhitelistRegistry whitelist, IOrderMixin limitOrderProtocol, IERC20 token)
+    constructor(IOrderMixin limitOrderProtocol, IERC20 token)
         FeeBankCharger(token)
     {
-        _whitelist = whitelist;
         _limitOrderProtocol = limitOrderProtocol;
     }
 
-    function settleOrders(bytes calldata data) external onlyWhitelisted(msg.sender) {
+    function settleOrders(bytes calldata data) external {
         _settleOrder(data, msg.sender, 0);
     }
 
@@ -107,14 +100,22 @@ contract Settlement is ISettlement, FeeBankCharger {
     }
 
     function _settleOrder(bytes calldata data, address resolver, uint256 totalFee) private {
-        uint256 orderSalt;
         IERC20 orderToken;
-        assembly {  // solhint-disable-line no-inline-assembly
-            let orderOffset := add(data.offset, calldataload(data.offset))
-            orderSalt := calldataload(orderOffset)
-            orderToken := calldataload(add(orderOffset, 0x40))
+        uint256 orderSalt;
+        {  // stack too deep
+            bytes calldata orderInteractions;
+            assembly {  // solhint-disable-line no-inline-assembly
+                let orderOffset := add(data.offset, calldataload(data.offset))
+                orderSalt := calldataload(orderOffset)
+                orderToken := calldataload(add(orderOffset, 0x40))
+
+                orderInteractions.offset := add(orderOffset, calldataload(add(orderOffset, 0x120)))
+                orderInteractions.length := calldataload(orderInteractions.offset)
+                orderInteractions.offset := add(orderInteractions.offset, 0x20)
+            }
+            totalFee += orderSalt.getFee() * _ORDER_FEE_BASE_POINTS;
+            if (!_checkResolver(resolver, orderInteractions)) revert ResolverIsNotWhitelisted();
         }
-        totalFee += orderSalt.getFee() * _ORDER_FEE_BASE_POINTS;
 
         bytes4 selector = IOrderMixin.fillOrderTo.selector;
         uint256 suffixLength = DynamicSuffix._DATA_SIZE;
@@ -141,6 +142,21 @@ contract Settlement is ISettlement, FeeBankCharger {
             if iszero(call(gas(), limitOrderProtocol, 0, ptr, add(0x84, data.length), ptr, 0)) {
                 returndatacopy(ptr, 0, returndatasize())
                 revert(ptr, returndatasize())
+            }
+        }
+    }
+
+    function _checkResolver(address resolver, bytes calldata orderInteractions) private pure returns(bool result) {
+        assembly {  // solhint-disable-line no-inline-assembly
+            let ptr := sub(add(orderInteractions.offset, orderInteractions.length), 1)
+            let count := shr(248, calldataload(ptr))
+            ptr := sub(ptr, 20)
+            for { let end := sub(ptr, mul(count, 20)) } gt(ptr, end) { ptr := sub(ptr, 20) } {
+                let account := shr(96, calldataload(ptr))
+                if eq(account, resolver) {
+                    result := 1
+                    break
+                }
             }
         }
     }

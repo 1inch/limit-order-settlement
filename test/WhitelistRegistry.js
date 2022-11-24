@@ -63,7 +63,7 @@ describe('WhitelistRegistry', function () {
             }
             for (let i = 1; i <= WHITELIST_LIMIT; ++i) {
                 await whitelistRegistry.connect(addrs[i]).register();
-                expect(await whitelistRegistry.isWhitelisted(addrs[i].address)).to.be.true;
+                expect(await whitelistRegistry.getWhitelist()).to.contain(addrs[i].address);
             }
         });
 
@@ -82,22 +82,23 @@ describe('WhitelistRegistry', function () {
             }
             for (let i = 1; i <= WHITELIST_LIMIT; ++i) {
                 await whitelistRegistry.connect(addrs[i]).register();
-                expect(await whitelistRegistry.isWhitelisted(addrs[i].address)).to.be.true;
+                expect(await whitelistRegistry.getWhitelist()).to.contain(addrs[i].address);
             }
             await expect(
                 whitelistRegistry.connect(addrs[WHITELIST_LIMIT + 1]).register(),
             ).to.be.revertedWithCustomError(whitelistRegistry, 'NotEnoughBalance');
-            expect(await whitelistRegistry.isWhitelisted(addrs[WHITELIST_LIMIT + 1].address)).to.be.false;
+            expect(await whitelistRegistry.getWhitelist()).to.not.contain(addrs[WHITELIST_LIMIT + 1].address);
             for (let i = 1; i <= WHITELIST_LIMIT; ++i) {
                 await rewardableDelegationPod.burn(addrs[i].address, THRESHOLD);
-                expect(await whitelistRegistry.isWhitelisted(addrs[i].address)).to.be.true;
+                expect(await whitelistRegistry.getWhitelist()).to.contain(addrs[i].address);
             }
             await rewardableDelegationPod.mint(addrs[WHITELIST_LIMIT + 1].address, THRESHOLD);
             await whitelistRegistry.connect(addrs[WHITELIST_LIMIT + 1]).register();
-            expect(await whitelistRegistry.isWhitelisted(addrs[WHITELIST_LIMIT + 1].address)).to.be.true;
-            expect(await whitelistRegistry.isWhitelisted(addrs[1].address)).to.be.false;
+            const whitelist = await whitelistRegistry.getWhitelist();
+            expect(whitelist).to.contain(addrs[WHITELIST_LIMIT + 1].address);
+            expect(whitelist).to.not.contain(addrs[1].address);
             for (let i = 2; i <= WHITELIST_LIMIT + 1; ++i) {
-                expect(await whitelistRegistry.isWhitelisted(addrs[i].address)).to.be.true;
+                expect(whitelist).to.contain(addrs[i].address);
             }
         });
 
@@ -108,13 +109,14 @@ describe('WhitelistRegistry', function () {
             }
             for (let i = 1; i <= WHITELIST_LIMIT; ++i) {
                 await whitelistRegistry.connect(addrs[i]).register();
-                expect(await whitelistRegistry.isWhitelisted(addrs[i].address)).to.be.true;
+                expect(await whitelistRegistry.getWhitelist()).to.contain(addrs[i].address);
             }
             await rewardableDelegationPod.burn(addrs[3].address, 1);
-            expect(await whitelistRegistry.isWhitelisted(addrs[3].address)).to.be.true;
+            expect(await whitelistRegistry.getWhitelist()).to.contain(addrs[3].address);
             await whitelistRegistry.connect(addrs[WHITELIST_LIMIT + 1]).register();
-            expect(await whitelistRegistry.isWhitelisted(addrs[WHITELIST_LIMIT + 1].address)).to.be.true;
-            expect(await whitelistRegistry.isWhitelisted(addrs[3].address)).to.be.false;
+            const whitelist = await whitelistRegistry.getWhitelist();
+            expect(whitelist).to.contain(addrs[WHITELIST_LIMIT + 1].address);
+            expect(whitelist).to.not.contain(addrs[3].address);
         });
 
         it('should whitelist 10 addresses, then whitelist 9 times successfully', async function () {
@@ -127,11 +129,12 @@ describe('WhitelistRegistry', function () {
             }
             for (let i = 1; i <= WHITELIST_LIMIT + 9; ++i) {
                 await whitelistRegistry.connect(addrs[i]).register();
-                expect(await whitelistRegistry.isWhitelisted(addrs[i].address)).to.be.true;
+                expect(await whitelistRegistry.getWhitelist()).to.contain(addrs[i].address);
             }
             let whitelisted = 0;
+            const whitelist = await whitelistRegistry.getWhitelist();
             for (let i = 1; i <= WHITELIST_LIMIT; ++i) {
-                whitelisted += await whitelistRegistry.isWhitelisted(addrs[i].address);
+                whitelisted += whitelist.includes(addrs[i].address);
             }
             expect(whitelisted).to.equal(1);
         });
@@ -141,28 +144,33 @@ describe('WhitelistRegistry', function () {
         it('should register and promote provided address', async function () {
             const { rewardableDelegationPod, whitelistRegistry } = await loadFixture(initContracts);
             await rewardableDelegationPod.mint(addrs[0].address, VOTING_POWER_THRESHOLD);
-            await whitelistRegistry.registerAndPromote(addrs[1].address);
-            expect(await whitelistRegistry.isWhitelisted(addrs[0].address)).to.be.false;
-            expect(await whitelistRegistry.isWhitelisted(addrs[1].address)).to.be.true;
+            await whitelistRegistry.register();
+            await whitelistRegistry.promote(1, addrs[1].address);
+            const promotees = await whitelistRegistry.getPromotees(1);
+            expect(promotees).to.not.contain(addrs[0].address);
+            expect(promotees).to.contain(addrs[1].address);
         });
 
         it('should change promotee', async function () {
             const { rewardableDelegationPod, whitelistRegistry } = await loadFixture(initContracts);
             await rewardableDelegationPod.mint(addrs[0].address, VOTING_POWER_THRESHOLD);
             await whitelistRegistry.register();
-            expect(await whitelistRegistry.isWhitelisted(addrs[0].address)).to.be.true;
-            await whitelistRegistry.promote(addrs[1].address);
-            expect(await whitelistRegistry.isWhitelisted(addrs[0].address)).to.be.false;
-            expect(await whitelistRegistry.isWhitelisted(addrs[1].address)).to.be.true;
+            expect(await whitelistRegistry.getWhitelist()).to.contain(addrs[0].address);
+            await whitelistRegistry.promote(1, addrs[1].address);
+            const promotees = await whitelistRegistry.getPromotees(1);
+            expect(promotees).to.not.contain(addrs[0].address);
+            expect(promotees).to.contain(addrs[1].address);
         });
 
         it('should delete promotee on removal', async function () {
             const { rewardableDelegationPod, whitelistRegistry } = await loadFixture(initContracts);
             await rewardableDelegationPod.mint(addrs[0].address, VOTING_POWER_THRESHOLD);
-            await whitelistRegistry.registerAndPromote(addrs[1].address);
+            await whitelistRegistry.register();
+            await whitelistRegistry.promote(1, addrs[1].address);
             await whitelistRegistry.setWhitelistLimit(0);
-            expect(await whitelistRegistry.isWhitelisted(addrs[0].address)).to.be.false;
-            expect(await whitelistRegistry.isWhitelisted(addrs[1].address)).to.be.false;
+            const promotees = await whitelistRegistry.getPromotees(1);
+            expect(promotees).to.not.contain(addrs[0].address);
+            expect(promotees).to.not.contain(addrs[1].address);
         });
     });
 
@@ -172,18 +180,19 @@ describe('WhitelistRegistry', function () {
             for (let i = 0; i < WHITELIST_LIMIT; ++i) {
                 await rewardableDelegationPod.mint(addrs[i].address, VOTING_POWER_THRESHOLD + 1n);
                 await whitelistRegistry.connect(addrs[i]).register();
-                expect(await whitelistRegistry.isWhitelisted(addrs[i].address)).to.be.true;
+                expect(await whitelistRegistry.getWhitelist()).to.contain(addrs[i].address);
                 if (i % 2 === 1) {
                     await rewardableDelegationPod.burn(addrs[i].address, VOTING_POWER_THRESHOLD);
                     await rewardableDelegationPod.mint(addrs[i - 1].address, VOTING_POWER_THRESHOLD);
                 }
             }
             await whitelistRegistry.clean();
+            const whitelist = await whitelistRegistry.getWhitelist();
             for (let i = 0; i < WHITELIST_LIMIT; ++i) {
                 if (i % 2 === 1) {
-                    expect(await whitelistRegistry.isWhitelisted(addrs[i].address)).to.be.false;
+                    expect(whitelist).to.not.contain(addrs[i].address);
                 } else {
-                    expect(await whitelistRegistry.isWhitelisted(addrs[i].address)).to.be.true;
+                    expect(whitelist).to.contain(addrs[i].address);
                 }
             }
         });
@@ -200,11 +209,12 @@ describe('WhitelistRegistry', function () {
 
     describe('setWhitelistLimit', function () {
         async function expectAddrsInWhitelist(whitelistRegistry, indexFrom, indexTo, except = []) {
+            const whitelist = await whitelistRegistry.getWhitelist();
             for (let i = indexFrom; i <= indexTo; i++) {
                 if (except.indexOf(i) !== -1) {
-                    expect(await whitelistRegistry.isWhitelisted(addrs[i].address)).to.be.be.false;
+                    expect(whitelist).to.not.contain(addrs[i].address);
                 } else {
-                    expect(await whitelistRegistry.isWhitelisted(addrs[i].address)).to.be.be.true;
+                    expect(whitelist).to.contain(addrs[i].address);
                 }
             }
         };
