@@ -118,28 +118,32 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
         _deposit(msg.sender, amount, 0);
     }
 
-    /* solhint-disable not-rely-on-time */
-    function _deposit(
-        address account,
-        uint256 amount,
-        uint256 duration
-    ) private {
+    function previewBalance(address account, uint256 amount, uint256 lockedTill) public view returns (uint256) {
+        return _previewBalance(account, amount, lockedTill);
+    }
+
+    function _previewBalance(address account, uint256 amount, uint256 lockedTill) internal view returns (uint256) {
+        amount += _deposits[account];
+
+        uint256 lockedPeriod = lockedTill - block.timestamp;  // solhint-disable-line not-rely-on-time
+        if (lockedPeriod < MIN_LOCK_PERIOD) revert LockTimeLessMinLock();
+        if (lockedPeriod > MAX_LOCK_PERIOD) revert LockTimeMoreMaxLock();
+
+        return _balanceAt(_deposits[account], lockedTill) / _VOTING_POWER_DIVIDER;
+    }
+
+    function _deposit(address account, uint256 amount, uint256 duration) private {
         if (amount > 0) {
             oneInch.safeTransferFrom(msg.sender, address(this), amount);
             _deposits[account] += amount;
             totalDeposits += amount;
         }
 
+        // solhint-disable-next-line not-rely-on-time
         uint256 lockedTill = Math.max(_unlockTime[account], block.timestamp) + duration;
-        uint256 lockedPeriod = lockedTill - block.timestamp;
-        if (lockedPeriod < MIN_LOCK_PERIOD) revert LockTimeLessMinLock();
-        if (lockedPeriod > MAX_LOCK_PERIOD) revert LockTimeMoreMaxLock();
         _unlockTime[account] = lockedTill;
-
-        _mint(account, _balanceAt(_deposits[account], lockedTill) / _VOTING_POWER_DIVIDER - balanceOf(account));
+        _mint(account, _previewBalance(account, amount, lockedTill) - balanceOf(account));
     }
-
-    /* solhint-enable not-rely-on-time */
 
     function withdraw() external {
         withdrawTo(msg.sender);
