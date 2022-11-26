@@ -127,6 +127,7 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
     }
 
     function _previewBalance(Depositor memory depositor, uint256 amount, uint256 lockedTill) private view returns (uint256) {
+        // solhint-disable-next-line not-rely-on-time
         uint256 lockLeft = lockedTill - block.timestamp;
         if (lockLeft < MIN_LOCK_PERIOD) revert LockTimeLessMinLock();
         if (lockLeft > MAX_LOCK_PERIOD) revert LockTimeMoreMaxLock();
@@ -137,6 +138,7 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
     function _deposit(address account, uint256 amount, uint256 duration) private {
         Depositor memory depositor = _depositors[account]; // SLOAD
 
+        // solhint-disable-next-line not-rely-on-time
         uint256 lockedTill = Math.max(depositor.unlockTime, block.timestamp) + duration;
         uint256 newBalance = _previewBalance(depositor, amount, lockedTill) - balanceOf(account);
 
