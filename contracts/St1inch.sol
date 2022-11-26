@@ -43,7 +43,7 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
         uint256 podsLimit
     )
         ERC20Pods(podsLimit, _POD_CALL_GAS_LIMIT)
-        ERC20("Staking 1inch", "st1inch")
+        ERC20("Staking 1INCH", "st1INCH")
         VotingPowerCalculator(_expBase, origin)
     {
         oneInch = _oneInch;
