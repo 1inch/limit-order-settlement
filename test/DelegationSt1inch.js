@@ -12,7 +12,7 @@ describe('Delegation st1inch', function () {
     const commonLockDuration = time.duration.days('10');
 
     const stakeAndRegisterInDelegation = async (st1inch, delegation, user, amount, userIndex) => {
-        await st1inch.connect(user).increaseLockDuration(commonLockDuration);
+        await st1inch.connect(user).deposit(0, commonLockDuration);
         await st1inch.depositFor(user.address, amount);
         await st1inch.connect(user).addPod(delegation.address);
         await delegation

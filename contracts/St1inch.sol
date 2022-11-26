@@ -106,14 +106,6 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
         _deposit(account, amount, 0);
     }
 
-    function increaseLockDuration(uint256 duration) external {
-        _deposit(msg.sender, 0, duration);
-    }
-
-    function increaseAmount(uint256 amount) external {
-        _deposit(msg.sender, amount, 0);
-    }
-
     function previewBalance(address account, uint256 amount, uint256 lockedTill) public view returns (uint256) {
         return _previewBalance(depositors[account], amount, lockedTill);
     }
