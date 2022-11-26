@@ -33,21 +33,13 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
 
     uint256 public totalDeposits;
     bool public emergencyExit;
-    uint256 public immutable expBase;
-    // solhint-disable-next-line not-rely-on-time
-    uint256 public immutable origin = block.timestamp;
 
-    constructor(
-        IERC20 _oneInch,
-        uint256 _expBase,
-        uint256 podsLimit
-    )
+    constructor(IERC20 oneInch_, uint256 expBase_, uint256 podsLimit)
         ERC20Pods(podsLimit, _POD_CALL_GAS_LIMIT)
         ERC20("Staking 1inch", "st1inch")
-        VotingPowerCalculator(_expBase, origin)
+        VotingPowerCalculator(expBase_, block.timestamp)  // solhint-disable-line not-rely-on-time
     {
-        oneInch = _oneInch;
-        expBase = _expBase;
+        oneInch = oneInch_;
     }
 
     function setEmergencyExit(bool _emergencyExit) external onlyOwner {
@@ -85,27 +77,16 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
         _deposit(msg.sender, amount, duration);
     }
 
-    function depositWithPermit(
-        uint256 amount,
-        uint256 duration,
-        bytes calldata permit
-    ) external {
+    function depositWithPermit(uint256 amount, uint256 duration, bytes calldata permit) external {
         oneInch.safePermit(permit);
         _deposit(msg.sender, amount, duration);
     }
 
-    function depositFor(
-        address account,
-        uint256 amount
-    ) external {
+    function depositFor(address account, uint256 amount) external {
         _deposit(account, amount, 0);
     }
 
-    function depositForWithPermit(
-        address account,
-        uint256 amount,
-        bytes calldata permit
-    ) external {
+    function depositForWithPermit(address account, uint256 amount, bytes calldata permit) external {
         oneInch.safePermit(permit);
         _deposit(account, amount, 0);
     }
