@@ -36,7 +36,7 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
 
     constructor(IERC20 oneInch_, uint256 expBase_, uint256 podsLimit)
         ERC20Pods(podsLimit, _POD_CALL_GAS_LIMIT)
-        ERC20("Staking 1inch", "st1inch")
+        ERC20("Staking 1INCH", "st1INCH")
         VotingPowerCalculator(expBase_, block.timestamp)  // solhint-disable-line not-rely-on-time
     {
         oneInch = oneInch_;
