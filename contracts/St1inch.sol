@@ -4,6 +4,7 @@ pragma solidity 0.8.17;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
+import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@1inch/erc20-pods/contracts/ERC20Pods.sol";
 import "@1inch/solidity-utils/contracts/libraries/SafeERC20.sol";
@@ -20,6 +21,7 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
     error LockTimeMoreMaxLock();
     error LockTimeLessMinLock();
     error UnlockTimeHasNotCome();
+    error RescueAmountIsTooLarge();
 
     uint256 public constant MIN_LOCK_PERIOD = 1 days;
     uint256 public constant MAX_LOCK_PERIOD = 4 * 365 days;
@@ -126,6 +128,17 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
             _burn(msg.sender, balanceOf(msg.sender));
 
             oneInch.safeTransfer(to, amount);
+        }
+    }
+
+    function rescueFunds(IERC20 token, uint256 amount) external onlyOwner {
+        if (address(token) == address(0)) {
+            Address.sendValue(payable(msg.sender), amount);
+        } else {
+            if (token == oneInch) {
+                if (amount > oneInch.balanceOf(address(this)) - totalDeposits) revert RescueAmountIsTooLarge();
+            }
+            token.safeTransfer(msg.sender, amount);
         }
     }
 
