@@ -28,8 +28,12 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
 
     IERC20 public immutable oneInch;
 
-    mapping(address => uint256) private _unlockTime;
-    mapping(address => uint256) private _deposits;
+    struct Depositor {
+        uint40 unlockTime;
+        uint216 amount;
+    }
+
+    mapping(address => Depositor) public depositors;
 
     uint256 public totalDeposits;
     bool public emergencyExit;
@@ -45,14 +49,6 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
     function setEmergencyExit(bool _emergencyExit) external onlyOwner {
         emergencyExit = _emergencyExit;
         emit EmergencyExitSet(_emergencyExit);
-    }
-
-    function depositsAmount(address account) external view returns (uint256) {
-        return _deposits[account];
-    }
-
-    function unlockTime(address account) external view returns (uint256) {
-        return _unlockTime[account];
     }
 
     function votingPowerOf(address account) external view returns (uint256) {
@@ -91,51 +87,46 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
         _deposit(account, amount, 0);
     }
 
-    function increaseLockDuration(uint256 duration) external {
-        _deposit(msg.sender, 0, duration);
-    }
+    function _deposit(address account, uint256 amount, uint256 duration) private {
+        Depositor memory depositor = depositors[account]; // SLOAD
 
-    function increaseAmount(uint256 amount) external {
-        _deposit(msg.sender, amount, 0);
-    }
+        // solhint-disable-next-line not-rely-on-time
+        uint256 lockedTill = Math.max(depositor.unlockTime, block.timestamp) + duration;
+        // solhint-disable-next-line not-rely-on-time
+        uint256 lockLeft = lockedTill - block.timestamp;
+        if (lockLeft < MIN_LOCK_PERIOD) revert LockTimeLessMinLock();
+        if (lockLeft > MAX_LOCK_PERIOD) revert LockTimeMoreMaxLock();
+        uint256 balanceDiff = _balanceAt(depositor.amount + amount, lockedTill) / _VOTING_POWER_DIVIDER - balanceOf(account);
 
-    /* solhint-disable not-rely-on-time */
-    function _deposit(
-        address account,
-        uint256 amount,
-        uint256 duration
-    ) private {
+        depositor.unlockTime = uint40(lockedTill);
+        depositor.amount += uint216(amount);
+        depositors[account] = depositor; // SSTORE
+        totalDeposits += amount;
+        _mint(account, balanceDiff);
+
         if (amount > 0) {
             oneInch.safeTransferFrom(msg.sender, address(this), amount);
-            _deposits[account] += amount;
-            totalDeposits += amount;
         }
-
-        uint256 lockedTill = Math.max(_unlockTime[account], block.timestamp) + duration;
-        uint256 lockedPeriod = lockedTill - block.timestamp;
-        if (lockedPeriod < MIN_LOCK_PERIOD) revert LockTimeLessMinLock();
-        if (lockedPeriod > MAX_LOCK_PERIOD) revert LockTimeMoreMaxLock();
-        _unlockTime[account] = lockedTill;
-
-        _mint(account, _balanceAt(_deposits[account], lockedTill) / _VOTING_POWER_DIVIDER - balanceOf(account));
     }
-
-    /* solhint-enable not-rely-on-time */
 
     function withdraw() external {
         withdrawTo(msg.sender);
     }
 
     function withdrawTo(address to) public {
+        Depositor memory depositor = depositors[msg.sender]; // SLOAD
         // solhint-disable-next-line not-rely-on-time
-        if (!emergencyExit && block.timestamp < _unlockTime[msg.sender]) revert UnlockTimeHasNotCome();
+        if (!emergencyExit && block.timestamp < depositor.unlockTime) revert UnlockTimeHasNotCome();
 
-        uint256 balance = _deposits[msg.sender];
-        totalDeposits -= balance;
-        _deposits[msg.sender] = 0;
-        _burn(msg.sender, balanceOf(msg.sender));
+        uint256 amount = depositor.amount;
+        if (amount > 0) {
+            totalDeposits -= amount;
+            depositor.amount = 0; // Drain balance, but keep unlockTime in storage (NextTxGas optimization)
+            depositors[msg.sender] = depositor; // SSTORE
+            _burn(msg.sender, balanceOf(msg.sender));
 
-        oneInch.safeTransfer(to, balance);
+            oneInch.safeTransfer(to, amount);
+        }
     }
 
     // ERC20 methods disablers
