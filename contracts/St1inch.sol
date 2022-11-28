@@ -106,31 +106,22 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
         _deposit(account, amount, 0);
     }
 
-    function previewBalance(address account, uint256 amount, uint256 lockedTill) public view returns (uint256) {
-        return _previewBalance(depositors[account], amount, lockedTill);
-    }
-
-    function _previewBalance(Depositor memory depositor, uint256 amount, uint256 lockedTill) private view returns (uint256) {
-        // solhint-disable-next-line not-rely-on-time
-        uint256 lockLeft = lockedTill - block.timestamp;
-        if (lockLeft < MIN_LOCK_PERIOD) revert LockTimeLessMinLock();
-        if (lockLeft > MAX_LOCK_PERIOD) revert LockTimeMoreMaxLock();
-
-        return _balanceAt(depositor.amount + amount, lockedTill) / _VOTING_POWER_DIVIDER;
-    }
-
     function _deposit(address account, uint256 amount, uint256 duration) private {
         Depositor memory depositor = depositors[account]; // SLOAD
 
         // solhint-disable-next-line not-rely-on-time
         uint256 lockedTill = Math.max(depositor.unlockTime, block.timestamp) + duration;
-        uint256 newBalance = _previewBalance(depositor, amount, lockedTill) - balanceOf(account);
+        // solhint-disable-next-line not-rely-on-time
+        uint256 lockLeft = lockedTill - block.timestamp;
+        if (lockLeft < MIN_LOCK_PERIOD) revert LockTimeLessMinLock();
+        if (lockLeft > MAX_LOCK_PERIOD) revert LockTimeMoreMaxLock();
+        uint256 balanceDiff = _balanceAt(depositor.amount + amount, lockedTill) / _VOTING_POWER_DIVIDER - balanceOf(account);
 
         depositor.unlockTime = uint40(lockedTill);
         depositor.amount += uint216(amount);
         depositors[account] = depositor; // SSTORE
         totalDeposits += amount;
-        _mint(account, newBalance);
+        _mint(account, balanceDiff);
 
         if (amount > 0) {
             oneInch.safeTransferFrom(msg.sender, address(this), amount);
