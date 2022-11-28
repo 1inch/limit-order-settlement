@@ -2,11 +2,11 @@ const { expect, constants } = require('@1inch/solidity-utils');
 const {
     initSaltObj,
     encodeParameters,
-    getStartTime, // eslint-disable-line no-unused-vars
-    getDuration, // eslint-disable-line no-unused-vars
-    getInitialRateBump, // eslint-disable-line no-unused-vars
-    getFee, // eslint-disable-line no-unused-vars
-    getSalt, // eslint-disable-line no-unused-vars
+    getStartTime,
+    getDuration,
+    getInitialRateBump,
+    getFee,
+    getSalt,
 } = require('./helpers/orderSaltUtils');
 const { ethers } = require('hardhat');
 const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
@@ -27,25 +27,25 @@ describe('OrderSaltParserMock', function () {
     }
 
     describe('separate fields', function () {
-        for (const method of ['getStartTime', 'getDuration', 'getInitialRateBump', 'getFee', 'getSalt']) {
-            describe(method, async function () {
+        for (const [methodName, method] of Object.entries({ getStartTime, getDuration, getInitialRateBump, getFee, getSalt })) {
+            describe(`Method ${methodName}`, async function () {
                 it('with specific values', async function () {
                     const { orderSaltParserMock } = await loadFixture(initContracts);
                     expect(
                         (
-                            await orderSaltParserMock.functions[method + '(uint256)'](ORDERSALT_WITH_SPECIFIC_VALUES)
+                            await orderSaltParserMock.functions[methodName + '(uint256)'](ORDERSALT_WITH_SPECIFIC_VALUES)
                         ).toString(),
-                    ).to.equal(eval(method + '(ORDERSALT_WITH_SPECIFIC_VALUES)').toString()); // eslint-disable-line no-eval
+                    ).to.equal(method(ORDERSALT_WITH_SPECIFIC_VALUES).toString());
                 });
 
                 it('with simple values', async function () {
                     const { orderSaltParserMock } = await loadFixture(initContracts);
                     expect(
                         (
-                            await orderSaltParserMock.functions[method + '(uint256)'](ORDERSALT_WITH_SIMPLE_VALUES)
+                            await orderSaltParserMock.functions[methodName + '(uint256)'](ORDERSALT_WITH_SIMPLE_VALUES)
                         ).toString(),
                     ).to.equal(
-                        eval(method + '(ORDERSALT_WITH_SIMPLE_VALUES)').toString(), // eslint-disable-line no-eval
+                        method(ORDERSALT_WITH_SIMPLE_VALUES).toString(),
                     );
                 });
 
@@ -53,20 +53,20 @@ describe('OrderSaltParserMock', function () {
                     const { orderSaltParserMock } = await loadFixture(initContracts);
                     expect(
                         (
-                            await orderSaltParserMock.functions[method + '(uint256)'](
+                            await orderSaltParserMock.functions[methodName + '(uint256)'](
                                 ORDERSALT_WITH_FILLED_BOUNDARY_BITS,
                             )
                         ).toString(),
-                    ).to.equal(eval(method + '(ORDERSALT_WITH_FILLED_BOUNDARY_BITS)').toString()); // eslint-disable-line no-eval
+                    ).to.equal(method(ORDERSALT_WITH_FILLED_BOUNDARY_BITS).toString());
                 });
 
                 it('with filled all bits', async function () {
                     const { orderSaltParserMock } = await loadFixture(initContracts);
                     expect(
                         (
-                            await orderSaltParserMock.functions[method + '(uint256)'](ORDERSALT_WITH_FILLED_ALL_BITS)
+                            await orderSaltParserMock.functions[methodName + '(uint256)'](ORDERSALT_WITH_FILLED_ALL_BITS)
                         ).toString(),
-                    ).to.equal(eval(method + '(ORDERSALT_WITH_FILLED_ALL_BITS)').toString()); // eslint-disable-line no-eval
+                    ).to.equal(method(ORDERSALT_WITH_FILLED_ALL_BITS).toString());
                 });
             });
         }
