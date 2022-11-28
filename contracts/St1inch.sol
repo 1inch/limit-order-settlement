@@ -41,7 +41,7 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
     constructor(IERC20 oneInch_, uint256 expBase_, uint256 podsLimit)
         ERC20Pods(podsLimit, _POD_CALL_GAS_LIMIT)
         ERC20("Staking 1INCH", "st1INCH")
-        VotingPowerCalculator(expBase_, block.timestamp)  // solhint-disable-line not-rely-on-time
+        VotingPowerCalculator(expBase_, block.timestamp)
     {
         oneInch = oneInch_;
     }
@@ -52,7 +52,6 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
     }
 
     function votingPowerOf(address account) external view returns (uint256) {
-        // solhint-disable-next-line not-rely-on-time
         return _votingPowerAt(balanceOf(account), block.timestamp);
     }
 
@@ -61,7 +60,6 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
     }
 
     function votingPower(uint256 balance) external view returns (uint256) {
-        // solhint-disable-next-line not-rely-on-time
         return _votingPowerAt(balance, block.timestamp);
     }
 
@@ -90,9 +88,7 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
     function _deposit(address account, uint256 amount, uint256 duration) private {
         Depositor memory depositor = depositors[account]; // SLOAD
 
-        // solhint-disable-next-line not-rely-on-time
         uint256 lockedTill = Math.max(depositor.unlockTime, block.timestamp) + duration;
-        // solhint-disable-next-line not-rely-on-time
         uint256 lockLeft = lockedTill - block.timestamp;
         if (lockLeft < MIN_LOCK_PERIOD) revert LockTimeLessMinLock();
         if (lockLeft > MAX_LOCK_PERIOD) revert LockTimeMoreMaxLock();
@@ -115,7 +111,6 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
 
     function withdrawTo(address to) public {
         Depositor memory depositor = depositors[msg.sender]; // SLOAD
-        // solhint-disable-next-line not-rely-on-time
         if (!emergencyExit && block.timestamp < depositor.unlockTime) revert UnlockTimeHasNotCome();
 
         uint256 amount = depositor.amount;
