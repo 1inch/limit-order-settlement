@@ -3,7 +3,9 @@
 pragma solidity 0.8.17;
 
 contract VotingPowerCalculator {
-    uint256 private immutable _origin;
+    uint256 public immutable origin;
+    uint256 public immutable expBase;
+
     uint256 private immutable _expTable0;
     uint256 private immutable _expTable1;
     uint256 private immutable _expTable2;
@@ -35,9 +37,10 @@ contract VotingPowerCalculator {
     uint256 private immutable _expTable28;
     uint256 private immutable _expTable29;
 
-    constructor(uint256 expBase, uint256 origin) {
-        _origin = origin;
-        _expTable0 = expBase;
+    constructor(uint256 expBase_, uint256 origin_) {
+        origin = origin_;
+        expBase = expBase_;
+        _expTable0 = expBase_;
         _expTable1 = (_expTable0 * _expTable0) / 1e18;
         _expTable2 = (_expTable1 * _expTable1) / 1e18;
         _expTable3 = (_expTable2 * _expTable2) / 1e18;
@@ -71,7 +74,7 @@ contract VotingPowerCalculator {
 
     function _votingPowerAt(uint256 balance, uint256 timestamp) internal view returns (uint256 votingPower) {
         unchecked {
-            uint256 t = timestamp - _origin;
+            uint256 t = timestamp - origin;
             votingPower = balance;
             if (t & 0x01 != 0) {
                 votingPower = (votingPower * _expTable0) / 1e18;
@@ -169,7 +172,7 @@ contract VotingPowerCalculator {
 
     function _balanceAt(uint256 votingPower, uint256 timestamp) internal view returns (uint256 balance) {
         unchecked {
-            uint256 t = timestamp - _origin;
+            uint256 t = timestamp - origin;
             balance = votingPower;
             if (t & 0x01 != 0) {
                 balance = (balance * 1e18) / _expTable0;
