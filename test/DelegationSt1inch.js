@@ -5,7 +5,7 @@ const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
 describe('Delegation st1inch', function () {
     let addr, addr1;
     let accounts;
-    const baseExp = 999999981746376586n;  // 0.1^(1/(4 years)) means 90% value loss over 4 years
+    const baseExp = 999999981746376586n; // 0.1^(1/(4 years)) means 90% value loss over 4 years
     const threshold = ether('0.1');
     const MAX_WHITELISTED = 3;
     const maxPods = 5;
