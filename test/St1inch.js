@@ -6,7 +6,7 @@ const { getChainId } = require('./helpers/fixtures');
 
 describe('St1inch', function () {
     let addr, addr1;
-    const baseExp = 999999981746377019n;
+    const baseExp = 999999981746376586n;  // 0.1^(1/(4 years)) means 90% value loss over 4 years
     const votingPowerDivider = 10n;
     let chainId;
 
