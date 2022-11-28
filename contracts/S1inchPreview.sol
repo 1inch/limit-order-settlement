@@ -5,7 +5,7 @@ pragma solidity 0.8.17;
 import "./helpers/VotingPowerCalculator.sol";
 import "./St1inch.sol";
 
-contract St1inchView is VotingPowerCalculator {
+contract St1inchPreview is VotingPowerCalculator {
     St1inch public immutable st1INCH;
     uint256 private constant _VOTING_POWER_DIVIDER = 10;
 
