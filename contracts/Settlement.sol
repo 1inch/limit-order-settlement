@@ -85,9 +85,7 @@ contract Settlement is ISettlement, FeeBankCharger {
         }
 
         unchecked {
-            // solhint-disable-next-line not-rely-on-time
             if (block.timestamp > orderStartTime) {
-                // solhint-disable-next-line not-rely-on-time
                 uint256 timePassed = block.timestamp - orderStartTime;
                 return
                     timePassed < duration
@@ -104,7 +102,7 @@ contract Settlement is ISettlement, FeeBankCharger {
         uint256 orderSalt;
         {  // stack too deep
             bytes calldata orderInteractions;
-            assembly {  // solhint-disable-line no-inline-assembly
+            assembly {
                 let orderOffset := add(data.offset, calldataload(data.offset))
                 orderSalt := calldataload(orderOffset)
                 orderToken := calldataload(add(orderOffset, 0x40))
@@ -120,7 +118,7 @@ contract Settlement is ISettlement, FeeBankCharger {
         bytes4 selector = IOrderMixin.fillOrderTo.selector;
         uint256 suffixLength = DynamicSuffix._DATA_SIZE;
         IOrderMixin limitOrderProtocol = _limitOrderProtocol;
-        assembly {  // solhint-disable-line no-inline-assembly
+        assembly {
             let interactionLengthOffset := calldataload(add(data.offset, 0x40))
             let interactionOffset := add(interactionLengthOffset, 0x20)
             let interactionLength := calldataload(add(data.offset, interactionLengthOffset))
@@ -147,7 +145,7 @@ contract Settlement is ISettlement, FeeBankCharger {
     }
 
     function _checkResolver(address resolver, bytes calldata orderInteractions) private pure returns(bool result) {
-        assembly {  // solhint-disable-line no-inline-assembly
+        assembly {
             let ptr := sub(add(orderInteractions.offset, orderInteractions.length), 1)
             let count := shr(248, calldataload(ptr))
             ptr := sub(ptr, 20)
@@ -162,7 +160,7 @@ contract Settlement is ISettlement, FeeBankCharger {
     }
 
     function _decodeTargetAndCalldata(bytes calldata cd) private pure returns (address target, bytes calldata data) {
-        assembly {  // solhint-disable-line no-inline-assembly
+        assembly {
             target := shr(96, calldataload(cd.offset))
             data.offset := add(cd.offset, 20)
             data.length := sub(cd.length, 20)
@@ -171,7 +169,7 @@ contract Settlement is ISettlement, FeeBankCharger {
 
     function _decodeSuffix(bytes calldata cd) private pure returns (DynamicSuffix.Data calldata suffix) {
         uint256 suffixSize = DynamicSuffix._DATA_SIZE;
-        assembly {  // solhint-disable-line no-inline-assembly
+        assembly {
             suffix := sub(add(cd.offset, cd.length), suffixSize)
         }
     }
