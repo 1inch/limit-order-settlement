@@ -14,12 +14,18 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
     using SafeERC20 for IERC20;
 
     event EmergencyExitSet(bool status);
+    event RektModeSet(bool mode);
+    event RektReceiverSet(address receiver);
 
     error ApproveDisabled();
     error TransferDisabled();
     error LockTimeMoreMaxLock();
     error LockTimeLessMinLock();
     error UnlockTimeHasNotCome();
+    error StakeUnlocked();
+    error MinReturnIsNotMet();
+    error MaxLossIsNotMet();
+    error RektIsNotAllowed();
 
     uint256 public constant MIN_LOCK_PERIOD = 1 days;
     uint256 public constant MAX_LOCK_PERIOD = 4 * 365 days;
@@ -37,6 +43,8 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
 
     uint256 public totalDeposits;
     bool public emergencyExit;
+    bool public rektMode;
+    address public rektReceiver;
 
     constructor(IERC20 oneInch_, uint256 expBase_, uint256 podsLimit)
         ERC20Pods(podsLimit, _POD_CALL_GAS_LIMIT)
@@ -44,6 +52,16 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
         VotingPowerCalculator(expBase_, block.timestamp)  // solhint-disable-line not-rely-on-time
     {
         oneInch = oneInch_;
+    }
+
+    function setRektReceiver(address rektReceiver_) external onlyOwner {
+        rektReceiver = rektReceiver_;
+        emit RektReceiverSet(rektReceiver_);
+    }
+
+    function setRektMode(bool _rektMode) external onlyOwner {
+        rektMode = _rektMode;
+        emit RektModeSet(_rektMode);
     }
 
     function setEmergencyExit(bool _emergencyExit) external onlyOwner {
@@ -109,6 +127,26 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
         }
     }
 
+    // rekt(x) = min(deposit, (deposit - vp(x)) / 0.9)
+    function rektWithdrawTo(address to, uint256 minReturn, uint256 maxLoss) external {
+        if (!rektMode) revert RektIsNotAllowed();
+        Depositor memory depositor = depositors[msg.sender]; // SLOAD
+        if (emergencyExit || block.timestamp >= depositor.unlockTime) revert StakeUnlocked();
+        uint256 amount = depositor.amount;
+        if (amount > 0) {
+            uint256 balance = balanceOf(msg.sender);
+            uint256 vp = _votingPowerAt(balance, block.timestamp);
+            uint256 ret = Math.min(amount, (amount - vp) * 10 / 9);
+            uint256 loss = amount - ret;
+            _withdraw(depositor, amount, balance);
+
+            if (ret < minReturn) revert MinReturnIsNotMet();
+            if (loss > maxLoss) revert MaxLossIsNotMet();
+            oneInch.safeTransfer(to, ret);
+            oneInch.safeTransfer(rektReceiver, loss);
+        }
+    }
+
     function withdraw() external {
         withdrawTo(msg.sender);
     }
@@ -120,13 +158,16 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
 
         uint256 amount = depositor.amount;
         if (amount > 0) {
-            totalDeposits -= amount;
-            depositor.amount = 0; // Drain balance, but keep unlockTime in storage (NextTxGas optimization)
-            depositors[msg.sender] = depositor; // SSTORE
-            _burn(msg.sender, balanceOf(msg.sender));
-
+            _withdraw(depositor, amount, balanceOf(msg.sender));
             oneInch.safeTransfer(to, amount);
         }
+    }
+
+    function _withdraw(Depositor memory depositor, uint256 amount, uint256 balance) private {
+        totalDeposits -= amount;
+        depositor.amount = 0; // Drain balance, but keep unlockTime in storage (NextTxGas optimization)
+        depositors[msg.sender] = depositor; // SSTORE
+        _burn(msg.sender, balance);
     }
 
     // ERC20 methods disablers
