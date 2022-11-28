@@ -3,6 +3,9 @@
     "rules": {
         "compiler-version": ["error", "^0.8.0"],
         "private-vars-leading-underscore": "error",
-        "func-visibility": ["error", { "ignoreConstructors": true }]
+        "func-visibility": ["error", { "ignoreConstructors": true }],
+        "no-empty-blocks": "off",
+        "not-rely-on-time": "off",
+        "no-inline-assembly": "off"
     }
 }

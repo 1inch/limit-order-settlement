@@ -15,7 +15,6 @@ contract St1inchPreview is VotingPowerCalculator {
 
     function previewBalance(address account, uint256 amount, uint256 duration) external view returns (uint256) {
         (uint40 unlockTime, uint216 balance) = st1INCH.depositors(account);
-        // solhint-disable-next-line not-rely-on-time
         uint256 lockedTill = Math.max(unlockTime, block.timestamp) + duration;
         return _balanceAt(balance + amount, lockedTill) / _VOTING_POWER_DIVIDER;
     }

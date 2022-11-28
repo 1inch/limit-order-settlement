@@ -9,7 +9,7 @@ import "../St1inch.sol";
 contract RewardableDelegationPodWithVotingPowerMock is RewardableDelegationPodWithVotingPower {
     constructor(string memory name, string memory symbol, St1inch st1inch)
         RewardableDelegationPodWithVotingPower(name, symbol, st1inch)
-    {} // solhint-disable-line no-empty-blocks
+    {}
 
     function mint(address account, uint256 amount) external {
         _mint(account, amount);
