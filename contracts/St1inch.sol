@@ -143,11 +143,11 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
         revert ApproveDisabled();
     }
 
-    function transfer(address, uint256) public pure override(IERC20, ERC20) returns (bool) {
+    function transfer(address, uint256) public virtual override(IERC20, ERC20) returns (bool) {
         revert TransferDisabled();
     }
 
-    function transferFrom(address, address, uint256) public pure override(IERC20, ERC20) returns (bool) {
+    function transferFrom(address, address, uint256) public virtual override(IERC20, ERC20) returns (bool) {
         revert TransferDisabled();
     }
 
