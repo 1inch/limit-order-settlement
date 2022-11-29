@@ -2,8 +2,8 @@
 
 pragma solidity 0.8.17;
 
-import "./helpers/VotingPowerCalculator.sol";
-import "./St1inch.sol";
+import "./VotingPowerCalculator.sol";
+import "../St1inch.sol";
 
 contract St1inchPreview is VotingPowerCalculator {
     St1inch public immutable st1INCH;
