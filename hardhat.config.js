@@ -33,7 +33,6 @@ module.exports = {
         paths: [
             '@1inch/solidity-utils/contracts/mocks/TokenMock.sol',
             '@1inch/solidity-utils/contracts/mocks/ERC20PermitMock.sol',
-            '@1inch/erc20-pods/contracts/mocks/ERC20PodsMock.sol',
             '@1inch/erc20-pods/contracts/mocks/PodMock.sol',
             '@1inch/limit-order-protocol-contract/contracts/LimitOrderProtocol.sol',
             '@1inch/limit-order-protocol-contract/contracts/mocks/WrappedTokenMock.sol',

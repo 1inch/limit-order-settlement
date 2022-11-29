@@ -23,13 +23,10 @@ describe('St1inch', function () {
         await oneInch.approve(st1inch.address, ether('100'));
         await oneInch.connect(addr1).approve(st1inch.address, ether('100'));
 
-        const pods = [];
-        const ERC20PodsMock = await ethers.getContractFactory('ERC20PodsMock');
         const PodMock = await ethers.getContractFactory('PodMock');
+        const pods = [];
         for (let i = 0; i < maxPods; i++) {
-            const token = await ERC20PodsMock.deploy(`TOKEN_${i}`, `TKN${i}`, maxPods);
-            await token.deployed();
-            pods[i] = await PodMock.deploy(`POD_TOKEN_${i}`, `PT${i}`, token.address);
+            pods[i] = await PodMock.deploy(`POD_TOKEN_${i}`, `PT${i}`, st1inch.address);
             await pods[i].deployed();
         }
         const amount = ether('1');

@@ -20,10 +20,10 @@
     "@1inch/solidity-utils" "2.2.2"
     "@openzeppelin/contracts" "4.8.0"
 
-"@1inch/erc20-pods@^0.0.12":
-  version "0.0.12"
-  resolved "https://registry.yarnpkg.com/@1inch/erc20-pods/-/erc20-pods-0.0.12.tgz#7f028582366a0fa21d52e4a56e531f73f145560c"
-  integrity sha512-h+ON++L5neWcyz8OiVRmoSH9JR1a282tnK15Mf0e0h9rbxrQL5nWRR352BKBtngCVx76K1gHoJn83h8G1ykXvg==
+"@1inch/erc20-pods@^0.0.13":
+  version "0.0.13"
+  resolved "https://registry.yarnpkg.com/@1inch/erc20-pods/-/erc20-pods-0.0.13.tgz#2a9b46226a5267c07fb3cc7b27e1a6c7e49b9359"
+  integrity sha512-JsJyZhLUQRfIndnZBIi9TrMrlIrWI8yiPDD+vcZv/RCL9RSLfn8NIu5BbxqupOzbcIBf1HOjQX5q1K7wttWmng==
   dependencies:
     "@1inch/solidity-utils" "2.2.2"
     "@openzeppelin/contracts" "4.8.0"
