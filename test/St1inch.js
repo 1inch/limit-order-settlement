@@ -56,7 +56,7 @@ describe('St1inch', function () {
         const TokenPermitMock = await ethers.getContractFactory('ERC20PermitMock');
         const oneInch = await TokenPermitMock.deploy('1inch', '1inch', addr.address, ether('200'));
         await oneInch.deployed();
-        await oneInch.transfer(addr1.address, ether('100'));
+
         return { oneInch };
     }
 
@@ -66,6 +66,8 @@ describe('St1inch', function () {
         const St1inch = await ethers.getContractFactory('St1inch');
         const st1inch = await St1inch.deploy(oneInch.address, baseExp, maxPods);
         await st1inch.deployed();
+
+        await oneInch.transfer(addr1.address, ether('100'));
         await oneInch.approve(st1inch.address, ether('100'));
         await oneInch.connect(addr1).approve(st1inch.address, ether('100'));
 

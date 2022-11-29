@@ -26,7 +26,7 @@
   },
   "dependencies": {
     "@1inch/delegating": "0.0.10",
-    "@1inch/erc20-pods": "^0.0.13",
+    "@1inch/erc20-pods": "0.0.13",
     "@1inch/limit-order-protocol-contract": "3.0.0",
     "@openzeppelin/contracts": "4.8.0"
   },
