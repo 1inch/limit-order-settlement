@@ -3,11 +3,13 @@ const { BigNumber: BN } = require('ethers');
 const { ethers } = require('hardhat');
 const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
 const { getChainId } = require('./helpers/fixtures');
+const { shouldBehaveLikeERC20Pods } = require('@1inch/erc20-pods/test/behaviors/ERC20Pods.behavior.js');
 
 describe('St1inch', function () {
     let addr, addr1;
     const baseExp = 999999981746376586n; // 0.1^(1/(4 years)) means 90% value loss over 4 years
     const votingPowerDivider = 10n;
+    const maxPods = 5;
     let chainId;
 
     const exp = (point, t) => {
@@ -50,26 +52,52 @@ describe('St1inch', function () {
         );
     };
 
-    async function initContracts() {
+    async function deployInch() {
         const TokenPermitMock = await ethers.getContractFactory('ERC20PermitMock');
         const oneInch = await TokenPermitMock.deploy('1inch', '1inch', addr.address, ether('200'));
         await oneInch.deployed();
-        await oneInch.transfer(addr1.address, ether('100'));
 
-        const maxPods = 5;
+        return { oneInch };
+    }
+
+    async function initContracts() {
+        const { oneInch } = await deployInch();
+
         const St1inch = await ethers.getContractFactory('St1inch');
         const st1inch = await St1inch.deploy(oneInch.address, baseExp, maxPods);
         await st1inch.deployed();
+
+        await oneInch.transfer(addr1.address, ether('100'));
         await oneInch.approve(st1inch.address, ether('100'));
         await oneInch.connect(addr1).approve(st1inch.address, ether('100'));
 
         return { oneInch, st1inch };
     }
 
+    async function initContractsBehavior() {
+        const { oneInch } = await deployInch();
+
+        const St1inch = await ethers.getContractFactory('St1inchMock');
+        const st1inch = await St1inch.deploy(oneInch.address, baseExp, maxPods);
+        await st1inch.deployed();
+
+        const PodMock = await ethers.getContractFactory('PodMock');
+        const pods = [];
+        for (let i = 0; i < maxPods; i++) {
+            pods[i] = await PodMock.deploy(`POD_TOKEN_${i}`, `PT${i}`, st1inch.address);
+            await pods[i].deployed();
+        }
+        const amount = ether('1');
+        const erc20Pods = st1inch;
+        return { erc20Pods, pods, amount };
+    }
+
     before(async function () {
         [addr, addr1] = await ethers.getSigners();
         chainId = await getChainId();
     });
+
+    shouldBehaveLikeERC20Pods(initContractsBehavior);
 
     it('should take users deposit', async function () {
         const { st1inch } = await loadFixture(initContracts);
