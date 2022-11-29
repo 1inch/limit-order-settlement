@@ -21,12 +21,12 @@
     "lint:sol:fix": "solhint --max-warnings 0 \"contracts/**/*.sol\" --fix",
     "lint": "yarn lint:js && yarn lint:sol",
     "lint:fix": "yarn lint:js:fix && yarn lint:sol:fix",
-    "test": "hardhat test",
+    "test": "hardhat test --parallel",
     "test:ci": "hardhat test"
   },
   "dependencies": {
     "@1inch/delegating": "0.0.10",
-    "@1inch/erc20-pods": "^0.0.12",
+    "@1inch/erc20-pods": "0.0.12",
     "@1inch/limit-order-protocol-contract": "3.0.0",
     "@openzeppelin/contracts": "4.8.0"
   },
