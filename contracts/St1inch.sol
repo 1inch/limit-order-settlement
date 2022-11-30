@@ -139,7 +139,7 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
             uint256 loss = amount - ret;
             if (ret < minReturn) revert MinReturnIsNotMet();
             if (loss > maxLoss) revert MaxLossIsNotMet();
-            if (loss * _ONE > amount * maxLossRatio) revert LossIsTooBig();
+            if (loss > amount * maxLossRatio / _ONE) revert LossIsTooBig();
 
             _withdraw(depositor, amount, balance);
             oneInch.safeTransfer(to, ret);
