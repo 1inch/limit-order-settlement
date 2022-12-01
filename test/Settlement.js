@@ -1,4 +1,4 @@
-const { assertRoughlyEqualValues, time, expect, ether, trim0x } = require('@1inch/solidity-utils');
+const { assertRoughlyEqualValues, time, expect, ether, trim0x, timeIncreaseTo } = require('@1inch/solidity-utils');
 const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
 const { ethers } = require('hardhat');
 const { deploySwapTokens, getChainId } = require('./helpers/fixtures');
@@ -710,5 +710,87 @@ describe('Settlement', function () {
                 ]).substring(10),
             ),
         ).to.be.revertedWithCustomError(matcher, 'NotEnoughCredit');
+    });
+
+    it('should change by non-whitelisted resolver after deadline', async function () {
+        const { dai, weth, swap, matcher, resolver } = await loadFixture(initContracts);
+
+        console.log(
+            BigInt(await time.latest()).toString(),
+        );
+
+        const order = await buildOrder(
+            {
+                salt: buildSalt({ orderStartTime: await defaultExpiredAuctionTimestamp(), fee: orderFee }),
+                makerAsset: dai.address,
+                takerAsset: weth.address,
+                makingAmount: ether('100'),
+                takingAmount: ether('0.1'),
+                from: addr.address,
+            },
+            {
+                whitelistedAddrs: [addr1.address],
+                whitelistDeadline: BigInt(await time.latest()) + 60n,
+            },
+        );
+        const backOrder = await buildOrder(
+            {
+                salt: buildSalt({ orderStartTime: await defaultExpiredAuctionTimestamp(), fee: backOrderFee }),
+                makerAsset: weth.address,
+                takerAsset: dai.address,
+                makingAmount: ether('0.1'),
+                takingAmount: ether('100'),
+                from: addr1.address,
+            },
+            {
+                whitelistedAddrs: [addr1.address],
+                whitelistDeadline: BigInt(await time.latest()) + 60n,
+            },
+        );
+        const signature = await signOrder(order, chainId, swap.address, addr);
+        const signatureBackOrder = await signOrder(backOrder, chainId, swap.address, addr1);
+
+        const matchingParams = matcher.address + '01' + trim0x(resolver.address);
+
+        const interaction =
+            matcher.address +
+            '00' +
+            swap.interface
+                .encodeFunctionData('fillOrderTo', [
+                    backOrder,
+                    signatureBackOrder,
+                    matchingParams,
+                    ether('0.1'),
+                    0,
+                    ether('100'),
+                    matcher.address,
+                ])
+                .substring(10);
+
+        await expect(
+            matcher.settleOrders(
+                '0x' + swap.interface.encodeFunctionData('fillOrderTo', [
+                    order,
+                    signature,
+                    interaction,
+                    ether('100'),
+                    0,
+                    ether('0.1'),
+                    matcher.address,
+                ]).substring(10),
+            ),
+        ).to.be.revertedWithCustomError(matcher, 'ResolverIsNotWhitelisted');
+        await timeIncreaseTo(BigInt(await time.latest()) + 100n);
+        await matcher.settleOrders(
+            '0x' + swap.interface.encodeFunctionData('fillOrderTo', [
+                order,
+                signature,
+                interaction,
+                ether('100'),
+                0,
+                ether('0.1'),
+                matcher.address,
+            ]).substring(10),
+        );
     });
 });
