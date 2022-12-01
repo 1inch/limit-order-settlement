@@ -144,17 +144,27 @@ contract Settlement is ISettlement, FeeBankCharger {
         }
     }
 
-    function _checkResolver(address resolver, bytes calldata orderInteractions) private pure returns(bool result) {
+    // suffix of orderInteractions is constructed as follows:
+    // [20 bytes * N, 1 byte, 4 bytes] = [allowed resolvers, allowed resolvers length, public avaliability timestamp]
+    function _checkResolver(address resolver, bytes calldata orderInteractions) private view returns(bool result) {
         assembly {
-            let ptr := sub(add(orderInteractions.offset, orderInteractions.length), 1)
-            let count := shr(248, calldataload(ptr))
-            ptr := sub(ptr, 20)
-            for { let end := sub(ptr, mul(count, 20)) } gt(ptr, end) { ptr := sub(ptr, 20) } {
-                let account := shr(96, calldataload(ptr))
-                if eq(account, resolver) {
-                    result := 1
-                    break
+            let ptr := sub(add(orderInteractions.offset, orderInteractions.length), 4)
+            let deadline := shr(224, calldataload(ptr))
+            switch gt(deadline, timestamp())
+            case 1 {
+                ptr := sub(ptr, 1)
+                let count := shr(248, calldataload(ptr))
+                ptr := sub(ptr, 20)
+                for { let end := sub(ptr, mul(count, 20)) } gt(ptr, end) { ptr := sub(ptr, 20) } {
+                    let account := shr(96, calldataload(ptr))
+                    if eq(account, resolver) {
+                        result := 1
+                        break
+                    }
                 }
+            }
+            default {
+                result := 1
             }
         }
     }
