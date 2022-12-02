@@ -7,7 +7,7 @@ import "../interfaces/IResolver.sol";
 contract ResolverMock is IResolver {
     error FailedExternalCall(uint256 index);
 
-    function resolveOrders(bytes calldata data) external {
+    function resolveOrders(address /* resolver */, bytes calldata data) external {
         if (data.length > 0) {
             (address[] memory targets, bytes[] memory calldatas) = abi.decode(data, (address[], bytes[]));
             for (uint256 i = 0; i < targets.length; i++) {

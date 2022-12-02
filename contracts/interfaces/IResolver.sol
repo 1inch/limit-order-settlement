@@ -3,5 +3,5 @@
 pragma solidity 0.8.17;
 
 interface IResolver {
-    function resolveOrders(bytes calldata data) external;
+    function resolveOrders(address resolver, bytes calldata data) external;
 }

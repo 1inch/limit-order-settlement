@@ -60,7 +60,7 @@ contract Settlement is ISettlement, FeeBankCharger {
         if (interactiveData[0] == _FINALIZE_INTERACTION) {
             _chargeFee(suffix.resolver(), suffix.totalFee);
             (address target, bytes calldata data) = _decodeTargetAndCalldata(interactiveData[1:interactiveData.length - DynamicSuffix._DATA_SIZE]);
-            IResolver(target).resolveOrders(data);
+            IResolver(target).resolveOrders(suffix.resolver(), data);
         } else {
             _settleOrder(
                 interactiveData[1:interactiveData.length - DynamicSuffix._DATA_SIZE],
