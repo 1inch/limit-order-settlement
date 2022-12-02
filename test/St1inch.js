@@ -418,35 +418,32 @@ describe('St1inch', function () {
             const tx = await st1inch.deposit(ether('1'), lockTime);
             const stakedTime = BigInt((await ethers.provider.getBlock(tx.blockNumber)).timestamp);
 
-            const depAmount = (await st1inch.depositors(addr.address)).amount;
-            const stBalance = await st1inch.balanceOf(addr.address);
-
             await timeIncreaseTo(stakedTime + BigInt(time.duration.years('1')));
-            const rest3YearsLoss = (await st1inch.earlyWithdrawLoss(depAmount, stBalance)).loss;
+            const rest3YearsLoss = (await st1inch.earlyWithdrawLoss(addr.address)).loss;
             console.log('rest3YearsLoss', rest3YearsLoss.toString());
 
             await timeIncreaseTo(stakedTime + BigInt(time.duration.years('2')));
-            const rest2YearsLoss = (await st1inch.earlyWithdrawLoss(depAmount, stBalance)).loss;
+            const rest2YearsLoss = (await st1inch.earlyWithdrawLoss(addr.address)).loss;
             console.log('rest2YearsLoss', rest2YearsLoss.toString());
 
             await timeIncreaseTo(stakedTime + BigInt(time.duration.years('3')));
-            const rest1YearsLoss = (await st1inch.earlyWithdrawLoss(depAmount, stBalance)).loss;
+            const rest1YearsLoss = (await st1inch.earlyWithdrawLoss(addr.address)).loss;
             console.log('rest1YearsLoss', rest1YearsLoss.toString());
 
             await timeIncreaseTo(stakedTime + BigInt(time.duration.years('3.5')));
-            const restHalfYearsLoss = (await st1inch.earlyWithdrawLoss(depAmount, stBalance)).loss;
+            const restHalfYearsLoss = (await st1inch.earlyWithdrawLoss(addr.address)).loss;
             console.log('restHalfYearsLoss', restHalfYearsLoss.toString());
 
             await timeIncreaseTo(stakedTime + BigInt(time.duration.years('3') + time.duration.weeks('48')));
-            const restMonthLoss = (await st1inch.earlyWithdrawLoss(depAmount, stBalance)).loss;
+            const restMonthLoss = (await st1inch.earlyWithdrawLoss(addr.address)).loss;
             console.log('restMonthLoss', restMonthLoss.toString());
 
             await timeIncreaseTo(stakedTime + BigInt(time.duration.years('3') + time.duration.weeks('51')));
-            const restWeekLoss = (await st1inch.earlyWithdrawLoss(depAmount, stBalance)).loss;
+            const restWeekLoss = (await st1inch.earlyWithdrawLoss(addr.address)).loss;
             console.log('restWeekLoss', restWeekLoss.toString());
 
             await timeIncreaseTo(stakedTime + BigInt(time.duration.years('3') + time.duration.days('364')));
-            const restDayLoss = (await st1inch.earlyWithdrawLoss(depAmount, stBalance)).loss;
+            const restDayLoss = (await st1inch.earlyWithdrawLoss(addr.address)).loss;
             console.log('restDayLoss', restDayLoss.toString());
 
             expect(rest3YearsLoss).to.gt(rest2YearsLoss);

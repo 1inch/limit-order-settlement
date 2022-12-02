@@ -135,7 +135,7 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
         uint256 amount = depositor.amount;
         if (amount > 0) {
             uint256 balance = balanceOf(msg.sender);
-            (uint256 loss, uint256 ret) = this.earlyWithdrawLoss(amount, balance);
+            (uint256 loss, uint256 ret) = _earlyWithdrawLoss(amount, balance);
             if (ret < minReturn) revert MinReturnIsNotMet();
             if (loss > maxLoss) revert MaxLossIsNotMet();
             if (loss > amount * maxLossRatio / _ONE) revert LossIsTooBig();
@@ -146,7 +146,11 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
         }
     }
 
-    function earlyWithdrawLoss(uint256 depAmount, uint256 stBalance) external view returns (uint256 loss, uint256 ret) {
+    function earlyWithdrawLoss(address account) external view returns (uint256 loss, uint256 ret) {
+        return _earlyWithdrawLoss(depositors[account].amount, balanceOf(account));
+    }
+
+    function _earlyWithdrawLoss(uint256 depAmount, uint256 stBalance) private view returns (uint256 loss, uint256 ret) {
         // TODO: it's failed if stake for 4 years and immediately call it, because `VP > depAmount`
         ret = (depAmount - _votingPowerAt(stBalance, block.timestamp)) * 10 / 9;
         loss = depAmount - ret;
