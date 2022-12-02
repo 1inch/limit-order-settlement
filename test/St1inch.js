@@ -71,6 +71,8 @@ describe('St1inch', function () {
         await oneInch.approve(st1inch.address, ether('100'));
         await oneInch.connect(addr1).approve(st1inch.address, ether('100'));
 
+        await st1inch.setMaxLossRatio('100000000'); // 10%
+
         return { oneInch, st1inch };
     }
 
@@ -340,5 +342,119 @@ describe('St1inch', function () {
         await expect(st1inch.connect(addr1).setEmergencyExit(true)).to.be.revertedWith(
             'Ownable: caller is not the owner',
         );
+    });
+
+    describe('earlyWithdrawTo', async function () {
+        it('should not work after unlockTime', async function () {
+            const { st1inch } = await loadFixture(initContracts);
+            const lockTime = time.duration.years('1');
+            await st1inch.deposit(ether('1'), lockTime);
+            await timeIncreaseTo(BigInt(await time.latest()) + BigInt(lockTime));
+            await expect(st1inch.earlyWithdrawTo(addr.address, '1', '1')).to.be.revertedWithCustomError(
+                st1inch,
+                'StakeUnlocked',
+            );
+        });
+
+        it('should not work when emergencyExit is setted', async function () {
+            const { st1inch } = await loadFixture(initContracts);
+            await st1inch.deposit(ether('1'), time.duration.years('1'));
+            await st1inch.setEmergencyExit(true);
+            await expect(st1inch.earlyWithdrawTo(addr.address, '1', '1')).to.be.revertedWithCustomError(
+                st1inch,
+                'StakeUnlocked',
+            );
+        });
+
+        it('should not work when minReturn is not met', async function () {
+            const { st1inch } = await loadFixture(initContracts);
+            await st1inch.deposit(ether('1'), time.duration.years('1'));
+            await expect(st1inch.earlyWithdrawTo(addr.address, ether('1'), '1')).to.be.revertedWithCustomError(
+                st1inch,
+                'MinReturnIsNotMet',
+            );
+        });
+
+        it('should not work when maxLoss is not met', async function () {
+            const { st1inch } = await loadFixture(initContracts);
+            await st1inch.deposit(ether('1'), time.duration.years('1'));
+            await expect(st1inch.earlyWithdrawTo(addr.address, '1', '1')).to.be.revertedWithCustomError(
+                st1inch,
+                'MaxLossIsNotMet',
+            );
+        });
+
+        it('should not work when loss is too big', async function () {
+            const { st1inch } = await loadFixture(initContracts);
+            await st1inch.deposit(ether('1'), time.duration.years('2'));
+            await expect(st1inch.earlyWithdrawTo(addr.address, '1', ether('1'))).to.be.revertedWithCustomError(
+                st1inch,
+                'LossIsTooBig',
+            );
+        });
+
+        it('should withdrawal with loss', async function () {
+            const { oneInch, st1inch } = await loadFixture(initContracts);
+            const lockTime = time.duration.years('1');
+            await st1inch.deposit(ether('1'), lockTime);
+            await timeIncreaseTo(BigInt(await time.latest()) + BigInt(lockTime) / 2n);
+            await st1inch.setFeeReceiver(addr1.address);
+
+            const amount = BigInt((await st1inch.depositors(addr.address)).amount);
+            const vp = BigInt(await st1inch.votingPower(await st1inch.balanceOf(addr.address)));
+            const ret = (amount - vp) * 10n / 9n;
+            const loss = amount - ret;
+
+            const balanceAddrBefore = BigInt(await oneInch.balanceOf(addr.address));
+            const balanceAddr1Before = BigInt(await oneInch.balanceOf(addr1.address));
+            await st1inch.earlyWithdrawTo(addr.address, '1', ether('0.2'));
+            expect(await oneInch.balanceOf(addr1.address)).to.lt(balanceAddr1Before + loss);
+            expect(await oneInch.balanceOf(addr.address)).to.gt(balanceAddrBefore + ether('1') - loss);
+        });
+
+        it('should decrease loss with time', async function () {
+            const { st1inch } = await loadFixture(initContracts);
+            const lockTime = time.duration.years('4');
+            const tx = await st1inch.deposit(ether('1'), lockTime);
+            const stakedTime = BigInt((await ethers.provider.getBlock(tx.blockNumber)).timestamp);
+
+            const depAmount = (await st1inch.depositors(addr.address)).amount;
+            const stBalance = await st1inch.balanceOf(addr.address);
+
+            await timeIncreaseTo(stakedTime + BigInt(time.duration.years('1')));
+            const rest3YearsLoss = (await st1inch.earlyWithdrawLoss(depAmount, stBalance)).loss;
+            console.log('rest3YearsLoss', rest3YearsLoss.toString());
+
+            await timeIncreaseTo(stakedTime + BigInt(time.duration.years('2')));
+            const rest2YearsLoss = (await st1inch.earlyWithdrawLoss(depAmount, stBalance)).loss;
+            console.log('rest2YearsLoss', rest2YearsLoss.toString());
+
+            await timeIncreaseTo(stakedTime + BigInt(time.duration.years('3')));
+            const rest1YearsLoss = (await st1inch.earlyWithdrawLoss(depAmount, stBalance)).loss;
+            console.log('rest1YearsLoss', rest1YearsLoss.toString());
+
+            await timeIncreaseTo(stakedTime + BigInt(time.duration.years('3.5')));
+            const restHalfYearsLoss = (await st1inch.earlyWithdrawLoss(depAmount, stBalance)).loss;
+            console.log('restHalfYearsLoss', restHalfYearsLoss.toString());
+
+            await timeIncreaseTo(stakedTime + BigInt(time.duration.years('3') + time.duration.weeks('48')));
+            const restMonthLoss = (await st1inch.earlyWithdrawLoss(depAmount, stBalance)).loss;
+            console.log('restMonthLoss', restMonthLoss.toString());
+
+            await timeIncreaseTo(stakedTime + BigInt(time.duration.years('3') + time.duration.weeks('51')));
+            const restWeekLoss = (await st1inch.earlyWithdrawLoss(depAmount, stBalance)).loss;
+            console.log('restWeekLoss', restWeekLoss.toString());
+
+            await timeIncreaseTo(stakedTime + BigInt(time.duration.years('3') + time.duration.days('364')));
+            const restDayLoss = (await st1inch.earlyWithdrawLoss(depAmount, stBalance)).loss;
+            console.log('restDayLoss', restDayLoss.toString());
+
+            expect(rest3YearsLoss).to.gt(rest2YearsLoss);
+            expect(rest2YearsLoss).to.gt(rest1YearsLoss);
+            expect(rest1YearsLoss).to.gt(restHalfYearsLoss);
+            expect(restHalfYearsLoss).to.gt(restMonthLoss);
+            expect(restMonthLoss).to.gt(restWeekLoss);
+            expect(restWeekLoss).to.gt(restDayLoss);
+        });
     });
 });
