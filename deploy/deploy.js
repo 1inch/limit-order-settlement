@@ -17,20 +17,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     const { deploy } = deployments;
     const { deployer } = await getNamedAccounts();
 
-    const WhitelistRegistrySimple = await deploy('WhitelistRegistrySimple', {
-        from: deployer,
-    });
-
-    console.log('WhitelistRegistry deployed to:', WhitelistRegistrySimple.address);
-
-    if ((await getChainId()) !== '31337') {
-        await hre.run('verify:verify', {
-            address: WhitelistRegistrySimple.address,
-        });
-    }
-
     const constructorArguments = [
-        WhitelistRegistrySimple.address,
         ROUTER_V5_ADDR,
         INCH[chainId],
     ];

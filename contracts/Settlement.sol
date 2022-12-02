@@ -20,6 +20,7 @@ contract Settlement is ISettlement, FeeBankCharger {
     error IncorrectCalldataParams();
     error FailedExternalCall();
     error ResolverIsNotWhitelisted();
+    error WrongInteractionTarget();
 
     bytes32 private constant _FINALIZE_INTERACTION = bytes1(0x01);
     uint256 private constant _ORDER_FEE_BASE_POINTS = 1e15;
@@ -116,12 +117,21 @@ contract Settlement is ISettlement, FeeBankCharger {
         }
 
         bytes4 selector = IOrderMixin.fillOrderTo.selector;
+        bytes4 errorSelector = WrongInteractionTarget.selector;
         uint256 suffixLength = DynamicSuffix._DATA_SIZE;
         IOrderMixin limitOrderProtocol = _limitOrderProtocol;
         assembly {
             let interactionLengthOffset := calldataload(add(data.offset, 0x40))
             let interactionOffset := add(interactionLengthOffset, 0x20)
             let interactionLength := calldataload(add(data.offset, interactionLengthOffset))
+
+            { // stack too deep
+                let target := shr(96, calldataload(add(data.offset, interactionOffset)))
+                if iszero(eq(target, address())) {
+                    mstore(0, errorSelector)
+                    revert(0, 4)
+                }
+            }
 
             // Copy calldata and patch interaction.length
             let ptr := mload(0x40)
