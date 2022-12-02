@@ -125,10 +125,12 @@ contract Settlement is ISettlement, FeeBankCharger {
             let interactionOffset := add(interactionLengthOffset, 0x20)
             let interactionLength := calldataload(add(data.offset, interactionLengthOffset))
 
-            let target := shr(96, calldataload(add(data.offset, interactionOffset)))
-            if iszero(eq(target, address())) {
-                mstore(0, errorSelector)
-                revert(0, 4)
+            { // stack too deep
+                let target := shr(96, calldataload(add(data.offset, interactionOffset)))
+                if iszero(eq(target, address())) {
+                    mstore(0, errorSelector)
+                    revert(0, 4)
+                }
             }
 
             // Copy calldata and patch interaction.length
