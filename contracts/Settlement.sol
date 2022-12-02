@@ -13,9 +13,9 @@ import "./FeeBankCharger.sol";
 
 contract Settlement is ISettlement, FeeBankCharger {
     using SafeERC20 for IERC20;
+    using AddressLib for Address;
     using OrderSaltParser for uint256;
     using DynamicSuffix for DynamicSuffix.Data;
-    using AddressLib for Address;
 
     error AccessDenied();
     error IncorrectCalldataParams();
@@ -23,7 +23,7 @@ contract Settlement is ISettlement, FeeBankCharger {
     error ResolverIsNotWhitelisted();
     error WrongInteractionTarget();
 
-    bytes32 private constant _FINALIZE_INTERACTION = bytes1(0x01);
+    uint256 private constant _FINALIZE_INTERACTION = 0x01;
     uint256 private constant _ORDER_FEE_BASE_POINTS = 1e15;
     uint256 private constant _BASE_POINTS = 10000; // 100%
     uint256 private constant _DEFAULT_INITIAL_RATE_BUMP = 1000; // 10%
@@ -48,7 +48,12 @@ contract Settlement is ISettlement, FeeBankCharger {
     }
 
     function settleOrders(bytes calldata data) external {
-        _settleOrder(data, msg.sender, 0);
+        DynamicSuffix.TokenAndAmount[] calldata tamanuts;
+        assembly {
+            // tamanuts.offset := 0
+            tamanuts.length := 0
+        }
+        _settleOrder(0, data, 0, msg.sender, tamanuts);
     }
 
     function fillOrderInteraction(
@@ -57,22 +62,24 @@ contract Settlement is ISettlement, FeeBankCharger {
         uint256 takingAmount,
         bytes calldata interactiveData
     ) external onlyThis(taker) onlyLimitOrderProtocol returns (uint256 result) {
-        DynamicSuffix.Data calldata suffix = _decodeSuffix(interactiveData);
+        (
+            bool finalInteraction,
+            bytes calldata data,
+            DynamicSuffix.Data calldata suffix,
+            DynamicSuffix.TokenAndAmount[] calldata tamounts
+        ) = _decodeSuffix(interactiveData);
 
-        if (interactiveData[0] == _FINALIZE_INTERACTION) {
+        if (finalInteraction) {
             _chargeFee(suffix.resolver.get(), suffix.totalFee);
-            (address target, bytes calldata data) = _decodeTargetAndCalldata(interactiveData[1:interactiveData.length - DynamicSuffix._DATA_SIZE]);
-            IResolver(target).resolveOrders(suffix.resolver.get(), data);
+            (address target, bytes calldata cd) = _decodeTargetAndCalldata(data);
+            IResolver(target).resolveOrders(suffix.resolver.get(), tamounts, cd);
         } else {
-            _settleOrder(
-                interactiveData[1:interactiveData.length - DynamicSuffix._DATA_SIZE],
-                suffix.resolver.get(),
-                suffix.totalFee
-            );
+            _settleOrder(takingAmount, data, suffix.totalFee, suffix.resolver.get(), tamounts);
         }
 
-        result = (takingAmount * _calculateRateBump(suffix.salt)) / _BASE_POINTS;
-        IERC20 token = IERC20(suffix.token.get());
+        DynamicSuffix.TokenAndAmount calldata lastItem = tamounts[tamounts.length - 1];
+        result = lastItem.amount;
+        IERC20 token = IERC20(lastItem.token.get());
         if (suffix.takingFeeEnabled()) {
             token.safeTransfer(suffix.receiver.get(), result * suffix.takingFeeRatio() / DynamicSuffix._TAKING_FEE_BASE);
         }
@@ -103,61 +110,72 @@ contract Settlement is ISettlement, FeeBankCharger {
         }
     }
 
-    function _settleOrder(bytes calldata data, address resolver, uint256 totalFee) private {
-        IERC20 orderToken;
-        uint256 orderSalt;
-        uint256 takingFeeData;
-        {  // stack too deep
-            bytes calldata orderInteractions;
-            assembly {
-                let orderOffset := add(data.offset, calldataload(data.offset))
-                orderSalt := calldataload(orderOffset)
-                orderToken := calldataload(add(orderOffset, 0x40))
+    uint256 private constant _SUFFIX_LENGTH = 0x60; // DynamicSuffix._DATA_SIZE
 
-                orderInteractions.offset := add(orderOffset, calldataload(add(orderOffset, 0x120)))
-                orderInteractions.length := calldataload(orderInteractions.offset)
-                orderInteractions.offset := add(orderInteractions.offset, 0x20)
+    function _settleOrder(
+        uint256 takingAmount,
+        bytes calldata data,
+        uint256 totalFee,
+        address resolver,
+        DynamicSuffix.TokenAndAmount[] calldata tamounts
+    ) private {
+        // Decoding order
+        OrderLib.Order calldata order;
+        assembly {
+            order := add(data.offset, calldataload(add(data.offset, 0x04)))
+        }
+        if (!_checkResolver(resolver, order.interactions)) revert ResolverIsNotWhitelisted();
+        address orderTakerAsset = order.takerAsset;
+        uint256 orderTakerAmount = (takingAmount * _calculateRateBump(order.salt)) / _BASE_POINTS;
+        totalFee += order.salt.getFee() * _ORDER_FEE_BASE_POINTS;
+        Address feeReceiver = _extractFeeReceiver(order.interactions);
+
+        // Decode taker interaction
+        uint256 takerInteractionLengthPtr;
+        uint256 takerInteractionOffset;
+        uint256 takerInteractionLength;
+        { // Stack too deep
+            address takerInteractionTarget;
+            assembly {
+                takerInteractionLengthPtr := calldataload(add(data.offset, 0x40))
+                takerInteractionOffset := add(takerInteractionLengthPtr, 0x20)
+                takerInteractionLength := calldataload(add(data.offset, takerInteractionLengthPtr))
+                takerInteractionTarget := shr(96, calldataload(add(data.offset, takerInteractionOffset)))
             }
-            totalFee += orderSalt.getFee() * _ORDER_FEE_BASE_POINTS;
-            if (!_checkResolver(resolver, orderInteractions)) revert ResolverIsNotWhitelisted();
-            takingFeeData = _extractTakingFeeData(orderInteractions);
+            if (takerInteractionTarget != address(this)) revert WrongInteractionTarget();
         }
 
+        // Copy calldata for fillOrderTo
         bytes4 selector = IOrderMixin.fillOrderTo.selector;
-        bytes4 errorSelector = WrongInteractionTarget.selector;
-        uint256 suffixLength = DynamicSuffix._DATA_SIZE;
         IOrderMixin limitOrderProtocol = _limitOrderProtocol;
         assembly {
-            let interactionLengthOffset := calldataload(add(data.offset, 0x40))
-            let interactionOffset := add(interactionLengthOffset, 0x20)
-            let interactionLength := calldataload(add(data.offset, interactionLengthOffset))
-
-            { // stack too deep
-                let target := shr(96, calldataload(add(data.offset, interactionOffset)))
-                if iszero(eq(target, address())) {
-                    mstore(0, errorSelector)
-                    revert(0, 4)
-                }
-            }
-
             // Copy calldata and patch interaction.length
             let ptr := mload(0x40)
             mstore(ptr, selector)
-            calldatacopy(add(ptr, 4), data.offset, data.length)
-            mstore(add(add(ptr, interactionLengthOffset), 4), add(interactionLength, suffixLength))
 
-            {  // stack too deep
-                // Append suffix fields
-                let offset := add(add(ptr, interactionOffset), interactionLength)
-                mstore(add(offset, 0x04), totalFee)
-                mstore(add(offset, 0x24), resolver)
-                mstore(add(offset, 0x44), orderToken)
-                mstore(add(offset, 0x64), orderSalt)
-                mstore(add(offset, 0x84), takingFeeData)
+            let extraLength := add(add(_SUFFIX_LENGTH, mul(0x40, add(tamounts.length, 1))), 0x20)
+            { // Stack too deep
+                // Copy calldata and patch taker interaction length
+                let offset := add(ptr, 4)
+                calldatacopy(offset, data.offset, data.length)
+                mstore(add(offset, takerInteractionLengthPtr), add(takerInteractionLength, extraLength))
+
+                // Append dynamic suffix
+                offset := add(add(offset, takerInteractionOffset), takerInteractionLength)
+                mstore(offset, totalFee)
+                mstore(add(offset, 0x20), resolver)
+                mstore(add(offset, 0x40), feeReceiver)
+                offset := add(offset, _SUFFIX_LENGTH)
+
+                // Append tamounts and new one with length at the end
+                calldatacopy(offset, tamounts.offset, mul(0x40, tamounts.length))
+                offset := add(offset, mul(0x40, tamounts.length))
+                mstore(offset, orderTakerAsset)
+                mstore(add(offset, 0x20), orderTakerAmount)
+                mstore(add(offset, 0x40), add(tamounts.length, 1))
             }
 
-            // Call fillOrderTo
-            if iszero(call(gas(), limitOrderProtocol, 0, ptr, add(add(4, suffixLength), data.length), ptr, 0)) {
+            if iszero(call(gas(), limitOrderProtocol, 0, ptr, add(add(4, data.length), extraLength), ptr, 0)) {
                 returndatacopy(ptr, 0, returndatasize())
                 revert(ptr, returndatasize())
             }
@@ -195,15 +213,17 @@ contract Settlement is ISettlement, FeeBankCharger {
         }
     }
 
-    function _extractTakingFeeData(bytes calldata orderInteractions) private pure returns (uint256 feeData) {
+    function _extractFeeReceiver(bytes calldata orderInteractions) private pure returns (Address) {
+        bool haveFee = false;
+        uint32 feeRatio;
+        address receiver;
         assembly {
             let ptr := sub(add(orderInteractions.offset, orderInteractions.length), 1)
-            let takerFeeEnabled := shr(255, calldataload(ptr))
-            if eq(takerFeeEnabled, 1) {
-                feeData := shr(64, calldataload(sub(ptr, 24)))
-                feeData := or(feeData, shl(255, 1)) // set the highest bit to indicate that takerFee is enabled
-            }
+            haveFee := shr(255, calldataload(ptr))
+            feeRatio := shr(224, calldataload(sub(ptr, 24)))
+            receiver := shr(96, calldataload(sub(ptr, 20)))
         }
+        return DynamicSuffix.makeFeeReceiver(feeRatio, receiver);
     }
 
     function _decodeTargetAndCalldata(bytes calldata cd) private pure returns (address target, bytes calldata data) {
@@ -214,10 +234,22 @@ contract Settlement is ISettlement, FeeBankCharger {
         }
     }
 
-    function _decodeSuffix(bytes calldata cd) private pure returns (DynamicSuffix.Data calldata suffix) {
-        uint256 suffixSize = DynamicSuffix._DATA_SIZE;
+    function _decodeSuffix(bytes calldata cd) private pure returns (
+        bool finalInteraction,
+        bytes calldata rest,
+        DynamicSuffix.Data calldata suffix,
+        DynamicSuffix.TokenAndAmount[] calldata tamanuts
+    ) {
+        uint256 finalizeInteraction = _FINALIZE_INTERACTION;
         assembly {
-            suffix := sub(add(cd.offset, cd.length), suffixSize)
+            let lengthOffset := sub(add(cd.offset, cd.length), 0x20)
+            tamanuts.length := calldataload(lengthOffset)
+            tamanuts.offset := sub(lengthOffset, mul(0x40, tamanuts.length))
+            suffix := sub(tamanuts.offset, 0x60)
+
+            finalInteraction := eq(finalizeInteraction, shr(248, calldataload(cd.offset)))
+            rest.offset := add(cd.offset, 1)
+            rest.length := sub(suffix, rest.offset)
         }
     }
 }
