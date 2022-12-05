@@ -15,6 +15,7 @@ contract Settlement is ISettlement, FeeBankCharger {
     using SafeERC20 for IERC20;
     using OrderSaltParser for uint256;
     using DynamicSuffix for DynamicSuffix.Data;
+    using AddressLib for Address;
 
     error AccessDenied();
     error IncorrectCalldataParams();
@@ -59,21 +60,21 @@ contract Settlement is ISettlement, FeeBankCharger {
         DynamicSuffix.Data calldata suffix = _decodeSuffix(interactiveData);
 
         if (interactiveData[0] == _FINALIZE_INTERACTION) {
-            _chargeFee(suffix.resolver(), suffix.totalFee);
+            _chargeFee(suffix.resolver.get(), suffix.totalFee);
             (address target, bytes calldata data) = _decodeTargetAndCalldata(interactiveData[1:interactiveData.length - DynamicSuffix._DATA_SIZE]);
-            IResolver(target).resolveOrders(suffix.resolver(), data);
+            IResolver(target).resolveOrders(suffix.resolver.get(), data);
         } else {
             _settleOrder(
                 interactiveData[1:interactiveData.length - DynamicSuffix._DATA_SIZE],
-                suffix.resolver(),
+                suffix.resolver.get(),
                 suffix.totalFee
             );
         }
 
         result = (takingAmount * _calculateRateBump(suffix.salt)) / _BASE_POINTS;
-        IERC20 token = suffix.token();
+        IERC20 token = IERC20(suffix.token.get());
         if (suffix.takingFeeEnabled()) {
-            token.transfer(suffix.takingFeeReceiver(), result * suffix.takingFeeRatio() / DynamicSuffix._TAKING_FEE_BASE);
+            token.safeTransfer(suffix.receiver.get(), result * suffix.takingFeeRatio() / DynamicSuffix._TAKING_FEE_BASE);
         }
         token.forceApprove(address(_limitOrderProtocol), result);
     }
