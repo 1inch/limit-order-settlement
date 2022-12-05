@@ -53,7 +53,7 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
     constructor(IERC20 oneInch_, uint256 expBase_, uint256 podsLimit)
         ERC20Pods(podsLimit, _POD_CALL_GAS_LIMIT)
         ERC20("Staking 1INCH", "st1INCH")
-        VotingPowerCalculator(expBase_, block.timestamp)  // solhint-disable-line not-rely-on-time
+        VotingPowerCalculator(expBase_, block.timestamp)
     {
         oneInch = oneInch_;
     }
@@ -168,6 +168,24 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
         if (amount > 0) {
             _withdraw(depositor, amount, balanceOf(msg.sender));
             oneInch.safeTransfer(to, amount);
+        }
+    }
+
+    function _withdraw(Depositor memory depositor, uint256 amount, uint256 balance) private {
+        totalDeposits -= amount;
+        depositor.amount = 0; // Drain balance, but keep unlockTime in storage (NextTxGas optimization)
+        depositors[msg.sender] = depositor; // SSTORE
+        _burn(msg.sender, balance);
+    }
+
+    function rescueFunds(IERC20 token, uint256 amount) external onlyOwner {
+        if (address(token) == address(0)) {
+            Address.sendValue(payable(msg.sender), amount);
+        } else {
+            if (token == oneInch) {
+                if (amount > oneInch.balanceOf(address(this)) - totalDeposits) revert RescueAmountIsTooLarge();
+            }
+            token.safeTransfer(msg.sender, amount);
         }
     }
 
