@@ -67,6 +67,7 @@ describe('Settlement', function () {
             {
                 predicate: swap.interface.encodeFunctionData('timestampBelow', [0xff00000000]),
                 whitelistedAddrs: [addr.address],
+                whitelistedCutOffs: [0],
             },
         );
 
@@ -81,6 +82,7 @@ describe('Settlement', function () {
             {
                 predicate: swap.interface.encodeFunctionData('timestampBelow', [0xff00000000]),
                 whitelistedAddrs: [addr.address],
+                whitelistedCutOffs: [0],
             },
         );
 
@@ -143,6 +145,7 @@ describe('Settlement', function () {
             {
                 predicate: swap.interface.encodeFunctionData('timestampBelow', [0xff00000000]),
                 whitelistedAddrs: [addr.address],
+                whitelistedCutOffs: [0],
             },
         );
 
@@ -158,6 +161,7 @@ describe('Settlement', function () {
             {
                 predicate: swap.interface.encodeFunctionData('timestampBelow', [0xff00000000]),
                 whitelistedAddrs: [addr.address],
+                whitelistedCutOffs: [0],
             },
         );
 
@@ -238,6 +242,7 @@ describe('Settlement', function () {
             {
                 predicate: swap.interface.encodeFunctionData('timestampBelow', [0xff00000000]),
                 whitelistedAddrs: [addr.address],
+                whitelistedCutOffs: [0],
             },
         );
 
@@ -253,6 +258,7 @@ describe('Settlement', function () {
             {
                 predicate: swap.interface.encodeFunctionData('timestampBelow', [0xff00000000]),
                 whitelistedAddrs: [addr.address],
+                whitelistedCutOffs: [0],
             },
         );
 
@@ -267,6 +273,7 @@ describe('Settlement', function () {
             {
                 predicate: swap.interface.encodeFunctionData('timestampBelow', [0xff00000000]),
                 whitelistedAddrs: [addr.address],
+                whitelistedCutOffs: [0],
             },
         );
 
@@ -358,6 +365,7 @@ describe('Settlement', function () {
                 {
                     predicate: swap.interface.encodeFunctionData('timestampBelow', [0xff00000000]),
                     whitelistedAddrs: [addr.address],
+                    whitelistedCutOffs: [0],
                 },
             );
             const signature = await signOrder(order, chainId, swap.address, addr1);
@@ -532,6 +540,7 @@ describe('Settlement', function () {
             },
             {
                 whitelistedAddrs: [addr.address],
+                whitelistedCutOffs: [0],
             },
         );
         const backOrder = await buildOrder(
@@ -545,6 +554,7 @@ describe('Settlement', function () {
             },
             {
                 whitelistedAddrs: [addr.address],
+                whitelistedCutOffs: [0],
             },
         );
         const signature = await signOrder(order, chainId, swap.address, addr);
@@ -597,6 +607,7 @@ describe('Settlement', function () {
             },
             {
                 whitelistedAddrs: [proxy.address],
+                whitelistedCutOffs: [0],
             },
         );
         const backOrder = await buildOrder(
@@ -610,6 +621,7 @@ describe('Settlement', function () {
             },
             {
                 whitelistedAddrs: [proxy.address],
+                whitelistedCutOffs: [0],
             },
         );
         const signature = await signOrder(order, chainId, swap.address, addr);
@@ -663,6 +675,7 @@ describe('Settlement', function () {
             },
             {
                 whitelistedAddrs: [addr.address],
+                whitelistedCutOffs: [0],
             },
         );
         const backOrder = await buildOrder(
@@ -676,6 +689,7 @@ describe('Settlement', function () {
             },
             {
                 whitelistedAddrs: [addr.address],
+                whitelistedCutOffs: [0],
             },
         );
         const signature = await signOrder(order, chainId, swap.address, addr);
@@ -712,7 +726,7 @@ describe('Settlement', function () {
         ).to.be.revertedWithCustomError(matcher, 'NotEnoughCredit');
     });
 
-    it('should change by non-whitelisted resolver after deadline', async function () {
+    it('should change by non-whitelisted resolver after publicCutOff', async function () {
         const { dai, weth, swap, matcher, resolver } = await loadFixture(initContracts);
 
         console.log(
@@ -730,7 +744,8 @@ describe('Settlement', function () {
             },
             {
                 whitelistedAddrs: [addr1.address],
-                whitelistDeadline: BigInt(await time.latest()) + 60n,
+                whitelistedCutOffs: [0],
+                publicCutOff: BigInt(await time.latest()) + 60n,
             },
         );
         const backOrder = await buildOrder(
@@ -744,7 +759,8 @@ describe('Settlement', function () {
             },
             {
                 whitelistedAddrs: [addr1.address],
-                whitelistDeadline: BigInt(await time.latest()) + 60n,
+                whitelistedCutOffs: [0],
+                publicCutOff: BigInt(await time.latest()) + 60n,
             },
         );
         const signature = await signOrder(order, chainId, swap.address, addr);
