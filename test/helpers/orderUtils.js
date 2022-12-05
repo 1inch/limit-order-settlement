@@ -83,8 +83,9 @@ const buildOrder = async (
         whitelistedAddrs.length.toString(16).padStart(2, '0') +
         publicCutOff.toString(16).padStart(8, '0');
 
-    const takingFeeData = takerFeeReceiver === constants.ZERO_ADDRESS || takerFeeRatio == 0 ? '00' :
-        takerFeeRatio.toString(16).padStart(8, '0') + trim0x(takerFeeReceiver) + '01';
+    const takingFeeData = takerFeeReceiver === constants.ZERO_ADDRESS || takerFeeRatio === 0
+        ? '00'
+        : takerFeeRatio.toString(16).padStart(8, '0') + trim0x(takerFeeReceiver) + '01';
 
     return {
         salt,
