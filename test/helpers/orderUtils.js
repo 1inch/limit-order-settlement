@@ -39,6 +39,8 @@ const buildOrder = async (
         whitelistedAddrs = [],
         whitelistedCutOffs = [],
         publicCutOff = 0xffffffff,
+        takerFeeReceiver = constants.ZERO_ADDRESS,
+        takerFeeRatio = 0,
     } = {},
 ) => {
     if (getMakingAmount === '') {
@@ -81,6 +83,9 @@ const buildOrder = async (
         whitelistedAddrs.length.toString(16).padStart(2, '0') +
         publicCutOff.toString(16).padStart(8, '0');
 
+    const takingFeeData = takerFeeReceiver === constants.ZERO_ADDRESS || takerFeeRatio == 0 ? '00' :
+        takerFeeRatio.toString(16).padStart(8, '0') + trim0x(takerFeeReceiver) + '01';
+
     return {
         salt,
         makerAsset,
@@ -91,7 +96,7 @@ const buildOrder = async (
         makingAmount: makingAmount.toString(),
         takingAmount: takingAmount.toString(),
         offsets: offsets.toString(),
-        interactions: interactions + whitelist,
+        interactions: interactions + whitelist + takingFeeData,
     };
 };
 
