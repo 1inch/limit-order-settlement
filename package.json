@@ -33,10 +33,10 @@
   },
   "devDependencies": {
     "@1inch/farming": "1.1.3",
+    "@nomiclabs/hardhat-etherscan": "3.1.2",
+    "@nomiclabs/hardhat-ethers": "2.2.1",
     "@nomicfoundation/hardhat-chai-matchers": "1.0.4",
     "@nomicfoundation/hardhat-network-helpers": "1.0.6",
-    "@nomiclabs/hardhat-ethers": "2.2.1",
-    "@nomiclabs/hardhat-etherscan": "3.1.2",
     "chai": "4.3.7",
     "dotenv": "16.0.3",
     "eslint": "8.27.0",
