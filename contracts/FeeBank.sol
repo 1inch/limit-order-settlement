@@ -41,9 +41,9 @@ contract FeeBank is Ownable {
      * @return totalAvailableCredit The total account's availableCredit after deposit.
      */
     function depositFor(address account, uint256 amount) public returns (uint256 totalAvailableCredit) {
-        _token.safeTransferFrom(msg.sender, address(this), amount);
         _accountDeposits[account] += amount;
         totalAvailableCredit = _charger.increaseAvailableCredit(account, amount);
+        _token.safeTransferFrom(msg.sender, address(this), amount);
     }
 
     /**
