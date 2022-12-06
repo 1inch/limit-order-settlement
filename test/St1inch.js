@@ -7,7 +7,7 @@ const { shouldBehaveLikeERC20Pods } = require('@1inch/erc20-pods/test/behaviors/
 
 describe('St1inch', function () {
     let addr, addr1;
-    const baseExp = 999999981746376586n; // 0.1^(1/(4 years)) means 90% value loss over 4 years
+    const baseExp = 999999981746376587n; // 0.1^(1/(4 years)) means 90% value loss over 4 years
     const votingPowerDivider = 10n;
     const maxPods = 5;
     let chainId;
@@ -417,6 +417,9 @@ describe('St1inch', function () {
             const lockTime = time.duration.years('4');
             const tx = await st1inch.deposit(ether('1'), lockTime);
             const stakedTime = BigInt((await ethers.provider.getBlock(tx.blockNumber)).timestamp);
+
+            const rest4YearsLoss = (await st1inch.earlyWithdrawLoss(addr.address)).loss;
+            console.log('rest4YearsLoss', rest4YearsLoss.toString());
 
             await timeIncreaseTo(stakedTime + BigInt(time.duration.years('1')));
             const rest3YearsLoss = (await st1inch.earlyWithdrawLoss(addr.address)).loss;
