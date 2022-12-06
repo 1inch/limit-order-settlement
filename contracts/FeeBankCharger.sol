@@ -12,6 +12,7 @@ contract FeeBankCharger is IFeeBankCharger {
 
     address public immutable feeBank;
     mapping(address => uint256) private _creditAllowance;
+    mapping(address => uint256) private _rewards;
 
     modifier onlyFeeBank() {
         if (msg.sender != feeBank) revert OnlyFeeBankAccess();
@@ -19,11 +20,21 @@ contract FeeBankCharger is IFeeBankCharger {
     }
 
     constructor(IERC20 token) {
-        feeBank = address(new FeeBank(this, token, msg.sender));
+        feeBank = address(new FeeBank(this, token));
+        FeeBank(feeBank).transferOwnership(msg.sender);
     }
 
     function availableCredit(address account) external view returns (uint256) {
         return _creditAllowance[account];
+    }
+
+    function availableReward(address account) external view returns (uint256) {
+        return _rewards[account];
+    }
+
+    function claimReward(address account) external onlyFeeBank returns (uint256 reward) {
+        reward = _rewards[account];
+        _rewards[account] = 0;
     }
 
     function increaseAvailableCredit(address account, uint256 amount) external onlyFeeBank returns (uint256 allowance) {
@@ -44,5 +55,9 @@ contract FeeBankCharger is IFeeBankCharger {
         unchecked {
             _creditAllowance[account] = currentAllowance - fee;
         }
+    }
+
+    function _addReward(address account, uint256 amount) internal {
+        _rewards[account] += amount;
     }
 }

@@ -135,11 +135,11 @@ describe('FeeBank', function () {
             const amount = ether('10');
             const subCreditAmount = ether('2');
             await feeBank.connect(addr1).deposit(amount);
-            await matcher.decreaseAvailableCreditMock(addr1.address, subCreditAmount);
+            await matcher.chargeFee(addr1.address, addr.address, subCreditAmount);
 
             const balanceBefore = await inch.balanceOf(addr.address);
             expect(await feeBank.availableCredit(addr1.address)).to.equal(amount - subCreditAmount);
-            await feeBank.gatherFees([addr1.address]);
+            await feeBank.claimReward();
 
             expect(await feeBank.availableCredit(addr1.address)).to.equal(amount - subCreditAmount);
             expect(await inch.balanceOf(addr.address)).to.equal(balanceBefore.toBigInt() + subCreditAmount);
@@ -153,13 +153,13 @@ describe('FeeBank', function () {
             const subCreditAddr1Amount = ether('11');
             await feeBank.deposit(addrAmount);
             await feeBank.connect(addr1).deposit(addr1Amount);
-            await matcher.decreaseAvailableCreditMock(addr.address, subCreditaddrAmount);
-            await matcher.decreaseAvailableCreditMock(addr1.address, subCreditAddr1Amount);
+            await matcher.chargeFee(addr.address, addr.address, subCreditaddrAmount);
+            await matcher.chargeFee(addr1.address, addr.address, subCreditAddr1Amount);
 
             const balanceBefore = await inch.balanceOf(addr.address);
             expect(await feeBank.availableCredit(addr.address)).to.equal(addrAmount - subCreditaddrAmount);
             expect(await feeBank.availableCredit(addr1.address)).to.equal(addr1Amount - subCreditAddr1Amount);
-            await feeBank.gatherFees([addr.address, addr1.address]);
+            await feeBank.claimReward();
 
             expect(await feeBank.availableCredit(addr.address)).to.equal(addrAmount - subCreditaddrAmount);
             expect(await feeBank.availableCredit(addr1.address)).to.equal(addr1Amount - subCreditAddr1Amount);
@@ -185,7 +185,7 @@ describe('FeeBank', function () {
                 await feeBank.depositFor(accounts[i], amounts[i]);
             }
             for (let i = 1; i < accounts.length; i++) {
-                await matcher.decreaseAvailableCreditMock(accounts[i], subCreditAmounts[i]);
+                await matcher.chargeFee(accounts[i], addr.address, subCreditAmounts[i]);
             }
 
             const balanceBefore = await inch.balanceOf(addr.address);
@@ -193,18 +193,11 @@ describe('FeeBank', function () {
                 expect(await feeBank.availableCredit(accounts[i])).to.equal(amounts[i].sub(subCreditAmounts[i]));
             }
 
-            await feeBank.gatherFees(accounts);
+            await feeBank.claimReward();
             for (let i = 1; i < accounts.length; i++) {
                 expect(await feeBank.availableCredit(accounts[i])).to.equal(amounts[i].sub(subCreditAmounts[i]));
             }
             expect(await inch.balanceOf(addr.address)).to.equal(balanceBefore.add(totalSubCreditAmounts));
-        });
-
-        it('should not work by non-owner', async function () {
-            const { feeBank } = await loadFixture(initContracts);
-            await expect(feeBank.connect(addr1).gatherFees([addr.address, addr1.address])).to.be.revertedWith(
-                'Ownable: caller is not the owner',
-            );
         });
     });
 });

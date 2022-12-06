@@ -9,7 +9,8 @@ contract SettlementMock is Settlement {
         Settlement(limitOrderProtocol, token)
     {}
 
-    function decreaseAvailableCreditMock(address account, uint256 amount) external {
+    function chargeFee(address account, address receiver, uint256 amount) external {
         _chargeFee(account, amount);
+        _addReward(receiver, amount);
     }
 }

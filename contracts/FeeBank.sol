@@ -16,13 +16,12 @@ contract FeeBank is Ownable {
 
     mapping(address => uint256) private _accountDeposits;
 
-    constructor(IFeeBankCharger charger, IERC20 inch, address owner) {
+    constructor(IFeeBankCharger charger, IERC20 inch) {
         _charger = charger;
         _token = inch;
-        transferOwnership(owner);
     }
 
-    function availableCredit(address account) external view returns (uint256) {
+    function availableCredit(address account) external view returns (uint256 totalAvailableCredit) {
         return _charger.availableCredit(account);
     }
 
@@ -31,8 +30,8 @@ contract FeeBank is Ownable {
      * @param amount The amount of 1INCH sender pay for incresing.
      * @return totalAvailableCredit The total sender's availableCredit after deposit.
      */
-    function deposit(uint256 amount) external returns (uint256) {
-        return _depositFor(msg.sender, amount);
+    function deposit(uint256 amount) external returns (uint256 totalAvailableCredit) {
+        return depositFor(msg.sender, amount);
     }
 
     /**
@@ -41,8 +40,10 @@ contract FeeBank is Ownable {
      * @param amount The amount of 1INCH sender pay for incresing.
      * @return totalAvailableCredit The total account's availableCredit after deposit.
      */
-    function depositFor(address account, uint256 amount) external returns (uint256) {
-        return _depositFor(account, amount);
+    function depositFor(address account, uint256 amount) public returns (uint256 totalAvailableCredit) {
+        _token.safeTransferFrom(msg.sender, address(this), amount);
+        _accountDeposits[account] += amount;
+        totalAvailableCredit = _charger.increaseAvailableCredit(account, amount);
     }
 
     /**
@@ -51,7 +52,7 @@ contract FeeBank is Ownable {
      * @param permit The data with sender's permission via token.
      * @return totalAvailableCredit The total sender's availableCredit after deposit.
      */
-    function depositWithPermit(uint256 amount, bytes calldata permit) external returns (uint256) {
+    function depositWithPermit(uint256 amount, bytes calldata permit) external returns (uint256 totalAvailableCredit) {
         return depositForWithPermit(msg.sender, amount, permit);
     }
 
@@ -62,9 +63,9 @@ contract FeeBank is Ownable {
         address account,
         uint256 amount,
         bytes calldata permit
-    ) public returns (uint256) {
+    ) public returns (uint256 totalAvailableCredit) {
         _token.safePermit(permit);
-        return _depositFor(account, amount);
+        return depositFor(account, amount);
     }
 
     /**
@@ -72,8 +73,8 @@ contract FeeBank is Ownable {
      * @param amount The amount of 1INCH sender returns.
      * @return totalAvailableCredit The total sender's availableCredit after withdrawal.
      */
-    function withdraw(uint256 amount) external returns (uint256) {
-        return _withdrawTo(msg.sender, amount);
+    function withdraw(uint256 amount) external returns (uint256 totalAvailableCredit) {
+        return withdrawTo(msg.sender, amount);
     }
 
     /**
@@ -82,34 +83,20 @@ contract FeeBank is Ownable {
      * @param amount The amount of withdrawaled tokens.
      * @return totalAvailableCredit The total sender's availableCredit after withdrawal.
      */
-    function withdrawTo(address account, uint256 amount) external returns (uint256) {
-        return _withdrawTo(account, amount);
-    }
-
-    /**
-     * @notice Admin method returns commissions spent by users.
-     * @param accounts Accounts whose commissions are being withdrawn.
-     * @return totalAccountFees The total amount of accounts commissions.
-     */
-    function gatherFees(address[] memory accounts) external onlyOwner returns (uint256 totalAccountFees) {
-        uint256 accountsLength = accounts.length;
-        for (uint256 i = 0; i < accountsLength; i++) {
-            uint256 accountFee = _accountDeposits[accounts[i]] - _charger.availableCredit(accounts[i]);
-            _accountDeposits[accounts[i]] -= accountFee;
-            totalAccountFees += accountFee;
-        }
-        _token.safeTransfer(msg.sender, totalAccountFees);
-    }
-
-    function _depositFor(address account, uint256 amount) internal returns (uint256 totalAvailableCredit) {
-        _token.safeTransferFrom(msg.sender, address(this), amount);
-        _accountDeposits[account] += amount;
-        totalAvailableCredit = _charger.increaseAvailableCredit(account, amount);
-    }
-
-    function _withdrawTo(address account, uint256 amount) internal returns (uint256 totalAvailableCredit) {
+    function withdrawTo(address account, uint256 amount) public returns (uint256 totalAvailableCredit) {
         totalAvailableCredit = _charger.decreaseAvailableCredit(msg.sender, amount);
         _accountDeposits[msg.sender] -= amount;
         _token.safeTransfer(account, amount);
+    }
+
+    function claimReward() external returns (uint256 reward) {
+        return claimRewardTo(msg.sender);
+    }
+
+    function claimRewardTo(address account) public returns (uint256 reward) {
+        reward = _charger.claimReward(msg.sender);
+        if (reward > 0) {
+            _token.safeTransfer(account, reward);
+        }
     }
 }

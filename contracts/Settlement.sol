@@ -28,6 +28,9 @@ contract Settlement is ISettlement, FeeBankCharger {
     uint256 private constant _BASE_POINTS = 10000; // 100%
     uint256 private constant _DEFAULT_INITIAL_RATE_BUMP = 1000; // 10%
     uint256 private constant _DEFAULT_DURATION = 30 minutes;
+    uint256 private constant _REFERRAL_PERCENT = 2000; // 20%
+    uint256 private constant _TAKER_FEE_FLAG = 1;
+    uint256 private constant _REFERRAL_FLAG = 2;
 
     IOrderMixin private immutable _limitOrderProtocol;
 
@@ -118,9 +121,19 @@ contract Settlement is ISettlement, FeeBankCharger {
                 orderInteractions.length := calldataload(orderInteractions.offset)
                 orderInteractions.offset := add(orderInteractions.offset, 0x20)
             }
-            totalFee += orderSalt.getFee() * _ORDER_FEE_BASE_POINTS;
             if (!_checkResolver(resolver, orderInteractions)) revert ResolverIsNotWhitelisted();
-            takingFeeData = _extractTakingFeeData(orderInteractions);
+            address referral;
+            (takingFeeData, referral) = _extractParameters(orderInteractions);
+            uint256 fee = orderSalt.getFee() * _ORDER_FEE_BASE_POINTS;
+            totalFee += fee;
+            if (referral != address(0)) {
+                uint256 referralFee = fee * _REFERRAL_PERCENT / _BASE_POINTS;
+                uint256 protocolFee = fee - referralFee;
+                _addReward(referral, referralFee);
+                _addReward(Ownable(feeBank).owner(), protocolFee);
+            } else {
+                _addReward(Ownable(feeBank).owner(), fee);
+            }
         }
 
         bytes4 selector = IOrderMixin.fillOrderTo.selector;
@@ -195,13 +208,18 @@ contract Settlement is ISettlement, FeeBankCharger {
         }
     }
 
-    function _extractTakingFeeData(bytes calldata orderInteractions) private pure returns (uint256 feeData) {
+    function _extractParameters(bytes calldata orderInteractions) private pure returns (uint256 feeData, address referral) {
         assembly {
             let ptr := sub(add(orderInteractions.offset, orderInteractions.length), 1)
-            let takerFeeEnabled := shr(255, calldataload(ptr))
-            if eq(takerFeeEnabled, 1) {
-                feeData := shr(96, calldataload(sub(ptr, 24)))
+            let flags := shr(255, calldataload(ptr))
+            if eq(and(flags, _TAKER_FEE_FLAG), _TAKER_FEE_FLAG) {
+                ptr := sub(ptr, 24)
+                feeData := shr(96, calldataload(ptr))
                 feeData := or(feeData, shl(255, 1)) // set the highest bit to indicate that takerFee is enabled
+            }
+            if eq(and(flags, _REFERRAL_FLAG), _REFERRAL_FLAG) {
+                ptr := sub(ptr, 20)
+                referral := shr(96, calldataload(ptr))
             }
         }
     }
