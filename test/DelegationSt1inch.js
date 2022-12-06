@@ -9,7 +9,7 @@ describe('Delegation st1inch', function () {
     const threshold = ether('0.1');
     const MAX_WHITELISTED = 3;
     const maxPods = 5;
-    const commonLockDuration = time.duration.days('10');
+    const commonLockDuration = time.duration.days('40');
 
     const stakeAndRegisterInDelegation = async (st1inch, delegation, user, amount, userIndex) => {
         await st1inch.connect(user).deposit(0, commonLockDuration);

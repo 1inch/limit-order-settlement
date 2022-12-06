@@ -2,23 +2,29 @@
 
 pragma solidity 0.8.17;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "./Address.sol";
 
 library DynamicSuffix {
+    using AddressLib for Address;
+
     struct Data {
         uint256 totalFee;
-        uint256 _resolver;
-        uint256 _token;
+        Address resolver;
+        Address token;
         uint256 salt;
+        Address receiver;
     }
 
-    uint256 internal constant _DATA_SIZE = 0x80;
+    uint256 internal constant _DATA_SIZE = 0xa0;
+    uint256 internal constant _TAKING_FEE_BASE = 1e9;
+    uint256 private constant _TAKING_FEE_FLAG = 1 << 255;
+    uint256 private constant _TAKING_FEE_RATIO_OFFSET = 160;
 
-    function resolver(Data calldata self) internal pure returns (address) {
-        return address(uint160(self._resolver));
+    function takingFeeEnabled(Data calldata self) internal pure returns (bool) {
+        return self.receiver.getFlag(_TAKING_FEE_FLAG);
     }
 
-    function token(Data calldata self) internal pure returns (IERC20) {
-        return IERC20(address(uint160(self._token)));
+    function takingFeeRatio(Data calldata self) internal pure returns (uint256) {
+        return self.receiver.getUint32(_TAKING_FEE_RATIO_OFFSET);
     }
 }

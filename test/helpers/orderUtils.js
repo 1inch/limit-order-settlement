@@ -37,7 +37,10 @@ const buildOrder = async (
         preInteraction = '0x',
         postInteraction = '0x',
         whitelistedAddrs = [],
-        whitelistDeadline = 0xffffffff,
+        whitelistedCutOffs = [],
+        publicCutOff = 0xffffffff,
+        takerFeeReceiver = constants.ZERO_ADDRESS,
+        takerFeeRatio = 0,
     } = {},
 ) => {
     if (getMakingAmount === '') {
@@ -73,9 +76,16 @@ const buildOrder = async (
         .map(cumulativeSum)
         .reduce((acc, a, i) => acc + (BigInt(a) << BigInt(32 * i)), BigInt(0));
 
-    const whitelist = whitelistedAddrs.map(trim0x).join('') +
+    if (whitelistedAddrs.length !== whitelistedCutOffs.length) {
+        throw new Error('whitelist length mismatch');
+    }
+    const whitelist = whitelistedAddrs.map((a, i) => whitelistedCutOffs[i].toString(16).padStart(8, '0') + trim0x(a)).join('') +
         whitelistedAddrs.length.toString(16).padStart(2, '0') +
-        whitelistDeadline.toString(16).padStart(8, '0');
+        publicCutOff.toString(16).padStart(8, '0');
+
+    const takingFeeData = takerFeeReceiver === constants.ZERO_ADDRESS || takerFeeRatio === 0
+        ? '00'
+        : takerFeeRatio.toString(16).padStart(8, '0') + trim0x(takerFeeReceiver) + '01';
 
     return {
         salt,
@@ -87,7 +97,7 @@ const buildOrder = async (
         makingAmount: makingAmount.toString(),
         takingAmount: takingAmount.toString(),
         offsets: offsets.toString(),
-        interactions: interactions + whitelist,
+        interactions: interactions + whitelist + takingFeeData,
     };
 };
 

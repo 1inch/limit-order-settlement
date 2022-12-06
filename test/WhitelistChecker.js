@@ -49,6 +49,7 @@ describe('WhitelistChecker', function () {
             },
             {
                 whitelistedAddrs: [addr.address],
+                whitelistedCutOffs: [0],
             },
         );
         const order1 = await buildOrder(
@@ -61,6 +62,7 @@ describe('WhitelistChecker', function () {
             },
             {
                 whitelistedAddrs: [addr.address],
+                whitelistedCutOffs: [0],
             },
         );
         const signature0 = await signOrder(order0, chainId, swap.address, addr);

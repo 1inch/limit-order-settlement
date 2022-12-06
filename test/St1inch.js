@@ -108,9 +108,9 @@ describe('St1inch', function () {
         expect(await st1inch.balanceOf(addr.address)).to.equal(0);
         expect(await st1inch.votingPowerOf(addr.address)).to.equal(0);
 
-        await st1inch.deposit(ether('100'), time.duration.days('1'));
+        await st1inch.deposit(ether('100'), time.duration.days('30'));
 
-        await checkBalances(addr.address, ether('100'), time.duration.days('1'), st1inch);
+        await checkBalances(addr.address, ether('100'), time.duration.days('30'), st1inch);
     });
 
     it('should take users deposit with permit', async function () {
@@ -122,9 +122,9 @@ describe('St1inch', function () {
         await oneInch.approve(st1inch.address, '0');
         const permit = await getPermit(addr, oneInch, '1', chainId, st1inch.address, ether('100'));
 
-        await st1inch.depositWithPermit(ether('100'), time.duration.days('1'), permit);
+        await st1inch.depositWithPermit(ether('100'), time.duration.days('30'), permit);
 
-        await checkBalances(addr.address, ether('100'), time.duration.days('1'), st1inch);
+        await checkBalances(addr.address, ether('100'), time.duration.days('30'), st1inch);
     });
 
     it('should take users deposit for other account', async function () {
@@ -136,12 +136,12 @@ describe('St1inch', function () {
         const balanceaddr = await oneInch.balanceOf(addr.address);
         const balanceAddr1 = await oneInch.balanceOf(addr1.address);
 
-        await st1inch.connect(addr1).deposit(0, time.duration.days('1') + 1);
+        await st1inch.connect(addr1).deposit(0, time.duration.days('30') + 1);
         await st1inch.depositFor(addr1.address, ether('100'));
 
         expect(await oneInch.balanceOf(addr.address)).to.equal(balanceaddr.sub(ether('100')));
         expect(await oneInch.balanceOf(addr1.address)).to.equal(balanceAddr1);
-        await checkBalances(addr1.address, ether('100'), time.duration.days('1'), st1inch);
+        await checkBalances(addr1.address, ether('100'), time.duration.days('30'), st1inch);
         expect((await st1inch.depositors(addr.address)).amount).to.equal(0);
         expect(await st1inch.balanceOf(addr.address)).to.equal(0);
         expect(await st1inch.votingPowerOf(addr.address)).to.equal(0);
@@ -158,12 +158,12 @@ describe('St1inch', function () {
         await oneInch.approve(st1inch.address, '0');
         const permit = await getPermit(addr, oneInch, '1', chainId, st1inch.address, ether('100'));
 
-        await st1inch.connect(addr1).deposit(0, time.duration.days('1') + 1);
+        await st1inch.connect(addr1).deposit(0, time.duration.days('30') + 1);
         await st1inch.depositForWithPermit(addr1.address, ether('100'), permit);
 
         expect(await oneInch.balanceOf(addr.address)).to.equal(balanceaddr.sub(ether('100')));
         expect(await oneInch.balanceOf(addr1.address)).to.equal(balanceAddr1);
-        await checkBalances(addr1.address, ether('100'), time.duration.days('1'), st1inch);
+        await checkBalances(addr1.address, ether('100'), time.duration.days('30'), st1inch);
         expect((await st1inch.depositors(addr.address)).amount).to.equal(0);
         expect(await st1inch.balanceOf(addr.address)).to.equal(0);
         expect(await st1inch.votingPowerOf(addr.address)).to.equal(0);
@@ -171,7 +171,7 @@ describe('St1inch', function () {
 
     it('should increase unlock time for deposit (call deposit)', async function () {
         const { st1inch } = await loadFixture(initContracts);
-        await st1inch.deposit(ether('100'), time.duration.days('1'));
+        await st1inch.deposit(ether('100'), time.duration.days('30'));
         await timeIncreaseTo((await st1inch.depositors(addr.address)).unlockTime);
 
         await st1inch.deposit(0, time.duration.years('2'));
@@ -180,19 +180,19 @@ describe('St1inch', function () {
 
     it('should increase unlock time for deposit (call deposit(0,*))', async function () {
         const { st1inch } = await loadFixture(initContracts);
-        await st1inch.deposit(ether('70'), time.duration.days('1'));
+        await st1inch.deposit(ether('70'), time.duration.days('30'));
         await timeIncreaseTo((await st1inch.depositors(addr.address)).unlockTime);
 
-        await st1inch.deposit(0, time.duration.days('10'));
-        await checkBalances(addr.address, ether('70'), time.duration.days('10'), st1inch);
+        await st1inch.deposit(0, time.duration.days('40'));
+        await checkBalances(addr.address, ether('70'), time.duration.days('40'), st1inch);
     });
 
     it('should increase deposit amount (call deposit)', async function () {
         const { st1inch } = await loadFixture(initContracts);
-        await st1inch.deposit(ether('20'), time.duration.days('10'));
+        await st1inch.deposit(ether('20'), time.duration.days('50'));
 
         const unlockTime = (await st1inch.depositors(addr.address)).unlockTime;
-        await timeIncreaseTo(unlockTime - time.duration.days('5'));
+        await timeIncreaseTo(unlockTime - time.duration.days('45'));
 
         await st1inch.deposit(ether('30'), 0);
         await checkBalances(addr.address, ether('50'), unlockTime - (await time.latest()), st1inch);
@@ -319,14 +319,14 @@ describe('St1inch', function () {
 
     it('should withdraw before unlock time', async function () {
         const { st1inch } = await loadFixture(initContracts);
-        await st1inch.deposit(ether('50'), time.duration.days('1'));
+        await st1inch.deposit(ether('50'), time.duration.days('30'));
 
         await expect(st1inch.withdraw()).to.be.revertedWithCustomError(st1inch, 'UnlockTimeHasNotCome');
     });
 
     it('should emergency withdraw', async function () {
         const { oneInch, st1inch } = await loadFixture(initContracts);
-        await st1inch.deposit(ether('50'), time.duration.days('1'));
+        await st1inch.deposit(ether('50'), time.duration.days('30'));
         const balanceaddr = await oneInch.balanceOf(addr.address);
         expect(await st1inch.emergencyExit()).to.equal(false);
 

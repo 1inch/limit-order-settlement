@@ -15,6 +15,7 @@ contract Settlement is ISettlement, FeeBankCharger {
     using SafeERC20 for IERC20;
     using OrderSaltParser for uint256;
     using DynamicSuffix for DynamicSuffix.Data;
+    using AddressLib for Address;
 
     error AccessDenied();
     error IncorrectCalldataParams();
@@ -59,19 +60,23 @@ contract Settlement is ISettlement, FeeBankCharger {
         DynamicSuffix.Data calldata suffix = _decodeSuffix(interactiveData);
 
         if (interactiveData[0] == _FINALIZE_INTERACTION) {
-            _chargeFee(suffix.resolver(), suffix.totalFee);
+            _chargeFee(suffix.resolver.get(), suffix.totalFee);
             (address target, bytes calldata data) = _decodeTargetAndCalldata(interactiveData[1:interactiveData.length - DynamicSuffix._DATA_SIZE]);
-            IResolver(target).resolveOrders(suffix.resolver(), data);
+            IResolver(target).resolveOrders(suffix.resolver.get(), data);
         } else {
             _settleOrder(
                 interactiveData[1:interactiveData.length - DynamicSuffix._DATA_SIZE],
-                suffix.resolver(),
+                suffix.resolver.get(),
                 suffix.totalFee
             );
         }
 
         result = (takingAmount * _calculateRateBump(suffix.salt)) / _BASE_POINTS;
-        suffix.token().forceApprove(address(_limitOrderProtocol), result);
+        IERC20 token = IERC20(suffix.token.get());
+        if (suffix.takingFeeEnabled()) {
+            token.safeTransfer(suffix.receiver.get(), result * suffix.takingFeeRatio() / DynamicSuffix._TAKING_FEE_BASE);
+        }
+        token.forceApprove(address(_limitOrderProtocol), result);
     }
 
     function _calculateRateBump(uint256 salt) internal view returns (uint256) {
@@ -101,6 +106,7 @@ contract Settlement is ISettlement, FeeBankCharger {
     function _settleOrder(bytes calldata data, address resolver, uint256 totalFee) private {
         IERC20 orderToken;
         uint256 orderSalt;
+        uint256 takingFeeData;
         {  // stack too deep
             bytes calldata orderInteractions;
             assembly {
@@ -114,6 +120,7 @@ contract Settlement is ISettlement, FeeBankCharger {
             }
             totalFee += orderSalt.getFee() * _ORDER_FEE_BASE_POINTS;
             if (!_checkResolver(resolver, orderInteractions)) revert ResolverIsNotWhitelisted();
+            takingFeeData = _extractTakingFeeData(orderInteractions);
         }
 
         bytes4 selector = IOrderMixin.fillOrderTo.selector;
@@ -139,15 +146,18 @@ contract Settlement is ISettlement, FeeBankCharger {
             calldatacopy(add(ptr, 4), data.offset, data.length)
             mstore(add(add(ptr, interactionLengthOffset), 4), add(interactionLength, suffixLength))
 
-            // Append suffix fields
-            let offset := add(add(ptr, interactionOffset), interactionLength)
-            mstore(add(offset, 0x04), totalFee)
-            mstore(add(offset, 0x24), resolver)
-            mstore(add(offset, 0x44), orderToken)
-            mstore(add(offset, 0x64), orderSalt)
+            {  // stack too deep
+                // Append suffix fields
+                let offset := add(add(ptr, interactionOffset), interactionLength)
+                mstore(add(offset, 0x04), totalFee)
+                mstore(add(offset, 0x24), resolver)
+                mstore(add(offset, 0x44), orderToken)
+                mstore(add(offset, 0x64), orderSalt)
+                mstore(add(offset, 0x84), takingFeeData)
+            }
 
             // Call fillOrderTo
-            if iszero(call(gas(), limitOrderProtocol, 0, ptr, add(0x84, data.length), ptr, 0)) {
+            if iszero(call(gas(), limitOrderProtocol, 0, ptr, add(add(4, suffixLength), data.length), ptr, 0)) {
                 returndatacopy(ptr, 0, returndatasize())
                 revert(ptr, returndatasize())
             }
@@ -155,26 +165,43 @@ contract Settlement is ISettlement, FeeBankCharger {
     }
 
     // suffix of orderInteractions is constructed as follows:
-    // [20 bytes * N, 1 byte, 4 bytes] = [allowed resolvers, allowed resolvers length, public avaliability timestamp]
+    // [24 bytes * N, 1 byte, 4 bytes, optional[24 bytes], 1 byte]
+    // [list[allowance ts + allowed resolver], list length N, public avaliability timestamp, optional[takerFeeData], takerFeeEnabled]
+
     function _checkResolver(address resolver, bytes calldata orderInteractions) private view returns(bool result) {
         assembly {
-            let ptr := sub(add(orderInteractions.offset, orderInteractions.length), 4)
-            let deadline := shr(224, calldataload(ptr))
-            switch gt(deadline, timestamp())
+            let ptr := sub(add(orderInteractions.offset, orderInteractions.length), 1)
+            let takerFeeEnabled := shr(255, calldataload(ptr))
+            ptr := sub(ptr, add(4, mul(24, takerFeeEnabled)))
+            let publicCutOff := shr(224, calldataload(ptr))
+            switch gt(publicCutOff, timestamp())
             case 1 {
                 ptr := sub(ptr, 1)
                 let count := shr(248, calldataload(ptr))
                 ptr := sub(ptr, 20)
                 for { let end := sub(ptr, mul(count, 20)) } gt(ptr, end) { ptr := sub(ptr, 20) } {
                     let account := shr(96, calldataload(ptr))
+                    ptr := sub(ptr, 4)
+                    let addressCutOff := shr(224, calldataload(ptr))
                     if eq(account, resolver) {
-                        result := 1
+                        result := iszero(lt(timestamp(), addressCutOff))
                         break
                     }
                 }
             }
             default {
                 result := 1
+            }
+        }
+    }
+
+    function _extractTakingFeeData(bytes calldata orderInteractions) private pure returns (uint256 feeData) {
+        assembly {
+            let ptr := sub(add(orderInteractions.offset, orderInteractions.length), 1)
+            let takerFeeEnabled := shr(255, calldataload(ptr))
+            if eq(takerFeeEnabled, 1) {
+                feeData := shr(96, calldataload(sub(ptr, 24)))
+                feeData := or(feeData, shl(255, 1)) // set the highest bit to indicate that takerFee is enabled
             }
         }
     }
