@@ -30,7 +30,7 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
     error LossIsTooBig();
     error RescueAmountIsTooLarge();
 
-    uint256 public constant MIN_LOCK_PERIOD = 1 days;
+    uint256 public constant MIN_LOCK_PERIOD = 30 days;
     uint256 public constant MAX_LOCK_PERIOD = 4 * 365 days;
     uint256 private constant _VOTING_POWER_DIVIDER = 10;
     uint256 private constant _POD_CALL_GAS_LIMIT = 200_000;
