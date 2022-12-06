@@ -17,6 +17,9 @@ const setup = {
     maxPriorityFeePerGas: '100000000',
     returnFee: false,
     deployerPrivateKey: process.env.MAINNET_PRIVATE_KEY,
+    feeRecive: {
+        percent: '500000000', // 50%
+    }
 };
 
 const oldResolvers = [
@@ -124,6 +127,14 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         true,
     );
     feeData = await provider.getFeeData();
+
+    if (await st1inch.feeReceiver() === constants.ZERO_ADDRESS) {
+        await (await st1inch.setFeeReceiver(deployer)).wait();
+    }
+
+    if ((await st1inch.maxLossRatio()).toBigInt() === 0n) {
+        await (await st1inch.setMaxLossRatio(setup.feeRecive.percent)).wait();
+    }
 
     /* const st1inchPreview = */ await idempotentDeployGetContract(
         'St1inchPreview',
