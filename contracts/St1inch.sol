@@ -173,7 +173,9 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
 
     function _withdraw(Depositor memory depositor, uint256 amount, uint256 balance) private {
         totalDeposits -= amount;
-        depositor.amount = 0; // Drain balance, but keep unlockTime in storage (NextTxGas optimization)
+        depositor.amount = 0;
+        // keep unlockTime in storage for next tx optimization
+        depositor.unlockTime = uint40(Math.min(depositor.unlockTime, block.timestamp));
         depositors[msg.sender] = depositor; // SSTORE
         _burn(msg.sender, balance);
     }

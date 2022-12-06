@@ -178,6 +178,23 @@ describe('St1inch', function () {
         await checkBalances(addr.address, ether('100'), time.duration.years('2'), st1inch);
     });
 
+    it('should decrease unlock time with early withdraw', async function () {
+        const { oneInch, st1inch } = await loadFixture(initContracts);
+        await st1inch.setMaxLossRatio('1000000000'); // 100%
+        await st1inch.setFeeReceiver(addr.address);
+
+        await st1inch.deposit(ether('100'), time.duration.days('60'));
+        await timeIncreaseTo(await time.latest() + time.duration.days('5'));
+
+        await st1inch.earlyWithdrawTo(addr.address, ether('0'), ether('100'));
+        expect((await st1inch.depositors(addr.address)).unlockTime).to.equal(await time.latest());
+        await oneInch.approve(st1inch.address, ether('100'));
+
+        await st1inch.deposit(ether('100'), time.duration.days('30'));
+
+        await checkBalances(addr.address, ether('100'), time.duration.days('30'), st1inch);
+    });
+
     it('should increase unlock time for deposit (call deposit(0,*))', async function () {
         const { st1inch } = await loadFixture(initContracts);
         await st1inch.deposit(ether('70'), time.duration.days('30'));
@@ -279,6 +296,18 @@ describe('St1inch', function () {
         expect((await st1inch.depositors(addr.address)).amount).to.equal(0);
         expect(await st1inch.balanceOf(addr.address)).to.equal(0);
         expect(await st1inch.votingPowerOf(addr.address)).to.equal(0);
+    });
+
+    it('should store unlock time after withdraw', async function () {
+        const { st1inch } = await loadFixture(initContracts);
+        await st1inch.deposit(ether('100'), time.duration.days('50'));
+
+        const unlockTime = (await st1inch.depositors(addr.address)).unlockTime;
+        await timeIncreaseTo(unlockTime);
+
+        await st1inch.withdraw();
+
+        expect((await st1inch.depositors(addr.address)).unlockTime).to.equal(unlockTime);
     });
 
     it('should withdraw users deposit and send tokens to other address', async function () {
