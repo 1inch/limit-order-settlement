@@ -56,7 +56,7 @@ const deserialize = (path) => {
 };
 
 const addBalanceIfNeed = async (account, provider, chainId) => {
-    const deployerWallet = new ethers.Wallet(setup.deployerPrivateKey).connect(provider);
+    const deployerWallet = new ethers.Wallet(setup[chainId].deployerPrivateKey).connect(provider);
     if ((await provider.getBalance(account)).toBigInt() < setup[chainId].minBalance) {
         await (
             await deployerWallet.sendTransaction({
@@ -91,7 +91,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         deployer,
         feeData,
         'Mock1inch',
-        false,
+        true,
     );
     feeData = await provider.getFeeData();
 
@@ -102,7 +102,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         deployer,
         feeData,
         'SomeOtherToken',
-        false,
+        true,
     );
     feeData = await provider.getFeeData();
 
@@ -113,7 +113,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         deployer,
         feeData,
         'GovernanceMothership',
-        false,
+        true,
     );
     feeData = await provider.getFeeData();
 
@@ -125,7 +125,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         deployer,
         feeData,
         'St1inch',
-        false,
+        true,
     );
     feeData = await provider.getFeeData();
 
@@ -155,7 +155,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         deployer,
         feeData,
         'St1inchPreview',
-        false,
+        true,
     );
     feeData = await provider.getFeeData();
 
@@ -166,7 +166,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         deployer,
         feeData,
         'RewardableDelegationPodWithVotingPower',
-        false,
+        true,
     );
     feeData = await provider.getFeeData();
 
@@ -177,7 +177,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         deployer,
         feeData,
         'ResolverMetadata',
-        false,
+        true,
     );
     feeData = await provider.getFeeData();
 
@@ -190,7 +190,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         deployer,
         feeData,
         'WhitelistRegistry',
-        false,
+        true,
     );
     feeData = await provider.getFeeData();
 
@@ -201,7 +201,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         deployer,
         feeData,
         'WhitelistHelper',
-        false,
+        true,
     );
 
     if (setup.deployOldResolvers) {
@@ -261,7 +261,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     }
 
     if (setup.deployResolvers) {
-        for (let i = 0; i < resolvers.length; ++i) {
+        for (let i = 0; i < 7; /* resolvers.length */ ++i) {
             const resolver = resolvers[i];
             console.log(`resolvers[${i}] address:`, resolver.address);
 
@@ -385,7 +385,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
 
     const ShareToken = await ethers.getContractFactory('DelegatedShare');
     if (setup.deployFarms) {
-        for (let i = 0; i < resolvers.length; ++i) {
+        for (let i = 0; i < 7; /* resolvers.length */ ++i) {
             const resolver = resolvers[i];
             console.log(`farm for resolvers[${i}] address:`, resolver.address);
 
@@ -482,7 +482,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
                     maxPriorityFeePerGas: setup[chainId].maxPriorityFeePerGas,
                 })).wait();
             }
-            console.log('promote mint');
+            console.log('promote mint, :');
 
             if ((await fake1Inch.allowance(deployer, feeBankAddress)).toBigInt() < setup.promote.stake) {
                 await (await fake1Inch.approve(feeBankAddress, setup.promote.stake.toString(), {
@@ -524,7 +524,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     }
 
     if (setup.deployDelegators) {
-        for (let i = 0; i < delegators.length; ++i) {
+        for (let i = 0; i < 7; /* delegators.length */ ++i) {
             const delegator = delegators[i];
             const wallet = new ethers.Wallet(DELEGATORS_PRIVATE_KEYS[i]).connect(provider);
             feeData = await provider.getFeeData();
