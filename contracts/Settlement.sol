@@ -178,8 +178,8 @@ contract Settlement is ISettlement, FeeBankCharger {
             case 1 {
                 ptr := sub(ptr, 1)
                 let count := shr(248, calldataload(ptr))
-                ptr := sub(ptr, 20)
-                for { let end := sub(ptr, mul(count, 20)) } gt(ptr, end) { ptr := sub(ptr, 20) } {
+                for { let end := sub(ptr, mul(count, 24)) } gt(ptr, end) { } {
+                    ptr := sub(ptr, 20)
                     let account := shr(96, calldataload(ptr))
                     ptr := sub(ptr, 4)
                     let addressCutOff := shr(224, calldataload(ptr))
