@@ -1,26 +1,12 @@
 const { ether, constants } = require('@1inch/solidity-utils');
 const { getChainId, ethers } = require('hardhat');
-const { idempotentDeployGetContract } = require('../test/helpers/utils.js');
+const { idempotentDeployGetContract, getContractByAddress } = require('../test/helpers/utils.js');
 const { networks } = require('../hardhat.networks');
+const { setup } = require('../deployments/matic/test_env_setup/setup.js');
 const fs = require('fs');
 
 const BASE_EXP = '999999981746376586';
-
-const setup = {
-    delegatorsFilePath: './deployments/matic/test_env_setup/delegators.json',
-    resolversFilePath: './deployments/matic/test_env_setup/resolvers.json',
-    deployOldResolvers: false,
-    deployResolvers: false,
-    deployFarms: false,
-    deployDelegators: false,
-    maxFeePerGas: '17000000000',
-    maxPriorityFeePerGas: '100000000',
-    returnFee: false,
-    deployerPrivateKey: process.env.MAINNET_PRIVATE_KEY,
-    feeRecive: {
-        percent: '500000000', // 50%
-    }
-};
+const ROUTER_V5_ADDR = '0x1111111254EEB25477B68fb85Ed929f73A960582';
 
 const oldResolvers = [
     {
@@ -67,6 +53,20 @@ const deserialize = (path) => {
                 ? BigInt(value)
                 : value,
     );
+};
+
+const addBalanceIfNeed = async (account, provider, chainId) => {
+    const deployerWallet = new ethers.Wallet(setup.deployerPrivateKey).connect(provider);
+    if ((await provider.getBalance(account)).toBigInt() < setup[chainId].minBalance) {
+        await (
+            await deployerWallet.sendTransaction({
+                to: account,
+                value: setup[chainId].addedBalance,
+                maxPriorityFeePerGas: setup[chainId].maxPriorityFeePerGas,
+            })
+        ).wait();
+        console.log('send money to:', account);
+    }
 };
 
 module.exports = async ({ getNamedAccounts, deployments }) => {
@@ -136,6 +136,17 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         await (await st1inch.setMaxLossRatio(setup.feeRecive.percent)).wait();
     }
 
+    const settlement = await idempotentDeployGetContract(
+        'Settlement',
+        [ROUTER_V5_ADDR, fake1Inch.address],
+        deployments,
+        deployer,
+        feeData,
+        'Settlement',
+        true,
+    );
+    feeData = await provider.getFeeData();
+
     /* const st1inchPreview = */ await idempotentDeployGetContract(
         'St1inchPreview',
         [st1inch.address],
@@ -192,8 +203,6 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         true,
     );
 
-    const deployerWallet = new ethers.Wallet(setup.deployerPrivateKey).connect(provider);
-
     if (setup.deployOldResolvers) {
         for (let i = 0; i < oldResolvers.length; ++i) {
             const resolver = oldResolvers[i];
@@ -210,25 +219,13 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
             }
             console.log('mint');
 
-            if ((await provider.getBalance(resolver.address)).toBigInt() < ether('0.009')) {
-                await (
-                    await deployerWallet.sendTransaction({
-                        to: resolver.address,
-                        value: ether('0.1'),
-                        maxFeePerGas: setup.maxFeePerGas,
-                        maxPriorityFeePerGas: setup.maxPriorityFeePerGas,
-                    })
-                ).wait();
-            }
-            console.log('sendTransaction');
-            feeData = await provider.getFeeData();
+            addBalanceIfNeed(resolver.address, provider, chainId);
 
             if ((await prevSt1inch.balanceOf(resolver.address)).toBigInt() < resolver.stake) {
                 const depositAmount = resolver.stake - (await prevSt1inch.balanceOf(resolver.address)).toBigInt();
                 await (
                     await fake1Inch.connect(wallet).approve(prevSt1inch.address, depositAmount.toString(), {
-                        maxFeePerGas: setup.maxFeePerGas,
-                        maxPriorityFeePerGas: setup.maxPriorityFeePerGas,
+                        maxPriorityFeePerGas: setup[chainId].maxPriorityFeePerGas,
                         gasLimit: '300000',
                     })
                 ).wait();
@@ -236,8 +233,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
 
                 await (
                     await prevSt1inch.connect(wallet).stake(depositAmount, {
-                        maxFeePerGas: setup.maxFeePerGas,
-                        maxPriorityFeePerGas: setup.maxPriorityFeePerGas,
+                        maxPriorityFeePerGas: setup[chainId].maxPriorityFeePerGas,
                         gasLimit: '300000',
                     })
                 ).wait();
@@ -246,13 +242,12 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
             if (setup.returnFee) {
                 const balance = (await provider.getBalance(resolver.address)).toBigInt();
                 if (balance > 0n) {
-                    const balance = balance - BigInt(setup.maxPriorityFeePerGas);
+                    const balance = balance - BigInt(setup[chainId].maxPriorityFeePerGas);
                     await (
                         await wallet.sendTransaction({
                             to: process.env.MAINNET_DEPLOYER,
                             value: balance,
-                            maxFeePerGas: setup.maxPriorityFeePerGas,
-                            maxPriorityFeePerGas: setup.maxPriorityFeePerGas,
+                            maxPriorityFeePerGas: setup[chainId].maxPriorityFeePerGas,
                         })
                     ).wait();
                 }
@@ -277,25 +272,13 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
             }
             console.log('mint');
 
-            if ((await provider.getBalance(resolver.address)).toBigInt() < ether('0.009')) {
-                await (
-                    await deployerWallet.sendTransaction({
-                        to: resolver.address,
-                        value: ether('0.1'),
-                        maxFeePerGas: setup.maxFeePerGas,
-                        maxPriorityFeePerGas: setup.maxPriorityFeePerGas,
-                    })
-                ).wait();
-            }
-            console.log('sendTransaction');
-            feeData = await provider.getFeeData();
+            addBalanceIfNeed(resolver.address, provider, chainId);
 
             if ((await st1inch.depositors(resolver.address)).amount.toBigInt() < resolver.stake) {
                 const depositAmount = resolver.stake - (await st1inch.depositors(resolver.address)).amount.toBigInt();
                 await (
                     await fake1Inch.connect(wallet).approve(st1inch.address, depositAmount.toString(), {
-                        maxFeePerGas: setup.maxFeePerGas,
-                        maxPriorityFeePerGas: setup.maxPriorityFeePerGas,
+                        maxPriorityFeePerGas: setup[chainId].maxPriorityFeePerGas,
                         gasLimit: '300000',
                     })
                 ).wait();
@@ -303,8 +286,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
 
                 await (
                     await st1inch.connect(wallet).deposit(depositAmount, resolver.lockTime, {
-                        maxFeePerGas: setup.maxFeePerGas,
-                        maxPriorityFeePerGas: setup.maxPriorityFeePerGas,
+                        maxPriorityFeePerGas: setup[chainId].maxPriorityFeePerGas,
                         gasLimit: '300000',
                     })
                 ).wait();
@@ -317,8 +299,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
                     await st1inch
                         .connect(wallet)
                         .addPod(delegation.address, {
-                            maxFeePerGas: setup.maxFeePerGas,
-                            maxPriorityFeePerGas: setup.maxPriorityFeePerGas,
+                            maxPriorityFeePerGas: setup[chainId].maxPriorityFeePerGas,
                             gasLimit: '300000',
                         })
                 ).wait();
@@ -334,8 +315,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
                             `A${i}DT`,
                             maxPods,
                             {
-                                maxFeePerGas: setup.maxFeePerGas,
-                                maxPriorityFeePerGas: setup.maxPriorityFeePerGas,
+                                maxPriorityFeePerGas: setup[chainId].maxPriorityFeePerGas,
                                 gasLimit: '1750000',
                             },
                         )
@@ -349,8 +329,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
                     await delegation
                         .connect(wallet)
                         .delegate(resolver.address, {
-                            maxFeePerGas: setup.maxFeePerGas,
-                            maxPriorityFeePerGas: setup.maxPriorityFeePerGas,
+                            maxPriorityFeePerGas: setup[chainId].maxPriorityFeePerGas,
                             gasLimit: '300000',
                         })
                 ).wait();
@@ -364,8 +343,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
                         await whitelist
                             .connect(wallet)
                             .register({
-                                maxFeePerGas: setup.maxFeePerGas,
-                                maxPriorityFeePerGas: setup.maxPriorityFeePerGas,
+                                maxPriorityFeePerGas: setup[chainId].maxPriorityFeePerGas,
                                 gasLimit: '300000',
                             })
                     ).wait();
@@ -380,13 +358,12 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
             if (setup.returnFee) {
                 const balance = (await provider.getBalance(resolver.address)).toBigInt();
                 if (balance > 0n) {
-                    const balance = balance - BigInt(setup.maxPriorityFeePerGas);
+                    const balance = balance - BigInt(setup[chainId].maxPriorityFeePerGas);
                     await (
                         await wallet.sendTransaction({
                             to: process.env.MAINNET_DEPLOYER,
                             value: balance,
-                            maxFeePerGas: setup.maxPriorityFeePerGas,
-                            maxPriorityFeePerGas: setup.maxPriorityFeePerGas,
+                            maxPriorityFeePerGas: setup[chainId].maxPriorityFeePerGas,
                         })
                     ).wait();
                 }
@@ -428,8 +405,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
 
             if ((await delegation.defaultFarms(resolver.address)) !== farm.address) {
                 await (await delegation.connect(wallet).setDefaultFarm(farm.address, {
-                    maxFeePerGas: setup.maxFeePerGas,
-                    maxPriorityFeePerGas: setup.maxPriorityFeePerGas,
+                    maxPriorityFeePerGas: setup[chainId].maxPriorityFeePerGas,
                     gasLimit: '300000',
                 })).wait();
             }
@@ -443,8 +419,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
 
                 await (
                     await rewardToken.connect(wallet).approve(farm.address, resolver.reward.toString(), {
-                        maxFeePerGas: setup.maxFeePerGas,
-                        maxPriorityFeePerGas: setup.maxPriorityFeePerGas,
+                        maxPriorityFeePerGas: setup[chainId].maxPriorityFeePerGas,
                         gasLimit: '300000',
                     })
                 ).wait();
@@ -458,8 +433,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
                     await shareToken
                         .connect(wallet)
                         .addPod(farm.address, {
-                            maxFeePerGas: setup.maxFeePerGas,
-                            maxPriorityFeePerGas: setup.maxPriorityFeePerGas,
+                            maxPriorityFeePerGas: setup[chainId].maxPriorityFeePerGas,
                             gasLimit: '300000',
                         })
                 ).wait();
@@ -473,14 +447,60 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
                     await farm
                         .connect(wallet)
                         .startFarming(resolver.reward.toString(), resolver.rewardDuration, {
-                            maxFeePerGas: setup.maxFeePerGas,
-                            maxPriorityFeePerGas: setup.maxPriorityFeePerGas,
+                            maxPriorityFeePerGas: setup[chainId].maxPriorityFeePerGas,
                             gasLimit: '300000',
                         })
                 ).wait();
             }
             console.log(`farm for resolvers[${i}] has started`);
         }
+    }
+
+    const feeBankAddress = await settlement.feeBank();
+    console.log('Fee bank:', feeBankAddress);
+    if (setup.promote.enable) {
+        const feeBank = await getContractByAddress('FeeBank', feeBankAddress);
+        if ((await feeBank.availableCredit(setup.promote.address)).toBigInt() < setup.promote.stake.toString()) {
+            if ((await fake1Inch.balanceOf(deployer)).toBigInt() < setup.promote.stake) {
+                await (await fake1Inch.mint(deployer, setup.promote.stake.toString(), {
+                    maxPriorityFeePerGas: setup[chainId].maxPriorityFeePerGas,
+                })).wait();
+            }
+            console.log('promote mint');
+
+            if ((await fake1Inch.allowance(deployer, feeBankAddress)).toBigInt() < setup.promote.stake) {
+                await (await fake1Inch.approve(feeBankAddress, setup.promote.stake.toString(), {
+                    maxPriorityFeePerGas: setup[chainId].maxPriorityFeePerGas,
+                })).wait();
+            }
+            console.log('promote approve');
+
+            await (await feeBank.depositFor(setup.promote.address, setup.promote.stake.toString(), {
+                maxPriorityFeePerGas: setup[chainId].maxPriorityFeePerGas,
+            })).wait();
+        }
+        console.log('depositFor');
+
+        if ((await whitelist.promotions(resolvers[0].address, '1')) !== setup.promote.address) {
+            console.log('promote 1:', (await whitelist.promotions(resolvers[0].address, '1')));
+
+            const wallet = new ethers.Wallet(RESOLVERS_PRIVATE_KEYS[0]).connect(provider);
+            await (await whitelist.connect(wallet).promote('1', setup.promote.address, {
+                maxPriorityFeePerGas: setup[chainId].maxPriorityFeePerGas,
+            }));
+            console.log('promote 1');
+        }
+
+        if ((await whitelist.promotions(resolvers[0].address, '137')) !== setup.promote.address) {
+            console.log('promote 137:', (await whitelist.promotions(resolvers[0].address, '137')));
+            const wallet = new ethers.Wallet(RESOLVERS_PRIVATE_KEYS[0]).connect(provider);
+            await (await whitelist.connect(wallet).promote('137', setup.promote.address, {
+                maxPriorityFeePerGas: setup[chainId].maxPriorityFeePerGas,
+            }));
+            console.log('promote 137');
+        }
+
+        await addBalanceIfNeed(setup.promote.address, provider, chainId);
     }
 
     if (setup.deployDelegators) {
@@ -499,25 +519,13 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
             }
             console.log('mint');
 
-            if ((await provider.getBalance(delegator.address)).toBigInt() < ether('0.009')) {
-                await (
-                    await deployerWallet.sendTransaction({
-                        to: delegator.address,
-                        value: ether('0.1'),
-                        maxFeePerGas: setup.maxFeePerGas,
-                        maxPriorityFeePerGas: setup.maxPriorityFeePerGas,
-                    })
-                ).wait();
-            }
-            console.log('sendTransaction');
-            feeData = await provider.getFeeData();
+            addBalanceIfNeed(delegator.address, provider, chainId);
 
             if ((await st1inch.depositors(delegator.address)).amount.toBigInt() < delegator.stake) {
                 const depositAmount = delegator.stake - (await st1inch.depositors(delegator.address)).amount.toBigInt();
                 await (
                     await fake1Inch.connect(wallet).approve(st1inch.address, delegator.stake.toString(), {
-                        maxFeePerGas: setup.maxFeePerGas,
-                        maxPriorityFeePerGas: setup.maxPriorityFeePerGas,
+                        maxPriorityFeePerGas: setup[chainId].maxPriorityFeePerGas,
                         gasLimit: '300000',
                     })
                 ).wait();
@@ -525,8 +533,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
 
                 await (
                     await st1inch.connect(wallet).deposit(depositAmount.toString(), delegator.lockTime, {
-                        maxFeePerGas: setup.maxFeePerGas,
-                        maxPriorityFeePerGas: setup.maxPriorityFeePerGas,
+                        maxPriorityFeePerGas: setup[chainId].maxPriorityFeePerGas,
                         gasLimit: '300000',
                     })
                 ).wait();
@@ -539,8 +546,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
                     await st1inch
                         .connect(wallet)
                         .addPod(delegation.address, {
-                            maxFeePerGas: setup.maxFeePerGas,
-                            maxPriorityFeePerGas: setup.maxPriorityFeePerGas,
+                            maxPriorityFeePerGas: setup[chainId].maxPriorityFeePerGas,
                             gasLimit: '300000',
                         })
                 ).wait();
@@ -553,8 +559,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
                     await delegation
                         .connect(wallet)
                         .delegate(resolver, {
-                            maxFeePerGas: setup.maxFeePerGas,
-                            maxPriorityFeePerGas: setup.maxPriorityFeePerGas,
+                            maxPriorityFeePerGas: setup[chainId].maxPriorityFeePerGas,
                             gasLimit: '300000',
                         })
                 ).wait();
@@ -570,20 +575,19 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
             //     await (
             //         await shareToken
             //             .connect(wallet)
-            //             .addPod(farmAddress, { maxFeePerGas: setup.maxFeePerGas, maxPriorityFeePerGas: setup.maxPriorityFeePerGas, gasLimit: '300000' })
+            //             .addPod(farmAddress, { maxPriorityFeePerGas: setup[chainId].maxPriorityFeePerGas, gasLimit: '300000' })
             //     ).wait();
             // }
 
             if (setup.returnFee) {
                 const balance = (await provider.getBalance(delegator.address)).toBigInt();
                 if (balance > 0n) {
-                    const balance = balance - BigInt(setup.maxPriorityFeePerGas);
+                    const balance = balance - BigInt(setup[chainId].maxPriorityFeePerGas);
                     await (
                         await wallet.sendTransaction({
                             to: process.env.MAINNET_DEPLOYER,
                             value: balance,
-                            maxFeePerGas: setup.maxPriorityFeePerGas,
-                            maxPriorityFeePerGas: setup.maxPriorityFeePerGas,
+                            maxPriorityFeePerGas: setup[chainId].maxPriorityFeePerGas,
                         })
                     ).wait();
                 }
@@ -593,4 +597,4 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     }
 };
 
-module.exports.skip = async () => true;
+module.exports.skip = async () => false;

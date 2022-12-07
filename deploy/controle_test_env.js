@@ -1,14 +1,9 @@
+const { ether } = require('@1inch/solidity-utils');
 const { getChainId, ethers } = require('hardhat');
 const { getContractByAddress } = require('../test/helpers/utils.js');
 const { networks } = require('../hardhat.networks');
+const { setup } = require('../deployments/matic/test_env_setup/setup.js');
 const fs = require('fs');
-
-const setup = {
-    maxPriorityFeePerGas: '40000000000',
-    deployerPrivateKey: process.env.MATIC_PRIVATE_KEY,
-    delegatorsFilePath: './deployments/matic/test_env_setup/delegators.json',
-    resolversFilePath: './deployments/matic/test_env_setup/resolvers.json',
-};
 
 const deserialize = (path) => {
     return JSON.parse(
@@ -33,6 +28,8 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     const { deployer } = await getNamedAccounts();
 
     const st1inch = await getContractByAddress('St1inch', '0xF93cc6F5ac8E3071519b2c0b90FFb76a49073E3e');
-    await (await st1inch.setFeeReceiver(deployer));
+    await (await st1inch.setFeeReceiver(deployer, {
+        maxPriorityFeePerGas: setup[chainId].maxPriorityFeePerGas,
+    }));
 };
-module.exports.skip = async () => false;
+module.exports.skip = async () => true;
