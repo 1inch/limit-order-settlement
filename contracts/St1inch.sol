@@ -151,7 +151,6 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
     }
 
     function _earlyWithdrawLoss(uint256 depAmount, uint256 stBalance) private view returns (uint256 loss, uint256 ret) {
-        // TODO: it's failed if stake for 4 years and immediately call it, because `VP > depAmount`
         ret = (depAmount - _votingPowerAt(stBalance, block.timestamp)) * 10 / 9;
         loss = depAmount - ret;
     }
@@ -173,7 +172,9 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
 
     function _withdraw(Depositor memory depositor, uint256 amount, uint256 balance) private {
         totalDeposits -= amount;
-        depositor.amount = 0; // Drain balance, but keep unlockTime in storage (NextTxGas optimization)
+        depositor.amount = 0;
+        // keep unlockTime in storage for next tx optimization
+        depositor.unlockTime = uint40(Math.min(depositor.unlockTime, block.timestamp));
         depositors[msg.sender] = depositor; // SSTORE
         _burn(msg.sender, balance);
     }
