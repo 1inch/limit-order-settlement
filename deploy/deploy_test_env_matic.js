@@ -91,7 +91,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         deployer,
         feeData,
         'Mock1inch',
-        true,
+        false,
     );
     feeData = await provider.getFeeData();
 
@@ -102,7 +102,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         deployer,
         feeData,
         'SomeOtherToken',
-        true,
+        false,
     );
     feeData = await provider.getFeeData();
 
@@ -113,7 +113,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         deployer,
         feeData,
         'GovernanceMothership',
-        true,
+        false,
     );
     feeData = await provider.getFeeData();
 
@@ -125,7 +125,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         deployer,
         feeData,
         'St1inch',
-        true,
+        false,
     );
     feeData = await provider.getFeeData();
 
@@ -155,7 +155,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         deployer,
         feeData,
         'St1inchPreview',
-        true,
+        false,
     );
     feeData = await provider.getFeeData();
 
@@ -166,7 +166,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         deployer,
         feeData,
         'RewardableDelegationPodWithVotingPower',
-        true,
+        false,
     );
     feeData = await provider.getFeeData();
 
@@ -177,7 +177,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         deployer,
         feeData,
         'ResolverMetadata',
-        true,
+        false,
     );
     feeData = await provider.getFeeData();
 
@@ -190,7 +190,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         deployer,
         feeData,
         'WhitelistRegistry',
-        true,
+        false,
     );
     feeData = await provider.getFeeData();
 
@@ -201,7 +201,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         deployer,
         feeData,
         'WhitelistHelper',
-        true,
+        false,
     );
 
     if (setup.deployOldResolvers) {
@@ -216,7 +216,10 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
                 (await fake1Inch.balanceOf(resolver.address)).toBigInt() === 0n &&
                 (await st1inch.depositors(resolver.address)).amount.toBigInt() === 0n
             ) {
-                await (await fake1Inch.mint(resolver.address, resolver.stake.toString())).wait();
+                await (await fake1Inch.mint(resolver.address, resolver.stake.toString(), {
+                    maxFeePerGas: setup[chainId].maxFeePerGas,
+                    maxPriorityFeePerGas: setup[chainId].maxPriorityFeePerGas,
+                })).wait();
             }
             console.log('mint');
 
@@ -261,7 +264,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     }
 
     if (setup.deployResolvers) {
-        for (let i = 0; i < 7; /* resolvers.length */ ++i) {
+        for (let i = 0; i < resolvers.length; /* resolvers.length */ ++i) {
             const resolver = resolvers[i];
             console.log(`resolvers[${i}] address:`, resolver.address);
 
@@ -272,7 +275,10 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
                 (await fake1Inch.balanceOf(resolver.address)).toBigInt() === 0n &&
                 (await st1inch.depositors(resolver.address)).amount.toBigInt() === 0n
             ) {
-                await (await fake1Inch.mint(resolver.address, resolver.stake.toString())).wait();
+                await (await fake1Inch.mint(resolver.address, resolver.stake.toString(), {
+                    maxFeePerGas: setup[chainId].maxFeePerGas,
+                    maxPriorityFeePerGas: setup[chainId].maxPriorityFeePerGas,
+                })).wait();
             }
             console.log('mint');
 
@@ -385,7 +391,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
 
     const ShareToken = await ethers.getContractFactory('DelegatedShare');
     if (setup.deployFarms) {
-        for (let i = 0; i < 7; /* resolvers.length */ ++i) {
+        for (let i = 0; i < resolvers.length; /* resolvers.length */ ++i) {
             const resolver = resolvers[i];
             console.log(`farm for resolvers[${i}] address:`, resolver.address);
 
@@ -410,7 +416,10 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
             feeData = await provider.getFeeData();
 
             if ((await farm.distributor()) !== resolver.address) {
-                await (await farm.setDistributor(resolver.address)).wait();
+                await (await farm.setDistributor(resolver.address, {
+                    maxFeePerGas: setup[chainId].maxFeePerGas,
+                    maxPriorityFeePerGas: setup[chainId].maxPriorityFeePerGas,
+                })).wait();
             }
             console.log('setDistributor');
 
@@ -427,7 +436,10 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
                 (await rewardToken.balanceOf(resolver.address)).toBigInt() === 0n &&
                 (await rewardToken.balanceOf(farm.address)).toBigInt() === 0n
             ) {
-                await (await rewardToken.mint(resolver.address, resolver.reward.toString())).wait();
+                await (await rewardToken.mint(resolver.address, resolver.reward.toString(), {
+                    maxFeePerGas: setup[chainId].maxFeePerGas,
+                    maxPriorityFeePerGas: setup[chainId].maxPriorityFeePerGas,
+                })).wait();
 
                 await (
                     await rewardToken.connect(wallet).approve(farm.address, resolver.reward.toString(), {
@@ -482,7 +494,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
                     maxPriorityFeePerGas: setup[chainId].maxPriorityFeePerGas,
                 })).wait();
             }
-            console.log('promote mint, :');
+            console.log('promote mint');
 
             if ((await fake1Inch.allowance(deployer, feeBankAddress)).toBigInt() < setup.promote.stake) {
                 await (await fake1Inch.approve(feeBankAddress, setup.promote.stake.toString(), {
@@ -524,7 +536,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     }
 
     if (setup.deployDelegators) {
-        for (let i = 0; i < 7; /* delegators.length */ ++i) {
+        for (let i = 0; i < delegators.length; /* delegators.length */ ++i) {
             const delegator = delegators[i];
             const wallet = new ethers.Wallet(DELEGATORS_PRIVATE_KEYS[i]).connect(provider);
             feeData = await provider.getFeeData();
@@ -535,7 +547,10 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
                 (await fake1Inch.balanceOf(delegator.address)).toBigInt() === 0n &&
                 (await st1inch.depositors(delegator.address)).amount.toBigInt() === 0n
             ) {
-                await (await fake1Inch.mint(delegator.address, delegator.stake.toString())).wait();
+                await (await fake1Inch.mint(delegator.address, delegator.stake.toString(), {
+                    maxFeePerGas: setup[chainId].maxFeePerGas,
+                    maxPriorityFeePerGas: setup[chainId].maxPriorityFeePerGas,
+                })).wait();
             }
             console.log('mint');
 

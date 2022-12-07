@@ -6,7 +6,7 @@ const setup = {
     deployOldResolvers: false,
     deployResolvers: false,
     deployFarms: false,
-    deployDelegators: false,
+    deployDelegators: true,
     1: {
         maxFeePerGas: '15000000000',
         maxPriorityFeePerGas: '100000000',
