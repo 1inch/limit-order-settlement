@@ -130,6 +130,88 @@ describe('Settlement', function () {
         expect(await dai.balanceOf(addr1.address)).to.equal(addr1dai.add(ether('100')));
     });
 
+    it('sopposite direction recursive swap with taking fee', async function () {
+        const { dai, weth, swap, matcher, resolver } = await loadFixture(initContracts);
+
+        const order = await buildOrder(
+            {
+                makerAsset: dai.address,
+                takerAsset: weth.address,
+                makingAmount: ether('100'),
+                takingAmount: ether('0.1'),
+                salt: buildSalt({ orderStartTime: await time.latest() }),
+                from: addr.address,
+                takingFeeReceiver: addr1.address,
+                takingFeeRatio: 10000000n
+            },
+            {
+                predicate: swap.interface.encodeFunctionData('timestampBelow', [0xff00000000]),
+                whitelistedAddrs: [addr.address],
+                whitelistedCutOffs: [0],
+            },
+        );
+
+        const backOrder = await buildOrder(
+            {
+                makerAsset: weth.address,
+                takerAsset: dai.address,
+                makingAmount: ether('0.11'),
+                takingAmount: ether('100'),
+                from: addr1.address,
+                takingFeeReceiver: addr.address,
+                takingFeeRatio: 10000000n
+            },
+            {
+                predicate: swap.interface.encodeFunctionData('timestampBelow', [0xff00000000]),
+                whitelistedAddrs: [addr.address],
+                whitelistedCutOffs: [0],
+            },
+        );
+
+        const signature = await signOrder(order, chainId, swap.address, addr);
+        const signatureBackOrder = await signOrder(backOrder, chainId, swap.address, addr1);
+
+        const matchingParams = matcher.address + '01' + trim0x(resolver.address);
+
+        const interaction =
+            matcher.address +
+            '00' +
+            swap.interface
+                .encodeFunctionData('fillOrderTo', [
+                    backOrder,
+                    signatureBackOrder,
+                    matchingParams,
+                    ether('0.11'),
+                    0,
+                    ether('100'),
+                    matcher.address,
+                ])
+                .substring(10);
+
+        const addrweth = await weth.balanceOf(addr.address);
+        const addr1weth = await weth.balanceOf(addr1.address);
+        const addrdai = await dai.balanceOf(addr.address);
+        const addr1dai = await dai.balanceOf(addr1.address);
+
+        await matcher.settleOrders(
+            '0x' + swap.interface.encodeFunctionData('fillOrderTo', [
+                order,
+                signature,
+                interaction,
+                ether('100'),
+                0,
+                ether('0.11'),
+                matcher.address,
+            ]).substring(10),
+        );
+
+        assertRoughlyEqualValues(await weth.balanceOf(addr.address), addrweth.add(ether('0.11')), 1e-4);
+        // TODO: 6e-5 WETH lost into LimitOrderProtocol contract
+        expect(await weth.balanceOf(addr1.address)).to.equal(addr1weth.sub(ether('0.11')));
+        expect(await dai.balanceOf(addr.address)).to.equal(addrdai.sub(ether('100')));
+        expect(await dai.balanceOf(addr1.address)).to.equal(addr1dai.add(ether('100')));
+    });
+
     it('unidirectional recursive swap', async function () {
         const { dai, weth, swap, matcher, resolver } = await loadFixture(initContracts);
 
