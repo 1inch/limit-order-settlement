@@ -16,11 +16,9 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
 
     const { deployer } = await getNamedAccounts();
 
-    const whitelistRegistrySimple = await idempotentDeploy('WhitelistRegistrySimple', [], deployments, deployer);
-
     await idempotentDeploy(
         'Settlement',
-        [whitelistRegistrySimple.address, ROUTER_V5_ADDR, INCH[chainId]],
+        [ROUTER_V5_ADDR, INCH[chainId]],
         deployments,
         deployer,
     );
