@@ -726,65 +726,77 @@ describe('Settlement', function () {
         ).to.be.revertedWithCustomError(matcher, 'NotEnoughCredit');
     });
 
-    it('should change by non-whitelisted resolver after publicCutOff', async function () {
-        const { dai, weth, swap, matcher, resolver } = await loadFixture(initContracts);
+    describe('whitelist lock period', async function () {
+        it('should change only after whitelistedCutOff', async function () {
+            const { dai, weth, swap, matcher, resolver } = await loadFixture(initContracts);
 
-        console.log(
-            BigInt(await time.latest()).toString(),
-        );
+            const currentTime = BigInt(await time.latest());
+            const oneWeek = BigInt(time.duration.weeks('1'));
+            const order = await buildOrder(
+                {
+                    salt: buildSalt({ orderStartTime: await defaultExpiredAuctionTimestamp(), fee: orderFee }),
+                    makerAsset: dai.address,
+                    takerAsset: weth.address,
+                    makingAmount: ether('100'),
+                    takingAmount: ether('0.1'),
+                    from: addr.address,
+                },
+                {
+                    whitelistedAddrs: [addr.address],
+                    whitelistedCutOffs: [currentTime + oneWeek],
+                    publicCutOff: currentTime + oneWeek * 20n,
+                },
+            );
+            const backOrder = await buildOrder(
+                {
+                    salt: buildSalt({ orderStartTime: await defaultExpiredAuctionTimestamp(), fee: backOrderFee }),
+                    makerAsset: weth.address,
+                    takerAsset: dai.address,
+                    makingAmount: ether('0.1'),
+                    takingAmount: ether('100'),
+                    from: addr1.address,
+                },
+                {
+                    whitelistedAddrs: [addr.address],
+                    whitelistedCutOffs: [currentTime + oneWeek],
+                    publicCutOff: currentTime + oneWeek * 20n,
+                },
+            );
+            const signature = await signOrder(order, chainId, swap.address, addr);
+            const signatureBackOrder = await signOrder(backOrder, chainId, swap.address, addr1);
 
-        const order = await buildOrder(
-            {
-                salt: buildSalt({ orderStartTime: await defaultExpiredAuctionTimestamp(), fee: orderFee }),
-                makerAsset: dai.address,
-                takerAsset: weth.address,
-                makingAmount: ether('100'),
-                takingAmount: ether('0.1'),
-                from: addr.address,
-            },
-            {
-                whitelistedAddrs: [addr1.address],
-                whitelistedCutOffs: [0],
-                publicCutOff: BigInt(await time.latest()) + 60n,
-            },
-        );
-        const backOrder = await buildOrder(
-            {
-                salt: buildSalt({ orderStartTime: await defaultExpiredAuctionTimestamp(), fee: backOrderFee }),
-                makerAsset: weth.address,
-                takerAsset: dai.address,
-                makingAmount: ether('0.1'),
-                takingAmount: ether('100'),
-                from: addr1.address,
-            },
-            {
-                whitelistedAddrs: [addr1.address],
-                whitelistedCutOffs: [0],
-                publicCutOff: BigInt(await time.latest()) + 60n,
-            },
-        );
-        const signature = await signOrder(order, chainId, swap.address, addr);
-        const signatureBackOrder = await signOrder(backOrder, chainId, swap.address, addr1);
+            const matchingParams = matcher.address + '01' + trim0x(resolver.address);
 
-        const matchingParams = matcher.address + '01' + trim0x(resolver.address);
+            const interaction =
+                matcher.address +
+                '00' +
+                swap.interface
+                    .encodeFunctionData('fillOrderTo', [
+                        backOrder,
+                        signatureBackOrder,
+                        matchingParams,
+                        ether('0.1'),
+                        0,
+                        ether('100'),
+                        matcher.address,
+                    ])
+                    .substring(10);
 
-        const interaction =
-            matcher.address +
-            '00' +
-            swap.interface
-                .encodeFunctionData('fillOrderTo', [
-                    backOrder,
-                    signatureBackOrder,
-                    matchingParams,
-                    ether('0.1'),
-                    0,
-                    ether('100'),
-                    matcher.address,
-                ])
-                .substring(10);
-
-        await expect(
-            matcher.settleOrders(
+            await expect(
+                matcher.settleOrders(
+                    '0x' + swap.interface.encodeFunctionData('fillOrderTo', [
+                        order,
+                        signature,
+                        interaction,
+                        ether('100'),
+                        0,
+                        ether('0.1'),
+                        matcher.address,
+                    ]).substring(10),
+                ),
+            ).to.be.revertedWithCustomError(matcher, 'ResolverIsNotWhitelisted');
+            await timeIncreaseTo(currentTime + oneWeek + 1n);
+            await matcher.settleOrders(
                 '0x' + swap.interface.encodeFunctionData('fillOrderTo', [
                     order,
                     signature,
@@ -794,19 +806,87 @@ describe('Settlement', function () {
                     ether('0.1'),
                     matcher.address,
                 ]).substring(10),
-            ),
-        ).to.be.revertedWithCustomError(matcher, 'ResolverIsNotWhitelisted');
-        await timeIncreaseTo(BigInt(await time.latest()) + 100n);
-        await matcher.settleOrders(
-            '0x' + swap.interface.encodeFunctionData('fillOrderTo', [
-                order,
-                signature,
-                interaction,
-                ether('100'),
-                0,
-                ether('0.1'),
-                matcher.address,
-            ]).substring(10),
-        );
+            );
+        });
+
+        it('should change by non-whitelisted resolver after publicCutOff', async function () {
+            const { dai, weth, swap, matcher, resolver } = await loadFixture(initContracts);
+
+            const order = await buildOrder(
+                {
+                    salt: buildSalt({ orderStartTime: await defaultExpiredAuctionTimestamp(), fee: orderFee }),
+                    makerAsset: dai.address,
+                    takerAsset: weth.address,
+                    makingAmount: ether('100'),
+                    takingAmount: ether('0.1'),
+                    from: addr.address,
+                },
+                {
+                    whitelistedAddrs: [addr1.address],
+                    whitelistedCutOffs: [0],
+                    publicCutOff: BigInt(await time.latest()) + 60n,
+                },
+            );
+            const backOrder = await buildOrder(
+                {
+                    salt: buildSalt({ orderStartTime: await defaultExpiredAuctionTimestamp(), fee: backOrderFee }),
+                    makerAsset: weth.address,
+                    takerAsset: dai.address,
+                    makingAmount: ether('0.1'),
+                    takingAmount: ether('100'),
+                    from: addr1.address,
+                },
+                {
+                    whitelistedAddrs: [addr1.address],
+                    whitelistedCutOffs: [0],
+                    publicCutOff: BigInt(await time.latest()) + 60n,
+                },
+            );
+            const signature = await signOrder(order, chainId, swap.address, addr);
+            const signatureBackOrder = await signOrder(backOrder, chainId, swap.address, addr1);
+
+            const matchingParams = matcher.address + '01' + trim0x(resolver.address);
+
+            const interaction =
+                matcher.address +
+                '00' +
+                swap.interface
+                    .encodeFunctionData('fillOrderTo', [
+                        backOrder,
+                        signatureBackOrder,
+                        matchingParams,
+                        ether('0.1'),
+                        0,
+                        ether('100'),
+                        matcher.address,
+                    ])
+                    .substring(10);
+
+            await expect(
+                matcher.settleOrders(
+                    '0x' + swap.interface.encodeFunctionData('fillOrderTo', [
+                        order,
+                        signature,
+                        interaction,
+                        ether('100'),
+                        0,
+                        ether('0.1'),
+                        matcher.address,
+                    ]).substring(10),
+                ),
+            ).to.be.revertedWithCustomError(matcher, 'ResolverIsNotWhitelisted');
+            await timeIncreaseTo(BigInt(await time.latest()) + 100n);
+            await matcher.settleOrders(
+                '0x' + swap.interface.encodeFunctionData('fillOrderTo', [
+                    order,
+                    signature,
+                    interaction,
+                    ether('100'),
+                    0,
+                    ether('0.1'),
+                    matcher.address,
+                ]).substring(10),
+            );
+        });
     });
 });
