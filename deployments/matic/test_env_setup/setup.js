@@ -22,7 +22,7 @@ const setup = {
         deployerPrivateKey: process.env.MATIC_PRIVATE_KEY,
     },
     promote: {
-        enable: true,
+        enable: false,
         address: '0x3E4798B0e268bB73c04e29afe0bc7FdCF37B67c1',
         stake: ether('10000'),
     },
