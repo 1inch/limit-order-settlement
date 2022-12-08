@@ -744,7 +744,7 @@ describe('Settlement', function () {
                 {
                     whitelistedAddrs: [addr.address],
                     whitelistedCutOffs: [currentTime + oneWeek],
-                    publicCutOff: BigInt(await time.latest()) + oneWeek * 20n,
+                    publicCutOff: currentTime + oneWeek * 20n,
                 },
             );
             const backOrder = await buildOrder(
@@ -759,7 +759,7 @@ describe('Settlement', function () {
                 {
                     whitelistedAddrs: [addr.address],
                     whitelistedCutOffs: [currentTime + oneWeek],
-                    publicCutOff: BigInt(await time.latest()) + oneWeek * 20n,
+                    publicCutOff: currentTime + oneWeek * 20n,
                 },
             );
             const signature = await signOrder(order, chainId, swap.address, addr);
