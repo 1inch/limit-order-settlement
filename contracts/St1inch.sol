@@ -150,8 +150,10 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
         }
     }
 
-    function earlyWithdrawLoss(address account) external view returns (uint256 loss, uint256 ret) {
-        return _earlyWithdrawLoss(depositors[account].amount, balanceOf(account));
+    function earlyWithdrawLoss(address account) external view returns (uint256 loss, uint256 ret, bool canWithdraw) {
+        uint256 amount = depositors[account].amount;
+        (loss, ret) = _earlyWithdrawLoss(amount, balanceOf(account));
+        canWithdraw = loss <= amount * maxLossRatio / _ONE;
     }
 
     function _earlyWithdrawLoss(uint256 depAmount, uint256 stBalance) private view returns (uint256 loss, uint256 ret) {
