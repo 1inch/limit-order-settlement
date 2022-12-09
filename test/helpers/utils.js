@@ -69,7 +69,7 @@ const idempotentDeploy = async (
 
     const existingContract = await getOrNull(deploymentName);
     if (existingContract) {
-        console.log(`Skipping deploy for existing contract ${contractName} (${deploymentName})`);
+        console.log(`Skipping deploy for existing contract ${contractName} (${deploymentName}) at address: ${existingContract.address}`);
 
         return existingContract;
     }

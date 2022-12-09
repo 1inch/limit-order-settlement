@@ -200,7 +200,7 @@ contract Settlement is ISettlement, FeeBankCharger {
             let ptr := sub(add(orderInteractions.offset, orderInteractions.length), 1)
             let takerFeeEnabled := shr(255, calldataload(ptr))
             if eq(takerFeeEnabled, 1) {
-                feeData := shr(96, calldataload(sub(ptr, 24)))
+                feeData := shr(64, calldataload(sub(ptr, 24)))
                 feeData := or(feeData, shl(255, 1)) // set the highest bit to indicate that takerFee is enabled
             }
         }
