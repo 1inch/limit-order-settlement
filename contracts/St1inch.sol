@@ -128,8 +128,12 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
         }
     }
 
+    function earlyWithdraw(uint256 minReturn, uint256 maxLoss) external {
+        earlyWithdrawTo(msg.sender, minReturn, maxLoss);
+    }
+
     // ret(balance) = (deposit - vp(balance)) / 0.9
-    function earlyWithdrawTo(address to, uint256 minReturn, uint256 maxLoss) external {
+    function earlyWithdrawTo(address to, uint256 minReturn, uint256 maxLoss) public {
         Depositor memory depositor = depositors[msg.sender]; // SLOAD
         if (emergencyExit || block.timestamp >= depositor.unlockTime) revert StakeUnlocked();
         uint256 amount = depositor.amount;
