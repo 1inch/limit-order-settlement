@@ -91,7 +91,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         deployer,
         feeData,
         'Mock1inch',
-        false,
+        true,
     );
     feeData = await provider.getFeeData();
 
@@ -102,7 +102,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         deployer,
         feeData,
         'SomeOtherToken',
-        false,
+        true,
     );
     feeData = await provider.getFeeData();
 
@@ -113,7 +113,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         deployer,
         feeData,
         'GovernanceMothership',
-        false,
+        true,
     );
     feeData = await provider.getFeeData();
 
@@ -125,7 +125,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         deployer,
         feeData,
         'St1inch',
-        false,
+        true,
     );
     feeData = await provider.getFeeData();
 
@@ -155,7 +155,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         deployer,
         feeData,
         'St1inchPreview',
-        false,
+        true,
     );
     feeData = await provider.getFeeData();
 
@@ -166,7 +166,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         deployer,
         feeData,
         'RewardableDelegationPodWithVotingPower',
-        false,
+        true,
     );
     feeData = await provider.getFeeData();
 
@@ -177,7 +177,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         deployer,
         feeData,
         'ResolverMetadata',
-        false,
+        true,
     );
     feeData = await provider.getFeeData();
 
@@ -190,7 +190,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         deployer,
         feeData,
         'WhitelistRegistry',
-        false,
+        true,
     );
     feeData = await provider.getFeeData();
 
@@ -201,7 +201,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         deployer,
         feeData,
         'WhitelistHelper',
-        false,
+        true,
     );
 
     if (setup.deployOldResolvers) {
