@@ -5,7 +5,7 @@
     "reward": "17000000000000000000000",
     "rewardDuration": "2592000",
     "lockTime": "126144000",
-    "farm": "0x33C41882018d11fF77D731f3A37154bB5889Bf3F"
+    "farm": "0xCFD09Afc44714B7586FAfA23EFc0f86fDE5A913d"
   },
   {
     "address": "0xfaf9DCd8Eb35632F067FE4cCFA351b4724eaDd9f",
@@ -13,7 +13,7 @@
     "reward": "16000000000000000000000",
     "rewardDuration": "2592000",
     "lockTime": "94608000",
-    "farm": "0x1dcbe8323f728D6801F9B06838D0a44404fde337"
+    "farm": "0x95D28fcC905cA31B9A911dC80C9f38CB21d1f737"
   },
   {
     "address": "0xEED846aDE140B5B120f768F73D97c10B2B24c3e3",
@@ -21,7 +21,7 @@
     "reward": "15000000000000000000000",
     "rewardDuration": "2592000",
     "lockTime": "126144000",
-    "farm": "0x71C70Ffd7Cc74C9d37FF38c3C37E8FB617D015C3"
+    "farm": "0x233A097bfafCB15Bc9919E1e5D7487cc480194A5"
   },
   {
     "address": "0x2BDe1aB5671bbcdA4F3408a1828a1c8652333Da2",
@@ -29,7 +29,7 @@
     "reward": "14000000000000000000000",
     "rewardDuration": "2592000",
     "lockTime": "31536000",
-    "farm": "0x99E5aD8deA19186d8a05c97ba565379a85602f68"
+    "farm": "0x62D0486ad6eFEf655A2d78C81625B3B8C68C2684"
   },
   {
     "address": "0x7Bf9ba1C73Db0ea530Be097FC49b4225d359fa52",
@@ -37,7 +37,7 @@
     "reward": "13000000000000000000000",
     "rewardDuration": "2592000",
     "lockTime": "2592000",
-    "farm": "0x78264025aa919d7b00bBf22B19c847687f23b7d0"
+    "farm": "0x6183bf00A7Bd1Fb493FafE87d7C4Fea2598FB1A0"
   },
   {
     "address": "0xe0480C875152D74d7D25aFB5cDecfb54811B2F0b",
@@ -45,7 +45,7 @@
     "reward": "12000000000000000000000",
     "rewardDuration": "2592000",
     "lockTime": "126144000",
-    "farm": "0x0A7dc9fE4F8a45C783bab0C137884caf34e4BF1F"
+    "farm": "0xf21c6A7A73678b9a49712f748C4C323Def19532e"
   },
   {
     "address": "0x4cfD6e491E78B3bdC6Fd01e38A698950095A1EF9",
@@ -53,7 +53,7 @@
     "reward": "11000000000000000000000",
     "rewardDuration": "2592000",
     "lockTime": "94608000",
-    "farm": "0xC269D1097CD36D4D36DE87DC7FBAF8D306234c2a"
+    "farm": "0x9Ef979Ed11B11DE31bD5E8f07c26C56fE08660ED"
   },
   {
     "address": "0x11cDb0F806967581AEC94dEEd26d2508d987712b",
@@ -61,7 +61,7 @@
     "reward": "10000000000000000000000",
     "rewardDuration": "2592000",
     "lockTime": "63072000",
-    "farm": "0xd8571C70b21CFE432D41Cde75e4863843c0DBC0F"
+    "farm": "0x9af00588d5E83e1E38706527B7e8A10a87043045"
   },
   {
     "address": "0x3C1Dcf77032F6973BADE015c0F0549E14E557D9c",
@@ -69,7 +69,7 @@
     "reward": "9000000000000000000000",
     "rewardDuration": "2592000",
     "lockTime": "31536000",
-    "farm": "0x0ea8816dD206b38069fA5A7B38Eb6Ad6230e6693"
+    "farm": "0x62aB6697D6ec2bdf15f4b77a2C09e8a1621C40e4"
   },
   {
     "address": "0x78992E92eee926D37E8012E801ac67be499E61F9",
@@ -77,7 +77,7 @@
     "reward": "8000000000000000000000",
     "rewardDuration": "2592000",
     "lockTime": "15811200",
-    "farm": "0x14fF51fCa954D2F0D4fC6949922053B624eD6D2d"
+    "farm": "0xb17a9DA98aa66A3A2dfE08f84a5198A1f44Bf37D"
   },
   {
     "address": "0xAc8DD4AEeB882A50192658650a738041c60bb1B5",
@@ -85,7 +85,7 @@
     "reward": "7000000000000000000000",
     "rewardDuration": "2592000",
     "lockTime": "5184000",
-    "farm": "0x2291da0dCE1684B99b35E7ce6CF8E01ed661175e"
+    "farm": "0xcd43Db6f930bb6CEcaDFd94c9Ea8b7d52E5912eA"
   },
   {
     "address": "0xeb92FF5Be63BEbdC6F2B3ACE4C4da2127a14F61D",
@@ -93,7 +93,7 @@
     "reward": "6000000000000000000000",
     "rewardDuration": "2592000",
     "lockTime": "2592000",
-    "farm": "0x20e9001EfDb66Bf322Ce446f7B9dc72E2974903a"
+    "farm": "0x103788Ef5EaD5E26d518DF2114f2287983949B5C"
   },
   {
     "address": "0x9b7D865b4576AC20Ee929cF34Ee1D7415D31A7df",
@@ -101,7 +101,7 @@
     "reward": "5000000000000000000000",
     "rewardDuration": "2592000",
     "lockTime": "2592000",
-    "farm": "0x2eAAaf915512dBCD1D0BeD1e29a945f6226FfC4c"
+    "farm": "0xE10Ea9ed11FeEf934e02Cb3c381e854AD6F6a19b"
   },
   {
     "address": "0xA550a80eAbad7d141A910fD9ec4E5F2d0806C596",
@@ -109,7 +109,7 @@
     "reward": "4000000000000000000000",
     "rewardDuration": "2592000",
     "lockTime": "2592000",
-    "farm": "0x0Ca6375403639ea53082AfB9c366E034621eE767"
+    "farm": "0xcf00291b61DE539a79000372B3b58d41AB26D2B8"
   },
   {
     "address": "0xFAc6b79c2060c75D17D0a3C5838A44E995f67BEF",
@@ -117,7 +117,7 @@
     "reward": "3000000000000000000000",
     "rewardDuration": "2592000",
     "lockTime": "2592000",
-    "farm": "0xfA69242F0ecf0EAB3ad3Af29F97C6ca9223F3CbB"
+    "farm": "0x2eaCeA1B6B1da408eEC690b340678c9ca6b4e2F4"
   },
   {
     "address": "0xecB9222018F72Cdf70C21E83a6c8c6e96003088b",
@@ -125,7 +125,7 @@
     "reward": "2000000000000000000000",
     "rewardDuration": "2592000",
     "lockTime": "2592000",
-    "farm": "0xA4E322e6092adBe82FD5328a5C767e29D89E7c61"
+    "farm": "0x82A79E226F7c8Cf3C527B230b05aDc46E805f286"
   },
   {
     "address": "0x67622d31051Aeb561A5b318EBb475Bc4Db14110D",
@@ -133,6 +133,6 @@
     "reward": "1000000000000000000000",
     "rewardDuration": "2592000",
     "lockTime": "2592000",
-    "farm": "0x1BAd026CcBBF76f77952569dA78dc2dFF9834Af2"
+    "farm": "0xd85B96781121d1a546AB4BE54B5EB7CF52601309"
   }
 ]
