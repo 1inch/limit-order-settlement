@@ -8,13 +8,13 @@ describe('Settlement', function () {
     const basePoints = ether('0.001'); // 1e15
     const orderFee = 100n;
     const backOrderFee = 125n;
-    let addr, addr1;
+    let addr, addr1, addr2;
     let chainId;
     const abiCoder = ethers.utils.defaultAbiCoder;
 
     before(async function () {
         chainId = await getChainId();
-        [addr, addr1] = await ethers.getSigners();
+        [addr, addr1, addr2] = await ethers.getSigners();
     });
 
     async function initContracts() {
@@ -128,6 +128,98 @@ describe('Settlement', function () {
         expect(await weth.balanceOf(addr1.address)).to.equal(addr1weth.sub(ether('0.11')));
         expect(await dai.balanceOf(addr.address)).to.equal(addrdai.sub(ether('100')));
         expect(await dai.balanceOf(addr1.address)).to.equal(addr1dai.add(ether('100')));
+    });
+
+    it('sopposite direction recursive swap with taking fee', async function () {
+        const { dai, weth, swap, matcher, resolver } = await loadFixture(initContracts);
+
+        const order = await buildOrder(
+            {
+                makerAsset: dai.address,
+                takerAsset: weth.address,
+                makingAmount: ether('100'),
+                takingAmount: ether('0.1'),
+                salt: buildSalt({ orderStartTime: await time.latest() }),
+                from: addr.address,
+            },
+            {
+                predicate: swap.interface.encodeFunctionData('timestampBelow', [0xff00000000]),
+                whitelistedAddrs: [addr.address],
+                whitelistedCutOffs: [0],
+                takerFeeReceiver: addr2.address,
+                takerFeeRatio: 10000000n, // 1%
+            },
+        );
+
+        const backOrder = await buildOrder(
+            {
+                makerAsset: weth.address,
+                takerAsset: dai.address,
+                makingAmount: ether('0.11'),
+                takingAmount: ether('100'),
+                from: addr1.address,
+            },
+            {
+                predicate: swap.interface.encodeFunctionData('timestampBelow', [0xff00000000]),
+                whitelistedAddrs: [addr.address],
+                whitelistedCutOffs: [0],
+                takerFeeReceiver: addr2.address,
+                takerFeeRatio: 10000000n, // 1%
+            },
+        );
+
+        const signature = await signOrder(order, chainId, swap.address, addr);
+        const signatureBackOrder = await signOrder(backOrder, chainId, swap.address, addr1);
+
+        const wethFeeAmount = ether('0.0011'); // (takingAmount + 10% auction) * fee
+        const daiFeeAmount = ether('1');
+        // send fee amounts to matcher contract
+        await weth.transfer(matcher.address, wethFeeAmount.toString());
+        await dai.connect(addr1).transfer(matcher.address, daiFeeAmount.toString());
+
+        const matchingParams = matcher.address + '01' + trim0x(resolver.address);
+
+        const interaction =
+            matcher.address +
+            '00' +
+            swap.interface
+                .encodeFunctionData('fillOrderTo', [
+                    backOrder,
+                    signatureBackOrder,
+                    matchingParams,
+                    ether('0.11'),
+                    0,
+                    ether('100'),
+                    matcher.address,
+                ])
+                .substring(10);
+
+        const addrweth = await weth.balanceOf(addr.address);
+        const addr1weth = await weth.balanceOf(addr1.address);
+        const addr2weth = await weth.balanceOf(addr2.address);
+        const addrdai = await dai.balanceOf(addr.address);
+        const addr1dai = await dai.balanceOf(addr1.address);
+        const addr2dai = await dai.balanceOf(addr2.address);
+
+        await matcher.settleOrders(
+            '0x' + swap.interface.encodeFunctionData('fillOrderTo', [
+                order,
+                signature,
+                interaction,
+                ether('100'),
+                0,
+                ether('0.11'),
+                matcher.address,
+            ]).substring(10),
+        );
+
+        assertRoughlyEqualValues(await weth.balanceOf(addr.address), addrweth.add(ether('0.11')), 1e-3);
+        // TODO: 6e-5 WETH lost into LimitOrderProtocol contract
+        expect(await weth.balanceOf(addr1.address)).to.equal(addr1weth.sub(ether('0.11')));
+        expect(await dai.balanceOf(addr.address)).to.equal(addrdai.sub(ether('100')));
+        expect(await dai.balanceOf(addr1.address)).to.equal(addr1dai.add(ether('100')));
+        assertRoughlyEqualValues(await weth.balanceOf(addr2.address), addr2weth.add(wethFeeAmount), 1e-2);
+        assertRoughlyEqualValues(await dai.balanceOf(addr2.address), addr2dai.add(daiFeeAmount), 1e-2);
     });
 
     it('unidirectional recursive swap', async function () {
