@@ -14,6 +14,13 @@ const setup = {
         addedBalance: ether('0.1'),
         deployerPrivateKey: process.env.MAINNET_PRIVATE_KEY,
     },
+    56: {
+        maxFeePerGas: '5000000000',
+        maxPriorityFeePerGas: '5000000000',
+        minBalance: ether('0.009'),
+        addedBalance: ether('0.1'),
+        deployerPrivateKey: process.env.BSC_PRIVATE_KEY,
+    },
     137: {
         maxFeePerGas: '65000000000',
         maxPriorityFeePerGas: '45000000000',
