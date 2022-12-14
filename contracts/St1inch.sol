@@ -29,6 +29,8 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
     error MaxLossOverflow();
     error LossIsTooBig();
     error RescueAmountIsTooLarge();
+    error ExpBaseTooBig();
+    error ExpBaseTooSmall();
 
     uint256 public constant MIN_LOCK_PERIOD = 30 days;
     uint256 public constant MAX_LOCK_PERIOD = 4 * 365 days;
@@ -55,6 +57,8 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
         ERC20("Staking 1INCH", "st1INCH")
         VotingPowerCalculator(expBase_, block.timestamp)
     {
+        if (_votingPowerAt(1e18, block.timestamp + MAX_LOCK_PERIOD) * _VOTING_POWER_DIVIDER < 1e18) revert ExpBaseTooBig();
+        if (_votingPowerAt(1e18, block.timestamp + MAX_LOCK_PERIOD + 1) * _VOTING_POWER_DIVIDER > 1e18) revert ExpBaseTooSmall();
         oneInch = oneInch_;
     }
 
