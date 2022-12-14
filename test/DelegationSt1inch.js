@@ -1,11 +1,11 @@
 const { expect, time, ether, constants } = require('@1inch/solidity-utils');
 const { ethers } = require('hardhat');
 const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
+const { expBase } = require('./helpers/utils');
 
 describe('Delegation st1inch', function () {
     let addr, addr1;
     let accounts;
-    const baseExp = 999999981746376586n; // 0.1^(1/(4 years)) means 90% value loss over 4 years
     const threshold = ether('0.1');
     const MAX_WHITELISTED = 3;
     const maxPods = 5;
@@ -32,7 +32,7 @@ describe('Delegation st1inch', function () {
         await oneInch.transfer(addr1.address, ether('100'));
 
         const St1inch = await ethers.getContractFactory('St1inch');
-        const st1inch = await St1inch.deploy(oneInch.address, baseExp, maxPods);
+        const st1inch = await St1inch.deploy(oneInch.address, expBase, maxPods);
         await st1inch.deployed();
         await oneInch.approve(st1inch.address, ether('100'));
         await oneInch.connect(addr1).approve(st1inch.address, ether('100'));

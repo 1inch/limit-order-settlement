@@ -1,6 +1,7 @@
 const { expect, constants, ether } = require('@1inch/solidity-utils');
 const { ethers } = require('hardhat');
 const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
+const { expBase } = require('./helpers/utils');
 
 const THRESHOLD = ether('1');
 const VOTING_POWER_THRESHOLD = THRESHOLD * 2n;
@@ -14,7 +15,7 @@ describe('WhitelistRegistry', function () {
     before(async function () {
         addrs = await ethers.getSigners();
         const St1inch = await ethers.getContractFactory('St1inch');
-        st1inch = await St1inch.deploy(constants.ZERO_ADDRESS, 0, 0);
+        st1inch = await St1inch.deploy(constants.ZERO_ADDRESS, expBase, 1);
         await st1inch.deployed();
     });
 
