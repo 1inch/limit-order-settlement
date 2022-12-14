@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@1inch/erc20-pods/contracts/ERC20Pods.sol";
+import "@1inch/erc20-pods/contracts/Pod.sol";
 import "@1inch/solidity-utils/contracts/libraries/SafeERC20.sol";
 import "./helpers/VotingPowerCalculator.sol";
 import "./interfaces/IVotable.sol";
@@ -17,6 +18,7 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
     event EmergencyExitSet(bool status);
     event MaxLossRatioSet(uint256 ratio);
     event FeeReceiverSet(address receiver);
+    event DefaultFarmSet(address defaultFarm);
 
     error ApproveDisabled();
     error TransferDisabled();
@@ -31,6 +33,7 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
     error RescueAmountIsTooLarge();
     error ExpBaseTooBig();
     error ExpBaseTooSmall();
+    error DefaultFarmTokenMismatch();
 
     uint256 public constant MIN_LOCK_PERIOD = 30 days;
     uint256 public constant MAX_LOCK_PERIOD = 4 * 365 days;
@@ -51,6 +54,7 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
     bool public emergencyExit;
     uint256 public maxLossRatio;
     address public feeReceiver;
+    address public defaultFarm;
 
     constructor(IERC20 oneInch_, uint256 expBase_, uint256 podsLimit)
         ERC20Pods(podsLimit, _POD_CALL_GAS_LIMIT)
@@ -65,6 +69,12 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
     function setFeeReceiver(address feeReceiver_) external onlyOwner {
         feeReceiver = feeReceiver_;
         emit FeeReceiverSet(feeReceiver_);
+    }
+
+    function setDefaultFarm(address defaultFarm_) external onlyOwner {
+        if (defaultFarm_ != address(0) && Pod(defaultFarm_).token() != address(this)) revert DefaultFarmTokenMismatch();
+        defaultFarm = defaultFarm_;
+        emit DefaultFarmSet(defaultFarm_);
     }
 
     function setMaxLossRatio(uint256 maxLossRatio_) external onlyOwner {
@@ -129,6 +139,10 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
 
         if (amount > 0) {
             oneInch.safeTransferFrom(msg.sender, address(this), amount);
+        }
+
+        if (defaultFarm != address(0) && !hasPod(account, defaultFarm)) {
+            _addPod(account, defaultFarm);
         }
     }
 

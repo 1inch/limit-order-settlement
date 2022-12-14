@@ -85,7 +85,7 @@ const buildOrder = async (
 
     const takingFeeData = takerFeeReceiver === constants.ZERO_ADDRESS || takerFeeRatio === 0
         ? '00'
-        : takerFeeRatio.toString(16).padStart(8, '0') + trim0x(takerFeeReceiver) + '01';
+        : takerFeeRatio.toString(16).padStart(8, '0') + trim0x(takerFeeReceiver) + '80';
 
     return {
         salt,
