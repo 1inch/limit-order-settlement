@@ -95,7 +95,7 @@ contract Settlement is ISettlement, FeeBankCharger {
                 uint256 timePassed = block.timestamp - orderStartTime;
                 return
                     timePassed < duration
-                        ? _BASE_POINTS + (initialRateBump * (duration - timePassed)) / duration
+                        ? _BASE_POINTS + initialRateBump * (duration - timePassed) / duration
                         : _BASE_POINTS;
             } else {
                 return _BASE_POINTS + initialRateBump;
