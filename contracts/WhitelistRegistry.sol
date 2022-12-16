@@ -152,7 +152,14 @@ contract WhitelistRegistry is Ownable {
 
     function _shrinkPoorest(AddressSet.Data storage set, uint256 size) private {
         address[] memory addresses = set.items.get();
-        address[] memory poorestAddresses = _quickselect(addresses, 0, addresses.length - 1, size);
+        uint256 addressesLength = addresses.length;
+        for (uint i = 0; i < addressesLength / 2; i++) {
+            address t = addresses[i];
+            addresses[i] = addresses[addressesLength - i - 1];
+            addresses[addressesLength - i - 1] = t;
+        }
+
+        address[] memory poorestAddresses = _quickselect(addresses, 0, addressesLength - 1, size);
         // Remove poorest elements from set
         for (uint256 i = 0; i < size; i++) {
             _removeFromWhitelist(poorestAddresses[i]);
