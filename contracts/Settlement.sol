@@ -16,6 +16,7 @@ contract Settlement is ISettlement, FeeBankCharger {
     using OrderSaltParser for uint256;
     using DynamicSuffix for DynamicSuffix.Data;
     using AddressLib for Address;
+    using TakingFee for TakingFee.Data;
 
     error AccessDenied();
     error IncorrectCalldataParams();
@@ -73,8 +74,8 @@ contract Settlement is ISettlement, FeeBankCharger {
 
         result = (takingAmount * _calculateRateBump(suffix.salt)) / _BASE_POINTS;
         IERC20 token = IERC20(suffix.token.get());
-        if (suffix.takingFeeEnabled()) {
-            token.safeTransfer(suffix.receiver.get(), result * suffix.takingFeeRatio() / DynamicSuffix._TAKING_FEE_BASE);
+        if (suffix.takingFee.enabled()) {
+            token.safeTransfer(suffix.takingFee.receiver(), result * suffix.takingFee.ratio() / TakingFee._TAKING_FEE_BASE);
         }
         token.forceApprove(address(_limitOrderProtocol), result);
     }
@@ -163,6 +164,9 @@ contract Settlement is ISettlement, FeeBankCharger {
             }
         }
     }
+
+    // 3 bytes = 24 bits = 8 + 16
+    // 14 bit = 0..16k / 10k = 1.0001
 
     // suffix of orderInteractions is constructed as follows:
     // [24 bytes * N, 1 byte, 4 bytes, optional[24 bytes], 1 byte]
