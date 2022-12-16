@@ -1,6 +1,6 @@
 const { getChainId, ethers } = require('hardhat');
 const { idempotentDeployGetContract, getContractByAddress } = require('../test/helpers/utils.js');
-const { setup } = require('../deployments/matic/test_env_setup/setup.js');
+// const { setup } = require('../deployments/matic/test_env_setup/setup.js');
 const { networks } = require('../hardhat.networks');
 
 const ROUTER_V5_ADDR = '0x1111111254EEB25477B68fb85Ed929f73A960582';
@@ -17,15 +17,15 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     const provider = new ethers.providers.JsonRpcProvider(networks[deployments.getNetworkName()].url);
     const feeData = await provider.getFeeData();
 
-    // await idempotentDeployGetContract(
-    //     'Settlement',
-    //     [ROUTER_V5_ADDR, INCH_TOKEN],
-    //     deployments,
-    //     deployer,
-    //     feeData,
-    //     'Settlement',
-    //     true,
-    // );
+    await idempotentDeployGetContract(
+        'Settlement',
+        [ROUTER_V5_ADDR, INCH_TOKEN],
+        deployments,
+        deployer,
+        feeData,
+        'Settlement',
+        true,
+    );
 
     const settlement = await getContractByAddress('Settlement', '0x8330Ea89097cd8c099Ff531B6aEd75E0b70262BA');
 
