@@ -7,7 +7,7 @@ import "../St1inch.sol";
 
 contract St1inchPreview is VotingPowerCalculator {
     St1inch public immutable st1INCH;
-    uint256 private constant _VOTING_POWER_DIVIDER = 10;
+    uint256 private constant _VOTING_POWER_DIVIDER = 20;
 
     constructor(St1inch st1INCH_) VotingPowerCalculator(st1INCH_.expBase(), st1INCH_.origin()) {
         st1INCH = st1INCH_;
