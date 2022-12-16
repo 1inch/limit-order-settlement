@@ -3,17 +3,17 @@ const { BigNumber: BN } = require('ethers');
 const { ethers } = require('hardhat');
 const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
 const { getChainId } = require('./helpers/fixtures');
+const { expBase } = require('./helpers/utils');
 const { shouldBehaveLikeERC20Pods } = require('@1inch/erc20-pods/test/behaviors/ERC20Pods.behavior.js');
 
 describe('St1inch', function () {
     let addr, addr1;
-    const baseExp = 999999981746376587n; // 0.1^(1/(4 years)) means 90% value loss over 4 years
     const votingPowerDivider = 10n;
     const maxPods = 5;
     let chainId;
 
     const exp = (point, t) => {
-        let base = baseExp;
+        let base = expBase;
         while (t > 0n) {
             if ((t & 1n) === 1n) {
                 point = point * base / ether('1');
@@ -25,7 +25,7 @@ describe('St1inch', function () {
     };
 
     const expInv = (point, t) => {
-        let base = baseExp;
+        let base = expBase;
         while (t > 0n) {
             if ((t & 1n) === 1n) {
                 point = point * ether('1') / base;
@@ -64,7 +64,7 @@ describe('St1inch', function () {
         const { oneInch } = await deployInch();
 
         const St1inch = await ethers.getContractFactory('St1inch');
-        const st1inch = await St1inch.deploy(oneInch.address, baseExp, maxPods);
+        const st1inch = await St1inch.deploy(oneInch.address, expBase, maxPods);
         await st1inch.deployed();
 
         await oneInch.transfer(addr1.address, ether('100'));
@@ -80,7 +80,7 @@ describe('St1inch', function () {
         const { oneInch } = await deployInch();
 
         const St1inch = await ethers.getContractFactory('St1inchMock');
-        const st1inch = await St1inch.deploy(oneInch.address, baseExp, maxPods);
+        const st1inch = await St1inch.deploy(oneInch.address, expBase, maxPods);
         await st1inch.deployed();
 
         const PodMock = await ethers.getContractFactory('PodMock');

@@ -2,6 +2,8 @@ const hre = require('hardhat');
 const { ethers } = hre;
 const { constants } = require('@1inch/solidity-utils');
 
+const expBase = 999999981746376587n; // 0.1^(1/(4 years)) means 90% value loss over 4 years
+
 const _delay = (ms) =>
     new Promise((resolve) => {
         setTimeout(resolve, ms);
@@ -149,6 +151,7 @@ const deployCompoundTokenWrapper = async (
 };
 
 module.exports = {
+    expBase,
     addAaveTokens,
     deployCompoundTokenWrapper,
     getContract,
