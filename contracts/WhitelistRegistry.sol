@@ -54,6 +54,8 @@ contract WhitelistRegistry is Ownable {
     function setWhitelistLimit(uint256 whitelistLimit_) external onlyOwner {
         uint256 whitelistLength = _whitelist.length();
         if (whitelistLimit_ < whitelistLength) {
+            // if (whitelistLimit_ < whitelistLength / 2) then looking for whitelisted resolvers
+            // if (whitelistLimit_ > whitelistLength / 2) then looking for excluded resolvers
             _shrinkPoorest(_whitelist, whitelistLength - whitelistLimit_);
         }
         _setWhitelistLimit(whitelistLimit_);
@@ -112,6 +114,46 @@ contract WhitelistRegistry is Ownable {
                 promotees[i] = promotions[promotees[i]][chainId];
             }
         }
+    }
+
+    function _partition(address[] memory addresses, uint256 left, uint256 right) private view returns (uint256, address[] memory) {
+        uint256 pivotValue = token.balanceOf(addresses[right]);
+        uint256 pivotIndex = left;
+
+        for (uint i = left; i <= right - 1; i++) {
+            if (token.balanceOf(addresses[i]) <= pivotValue) {
+                (addresses[i], addresses[pivotIndex]) = (addresses[pivotIndex], addresses[i]);
+                pivotIndex++;
+            }
+        }
+        (addresses[pivotIndex], addresses[right]) = (addresses[right], addresses[pivotIndex]);
+        return (pivotIndex, addresses);
+    }
+
+    function _quickselect(address[] memory addresses, uint256 left, uint256 right, uint256 k) private view returns (address[] memory) {
+        if (left == right) {
+            // TODO: slice memory array with assembly
+            address[] memory a = new address[](k);
+            for (uint256 i = 0; i < k; i++) {
+                a[i] = addresses[i];
+            }
+            return a;
+        }
+
+        uint256 pivotIndex;
+        (pivotIndex,addresses) = _partition(addresses, left, right);
+        if (k == pivotIndex) {
+            // TODO: slice memory array with assembly
+            address[] memory a = new address[](k);
+            for (uint256 i = 0; i < k; i++) {
+                a[i] = addresses[i];
+            }
+            return a;
+        }
+        if (k < pivotIndex) {
+            return _quickselect(addresses, left, pivotIndex - 1, k);
+        }
+        return _quickselect(addresses, pivotIndex + 1, right, k);
     }
 
     function _shrinkPoorest(AddressSet.Data storage set, uint256 size) private {
