@@ -54,8 +54,6 @@ contract WhitelistRegistry is Ownable {
     function setWhitelistLimit(uint256 whitelistLimit_) external onlyOwner {
         uint256 whitelistLength = _whitelist.length();
         if (whitelistLimit_ < whitelistLength) {
-            // if (whitelistLimit_ < whitelistLength / 2) then looking for whitelisted resolvers
-            // if (whitelistLimit_ > whitelistLength / 2) then looking for excluded resolvers
             _shrinkPoorest(_whitelist, whitelistLength - whitelistLimit_);
         }
         _setWhitelistLimit(whitelistLimit_);
@@ -132,23 +130,19 @@ contract WhitelistRegistry is Ownable {
 
     function _quickselect(address[] memory addresses, uint256 left, uint256 right, uint256 k) private view returns (address[] memory) {
         if (left == right) {
-            // TODO: slice memory array with assembly
-            address[] memory a = new address[](k);
-            for (uint256 i = 0; i < k; i++) {
-                a[i] = addresses[i];
+            assembly {
+                mstore(addresses, k)
             }
-            return a;
+            return addresses;
         }
 
         uint256 pivotIndex;
         (pivotIndex,addresses) = _partition(addresses, left, right);
         if (k == pivotIndex) {
-            // TODO: slice memory array with assembly
-            address[] memory a = new address[](k);
-            for (uint256 i = 0; i < k; i++) {
-                a[i] = addresses[i];
+            assembly {
+                mstore(addresses, k)
             }
-            return a;
+            return addresses;
         }
         if (k < pivotIndex) {
             return _quickselect(addresses, left, pivotIndex - 1, k);
@@ -157,36 +151,11 @@ contract WhitelistRegistry is Ownable {
     }
 
     function _shrinkPoorest(AddressSet.Data storage set, uint256 size) private {
-        uint256 richestIndex = 0;
         address[] memory addresses = set.items.get();
-        uint256 addressesLength = addresses.length;
-        uint256[] memory balances = new uint256[](addressesLength);
-        for (uint256 i = 0; i < addressesLength; i++) {
-            balances[i] = token.balanceOf(addresses[i]);
-            if (balances[i] > balances[richestIndex]) {
-                richestIndex = i;
-            }
-        }
-
-        for (uint256 i = size; i < addressesLength; i++) {
-            if (balances[i] <= balances[richestIndex]) {
-                // Swap i-th and richest-th elements
-                (addresses[i], addresses[richestIndex]) = (addresses[richestIndex], addresses[i]);
-                (balances[i], balances[richestIndex]) = (balances[richestIndex], balances[i]);
-
-                // Find new richest in first size elements
-                richestIndex = 0;
-                for (uint256 j = 1; j < size; j++) {
-                    if (balances[j] > balances[richestIndex]) {
-                        richestIndex = j;
-                    }
-                }
-            }
-        }
-
+        address[] memory poorestAddresses = _quickselect(addresses, 0, addresses.length - 1, size);
         // Remove poorest elements from set
         for (uint256 i = 0; i < size; i++) {
-            _removeFromWhitelist(addresses[i]);
+            _removeFromWhitelist(poorestAddresses[i]);
         }
     }
 
