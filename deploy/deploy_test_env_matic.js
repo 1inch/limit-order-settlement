@@ -7,6 +7,7 @@ const fs = require('fs');
 
 const BASE_EXP = '999999981746376586';
 const ROUTER_V5_ADDR = '0x1111111254EEB25477B68fb85Ed929f73A960582';
+const INCH_TOKEN = '0x111111111117dC0aa78b770fA6A738034120C302';
 
 const oldResolvers = [
     {
@@ -84,43 +85,43 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
 
     const { deployer } = await getNamedAccounts();
 
-    const fake1Inch = await idempotentDeployGetContract(
-        'ERC20PermitMock',
-        ['MockInch', 'MKCH', deployer, 0],
-        deployments,
-        deployer,
-        feeData,
-        'Mock1inch',
-        true,
-    );
-    feeData = await provider.getFeeData();
+    // const fake1Inch = await idempotentDeployGetContract(
+    //     'ERC20PermitMock',
+    //     ['MockInch', 'MKCH', deployer, 0],
+    //     deployments,
+    //     deployer,
+    //     feeData,
+    //     'Mock1inch',
+    //     true,
+    // );
+    // feeData = await provider.getFeeData();
 
-    const rewardToken = await idempotentDeployGetContract(
-        'ERC20PermitMock',
-        ['someOtherToken', 'SOTKN', deployer, 0],
-        deployments,
-        deployer,
-        feeData,
-        'SomeOtherToken',
-        true,
-    );
-    feeData = await provider.getFeeData();
+    // const rewardToken = await idempotentDeployGetContract(
+    //     'ERC20PermitMock',
+    //     ['someOtherToken', 'SOTKN', deployer, 0],
+    //     deployments,
+    //     deployer,
+    //     feeData,
+    //     'SomeOtherToken',
+    //     true,
+    // );
+    // feeData = await provider.getFeeData();
 
-    const prevSt1inch = await idempotentDeployGetContract(
-        'GovernanceMothership',
-        [fake1Inch.address],
-        deployments,
-        deployer,
-        feeData,
-        'GovernanceMothership',
-        true,
-    );
-    feeData = await provider.getFeeData();
+    // const prevSt1inch = await idempotentDeployGetContract(
+    //     'GovernanceMothership',
+    //     [fake1Inch.address],
+    //     deployments,
+    //     deployer,
+    //     feeData,
+    //     'GovernanceMothership',
+    //     true,
+    // );
+    // feeData = await provider.getFeeData();
 
     const maxPods = 5;
     const st1inch = await idempotentDeployGetContract(
         'St1inch',
-        [fake1Inch.address, BASE_EXP, maxPods.toString()],
+        [INCH_TOKEN, BASE_EXP, maxPods.toString()],
         deployments,
         deployer,
         feeData,
@@ -139,7 +140,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
 
     const settlement = await idempotentDeployGetContract(
         'Settlement',
-        [ROUTER_V5_ADDR, fake1Inch.address],
+        [ROUTER_V5_ADDR, INCH_TOKEN],
         deployments,
         deployer,
         feeData,
@@ -624,4 +625,4 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     }
 };
 
-module.exports.skip = async () => true;
+module.exports.skip = async () => false;

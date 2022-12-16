@@ -35,7 +35,7 @@ const setup = {
     },
     returnFee: false,
     feeRecive: {
-        percent: '500000000', // 50%
+        percent: '900000000', // 90%
     },
 };
 
