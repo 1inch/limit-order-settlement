@@ -5,7 +5,7 @@ const { networks } = require('../hardhat.networks');
 const { setup } = require('../deployments/matic/test_env_setup/setup.js');
 const fs = require('fs');
 
-const BASE_EXP = '999999981746376586';
+const BASE_EXP = '999999952502977513';
 const ROUTER_V5_ADDR = '0x1111111254EEB25477B68fb85Ed929f73A960582';
 const INCH_TOKEN = '0x111111111117dC0aa78b770fA6A738034120C302';
 
