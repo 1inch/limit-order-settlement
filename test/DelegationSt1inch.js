@@ -6,7 +6,7 @@ const { expBase } = require('./helpers/utils');
 describe('Delegation st1inch', function () {
     let addr, addr1;
     let accounts;
-    const threshold = ether('0.1');
+    const threshold = ether('0.05');
     const MAX_WHITELISTED = 3;
     const maxPods = 5;
     const commonLockDuration = time.duration.days('40');

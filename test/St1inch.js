@@ -8,7 +8,7 @@ const { shouldBehaveLikeERC20Pods } = require('@1inch/erc20-pods/test/behaviors/
 
 describe('St1inch', function () {
     let addr, addr1;
-    const votingPowerDivider = 10n;
+    const votingPowerDivider = 20n;
     const maxPods = 5;
     let chainId;
 
@@ -219,27 +219,13 @@ describe('St1inch', function () {
         const { st1inch } = await loadFixture(initContracts);
         const origin = await st1inch.origin();
         await st1inch.deposit(ether('1'), time.duration.days('365'));
-        assertRoughlyEqualValues(await st1inch.votingPowerOfAt(addr.address, origin), ether('0.17782'), 1e-4);
+        assertRoughlyEqualValues(await st1inch.votingPowerOfAt(addr.address, origin), ether('0.22360'), 1e-4);
     });
 
     it('call deposit, 2 years lock, compare voting power against expected value', async function () {
         const { st1inch } = await loadFixture(initContracts);
         const origin = await st1inch.origin();
         await st1inch.deposit(ether('1'), time.duration.days('730'));
-        assertRoughlyEqualValues(await st1inch.votingPowerOfAt(addr.address, origin), ether('0.31622'), 1e-4);
-    });
-
-    it('call deposit, 3 years lock, compare voting power against expected value', async function () {
-        const { st1inch } = await loadFixture(initContracts);
-        const origin = await st1inch.origin();
-        await st1inch.deposit(ether('1'), time.duration.days('1095'));
-        assertRoughlyEqualValues(await st1inch.votingPowerOfAt(addr.address, origin), ether('0.56234'), 1e-4);
-    });
-
-    it('call deposit, 4 years lock, compare voting power against expected value', async function () {
-        const { st1inch } = await loadFixture(initContracts);
-        const origin = await st1inch.origin();
-        await st1inch.deposit(ether('1'), time.duration.days('1460'));
         assertRoughlyEqualValues(await st1inch.votingPowerOfAt(addr.address, origin), ether('1'), 1e-4);
     });
 
@@ -247,28 +233,14 @@ describe('St1inch', function () {
         const { st1inch } = await loadFixture(initContracts);
         await st1inch.deposit(ether('1'), time.duration.days('365'));
         const unlockTime = (await st1inch.depositors(addr.address)).unlockTime;
-        assertRoughlyEqualValues(await st1inch.votingPowerOfAt(addr.address, unlockTime), ether('0.1'), 1e-4);
+        assertRoughlyEqualValues(await st1inch.votingPowerOfAt(addr.address, unlockTime), ether('0.05'), 1e-4);
     });
 
     it('call deposit, 2 years lock, compare voting power against expected value after the lock end', async function () {
         const { st1inch } = await loadFixture(initContracts);
         await st1inch.deposit(ether('1'), time.duration.days('730'));
         const unlockTime = (await st1inch.depositors(addr.address)).unlockTime;
-        assertRoughlyEqualValues(await st1inch.votingPowerOfAt(addr.address, unlockTime), ether('0.1'), 1e-4);
-    });
-
-    it('call deposit, 3 years lock, compare voting power against expected value after the lock end', async function () {
-        const { st1inch } = await loadFixture(initContracts);
-        await st1inch.deposit(ether('1'), time.duration.days('1095'));
-        const unlockTime = (await st1inch.depositors(addr.address)).unlockTime;
-        assertRoughlyEqualValues(await st1inch.votingPowerOfAt(addr.address, unlockTime), ether('0.1'), 1e-4);
-    });
-
-    it('call deposit, 4 years lock, compare voting power against expected value after the lock end', async function () {
-        const { st1inch } = await loadFixture(initContracts);
-        await st1inch.deposit(ether('1'), time.duration.days('1460'));
-        const unlockTime = (await st1inch.depositors(addr.address)).unlockTime;
-        assertRoughlyEqualValues(await st1inch.votingPowerOfAt(addr.address, unlockTime), ether('0.1'), 1e-4);
+        assertRoughlyEqualValues(await st1inch.votingPowerOfAt(addr.address, unlockTime), ether('0.05'), 1e-4);
     });
 
     it('should increase deposit amount (call deposit(*,0))', async function () {
@@ -431,7 +403,7 @@ describe('St1inch', function () {
 
             const amount = BigInt((await st1inch.depositors(addr.address)).amount);
             const vp = BigInt(await st1inch.votingPower(await st1inch.balanceOf(addr.address)));
-            const ret = (amount - vp) * 10n / 9n;
+            const ret = (amount - vp) * 100n / 95n;
             const loss = amount - ret;
 
             const balanceAddrBefore = BigInt(await oneInch.balanceOf(addr.address));
@@ -443,42 +415,33 @@ describe('St1inch', function () {
 
         it('should decrease loss with time', async function () {
             const { st1inch } = await loadFixture(initContracts);
-            const lockTime = time.duration.years('4');
+            const lockTime = time.duration.years('2');
             const tx = await st1inch.deposit(ether('1'), lockTime);
             const stakedTime = BigInt((await ethers.provider.getBlock(tx.blockNumber)).timestamp);
 
-            const rest4YearsLoss = (await st1inch.earlyWithdrawLoss(addr.address)).loss;
-            console.log('rest4YearsLoss', rest4YearsLoss.toString());
+            const rest2YearsLoss = (await st1inch.earlyWithdrawLoss(addr.address)).loss;
+            console.log('rest4YearsLoss', rest2YearsLoss.toString());
 
             await timeIncreaseTo(stakedTime + BigInt(time.duration.years('1')));
-            const rest3YearsLoss = (await st1inch.earlyWithdrawLoss(addr.address)).loss;
-            console.log('rest3YearsLoss', rest3YearsLoss.toString());
-
-            await timeIncreaseTo(stakedTime + BigInt(time.duration.years('2')));
-            const rest2YearsLoss = (await st1inch.earlyWithdrawLoss(addr.address)).loss;
-            console.log('rest2YearsLoss', rest2YearsLoss.toString());
-
-            await timeIncreaseTo(stakedTime + BigInt(time.duration.years('3')));
             const rest1YearsLoss = (await st1inch.earlyWithdrawLoss(addr.address)).loss;
-            console.log('rest1YearsLoss', rest1YearsLoss.toString());
+            console.log('rest3YearsLoss', rest1YearsLoss.toString());
 
-            await timeIncreaseTo(stakedTime + BigInt(time.duration.years('3.5')));
+            await timeIncreaseTo(stakedTime + BigInt(time.duration.years('1.5')));
             const restHalfYearsLoss = (await st1inch.earlyWithdrawLoss(addr.address)).loss;
             console.log('restHalfYearsLoss', restHalfYearsLoss.toString());
 
-            await timeIncreaseTo(stakedTime + BigInt(time.duration.years('3') + time.duration.weeks('48')));
+            await timeIncreaseTo(stakedTime + BigInt(time.duration.years('1') + time.duration.weeks('48')));
             const restMonthLoss = (await st1inch.earlyWithdrawLoss(addr.address)).loss;
             console.log('restMonthLoss', restMonthLoss.toString());
 
-            await timeIncreaseTo(stakedTime + BigInt(time.duration.years('3') + time.duration.weeks('51')));
+            await timeIncreaseTo(stakedTime + BigInt(time.duration.years('1') + time.duration.weeks('51')));
             const restWeekLoss = (await st1inch.earlyWithdrawLoss(addr.address)).loss;
             console.log('restWeekLoss', restWeekLoss.toString());
 
-            await timeIncreaseTo(stakedTime + BigInt(time.duration.years('3') + time.duration.days('364')));
+            await timeIncreaseTo(stakedTime + BigInt(time.duration.years('1') + time.duration.days('364')));
             const restDayLoss = (await st1inch.earlyWithdrawLoss(addr.address)).loss;
             console.log('restDayLoss', restDayLoss.toString());
 
-            expect(rest3YearsLoss).to.gt(rest2YearsLoss);
             expect(rest2YearsLoss).to.gt(rest1YearsLoss);
             expect(rest1YearsLoss).to.gt(restHalfYearsLoss);
             expect(restHalfYearsLoss).to.gt(restMonthLoss);
