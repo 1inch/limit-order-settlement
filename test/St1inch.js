@@ -478,6 +478,7 @@ describe('St1inch', function () {
             const restDayLoss = (await st1inch.earlyWithdrawLoss(addr.address)).loss;
             console.log('restDayLoss', restDayLoss.toString());
 
+            expect(rest4YearsLoss).to.gt(rest3YearsLoss);
             expect(rest3YearsLoss).to.gt(rest2YearsLoss);
             expect(rest2YearsLoss).to.gt(rest1YearsLoss);
             expect(rest1YearsLoss).to.gt(restHalfYearsLoss);
