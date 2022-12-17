@@ -420,27 +420,45 @@ describe('St1inch', function () {
             const stakedTime = BigInt((await ethers.provider.getBlock(tx.blockNumber)).timestamp);
 
             const rest2YearsLoss = (await st1inch.earlyWithdrawLoss(addr.address)).loss;
-            console.log('rest4YearsLoss', rest2YearsLoss.toString());
+            const rest2YearsVotingPower = await st1inch.votingPowerOf(addr.address);
+            console.log('rest2YearsLoss', rest2YearsLoss.toString());
+            console.log('rest2YearsVP', rest2YearsVotingPower.toString());
+
+            await timeIncreaseTo(stakedTime + BigInt(time.duration.years('0.5')));
+            const rest1HalfYearsLoss = (await st1inch.earlyWithdrawLoss(addr.address)).loss;
+            const rest1HalfYearsVotingPower = await st1inch.votingPowerOf(addr.address);
+            console.log('rest1.5YearsLoss', rest1HalfYearsLoss.toString());
+            console.log('rest1.5YearsVP', rest1HalfYearsVotingPower.toString());
 
             await timeIncreaseTo(stakedTime + BigInt(time.duration.years('1')));
             const rest1YearsLoss = (await st1inch.earlyWithdrawLoss(addr.address)).loss;
-            console.log('rest3YearsLoss', rest1YearsLoss.toString());
+            const rest1YearsVotingPower = await st1inch.votingPowerOf(addr.address);
+            console.log('rest1YearsLoss', rest1YearsLoss.toString());
+            console.log('rest1YearsVP', rest1YearsVotingPower.toString());
 
             await timeIncreaseTo(stakedTime + BigInt(time.duration.years('1.5')));
             const restHalfYearsLoss = (await st1inch.earlyWithdrawLoss(addr.address)).loss;
+            const restHalfYearsVotingPower = await st1inch.votingPowerOf(addr.address);
             console.log('restHalfYearsLoss', restHalfYearsLoss.toString());
+            console.log('restHalfYearsVP', restHalfYearsVotingPower.toString());
 
             await timeIncreaseTo(stakedTime + BigInt(time.duration.years('1') + time.duration.weeks('48')));
             const restMonthLoss = (await st1inch.earlyWithdrawLoss(addr.address)).loss;
+            const restMonthVotingPower = await st1inch.votingPowerOf(addr.address);
             console.log('restMonthLoss', restMonthLoss.toString());
+            console.log('restMonthVP', restMonthVotingPower.toString());
 
             await timeIncreaseTo(stakedTime + BigInt(time.duration.years('1') + time.duration.weeks('51')));
             const restWeekLoss = (await st1inch.earlyWithdrawLoss(addr.address)).loss;
+            const restWeekVotingPower = await st1inch.votingPowerOf(addr.address);
             console.log('restWeekLoss', restWeekLoss.toString());
+            console.log('restWeekVP', restWeekVotingPower.toString());
 
             await timeIncreaseTo(stakedTime + BigInt(time.duration.years('1') + time.duration.days('364')));
             const restDayLoss = (await st1inch.earlyWithdrawLoss(addr.address)).loss;
+            const restDayVotingPower = await st1inch.votingPowerOf(addr.address);
             console.log('restDayLoss', restDayLoss.toString());
+            console.log('restDayVP', restDayVotingPower.toString());
 
             expect(rest2YearsLoss).to.gt(rest1YearsLoss);
             expect(rest1YearsLoss).to.gt(restHalfYearsLoss);
