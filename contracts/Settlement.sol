@@ -74,36 +74,12 @@ contract Settlement is ISettlement, FeeBankCharger {
             );
         }
 
-        result = (takingAmount * _calculateRateBump(suffix.salt)) / _BASE_POINTS;
+        result = takingAmount * (_BASE_POINTS + suffix.rateBump) / _BASE_POINTS;
         IERC20 token = IERC20(suffix.token.get());
         if (suffix.takingFee.enabled()) {
             token.safeTransfer(suffix.takingFee.receiver(), result * suffix.takingFee.ratio() / TakingFee._TAKING_FEE_BASE);
         }
         token.forceApprove(address(_limitOrderProtocol), result);
-    }
-
-    function _calculateRateBump(uint256 salt) internal view returns (uint256) {
-        uint256 orderStartTime = salt.getStartTime();
-        uint256 duration = salt.getDuration();
-        uint256 initialRateBump = salt.getInitialRateBump();
-        if (duration == 0) {
-            duration = _DEFAULT_DURATION;
-        }
-        if (initialRateBump == 0) {
-            initialRateBump = _DEFAULT_INITIAL_RATE_BUMP;
-        }
-
-        unchecked {
-            if (block.timestamp > orderStartTime) {
-                uint256 timePassed = block.timestamp - orderStartTime;
-                return
-                    timePassed < duration
-                        ? _BASE_POINTS + (initialRateBump * (duration - timePassed)) / duration
-                        : _BASE_POINTS;
-            } else {
-                return _BASE_POINTS + initialRateBump;
-            }
-        }
     }
 
     function _settleOrder(bytes calldata data, address resolver, uint256 totalFee) private {
@@ -118,6 +94,7 @@ contract Settlement is ISettlement, FeeBankCharger {
         bytes4 selector = IOrderMixin.fillOrderTo.selector;
         bytes4 errorSelector = WrongInteractionTarget.selector;
         uint256 suffixLength = DynamicSuffix._DATA_SIZE;
+        uint256 rateBump = order.rateBump();
         IOrderMixin limitOrderProtocol = _limitOrderProtocol;
         assembly {
             let interactionLengthOffset := calldataload(add(data.offset, 0x40))
@@ -144,7 +121,7 @@ contract Settlement is ISettlement, FeeBankCharger {
                 mstore(add(offset, 0x04), totalFee)
                 mstore(add(offset, 0x24), resolver)
                 mstore(add(offset, 0x44), calldataload(add(order, 0x40)))  // takerAsset
-                mstore(add(offset, 0x64), calldataload(order))  // salt
+                mstore(add(offset, 0x64), rateBump)
                 mstore(add(offset, 0x84), takingFeeData)
             }
 

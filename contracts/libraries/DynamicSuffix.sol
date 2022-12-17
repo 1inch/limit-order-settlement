@@ -10,7 +10,7 @@ library DynamicSuffix {
         uint256 totalFee;
         Address resolver;
         Address token;
-        uint256 salt;
+        uint256 rateBump;
         TakingFee.Data takingFee;
     }
 

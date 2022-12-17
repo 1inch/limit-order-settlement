@@ -72,14 +72,24 @@ library OrderSuffix {
         }
     }
 
-    function pointBump(OrderLib.Order calldata order, uint256 startBump, uint256 time) internal pure returns (uint256 bump) {
+    function rateBump(OrderLib.Order calldata order) internal view returns (uint256 bump) {
+        uint256 startBump = order.salt.getInitialRateBump();
         uint256 cumulativeTime = order.salt.getStartTime();
         uint256 lastTime = cumulativeTime + order.salt.getDuration();
+        if (block.timestamp <= cumulativeTime) {
+            return startBump;
+        } else if (block.timestamp >= lastTime) {
+            return 0;
+        }
 
-        bytes calldata interactions = order.interactions;
-        uint256 flags_ = flags(order);
-        uint256 resolversCount = (flags_ & _RESOLVERS_LENGTH_MASK) >> _RESOLVERS_LENGTH_OFFSET;
-        uint256 pointsCount = (flags_ & _POINTS_LENGTH_MASK) >> _POINTS_LENGTH_OFFSET;
+        uint256 ptr;
+
+        {  // stack too deep
+            bytes calldata interactions = order.interactions;
+            assembly {
+                ptr := sub(add(interactions.offset, interactions.length), 1)
+            }
+        }
         assembly {
             function linearInterpolation(t1, t2, v1, v2, t) -> v {
                 v := div(
@@ -88,12 +98,17 @@ library OrderSuffix {
                 )
             }
 
-            // Fast backward to the first point
-            let ptr := sub(add(interactions.offset, interactions.length), 5) // 1 byte for flags + 4 bytes for public time limit
-            if and(flags_, _HAS_TAKING_FEE_FLAG) {
-                ptr := sub(ptr, 32)
+            // move ptr to the last point
+            let pointsCount
+            {  // stack too deep
+                let flags_ := shr(248, calldataload(ptr))
+                let resolversCount := shr(3, and(flags_, _RESOLVERS_LENGTH_MASK))
+                pointsCount := and(flags_, _POINTS_LENGTH_MASK)
+                if and(flags_, _HAS_TAKING_FEE_FLAG) {
+                    ptr := sub(ptr, 32)
+                }
+                ptr := sub(ptr, add(mul(24, resolversCount), 4)) // 24 byte for each wl entry + 4 bytes for public time limit
             }
-            ptr := sub(ptr, mul(24, resolversCount))
 
             // Check points sequentially
             let prevCoefficient := startBump
@@ -103,7 +118,7 @@ library OrderSuffix {
                 let coefficient := shr(240, calldataload(ptr))
                 ptr := sub(ptr, 1)
                 let delay := shr(248, calldataload(ptr))
-                if gt(cumulativeTime, time) {
+                if gt(cumulativeTime, timestamp()) {
                     // prevCumulativeTime <passed> time <elapsed> cumulativeTime
                     // prevCoefficient    <passed>  X   <elapsed> coefficient
                     bump := linearInterpolation(
@@ -111,7 +126,7 @@ library OrderSuffix {
                         cumulativeTime,
                         prevCoefficient,
                         coefficient,
-                        time
+                        timestamp()
                     )
                     break
                 }
@@ -126,7 +141,7 @@ library OrderSuffix {
                     lastTime,
                     prevCoefficient,
                     0,
-                    time
+                    timestamp()
                 )
             }
         }
