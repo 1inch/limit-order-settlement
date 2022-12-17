@@ -118,6 +118,7 @@ library OrderSuffix {
                 let coefficient := shr(240, calldataload(ptr))
                 ptr := sub(ptr, 1)
                 let delay := shr(248, calldataload(ptr))
+                cumulativeTime := add(cumulativeTime, delay)
                 if gt(cumulativeTime, timestamp()) {
                     // prevCumulativeTime <passed> time <elapsed> cumulativeTime
                     // prevCoefficient    <passed>  X   <elapsed> coefficient
@@ -132,7 +133,6 @@ library OrderSuffix {
                 }
                 prevCumulativeTime := cumulativeTime
                 prevCoefficient := coefficient
-                cumulativeTime := add(cumulativeTime, delay)
             }
 
             if iszero(bump) {

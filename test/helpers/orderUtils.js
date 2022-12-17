@@ -41,6 +41,8 @@ const buildOrder = async (
         publicCutOff = 0xffffffff,
         takerFeeReceiver = constants.ZERO_ADDRESS,
         takerFeeRatio = 0,
+        auctionBumps = [],
+        auctionDelays = [],
     } = {},
 ) => {
     if (getMakingAmount === '') {
@@ -79,6 +81,13 @@ const buildOrder = async (
     if (whitelistedAddrs.length !== whitelistedCutOffs.length) {
         throw new Error('whitelist length mismatch');
     }
+
+    if (auctionBumps.length !== auctionDelays.length) {
+        throw new Error('auction length mismatch');
+    }
+
+    const auctionParams = auctionBumps.map((b, i) => auctionDelays[i].toString(16).padStart(2, '0') + b.toString(16).padStart(4, '0')).join('');
+
     const whitelist = whitelistedAddrs.map((a, i) => whitelistedCutOffs[i].toString(16).padStart(8, '0') + trim0x(a)).join('') +
         publicCutOff.toString(16).padStart(8, '0');
 
@@ -86,7 +95,7 @@ const buildOrder = async (
         ? ''
         : '80' + takerFeeRatio.toString(16).padStart(22, '0') + trim0x(takerFeeReceiver);
 
-    let flags = BigInt(whitelistedAddrs.length) << 3n;
+    let flags = (BigInt(whitelistedAddrs.length) << 3n) | BigInt(auctionBumps.length);
     if (takingFeeData !== '') {
         flags |= 0x80n;
     }
@@ -101,7 +110,7 @@ const buildOrder = async (
         makingAmount: makingAmount.toString(),
         takingAmount: takingAmount.toString(),
         offsets: offsets.toString(),
-        interactions: interactions + whitelist + takingFeeData + flags.toString(16).padStart(2, '0'),
+        interactions: interactions + auctionParams + whitelist + takingFeeData + flags.toString(16).padStart(2, '0'),
     };
 };
 
