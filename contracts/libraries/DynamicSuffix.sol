@@ -15,4 +15,10 @@ library DynamicSuffix {
     }
 
     uint256 internal constant _DATA_SIZE = 0xa0;
+
+    function decodeSuffix(bytes calldata cd) internal pure returns(Data calldata suffix) {
+        assembly {
+            suffix := sub(add(cd.offset, cd.length), _DATA_SIZE)
+        }
+    }
 }

@@ -24,8 +24,6 @@ library OrderSuffix {
     uint256 private constant _POINTS_LENGTH_MASK = 0x07;
     uint256 private constant _POINTS_LENGTH_OFFSET = 0;
 
-    uint256 private constant _COEFFICIENT_BASE = 65536;
-
     function flags(OrderLib.Order calldata order) internal pure returns (uint256 ret) {
         bytes calldata interactions = order.interactions;
         assembly {
@@ -49,14 +47,13 @@ library OrderSuffix {
         uint256 flags_ = flags(order);
         uint256 resolversCount = (flags_ & _RESOLVERS_LENGTH_MASK) >> _RESOLVERS_LENGTH_OFFSET;
         assembly {
-            let ptr := sub(add(interactions.offset, interactions.length), 1)
+            let ptr := sub(add(interactions.offset, interactions.length), 5)
             if and(flags_, _HAS_TAKING_FEE_FLAG) {
                 ptr := sub(ptr, 32)
             }
 
             // Check public time limit
             let publicLimit := shr(224, calldataload(ptr))
-            ptr := sub(ptr, 4)
             valid := gt(timestamp(), publicLimit)
 
             // Check resolvers and corresponding time limits
@@ -67,7 +64,7 @@ library OrderSuffix {
                     ptr := sub(ptr, 4)
                     let limit := shr(224, calldataload(ptr))
                     if eq(account, resolver) {
-                        valid := lt(timestamp(), limit)
+                        valid := iszero(lt(timestamp(), limit))
                         break
                     }
                 }
@@ -75,7 +72,6 @@ library OrderSuffix {
         }
     }
 
-    // TODO: respect partial fills
     function pointBump(OrderLib.Order calldata order, uint256 startBump, uint256 time) internal pure returns (uint256 bump) {
         uint256 cumulativeTime = order.salt.getStartTime();
         uint256 lastTime = cumulativeTime + order.salt.getDuration();
@@ -129,7 +125,7 @@ library OrderSuffix {
                     prevCumulativeTime,
                     lastTime,
                     prevCoefficient,
-                    _COEFFICIENT_BASE,
+                    0,
                     time
                 )
             }

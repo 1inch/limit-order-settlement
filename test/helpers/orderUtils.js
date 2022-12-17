@@ -80,12 +80,16 @@ const buildOrder = async (
         throw new Error('whitelist length mismatch');
     }
     const whitelist = whitelistedAddrs.map((a, i) => whitelistedCutOffs[i].toString(16).padStart(8, '0') + trim0x(a)).join('') +
-        whitelistedAddrs.length.toString(16).padStart(2, '0') +
         publicCutOff.toString(16).padStart(8, '0');
 
     const takingFeeData = takerFeeReceiver === constants.ZERO_ADDRESS || takerFeeRatio === 0
-        ? '00'
-        : takerFeeRatio.toString(16).padStart(8, '0') + trim0x(takerFeeReceiver) + '80';
+        ? ''
+        : '80' + takerFeeRatio.toString(16).padStart(22, '0') + trim0x(takerFeeReceiver);
+
+    let flags = BigInt(whitelistedAddrs.length) << 3n;
+    if (takingFeeData !== '') {
+        flags |= 0x80n;
+    }
 
     return {
         salt,
@@ -97,7 +101,7 @@ const buildOrder = async (
         makingAmount: makingAmount.toString(),
         takingAmount: takingAmount.toString(),
         offsets: offsets.toString(),
-        interactions: interactions + whitelist + takingFeeData,
+        interactions: interactions + whitelist + takingFeeData + flags.toString(16).padStart(2, '0'),
     };
 };
 
