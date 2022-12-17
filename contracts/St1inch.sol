@@ -36,8 +36,8 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
     error DefaultFarmTokenMismatch();
 
     uint256 public constant MIN_LOCK_PERIOD = 30 days;
-    uint256 public constant MAX_LOCK_PERIOD = 4 * 365 days;
-    uint256 private constant _VOTING_POWER_DIVIDER = 10;
+    uint256 public constant MAX_LOCK_PERIOD = 2 * 365 days;
+    uint256 private constant _VOTING_POWER_DIVIDER = 20;
     uint256 private constant _POD_CALL_GAS_LIMIT = 200_000;
     uint256 private constant _ONE = 1e9;
 
@@ -176,7 +176,7 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
     }
 
     function _earlyWithdrawLoss(uint256 depAmount, uint256 stBalance) private view returns (uint256 loss, uint256 ret) {
-        ret = (depAmount - _votingPowerAt(stBalance, block.timestamp)) * 10 / 9;
+        ret = (depAmount - _votingPowerAt(stBalance, block.timestamp)) * 100 / 95;
         loss = depAmount - ret;
     }
 
