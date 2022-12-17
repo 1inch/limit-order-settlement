@@ -130,7 +130,7 @@ describe('Settlement', function () {
         expect(await dai.balanceOf(addr1.address)).to.equal(addr1dai.add(ether('100')));
     });
 
-    it('sopposite direction recursive swap with taking fee', async function () {
+    it('opposite direction recursive swap with taking fee', async function () {
         const { dai, weth, swap, matcher, resolver } = await loadFixture(initContracts);
 
         const order = await buildOrder(
