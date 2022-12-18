@@ -93,7 +93,7 @@ const buildOrder = async (
 
     const takingFeeData = takerFeeReceiver === constants.ZERO_ADDRESS || takerFeeRatio === 0
         ? ''
-        : '80' + takerFeeRatio.toString(16).padStart(22, '0') + trim0x(takerFeeReceiver);
+        : takerFeeRatio.toString(16).padStart(24, '0') + trim0x(takerFeeReceiver);
 
     let flags = (BigInt(whitelistedAddrs.length) << 3n) | BigInt(auctionBumps.length);
     if (takingFeeData !== '') {
