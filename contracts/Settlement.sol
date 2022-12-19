@@ -66,9 +66,8 @@ contract Settlement is ISettlement, FeeBankCharger {
         uint256 takingFee = result * suffix.takingFee.ratio() / TakingFee._TAKING_FEE_BASE;
 
         DynamicSuffix.TokenAndAmount[] memory allTokensAndAmounts;
-        uint256 emptyPtr;
         assembly {
-            emptyPtr := mload(0x40)
+            let emptyPtr := mload(0x40)
             allTokensAndAmounts := emptyPtr
             mstore(allTokensAndAmounts, add(tokensAndAmounts.length, 1))
             emptyPtr := add(emptyPtr, 0x20)
