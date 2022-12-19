@@ -5,14 +5,14 @@ pragma solidity 0.8.17;
 /// @title Library for parsing parameters from salt.
 library OrderSaltParser {
     uint256 private constant _TIME_START_MASK        = 0xFFFFFFFF00000000000000000000000000000000000000000000000000000000; // prettier-ignore
-    uint256 private constant _DURATION_MASK          = 0x00000000FFFFFFFF000000000000000000000000000000000000000000000000; // prettier-ignore
-    uint256 private constant _INITIAL_RATE_BUMP_MASK = 0x0000000000000000FFFF00000000000000000000000000000000000000000000; // prettier-ignore
+    uint256 private constant _DURATION_MASK          = 0x00000000FFFFFF00000000000000000000000000000000000000000000000000; // prettier-ignore
+    uint256 private constant _INITIAL_RATE_BUMP_MASK = 0x00000000000000FFFFFF00000000000000000000000000000000000000000000; // prettier-ignore
     uint256 private constant _FEE_MASK               = 0x00000000000000000000FFFFFFFF000000000000000000000000000000000000; // prettier-ignore
     uint256 private constant _SALT_MASK              = 0x0000000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF; // prettier-ignore
 
     uint256 private constant _TIME_START_SHIFT = 224; // orderTimeMask 224-255
-    uint256 private constant _DURATION_SHIFT = 192; // durationMask 192-223
-    uint256 private constant _INITIAL_RATE_BUMP_SHIFT = 176; // initialRateMask 176-191
+    uint256 private constant _DURATION_SHIFT = 200; // durationMask 200-223
+    uint256 private constant _INITIAL_RATE_BUMP_SHIFT = 176; // initialRateMask 176-200
     uint256 private constant _FEE_SHIFT = 144; // orderFee 144-175
 
     function getStartTime(uint256 salt) internal pure returns (uint256) {

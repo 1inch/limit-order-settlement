@@ -1,7 +1,7 @@
 const { expect, constants } = require('@1inch/solidity-utils');
 const {
     initSaltObj,
-    encodeParameters,
+    encodeSalt,
     getStartTime,
     getDuration,
     getInitialRateBump,
@@ -11,12 +11,10 @@ const {
 const { ethers } = require('hardhat');
 const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
 
-const ORDERSALT_WITH_SPECIFIC_VALUES = BigInt('0x0000000100000002000300000004000000000000000000000000000000000005');
-const ORDERSALT_WITH_SIMPLE_VALUES = BigInt('0x0000001100000022003300000044000000000000000000000000000000000555');
-const ORDERSALT_WITH_FILLED_BOUNDARY_BITS = BigInt(
-    '0xF0000001F0000002F003F0000004F00000000000000000000000000000000123',
-);
-const ORDERSALT_WITH_FILLED_ALL_BITS = BigInt(constants.MAX_UINT256);
+const ORDERSALT_WITH_SPECIFIC_VALUES      = 0x0000000100000203000000000004000000000000000000000000000000000005n;
+const ORDERSALT_WITH_SIMPLE_VALUES        = 0x0000001100002233000000000044000000000000000000000000000000000555n;
+const ORDERSALT_WITH_FILLED_BOUNDARY_BITS = 0xF0000001F00002F003F000000004F00000000000000000000000000000000123n;
+const ORDERSALT_WITH_FILLED_ALL_BITS      = BigInt(constants.MAX_UINT256);
 
 describe('OrderSaltParserMock', function () {
     async function initContracts() {
@@ -72,11 +70,11 @@ describe('OrderSaltParserMock', function () {
         }
     });
 
-    describe('encodeParameters', function () {
+    describe('encodeSalt', function () {
         it('with specific values', async function () {
             const parseObj = initSaltObj(ORDERSALT_WITH_SPECIFIC_VALUES);
             expect(
-                encodeParameters(
+                encodeSalt(
                     parseObj.startTime,
                     parseObj.duration,
                     parseObj.initialRate,
@@ -89,7 +87,7 @@ describe('OrderSaltParserMock', function () {
         it('with simple values', async function () {
             const parseObj = initSaltObj(ORDERSALT_WITH_SIMPLE_VALUES);
             expect(
-                encodeParameters(
+                encodeSalt(
                     parseObj.startTime,
                     parseObj.duration,
                     parseObj.initialRate,
@@ -102,7 +100,7 @@ describe('OrderSaltParserMock', function () {
         it('with filled bits on the value boundaries', async function () {
             const parseObj = initSaltObj(ORDERSALT_WITH_FILLED_BOUNDARY_BITS);
             expect(
-                encodeParameters(
+                encodeSalt(
                     parseObj.startTime,
                     parseObj.duration,
                     parseObj.initialRate,
@@ -115,7 +113,7 @@ describe('OrderSaltParserMock', function () {
         it('with filled all bits', async function () {
             const parseObj = initSaltObj(ORDERSALT_WITH_FILLED_ALL_BITS);
             expect(
-                encodeParameters(
+                encodeSalt(
                     parseObj.startTime,
                     parseObj.duration,
                     parseObj.initialRate,

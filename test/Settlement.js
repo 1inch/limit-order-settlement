@@ -102,7 +102,7 @@ describe('Settlement', function () {
                     ether('0.11'),
                     0,
                     ether('100'),
-                    matcher.address,
+                    resolver.address,
                 ])
                 .substring(10);
 
@@ -119,7 +119,7 @@ describe('Settlement', function () {
                 ether('100'),
                 0,
                 ether('0.11'),
-                matcher.address,
+                resolver.address,
             ]).substring(10),
         );
 
@@ -174,8 +174,8 @@ describe('Settlement', function () {
         const wethFeeAmount = ether('0.0011'); // (takingAmount + 10% auction) * fee
         const daiFeeAmount = ether('1');
         // send fee amounts to matcher contract
-        await weth.transfer(matcher.address, wethFeeAmount.toString());
-        await dai.connect(addr1).transfer(matcher.address, daiFeeAmount.toString());
+        await weth.transfer(resolver.address, wethFeeAmount.toString());
+        await dai.connect(addr1).transfer(resolver.address, daiFeeAmount.toString());
 
         const matchingParams = matcher.address + '01' + trim0x(resolver.address);
 
@@ -190,7 +190,7 @@ describe('Settlement', function () {
                     ether('0.11'),
                     0,
                     ether('100'),
-                    matcher.address,
+                    resolver.address,
                 ])
                 .substring(10);
 
@@ -209,7 +209,7 @@ describe('Settlement', function () {
                 ether('100'),
                 0,
                 ether('0.11'),
-                matcher.address,
+                resolver.address,
             ]).substring(10),
         );
 
@@ -269,7 +269,7 @@ describe('Settlement', function () {
                 [
                     weth.interface.encodeFunctionData('transferFrom', [
                         addr.address,
-                        matcher.address,
+                        resolver.address,
                         ether('0.0275'),
                     ]),
                     dai.interface.encodeFunctionData('transfer', [
@@ -386,7 +386,7 @@ describe('Settlement', function () {
                     ether('0.0275'),
                     0,
                     ether('25'),
-                    matcher.address,
+                    resolver.address,
                 ])
                 .substring(10);
 
@@ -401,7 +401,7 @@ describe('Settlement', function () {
                     ether('15'),
                     0,
                     ether('0.015'),
-                    matcher.address,
+                    resolver.address,
                 ])
                 .substring(10);
 
@@ -418,7 +418,7 @@ describe('Settlement', function () {
                 ether('10'),
                 0,
                 ether('0.01'),
-                matcher.address,
+                resolver.address,
             ]).substring(10),
         );
 
@@ -432,8 +432,8 @@ describe('Settlement', function () {
     describe('dutch auction params', function () {
         const prepareSingleOrder = async ({
             orderStartTime,
-            initialStartRate = '1000',
-            duration = '1800',
+            initialStartRate = 1000000,
+            duration = 1800,
             salt = '1',
             dai,
             weth,
@@ -474,8 +474,8 @@ describe('Settlement', function () {
                         : orderStartTime + BigInt(duration) - ts;
                 actualTakingAmount =
                     (actualTakingAmount *
-                        (BigInt('10000') + (BigInt(initialStartRate) * minDuration) / BigInt(duration))) /
-                    BigInt('10000');
+                        (BigInt('10000000') + (BigInt(initialStartRate) * minDuration) / BigInt(duration))) /
+                    BigInt('10000000');
             }
 
             const matchingParams =
@@ -487,7 +487,7 @@ describe('Settlement', function () {
                     [
                         weth.interface.encodeFunctionData('transferFrom', [
                             addr.address,
-                            matcher.address,
+                            resolver.address,
                             actualTakingAmount,
                         ]),
                         dai.interface.encodeFunctionData('transfer', [addr.address, makingAmount]),
@@ -545,7 +545,7 @@ describe('Settlement', function () {
         describe('order with one bump point', async function () {
             async function prepareOrder({
                 orderStartTime,
-                initialStartRate = '1000',
+                initialStartRate = '1000000',
                 duration = '1800',
                 salt = '1',
                 dai,
@@ -569,7 +569,7 @@ describe('Settlement', function () {
                         predicate: swap.interface.encodeFunctionData('timestampBelow', [0xff00000000]),
                         whitelistedAddrs: [addr.address],
                         whitelistedCutOffs: [0],
-                        auctionBumps: [900],
+                        auctionBumps: [900000],
                         auctionDelays: [240],
                     },
                 );
@@ -606,7 +606,7 @@ describe('Settlement', function () {
                         [
                             weth.interface.encodeFunctionData('transferFrom', [
                                 addr.address,
-                                matcher.address,
+                                resolver.address,
                                 actualTakingAmount,
                             ]),
                             dai.interface.encodeFunctionData('transfer', [addr.address, makingAmount]),
@@ -661,7 +661,7 @@ describe('Settlement', function () {
                         [
                             weth.interface.encodeFunctionData('transferFrom', [
                                 addr.address,
-                                matcher.address,
+                                resolver.address,
                                 actualTakingAmount,
                             ]),
                             dai.interface.encodeFunctionData('transfer', [addr.address, makingAmount]),
@@ -701,7 +701,7 @@ describe('Settlement', function () {
             const currentTimestamp = BigInt(await time.latest());
             const { order, signature, interaction, makingAmount, takingAmount } = await prepareSingleOrder({
                 orderStartTime: currentTimestamp,
-                initialStartRate: '2000',
+                initialStartRate: '2000000',
                 dai,
                 weth,
                 swap,
@@ -738,7 +738,7 @@ describe('Settlement', function () {
             const currentTimestamp = BigInt(await time.latest());
             const { order, signature, interaction, makingAmount, takingAmount } = await prepareSingleOrder({
                 orderStartTime: currentTimestamp - BigInt(450),
-                initialStartRate: '1000',
+                initialStartRate: '1000000',
                 duration: '900',
                 dai,
                 weth,
@@ -818,7 +818,7 @@ describe('Settlement', function () {
                     ether('0.1'),
                     0,
                     ether('100'),
-                    matcher.address,
+                    resolver.address,
                 ])
                 .substring(10);
         const availableCreditBefore = await matcher.availableCredit(addr.address);
@@ -830,7 +830,7 @@ describe('Settlement', function () {
                 ether('100'),
                 0,
                 ether('0.1'),
-                matcher.address,
+                resolver.address,
             ]).substring(10),
         );
         expect(await matcher.availableCredit(addr.address)).to.equal(
@@ -885,7 +885,7 @@ describe('Settlement', function () {
                     ether('0.1'),
                     0,
                     ether('100'),
-                    matcher.address,
+                    resolver.address,
                 ])
                 .substring(10);
         await proxy.deposit(ether('100'));
@@ -898,7 +898,7 @@ describe('Settlement', function () {
                 ether('100'),
                 0,
                 ether('0.1'),
-                matcher.address,
+                resolver.address,
             ]).substring(10),
         );
         expect(await matcher.availableCredit(proxy.address)).to.equal(
@@ -911,7 +911,7 @@ describe('Settlement', function () {
 
         const order = await buildOrder(
             {
-                salt: buildSalt({ orderStartTime: await defaultExpiredAuctionTimestamp(), fee: ether('1000') }),
+                salt: buildSalt({ orderStartTime: await defaultExpiredAuctionTimestamp(), fee: '1000000' }),
                 makerAsset: dai.address,
                 takerAsset: weth.address,
                 makingAmount: ether('100'),
@@ -1023,7 +1023,7 @@ describe('Settlement', function () {
                         ether('0.1'),
                         0,
                         ether('100'),
-                        matcher.address,
+                        resolver.address,
                     ])
                     .substring(10);
 
@@ -1036,7 +1036,7 @@ describe('Settlement', function () {
                         ether('100'),
                         0,
                         ether('0.1'),
-                        matcher.address,
+                        resolver.address,
                     ]).substring(10),
                 ),
             ).to.be.revertedWithCustomError(matcher, 'ResolverIsNotWhitelisted');
@@ -1049,7 +1049,7 @@ describe('Settlement', function () {
                     ether('100'),
                     0,
                     ether('0.1'),
-                    matcher.address,
+                    resolver.address,
                 ]).substring(10),
             );
         });
@@ -1103,7 +1103,7 @@ describe('Settlement', function () {
                         ether('0.1'),
                         0,
                         ether('100'),
-                        matcher.address,
+                        resolver.address,
                     ])
                     .substring(10);
 
@@ -1116,7 +1116,7 @@ describe('Settlement', function () {
                         ether('100'),
                         0,
                         ether('0.1'),
-                        matcher.address,
+                        resolver.address,
                     ]).substring(10),
                 ),
             ).to.be.revertedWithCustomError(matcher, 'ResolverIsNotWhitelisted');
@@ -1129,7 +1129,7 @@ describe('Settlement', function () {
                     ether('100'),
                     0,
                     ether('0.1'),
-                    matcher.address,
+                    resolver.address,
                 ]).substring(10),
             );
         });

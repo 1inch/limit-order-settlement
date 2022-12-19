@@ -81,7 +81,7 @@ describe('WhitelistChecker', function () {
                     ether('0.1'),
                     0,
                     ether('100'),
-                    matcher.address,
+                    resolver.address,
                 ])
                 .substring(10);
         await settleOrderMethod(
@@ -92,7 +92,7 @@ describe('WhitelistChecker', function () {
                 ether('100'),
                 0,
                 ether('0.1'),
-                matcher.address,
+                resolver.address,
             ]).substring(10),
         );
     }

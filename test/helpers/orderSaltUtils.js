@@ -1,16 +1,17 @@
-const { ethers } = require('hardhat');
+const { assert } = require('console');
 
 /* eslint-disable no-multi-spaces */
+                               0x0000000100000203000000000004000000000000000000000000000000000005
 const TIME_START_MASK        = 0xFFFFFFFF00000000000000000000000000000000000000000000000000000000n; // prettier-ignore
-const DURATION_MASK          = 0x00000000FFFFFFFF000000000000000000000000000000000000000000000000n; // prettier-ignore
-const INITIAL_RATE_BUMP_MASK = 0x0000000000000000FFFF00000000000000000000000000000000000000000000n; // prettier-ignore
+const DURATION_MASK          = 0x00000000FFFFFF00000000000000000000000000000000000000000000000000n; // prettier-ignore
+const INITIAL_RATE_BUMP_MASK = 0x00000000000000FFFFFF00000000000000000000000000000000000000000000n; // prettier-ignore
 const FEE_MASK               = 0x00000000000000000000FFFFFFFF000000000000000000000000000000000000n; // prettier-ignore
 const SALT_MASK              = 0x0000000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFn; // prettier-ignore
 /* eslint-enable no-multi-spaces */
 
 const TIME_START_SHIFT = 224n; // orderTimeMask 224-255
-const DURATION_SHIFT = 192n; // durationMask 192-223
-const INITIAL_RATE_BUMP_SHIFT = 176n; // initialRateMask 176-191
+const DURATION_SHIFT = 200n; // durationMask 200-223
+const INITIAL_RATE_BUMP_SHIFT = 176n; // initialRateMask 176-199
 const FEE_SHIFT = 144n; // orderFee 144-175
 
 const initSaltObj = (orderSalt) => {
@@ -23,16 +24,17 @@ const initSaltObj = (orderSalt) => {
     };
 };
 
-const encodeParameters = (startTime, duration, initialRate, fee, salt) => {
-    const abiCoder = ethers.utils.defaultAbiCoder;
-    return (
+const encodeSalt = (startTime, duration, initialRate, fee, salt) => {
+    const res = (
         '0x' +
-        abiCoder.encode(['uint32'], [startTime]).slice(-8) +
-        abiCoder.encode(['uint32'], [duration]).slice(-8) +
-        abiCoder.encode(['uint16'], [initialRate]).slice(-4) +
-        abiCoder.encode(['uint32'], [fee]).slice(-8) +
-        abiCoder.encode(['uint144'], [salt]).slice(-36)
+        BigInt(startTime).toString(16).padStart(8, '0') +
+        BigInt(duration).toString(16).padStart(6, '0') +
+        BigInt(initialRate).toString(16).padStart(6, '0') +
+        BigInt(fee).toString(16).padStart(8, '0') +
+        BigInt(salt).toString(16).padStart(36, '0')
     );
+    assert(res.length == 66, "Some inputs were out of allowed ranges");
+    return res;
 };
 
 const getStartTime = (orderSalt) => {
@@ -57,7 +59,7 @@ const getSalt = (orderSalt) => {
 
 module.exports = {
     initSaltObj,
-    encodeParameters,
+    encodeSalt,
     getStartTime,
     getDuration,
     getInitialRateBump,
