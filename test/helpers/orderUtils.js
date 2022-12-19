@@ -1,4 +1,5 @@
 const { constants, trim0x, time } = require('@1inch/solidity-utils');
+const { encodeSalt } = require('./orderSaltUtils');
 
 const Order = [
     { name: 'salt', type: 'uint256' },
@@ -86,7 +87,7 @@ const buildOrder = async (
         throw new Error('auction length mismatch');
     }
 
-    const auctionParams = auctionBumps.map((b, i) => auctionDelays[i].toString(16).padStart(2, '0') + b.toString(16).padStart(4, '0')).join('');
+    const auctionParams = auctionBumps.map((b, i) => auctionDelays[i].toString(16).padStart(2, '0') + b.toString(16).padStart(6, '0')).join('');
 
     const whitelist = whitelistedAddrs.map((a, i) => whitelistedCutOffs[i].toString(16).padStart(8, '0') + trim0x(a)).join('') +
         publicCutOff.toString(16).padStart(8, '0');
@@ -118,18 +119,11 @@ const defaultExpiredAuctionTimestamp = async () => BigInt(await time.latest()) -
 
 const buildSalt = ({
     orderStartTime,
-    initialStartRate = 1000, // 10000 = 100%
+    initialStartRate = 1000000, // 10000000 = 100%
     duration = 180, // seconds
     fee = 0, // in wei
     salt = '1', // less than uint176
-}) =>
-    (
-        (BigInt(orderStartTime) << 224n) +
-        (BigInt(duration) << 192n) +
-        (BigInt(initialStartRate) << 176n) +
-        (BigInt(fee) << 144n) +
-        BigInt(salt)
-    ).toString();
+}) => encodeSalt(orderStartTime, duration, initialStartRate, fee, salt);
 
 async function signOrder(order, chainId, target, wallet) {
     return await wallet._signTypedData({ name, version, chainId, verifyingContract: target }, { Order }, order);

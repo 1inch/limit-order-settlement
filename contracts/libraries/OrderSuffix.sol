@@ -12,7 +12,7 @@ library OrderSuffix {
     using OrderSaltParser for uint256;
 
     // `Order.interactions` suffix structure:
-    // M*(1 + 2 bytes)  - auction points coefficients with seconds delays
+    // M*(1 + 3 bytes)  - auction points coefficients with seconds delays
     // N*(4 + 20 bytes) - resolver with corresponding time limit
     // 4 bytes          - public time limit
     // 32 bytes         - taking fee (optional if flags has _HAS_TAKING_FEE_FLAG)
@@ -113,9 +113,9 @@ library OrderSuffix {
             // Check points sequentially
             let prevCoefficient := startBump
             let prevCumulativeTime := cumulativeTime
-            for { let end := sub(ptr, mul(3, pointsCount)) } gt(ptr, end) { } {
-                ptr := sub(ptr, 2)
-                let coefficient := shr(240, calldataload(ptr))
+            for { let end := sub(ptr, mul(4, pointsCount)) } gt(ptr, end) { } {
+                ptr := sub(ptr, 3)
+                let coefficient := shr(232, calldataload(ptr))
                 ptr := sub(ptr, 1)
                 let delay := shr(248, calldataload(ptr))
                 cumulativeTime := add(cumulativeTime, delay)

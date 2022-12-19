@@ -7,7 +7,7 @@ import "../libraries/TokensAndAmounts.sol";
 import "@1inch/solidity-utils/contracts/libraries/SafeERC20.sol";
 
 contract ResolverMock is IResolver {
-    error FailedExternalCall(uint256 index);
+    error FailedExternalCall(uint256 index, bytes reason);
 
     using TokensAndAmounts for bytes;
     using SafeERC20 for IERC20;
@@ -22,8 +22,8 @@ contract ResolverMock is IResolver {
             (address[] memory targets, bytes[] memory calldatas) = abi.decode(data, (address[], bytes[]));
             for (uint256 i = 0; i < targets.length; i++) {
                 // solhint-disable-next-line avoid-low-level-calls
-                (bool success, ) = targets[i].call(calldatas[i]);
-                if (!success) revert FailedExternalCall(i);
+                (bool success, bytes memory reason) = targets[i].call(calldatas[i]);
+                if (!success) revert FailedExternalCall(i, reason);
             }
         }
         TokensAndAmounts.Data[] calldata items = tokensAndAmounts.decode();

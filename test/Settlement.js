@@ -432,8 +432,8 @@ describe('Settlement', function () {
     describe('dutch auction params', function () {
         const prepareSingleOrder = async ({
             orderStartTime,
-            initialStartRate = '1000',
-            duration = '1800',
+            initialStartRate = 1000000,
+            duration = 1800,
             salt = '1',
             dai,
             weth,
@@ -474,8 +474,8 @@ describe('Settlement', function () {
                         : orderStartTime + BigInt(duration) - ts;
                 actualTakingAmount =
                     (actualTakingAmount *
-                        (BigInt('10000') + (BigInt(initialStartRate) * minDuration) / BigInt(duration))) /
-                    BigInt('10000');
+                        (BigInt('10000000') + (BigInt(initialStartRate) * minDuration) / BigInt(duration))) /
+                    BigInt('10000000');
             }
 
             const matchingParams =
@@ -545,7 +545,7 @@ describe('Settlement', function () {
         describe('order with one bump point', async function () {
             async function prepareOrder({
                 orderStartTime,
-                initialStartRate = '1000',
+                initialStartRate = '1000000',
                 duration = '1800',
                 salt = '1',
                 dai,
@@ -569,7 +569,7 @@ describe('Settlement', function () {
                         predicate: swap.interface.encodeFunctionData('timestampBelow', [0xff00000000]),
                         whitelistedAddrs: [addr.address],
                         whitelistedCutOffs: [0],
-                        auctionBumps: [900],
+                        auctionBumps: [900000],
                         auctionDelays: [240],
                     },
                 );
@@ -701,7 +701,7 @@ describe('Settlement', function () {
             const currentTimestamp = BigInt(await time.latest());
             const { order, signature, interaction, makingAmount, takingAmount } = await prepareSingleOrder({
                 orderStartTime: currentTimestamp,
-                initialStartRate: '2000',
+                initialStartRate: '2000000',
                 dai,
                 weth,
                 swap,
@@ -738,7 +738,7 @@ describe('Settlement', function () {
             const currentTimestamp = BigInt(await time.latest());
             const { order, signature, interaction, makingAmount, takingAmount } = await prepareSingleOrder({
                 orderStartTime: currentTimestamp - BigInt(450),
-                initialStartRate: '1000',
+                initialStartRate: '1000000',
                 duration: '900',
                 dai,
                 weth,
@@ -911,7 +911,7 @@ describe('Settlement', function () {
 
         const order = await buildOrder(
             {
-                salt: buildSalt({ orderStartTime: await defaultExpiredAuctionTimestamp(), fee: ether('1000') }),
+                salt: buildSalt({ orderStartTime: await defaultExpiredAuctionTimestamp(), fee: '1000000' }),
                 makerAsset: dai.address,
                 takerAsset: weth.address,
                 makingAmount: ether('100'),

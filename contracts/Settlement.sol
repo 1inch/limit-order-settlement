@@ -28,9 +28,7 @@ contract Settlement is ISettlement, FeeBankCharger {
 
     bytes32 private constant _FINALIZE_INTERACTION = bytes1(0x01);
     uint256 private constant _ORDER_FEE_BASE_POINTS = 1e15;
-    uint256 private constant _BASE_POINTS = 10000; // 100%
-    uint256 private constant _DEFAULT_INITIAL_RATE_BUMP = 1000; // 10%
-    uint256 private constant _DEFAULT_DURATION = 30 minutes;
+    uint256 private constant _BASE_POINTS = 10_000_000; // 100%
 
     IOrderMixin private immutable _limitOrderProtocol;
 
