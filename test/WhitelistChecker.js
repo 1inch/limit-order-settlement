@@ -33,7 +33,7 @@ describe('WhitelistChecker', function () {
         await matcher.deployed();
 
         const ResolverMock = await ethers.getContractFactory('ResolverMock');
-        const resolver = await ResolverMock.deploy();
+        const resolver = await ResolverMock.deploy(matcher.address);
 
         return { dai, weth, swap, whitelistRegistrySimple, matcher, resolver };
     }
@@ -68,7 +68,7 @@ describe('WhitelistChecker', function () {
         const signature0 = await signOrder(order0, chainId, swap.address, addr);
         const signature1 = await signOrder(order1, chainId, swap.address, addr1);
 
-        const matchingParams = matcher.address + '01' + trim0x(resolver.address);
+        const matchingParams = matcher.address + '01' + trim0x(resolver.address) + 'ffff000000000000000000000000000000000000000000000000000000000000';
 
         const interaction =
             matcher.address +
@@ -81,7 +81,7 @@ describe('WhitelistChecker', function () {
                     ether('0.1'),
                     0,
                     ether('100'),
-                    resolver.address,
+                    matcher.address,
                 ])
                 .substring(10);
         await settleOrderMethod(
@@ -92,7 +92,7 @@ describe('WhitelistChecker', function () {
                 ether('100'),
                 0,
                 ether('0.1'),
-                resolver.address,
+                matcher.address,
             ]).substring(10),
         );
     }
@@ -129,6 +129,7 @@ describe('WhitelistChecker', function () {
             const interaction =
                 matcher.address +
                 '01' +
+                '0000000000000000000000000000000000000000000000000000000000000000' +
                 abiCoder.encode(['address[]', 'bytes[]'], [[matcher.address], ['0x']]).substring(2);
             await expect(
                 swap.fillOrder(order, signature, interaction, ether('10'), 0, ether('0.01')),
