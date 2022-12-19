@@ -18,7 +18,7 @@ const setup = {
         maxFeePerGas: '5000000000',
         maxPriorityFeePerGas: '5000000000',
         minBalance: ether('0.009'),
-        addedBalance: ether('0.1'),
+        addedBalance: ether('0.04'),
         deployerPrivateKey: process.env.BSC_PRIVATE_KEY,
     },
     137: {

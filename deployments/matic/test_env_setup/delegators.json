@@ -3,19 +3,19 @@
     "address": "0x4f75B1bE1b5C077eD665a9a20C49DD1f7b1Af238",
     "resolver": "0x5Fa936dB37a1e2319f0945438A88cE26A1A38aA0",
     "stake": "50000000000000000000000",
-    "lockTime": "126144000"
+    "lockTime": "63072000"
   },
   {
     "address": "0x17A21F1123e0D426B05fF395500243787dD1431b",
     "resolver": "0x5Fa936dB37a1e2319f0945438A88cE26A1A38aA0",
     "stake": "50000000000000000000000",
-    "lockTime": "126144000"
+    "lockTime": "63072000"
   },
   {
     "address": "0xe4f01c562a68380b44832Aa5aEeB496e14d688F7",
     "resolver": "0xfaf9DCd8Eb35632F067FE4cCFA351b4724eaDd9f",
     "stake": "100000000000000000000000",
-    "lockTime": "126144000"
+    "lockTime": "63072000"
   },
   {
     "address": "0x817bAD86A1a627c5519a7ca62bE5e2415B500ce1",
@@ -45,60 +45,60 @@
     "address": "0x50B87F54CfAd1ce79edBb0Bd64d76480976F1df2",
     "resolver": "0xA550a80eAbad7d141A910fD9ec4E5F2d0806C596",
     "stake": "10000000000000000000000",
-    "lockTime": "126144000"
+    "lockTime": "63072000"
   },
   {
     "address": "0xF04c34BA12584Cf97Ad22fE6EE10a206dB96371f",
     "resolver": "0xA550a80eAbad7d141A910fD9ec4E5F2d0806C596",
     "stake": "10000000000000000000000",
-    "lockTime": "126144000"
+    "lockTime": "63072000"
   },
   {
     "address": "0x282a95bB297Ec3D1ac32Db76a239Ce1A57baec87",
     "resolver": "0xFAc6b79c2060c75D17D0a3C5838A44E995f67BEF",
     "stake": "10000000000000000000000",
-    "lockTime": "126144000"
+    "lockTime": "63072000"
   },
   {
     "address": "0xde17a9B8F8d553EBa95Fa6f71Ff5dF86e081fd49",
     "resolver": "0xFAc6b79c2060c75D17D0a3C5838A44E995f67BEF",
     "stake": "10000000000000000000000",
-    "lockTime": "126144000"
+    "lockTime": "63072000"
   },
   {
     "address": "0x5d3978C5DC80cFbc6F64F8FDA4e3B1ae70625924",
     "resolver": "0xFAc6b79c2060c75D17D0a3C5838A44E995f67BEF",
     "stake": "20000000000000000000000",
-    "lockTime": "126144000"
+    "lockTime": "63072000"
   },
   {
     "address": "0x81B406B118F48A944DD9c043D483fcaC6FFbd955",
     "resolver": "0xecB9222018F72Cdf70C21E83a6c8c6e96003088b",
     "stake": "10000000000000000000000",
-    "lockTime": "126144000"
+    "lockTime": "63072000"
   },
   {
     "address": "0x3255acF3bf389e2029D3E682C8C436eAF9615fb2",
     "resolver": "0xecB9222018F72Cdf70C21E83a6c8c6e96003088b",
     "stake": "20000000000000000000000",
-    "lockTime": "126144000"
+    "lockTime": "63072000"
   },
   {
     "address": "0x1771d7cafa2399fcaabFa3DD2e8C1A9cf1cE5BcD",
     "resolver": "0xecB9222018F72Cdf70C21E83a6c8c6e96003088b",
     "stake": "30000000000000000000000",
-    "lockTime": "126144000"
+    "lockTime": "63072000"
   },
   {
     "address": "0x5C64353b2Bc341f99A01d8a1778F49f8B469c193",
     "resolver": "0xecB9222018F72Cdf70C21E83a6c8c6e96003088b",
     "stake": "40000000000000000000000",
-    "lockTime": "126144000"
+    "lockTime": "63072000"
   },
   {
     "address": "0x14Cc79F459D6F1eF8B244C2337E584a900F1D87A",
     "resolver": "0x67622d31051Aeb561A5b318EBb475Bc4Db14110D",
     "stake": "10000000000000000000000",
-    "lockTime": "126144000"
+    "lockTime": "63072000"
   }
 ]

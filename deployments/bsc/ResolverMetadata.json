@@ -1,0 +1,131 @@
+{
+  "address": "0x3f1b5DA783c0303e04867c6dF0533181d4a4a5E1",
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "contract IRewardableDelegationPod",
+          "name": "delegation_",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    },
+    {
+      "inputs": [],
+      "name": "NotRegisteredDelegatee",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "delegation",
+      "outputs": [
+        {
+          "internalType": "contract IRewardableDelegationPod",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "name": "getUrl",
+      "outputs": [
+        {
+          "internalType": "string",
+          "name": "",
+          "type": "string"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "string",
+          "name": "url",
+          "type": "string"
+        }
+      ],
+      "name": "setResolverUrl",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ],
+  "transactionHash": "0x25f409f6b86fadb53a4a5466d60e9dfdcb31f3e7ea144f2d7e842cad34c87eff",
+  "receipt": {
+    "to": null,
+    "from": "0x7c38A7A466f82863BE4e35A5854Ffb6079ff1A40",
+    "contractAddress": "0x3f1b5DA783c0303e04867c6dF0533181d4a4a5E1",
+    "transactionIndex": 30,
+    "gasUsed": "380424",
+    "logsBloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+    "blockHash": "0x7ea3f23d15f54d576298f67dcc9a4006f4c1af037aed4027b8a959c64f1ed483",
+    "transactionHash": "0x25f409f6b86fadb53a4a5466d60e9dfdcb31f3e7ea144f2d7e842cad34c87eff",
+    "logs": [],
+    "blockNumber": 24037830,
+    "cumulativeGasUsed": "2333310",
+    "status": 1,
+    "byzantium": true
+  },
+  "args": [
+    "0x6b0905BAe84443A7DACEfA910a64DCA811Cbf453"
+  ],
+  "numDeployments": 1,
+  "solcInputHash": "dd84ca0b270bfd2388f56fc3484732b3",
+  "metadata": "{\"compiler\":{\"version\":\"0.8.17+commit.8df45f5f\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[{\"internalType\":\"contract IRewardableDelegationPod\",\"name\":\"delegation_\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"inputs\":[],\"name\":\"NotRegisteredDelegatee\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"delegation\",\"outputs\":[{\"internalType\":\"contract IRewardableDelegationPod\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"name\":\"getUrl\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"url\",\"type\":\"string\"}],\"name\":\"setResolverUrl\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}],\"devdoc\":{\"kind\":\"dev\",\"methods\":{},\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{},\"version\":1}},\"settings\":{\"compilationTarget\":{\"contracts/helpers/ResolverMetadata.sol\":\"ResolverMetadata\"},\"evmVersion\":\"london\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\",\"useLiteralContent\":true},\"optimizer\":{\"enabled\":true,\"runs\":1000000},\"remappings\":[]},\"sources\":{\"@1inch/delegating/contracts/interfaces/IDelegatedShare.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\n\\npragma solidity ^0.8.0;\\n\\nimport \\\"@openzeppelin/contracts/token/ERC20/IERC20.sol\\\";\\n\\ninterface IDelegatedShare is IERC20 {\\n    function addDefaultFarmIfNeeded(address account, address farm) external; // onlyOwner\\n    function mint(address account, uint256 amount) external; // onlyOwner\\n    function burn(address account, uint256 amount) external; // onlyOwner\\n}\\n\",\"keccak256\":\"0x6063b98e988d64a42a963bb01e2c9d040afae5d44dfcad6c31efbe059ecc4084\",\"license\":\"MIT\"},\"@1inch/delegating/contracts/interfaces/IDelegationPod.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\n\\npragma solidity ^0.8.0;\\n\\nimport \\\"@openzeppelin/contracts/token/ERC20/IERC20.sol\\\";\\nimport \\\"@1inch/erc20-pods/contracts/interfaces/IPod.sol\\\";\\n\\ninterface IDelegationPod is IPod, IERC20 {\\n    event Delegated(address account, address delegatee);\\n\\n    function delegated(address account) external view returns(address);\\n    function delegate(address delegatee) external;\\n}\\n\",\"keccak256\":\"0x8b02f13ce21132f6943d7892ab10f3f8f697d5f5e36d8bd788b6cdf2154a2c16\",\"license\":\"MIT\"},\"@1inch/delegating/contracts/interfaces/IRewardableDelegationPod.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\n\\npragma solidity ^0.8.0;\\n\\nimport \\\"./IDelegationPod.sol\\\";\\nimport \\\"./IDelegatedShare.sol\\\";\\n\\ninterface IRewardableDelegationPod is IDelegationPod {\\n    event DefaultFarmSet(address defaultFarm);\\n    event RegisterDelegatee(address delegatee);\\n\\n    function register(string memory name, string memory symbol, uint256 maxUserFarms) external returns(IDelegatedShare shareToken);\\n    function registration(address account) external returns(IDelegatedShare shareToken);\\n    function setDefaultFarm(address farm) external;\\n}\\n\",\"keccak256\":\"0x60bd1d397a99cfb34003a49beaf11ed603849960a95e954084a45876d7df504d\",\"license\":\"MIT\"},\"@1inch/erc20-pods/contracts/interfaces/IPod.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\n\\npragma solidity ^0.8.0;\\n\\ninterface IPod {\\n    function updateBalances(address from, address to, uint256 amount) external; // onlyERC20Pods\\n}\\n\",\"keccak256\":\"0xb9c87816587a706f6b6d0b08ab12ea1197d86b3cbe2efa0ce8a8644a72f4d9d7\",\"license\":\"MIT\"},\"@openzeppelin/contracts/token/ERC20/IERC20.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\n// OpenZeppelin Contracts (last updated v4.6.0) (token/ERC20/IERC20.sol)\\n\\npragma solidity ^0.8.0;\\n\\n/**\\n * @dev Interface of the ERC20 standard as defined in the EIP.\\n */\\ninterface IERC20 {\\n    /**\\n     * @dev Emitted when `value` tokens are moved from one account (`from`) to\\n     * another (`to`).\\n     *\\n     * Note that `value` may be zero.\\n     */\\n    event Transfer(address indexed from, address indexed to, uint256 value);\\n\\n    /**\\n     * @dev Emitted when the allowance of a `spender` for an `owner` is set by\\n     * a call to {approve}. `value` is the new allowance.\\n     */\\n    event Approval(address indexed owner, address indexed spender, uint256 value);\\n\\n    /**\\n     * @dev Returns the amount of tokens in existence.\\n     */\\n    function totalSupply() external view returns (uint256);\\n\\n    /**\\n     * @dev Returns the amount of tokens owned by `account`.\\n     */\\n    function balanceOf(address account) external view returns (uint256);\\n\\n    /**\\n     * @dev Moves `amount` tokens from the caller's account to `to`.\\n     *\\n     * Returns a boolean value indicating whether the operation succeeded.\\n     *\\n     * Emits a {Transfer} event.\\n     */\\n    function transfer(address to, uint256 amount) external returns (bool);\\n\\n    /**\\n     * @dev Returns the remaining number of tokens that `spender` will be\\n     * allowed to spend on behalf of `owner` through {transferFrom}. This is\\n     * zero by default.\\n     *\\n     * This value changes when {approve} or {transferFrom} are called.\\n     */\\n    function allowance(address owner, address spender) external view returns (uint256);\\n\\n    /**\\n     * @dev Sets `amount` as the allowance of `spender` over the caller's tokens.\\n     *\\n     * Returns a boolean value indicating whether the operation succeeded.\\n     *\\n     * IMPORTANT: Beware that changing an allowance with this method brings the risk\\n     * that someone may use both the old and the new allowance by unfortunate\\n     * transaction ordering. One possible solution to mitigate this race\\n     * condition is to first reduce the spender's allowance to 0 and set the\\n     * desired value afterwards:\\n     * https://github.com/ethereum/EIPs/issues/20#issuecomment-263524729\\n     *\\n     * Emits an {Approval} event.\\n     */\\n    function approve(address spender, uint256 amount) external returns (bool);\\n\\n    /**\\n     * @dev Moves `amount` tokens from `from` to `to` using the\\n     * allowance mechanism. `amount` is then deducted from the caller's\\n     * allowance.\\n     *\\n     * Returns a boolean value indicating whether the operation succeeded.\\n     *\\n     * Emits a {Transfer} event.\\n     */\\n    function transferFrom(\\n        address from,\\n        address to,\\n        uint256 amount\\n    ) external returns (bool);\\n}\\n\",\"keccak256\":\"0x9750c6b834f7b43000631af5cc30001c5f547b3ceb3635488f140f60e897ea6b\",\"license\":\"MIT\"},\"contracts/helpers/ResolverMetadata.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\n\\npragma solidity 0.8.17;\\n\\nimport \\\"@1inch/delegating/contracts/interfaces/IRewardableDelegationPod.sol\\\";\\n\\ncontract ResolverMetadata {\\n    error NotRegisteredDelegatee();\\n\\n    IRewardableDelegationPod public immutable delegation;\\n    mapping (address => string) public getUrl;\\n\\n    modifier onlyRegistered {\\n        if (address(delegation.registration(msg.sender)) == address(0)) revert NotRegisteredDelegatee();\\n        _;\\n    }\\n\\n    constructor(IRewardableDelegationPod delegation_) {\\n        delegation = delegation_;\\n    }\\n\\n    function setResolverUrl(string calldata url) external onlyRegistered {\\n        getUrl[msg.sender] = url;\\n    }\\n}\\n\",\"keccak256\":\"0xab7e329b7ecea51b214557f45d4bb52d7a3d078d2118f08d2e123a8768a18dc0\",\"license\":\"MIT\"}},\"version\":1}",
+  "bytecode": "0x60a060405234801561001057600080fd5b5060405161067b38038061067b83398101604081905261002f91610040565b6001600160a01b0316608052610070565b60006020828403121561005257600080fd5b81516001600160a01b038116811461006957600080fd5b9392505050565b6080516105ea610091600039600081816060015261011201526105ea6000f3fe608060405234801561001057600080fd5b50600436106100415760003560e01c80639340fbf314610046578063df5cf7231461005b578063e92cde21146100ac575b600080fd5b610059610054366004610285565b6100cc565b005b6100827f000000000000000000000000000000000000000000000000000000000000000081565b60405173ffffffffffffffffffffffffffffffffffffffff90911681526020015b60405180910390f35b6100bf6100ba36600461031c565b6101eb565b6040516100a39190610340565b6040517f0840605a00000000000000000000000000000000000000000000000000000000815233600482015260009073ffffffffffffffffffffffffffffffffffffffff7f00000000000000000000000000000000000000000000000000000000000000001690630840605a906024016020604051808303816000875af115801561015b573d6000803e3d6000fd5b505050506040513d601f19601f8201168201806040525081019061017f91906103ac565b73ffffffffffffffffffffffffffffffffffffffff16036101cc576040517fccd4942000000000000000000000000000000000000000000000000000000000815260040160405180910390fd5b3360009081526020819052604090206101e6828483610499565b505050565b60006020819052908152604090208054610204906103f8565b80601f0160208091040260200160405190810160405280929190818152602001828054610230906103f8565b801561027d5780601f106102525761010080835404028352916020019161027d565b820191906000526020600020905b81548152906001019060200180831161026057829003601f168201915b505050505081565b6000806020838503121561029857600080fd5b823567ffffffffffffffff808211156102b057600080fd5b818501915085601f8301126102c457600080fd5b8135818111156102d357600080fd5b8660208285010111156102e557600080fd5b60209290920196919550909350505050565b73ffffffffffffffffffffffffffffffffffffffff8116811461031957600080fd5b50565b60006020828403121561032e57600080fd5b8135610339816102f7565b9392505050565b600060208083528351808285015260005b8181101561036d57858101830151858201604001528201610351565b5060006040828601015260407fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe0601f8301168501019250505092915050565b6000602082840312156103be57600080fd5b8151610339816102f7565b7f4e487b7100000000000000000000000000000000000000000000000000000000600052604160045260246000fd5b600181811c9082168061040c57607f821691505b602082108103610445577f4e487b7100000000000000000000000000000000000000000000000000000000600052602260045260246000fd5b50919050565b601f8211156101e657600081815260208120601f850160051c810160208610156104725750805b601f850160051c820191505b818110156104915782815560010161047e565b505050505050565b67ffffffffffffffff8311156104b1576104b16103c9565b6104c5836104bf83546103f8565b8361044b565b6000601f84116001811461051757600085156104e15750838201355b7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff600387901b1c1916600186901b1783556105ad565b6000838152602090207fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe0861690835b828110156105665786850135825560209485019460019092019101610546565b50868210156105a1577fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff60f88860031b161c19848701351681555b505060018560011b0183555b505050505056fea2646970667358221220eed7975c8ae795f44c9f206d5dc00af813cb2aee0cf53bbd6d77cb89c4a56c5f64736f6c63430008110033",
+  "deployedBytecode": "0x608060405234801561001057600080fd5b50600436106100415760003560e01c80639340fbf314610046578063df5cf7231461005b578063e92cde21146100ac575b600080fd5b610059610054366004610285565b6100cc565b005b6100827f000000000000000000000000000000000000000000000000000000000000000081565b60405173ffffffffffffffffffffffffffffffffffffffff90911681526020015b60405180910390f35b6100bf6100ba36600461031c565b6101eb565b6040516100a39190610340565b6040517f0840605a00000000000000000000000000000000000000000000000000000000815233600482015260009073ffffffffffffffffffffffffffffffffffffffff7f00000000000000000000000000000000000000000000000000000000000000001690630840605a906024016020604051808303816000875af115801561015b573d6000803e3d6000fd5b505050506040513d601f19601f8201168201806040525081019061017f91906103ac565b73ffffffffffffffffffffffffffffffffffffffff16036101cc576040517fccd4942000000000000000000000000000000000000000000000000000000000815260040160405180910390fd5b3360009081526020819052604090206101e6828483610499565b505050565b60006020819052908152604090208054610204906103f8565b80601f0160208091040260200160405190810160405280929190818152602001828054610230906103f8565b801561027d5780601f106102525761010080835404028352916020019161027d565b820191906000526020600020905b81548152906001019060200180831161026057829003601f168201915b505050505081565b6000806020838503121561029857600080fd5b823567ffffffffffffffff808211156102b057600080fd5b818501915085601f8301126102c457600080fd5b8135818111156102d357600080fd5b8660208285010111156102e557600080fd5b60209290920196919550909350505050565b73ffffffffffffffffffffffffffffffffffffffff8116811461031957600080fd5b50565b60006020828403121561032e57600080fd5b8135610339816102f7565b9392505050565b600060208083528351808285015260005b8181101561036d57858101830151858201604001528201610351565b5060006040828601015260407fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe0601f8301168501019250505092915050565b6000602082840312156103be57600080fd5b8151610339816102f7565b7f4e487b7100000000000000000000000000000000000000000000000000000000600052604160045260246000fd5b600181811c9082168061040c57607f821691505b602082108103610445577f4e487b7100000000000000000000000000000000000000000000000000000000600052602260045260246000fd5b50919050565b601f8211156101e657600081815260208120601f850160051c810160208610156104725750805b601f850160051c820191505b818110156104915782815560010161047e565b505050505050565b67ffffffffffffffff8311156104b1576104b16103c9565b6104c5836104bf83546103f8565b8361044b565b6000601f84116001811461051757600085156104e15750838201355b7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff600387901b1c1916600186901b1783556105ad565b6000838152602090207fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe0861690835b828110156105665786850135825560209485019460019092019101610546565b50868210156105a1577fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff60f88860031b161c19848701351681555b505060018560011b0183555b505050505056fea2646970667358221220eed7975c8ae795f44c9f206d5dc00af813cb2aee0cf53bbd6d77cb89c4a56c5f64736f6c63430008110033",
+  "devdoc": {
+    "kind": "dev",
+    "methods": {},
+    "version": 1
+  },
+  "userdoc": {
+    "kind": "user",
+    "methods": {},
+    "version": 1
+  },
+  "storageLayout": {
+    "storage": [
+      {
+        "astId": 14222,
+        "contract": "contracts/helpers/ResolverMetadata.sol:ResolverMetadata",
+        "label": "getUrl",
+        "offset": 0,
+        "slot": "0",
+        "type": "t_mapping(t_address,t_string_storage)"
+      }
+    ],
+    "types": {
+      "t_address": {
+        "encoding": "inplace",
+        "label": "address",
+        "numberOfBytes": "20"
+      },
+      "t_mapping(t_address,t_string_storage)": {
+        "encoding": "mapping",
+        "key": "t_address",
+        "label": "mapping(address => string)",
+        "numberOfBytes": "32",
+        "value": "t_string_storage"
+      },
+      "t_string_storage": {
+        "encoding": "bytes",
+        "label": "string",
+        "numberOfBytes": "32"
+      }
+    }
+  }
+}

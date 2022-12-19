@@ -4,23 +4,23 @@
     "stake": "900000000000000000000000",
     "reward": "17000000000000000000000",
     "rewardDuration": "2592000",
-    "lockTime": "126144000",
-    "farm": "0xCFD09Afc44714B7586FAfA23EFc0f86fDE5A913d"
+    "lockTime": "63072000",
+    "farm": "0xeBfEd1448417267E60a56614fa99D2779AcEFd66"
   },
   {
     "address": "0xfaf9DCd8Eb35632F067FE4cCFA351b4724eaDd9f",
     "stake": "1000000000000000000000000",
     "reward": "16000000000000000000000",
     "rewardDuration": "2592000",
-    "lockTime": "94608000",
-    "farm": "0x95D28fcC905cA31B9A911dC80C9f38CB21d1f737"
+    "lockTime": "47304000",
+    "farm": "0x013657edb439B3d496d7F3f5F0b1ED0b8DbDD4b0"
   },
   {
     "address": "0xEED846aDE140B5B120f768F73D97c10B2B24c3e3",
     "stake": "400000000000000000000000",
     "reward": "15000000000000000000000",
     "rewardDuration": "2592000",
-    "lockTime": "126144000",
+    "lockTime": "63072000",
     "farm": "0x233A097bfafCB15Bc9919E1e5D7487cc480194A5"
   },
   {
@@ -44,7 +44,7 @@
     "stake": "100000000000000000000000",
     "reward": "12000000000000000000000",
     "rewardDuration": "2592000",
-    "lockTime": "126144000",
+    "lockTime": "63072000",
     "farm": "0xf21c6A7A73678b9a49712f748C4C323Def19532e"
   },
   {
@@ -52,7 +52,7 @@
     "stake": "100000000000000000000000",
     "reward": "11000000000000000000000",
     "rewardDuration": "2592000",
-    "lockTime": "94608000",
+    "lockTime": "47304000",
     "farm": "0x9Ef979Ed11B11DE31bD5E8f07c26C56fE08660ED"
   },
   {
@@ -60,7 +60,7 @@
     "stake": "100000000000000000000000",
     "reward": "10000000000000000000000",
     "rewardDuration": "2592000",
-    "lockTime": "63072000",
+    "lockTime": "31536000",
     "farm": "0x9af00588d5E83e1E38706527B7e8A10a87043045"
   },
   {

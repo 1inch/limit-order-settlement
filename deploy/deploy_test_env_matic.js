@@ -7,7 +7,7 @@ const fs = require('fs');
 
 const BASE_EXP = '999999952502977513';
 const ROUTER_V5_ADDR = '0x1111111254EEB25477B68fb85Ed929f73A960582';
-const INCH_TOKEN = '0x111111111117dC0aa78b770fA6A738034120C302';
+// const INCH_TOKEN = '0x111111111117dC0aa78b770fA6A738034120C302';
 
 const oldResolvers = [
     {
@@ -85,43 +85,43 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
 
     const { deployer } = await getNamedAccounts();
 
-    // const fake1Inch = await idempotentDeployGetContract(
-    //     'ERC20PermitMock',
-    //     ['MockInch', 'MKCH', deployer, 0],
-    //     deployments,
-    //     deployer,
-    //     feeData,
-    //     'Mock1inch',
-    //     true,
-    // );
-    // feeData = await provider.getFeeData();
+    const fake1Inch = await idempotentDeployGetContract(
+        'ERC20PermitMock',
+        ['MockInch', 'MKCH', deployer, 0],
+        deployments,
+        deployer,
+        feeData,
+        'Mock1inch',
+        true,
+    );
+    feeData = await provider.getFeeData();
 
-    // const rewardToken = await idempotentDeployGetContract(
-    //     'ERC20PermitMock',
-    //     ['someOtherToken', 'SOTKN', deployer, 0],
-    //     deployments,
-    //     deployer,
-    //     feeData,
-    //     'SomeOtherToken',
-    //     true,
-    // );
-    // feeData = await provider.getFeeData();
+    const rewardToken = await idempotentDeployGetContract(
+        'ERC20PermitMock',
+        ['someOtherToken', 'SOTKN', deployer, 0],
+        deployments,
+        deployer,
+        feeData,
+        'SomeOtherToken',
+        true,
+    );
+    feeData = await provider.getFeeData();
 
-    // const prevSt1inch = await idempotentDeployGetContract(
-    //     'GovernanceMothership',
-    //     [fake1Inch.address],
-    //     deployments,
-    //     deployer,
-    //     feeData,
-    //     'GovernanceMothership',
-    //     true,
-    // );
-    // feeData = await provider.getFeeData();
+    const prevSt1inch = await idempotentDeployGetContract(
+        'GovernanceMothership',
+        [fake1Inch.address],
+        deployments,
+        deployer,
+        feeData,
+        'GovernanceMothership',
+        true,
+    );
+    feeData = await provider.getFeeData();
 
     const maxPods = 5;
     const st1inch = await idempotentDeployGetContract(
         'St1inch',
-        [INCH_TOKEN, BASE_EXP, maxPods.toString()],
+        [fake1Inch.address, BASE_EXP, maxPods.toString()],
         deployments,
         deployer,
         feeData,
@@ -140,7 +140,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
 
     const settlement = await idempotentDeployGetContract(
         'Settlement',
-        [ROUTER_V5_ADDR, INCH_TOKEN],
+        [ROUTER_V5_ADDR, fake1Inch.address],
         deployments,
         deployer,
         feeData,
@@ -224,7 +224,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
             }
             console.log('mint');
 
-            addBalanceIfNeed(resolver.address, provider, chainId);
+            await addBalanceIfNeed(resolver.address, provider, chainId);
 
             if ((await prevSt1inch.balanceOf(resolver.address)).toBigInt() < resolver.stake) {
                 const depositAmount = resolver.stake - (await prevSt1inch.balanceOf(resolver.address)).toBigInt();
@@ -265,7 +265,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     }
 
     if (setup.deployResolvers) {
-        for (let i = 0; i < resolvers.length; /* resolvers.length */ ++i) {
+        for (let i = 0; i < 7; /* resolvers.length */ ++i) {
             const resolver = resolvers[i];
             console.log(`resolvers[${i}] address:`, resolver.address);
 
@@ -283,7 +283,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
             }
             console.log('mint');
 
-            addBalanceIfNeed(resolver.address, provider, chainId);
+            await addBalanceIfNeed(resolver.address, provider, chainId);
 
             if ((await st1inch.depositors(resolver.address)).amount.toBigInt() < resolver.stake) {
                 const depositAmount = resolver.stake - (await st1inch.depositors(resolver.address)).amount.toBigInt();
@@ -392,7 +392,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
 
     const ShareToken = await ethers.getContractFactory('DelegatedShare');
     if (setup.deployFarms) {
-        for (let i = 0; i < resolvers.length; /* resolvers.length */ ++i) {
+        for (let i = 0; i < 7; /* resolvers.length */ ++i) {
             const resolver = resolvers[i];
             console.log(`farm for resolvers[${i}] address:`, resolver.address);
 
@@ -537,7 +537,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     }
 
     if (setup.deployDelegators) {
-        for (let i = 0; i < delegators.length; /* delegators.length */ ++i) {
+        for (let i = 0; i < 7; /* delegators.length */ ++i) {
             const delegator = delegators[i];
             const wallet = new ethers.Wallet(DELEGATORS_PRIVATE_KEYS[i]).connect(provider);
             feeData = await provider.getFeeData();
@@ -555,7 +555,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
             }
             console.log('mint');
 
-            addBalanceIfNeed(delegator.address, provider, chainId);
+            await addBalanceIfNeed(delegator.address, provider, chainId);
 
             if ((await st1inch.depositors(delegator.address)).amount.toBigInt() < delegator.stake) {
                 const depositAmount = delegator.stake - (await st1inch.depositors(delegator.address)).amount.toBigInt();
