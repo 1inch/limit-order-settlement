@@ -4,9 +4,9 @@ const setup = {
     delegatorsFilePath: './deployments/matic/test_env_setup/delegators.json',
     resolversFilePath: './deployments/matic/test_env_setup/resolvers.json',
     deployOldResolvers: false,
-    deployResolvers: false,
-    deployFarms: false,
-    deployDelegators: false,
+    deployResolvers: true,
+    deployFarms: true,
+    deployDelegators: true,
     1: {
         maxFeePerGas: '15000000000',
         maxPriorityFeePerGas: '100000000',
@@ -22,7 +22,7 @@ const setup = {
         deployerPrivateKey: process.env.BSC_PRIVATE_KEY,
     },
     137: {
-        maxFeePerGas: '65000000000',
+        maxFeePerGas: '95000000000',
         maxPriorityFeePerGas: '45000000000',
         minBalance: ether('0.4'),
         addedBalance: ether('0.5'),

@@ -265,7 +265,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     }
 
     if (setup.deployResolvers) {
-        for (let i = 0; i < 7; /* resolvers.length */ ++i) {
+        for (let i = 0; i < resolvers.length; /* resolvers.length */ ++i) {
             const resolver = resolvers[i];
             console.log(`resolvers[${i}] address:`, resolver.address);
 
@@ -392,7 +392,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
 
     const ShareToken = await ethers.getContractFactory('DelegatedShare');
     if (setup.deployFarms) {
-        for (let i = 0; i < 7; /* resolvers.length */ ++i) {
+        for (let i = 0; i < resolvers.length; /* resolvers.length */ ++i) {
             const resolver = resolvers[i];
             console.log(`farm for resolvers[${i}] address:`, resolver.address);
 
@@ -537,7 +537,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     }
 
     if (setup.deployDelegators) {
-        for (let i = 0; i < 7; /* delegators.length */ ++i) {
+        for (let i = 0; i < delegators.length; /* delegators.length */ ++i) {
             const delegator = delegators[i];
             const wallet = new ethers.Wallet(DELEGATORS_PRIVATE_KEYS[i]).connect(provider);
             feeData = await provider.getFeeData();
@@ -625,4 +625,4 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     }
 };
 
-module.exports.skip = async () => true;
+module.exports.skip = async () => false;
