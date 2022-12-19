@@ -11,10 +11,12 @@ const {
 const { ethers } = require('hardhat');
 const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
 
+/* eslint-disable no-multi-spaces */
 const ORDERSALT_WITH_SPECIFIC_VALUES      = 0x0000000100000203000000000004000000000000000000000000000000000005n;
 const ORDERSALT_WITH_SIMPLE_VALUES        = 0x0000001100002233000000000044000000000000000000000000000000000555n;
 const ORDERSALT_WITH_FILLED_BOUNDARY_BITS = 0xF0000001F00002F003F000000004F00000000000000000000000000000000123n;
 const ORDERSALT_WITH_FILLED_ALL_BITS      = BigInt(constants.MAX_UINT256);
+/* eslint-enable no-multi-spaces */
 
 describe('OrderSaltParserMock', function () {
     async function initContracts() {

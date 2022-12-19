@@ -1,7 +1,6 @@
 const { assert } = require('console');
 
 /* eslint-disable no-multi-spaces */
-                               0x0000000100000203000000000004000000000000000000000000000000000005
 const TIME_START_MASK        = 0xFFFFFFFF00000000000000000000000000000000000000000000000000000000n; // prettier-ignore
 const DURATION_MASK          = 0x00000000FFFFFF00000000000000000000000000000000000000000000000000n; // prettier-ignore
 const INITIAL_RATE_BUMP_MASK = 0x00000000000000FFFFFF00000000000000000000000000000000000000000000n; // prettier-ignore
@@ -33,7 +32,7 @@ const encodeSalt = (startTime, duration, initialRate, fee, salt) => {
         BigInt(fee).toString(16).padStart(8, '0') +
         BigInt(salt).toString(16).padStart(36, '0')
     );
-    assert(res.length == 66, "Some inputs were out of allowed ranges");
+    assert(res.length === 66, 'Some inputs were out of allowed ranges');
     return res;
 };
 
