@@ -110,7 +110,7 @@ contract Settlement is ISettlement, FeeBankCharger {
         IOrderMixin limitOrderProtocol = _limitOrderProtocol;
 
         assembly {
-            function memcpy(src, dst, len) {
+            function memcpy(dst, src, len) {
                 pop(staticcall(gas(), 0x4, src, len, dst, len))
             }
 
