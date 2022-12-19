@@ -130,7 +130,7 @@ describe('Settlement', function () {
         expect(await dai.balanceOf(addr1.address)).to.equal(addr1dai.add(ether('100')));
     });
 
-    it('sopposite direction recursive swap with taking fee', async function () {
+    it('opposite direction recursive swap with taking fee', async function () {
         const { dai, weth, swap, matcher, resolver } = await loadFixture(initContracts);
 
         const order = await buildOrder(
@@ -430,7 +430,7 @@ describe('Settlement', function () {
     });
 
     describe('dutch auction params', function () {
-        const prerareSingleOrder = async ({
+        const prepareSingleOrder = async ({
             orderStartTime,
             initialStartRate = '1000',
             duration = '1800',
@@ -510,7 +510,7 @@ describe('Settlement', function () {
             const { dai, weth, swap, matcher, resolver } = await loadFixture(initContracts);
 
             const currentTimestamp = BigInt(await time.latest());
-            const { order, signature, interaction, makingAmount, takingAmount } = await prerareSingleOrder({
+            const { order, signature, interaction, makingAmount, takingAmount } = await prepareSingleOrder({
                 orderStartTime: currentTimestamp + BigInt(60),
                 dai,
                 weth,
@@ -542,11 +542,164 @@ describe('Settlement', function () {
             expect(await dai.balanceOf(addr.address)).to.equal(addrDai.add(ether('100')));
         });
 
+        describe('order with one bump point', async function () {
+            async function prepareOrder({
+                orderStartTime,
+                initialStartRate = '1000',
+                duration = '1800',
+                salt = '1',
+                dai,
+                weth,
+                swap,
+            }) {
+                const makerAsset = dai.address;
+                const takerAsset = weth.address;
+                const makingAmount = ether('100');
+                const takingAmount = ether('0.1');
+                const order = await buildOrder(
+                    {
+                        salt: buildSalt({ orderStartTime, initialStartRate, duration, salt }),
+                        makerAsset,
+                        takerAsset,
+                        makingAmount,
+                        takingAmount,
+                        from: addr1.address,
+                    },
+                    {
+                        predicate: swap.interface.encodeFunctionData('timestampBelow', [0xff00000000]),
+                        whitelistedAddrs: [addr.address],
+                        whitelistedCutOffs: [0],
+                        auctionBumps: [900],
+                        auctionDelays: [240],
+                    },
+                );
+                const signature = await signOrder(order, chainId, swap.address, addr1);
+                return {
+                    order,
+                    signature,
+                    makerAsset,
+                    takerAsset,
+                    makingAmount,
+                    takingAmount,
+                };
+            }
+
+            it('matching order before bump point', async function () {
+                const { dai, weth, swap, matcher, resolver } = await loadFixture(initContracts);
+
+                const currentTimestamp = BigInt(await time.latest());
+                const { order, signature, makingAmount, takingAmount } = await prepareOrder({
+                    orderStartTime: currentTimestamp,
+                    dai,
+                    weth,
+                    swap,
+                });
+
+                const actualTakingAmount = ether('0.109');
+
+                const interaction =
+                    matcher.address +
+                    '01' +
+                    trim0x(resolver.address) +
+                    trim0x(abiCoder.encode(['address[]', 'bytes[]'], [
+                        [weth.address, dai.address],
+                        [
+                            weth.interface.encodeFunctionData('transferFrom', [
+                                addr.address,
+                                matcher.address,
+                                actualTakingAmount,
+                            ]),
+                            dai.interface.encodeFunctionData('transfer', [addr.address, makingAmount]),
+                        ],
+                    ]));
+                await weth.approve(resolver.address, actualTakingAmount);
+
+                await timeIncreaseTo(currentTimestamp + 239n);
+
+                const addrweth = await weth.balanceOf(addr.address);
+                const addr1weth = await weth.balanceOf(addr1.address);
+                const addrDai = await dai.balanceOf(addr.address);
+                const addr1Dai = await dai.balanceOf(addr1.address);
+
+                await matcher.settleOrders(
+                    '0x' + swap.interface.encodeFunctionData('fillOrderTo', [
+                        order,
+                        signature,
+                        interaction,
+                        makingAmount,
+                        0,
+                        takingAmount,
+                        resolver.address,
+                    ]).substring(10),
+                );
+
+                expect(await weth.balanceOf(addr1.address)).to.equal(addr1weth.add(ether('0.109')));
+                expect(await weth.balanceOf(addr.address)).to.equal(addrweth.sub(ether('0.109')));
+                expect(await dai.balanceOf(addr1.address)).to.equal(addr1Dai.sub(ether('100')));
+                expect(await dai.balanceOf(addr.address)).to.equal(addrDai.add(ether('100')));
+            });
+
+            it('matching order after bump point', async function () {
+                const { dai, weth, swap, matcher, resolver } = await loadFixture(initContracts);
+
+                const currentTimestamp = BigInt(await time.latest());
+                const { order, signature, makingAmount, takingAmount } = await prepareOrder({
+                    orderStartTime: currentTimestamp,
+                    dai,
+                    weth,
+                    swap,
+                });
+
+                const actualTakingAmount = ether('0.106');
+
+                const interaction =
+                    matcher.address +
+                    '01' +
+                    trim0x(resolver.address) +
+                    trim0x(abiCoder.encode(['address[]', 'bytes[]'], [
+                        [weth.address, dai.address],
+                        [
+                            weth.interface.encodeFunctionData('transferFrom', [
+                                addr.address,
+                                matcher.address,
+                                actualTakingAmount,
+                            ]),
+                            dai.interface.encodeFunctionData('transfer', [addr.address, makingAmount]),
+                        ],
+                    ]));
+                await weth.approve(resolver.address, actualTakingAmount);
+
+                await timeIncreaseTo(currentTimestamp + 759n);
+
+                const addrweth = await weth.balanceOf(addr.address);
+                const addr1weth = await weth.balanceOf(addr1.address);
+                const addrDai = await dai.balanceOf(addr.address);
+                const addr1Dai = await dai.balanceOf(addr1.address);
+
+                await matcher.settleOrders(
+                    '0x' + swap.interface.encodeFunctionData('fillOrderTo', [
+                        order,
+                        signature,
+                        interaction,
+                        makingAmount,
+                        0,
+                        takingAmount,
+                        resolver.address,
+                    ]).substring(10),
+                );
+
+                expect(await weth.balanceOf(addr1.address)).to.equal(addr1weth.add(ether('0.106')));
+                expect(await weth.balanceOf(addr.address)).to.equal(addrweth.sub(ether('0.106')));
+                expect(await dai.balanceOf(addr1.address)).to.equal(addr1Dai.sub(ether('100')));
+                expect(await dai.balanceOf(addr.address)).to.equal(addrDai.add(ether('100')));
+            });
+        });
+
         it('set initial rate', async function () {
             const { dai, weth, swap, matcher, resolver } = await loadFixture(initContracts);
 
             const currentTimestamp = BigInt(await time.latest());
-            const { order, signature, interaction, makingAmount, takingAmount } = await prerareSingleOrder({
+            const { order, signature, interaction, makingAmount, takingAmount } = await prepareSingleOrder({
                 orderStartTime: currentTimestamp,
                 initialStartRate: '2000',
                 dai,
@@ -583,7 +736,7 @@ describe('Settlement', function () {
             const { dai, weth, swap, matcher, resolver } = await loadFixture(initContracts);
 
             const currentTimestamp = BigInt(await time.latest());
-            const { order, signature, interaction, makingAmount, takingAmount } = await prerareSingleOrder({
+            const { order, signature, interaction, makingAmount, takingAmount } = await prepareSingleOrder({
                 orderStartTime: currentTimestamp - BigInt(450),
                 initialStartRate: '1000',
                 duration: '900',
