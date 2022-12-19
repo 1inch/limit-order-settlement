@@ -106,8 +106,9 @@ contract Settlement is ISettlement, FeeBankCharger {
         totalFee += order.salt.getFee() * _ORDER_FEE_BASE_POINTS;
 
         uint256 rateBump = order.rateBump();
-        uint256 suffixLength = DynamicSuffix._STATIC_DATA_SIZE + tokensAndAmounts.length * 0x40 + 0x20;
+        uint256 suffixLength = DynamicSuffix._STATIC_DATA_SIZE + tokensAndAmounts.length + 0x20;
         IOrderMixin limitOrderProtocol = _limitOrderProtocol;
+
         assembly {
             function memcpy(src, dst, len) {
                 pop(staticcall(gas(), 0x4, src, len, dst, len))
@@ -140,8 +141,8 @@ contract Settlement is ISettlement, FeeBankCharger {
                 mstore(add(offset, 0x64), rateBump)
                 mstore(add(offset, 0x84), takingFeeData)
                 let tokensAndAmountsLength := mload(tokensAndAmounts)
-                memcpy(add(offset, 0xa4), add(tokensAndAmounts, 0x20), mul(0x40, tokensAndAmountsLength))
-                mstore(add(offset, add(0xa4, mul(0x40, tokensAndAmountsLength))), tokensAndAmountsLength)
+                memcpy(add(offset, 0xa4), add(tokensAndAmounts, 0x20), tokensAndAmountsLength)
+                mstore(add(offset, add(0xa4, tokensAndAmountsLength)), tokensAndAmountsLength)
             }
 
             // Call fillOrderTo
