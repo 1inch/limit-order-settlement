@@ -9,7 +9,7 @@ contract ResolverMock is IResolver {
 
     function resolveOrders(
         address /* resolver */,
-        DynamicSuffix.TokenAndAmount[] calldata /* items */,
+        bytes calldata /* items */,
         bytes calldata data
     ) external {
         if (data.length > 0) {

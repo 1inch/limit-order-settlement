@@ -51,7 +51,7 @@ contract Settlement is ISettlement, FeeBankCharger {
     }
 
     function settleOrders(bytes calldata data) external {
-        _settleOrder(data, msg.sender, 0, new DynamicSuffix.TokenAndAmount[](0));
+        _settleOrder(data, msg.sender, 0, new bytes(0));
     }
 
     function fillOrderInteraction(
@@ -60,22 +60,18 @@ contract Settlement is ISettlement, FeeBankCharger {
         uint256 takingAmount,
         bytes calldata interactiveData
     ) external onlyThis(taker) onlyLimitOrderProtocol returns (uint256 result) {
-        (DynamicSuffix.Data calldata suffix, DynamicSuffix.TokenAndAmount[] calldata tokensAndAmounts, bytes calldata interaction) = interactiveData.decodeSuffix();
+        (DynamicSuffix.Data calldata suffix, bytes calldata tokensAndAmounts, bytes calldata interaction) = interactiveData.decodeSuffix();
         IERC20 token = IERC20(suffix.token.get());
         result = takingAmount * (_BASE_POINTS + suffix.rateBump) / _BASE_POINTS;
         uint256 takingFee = result * suffix.takingFee.ratio() / TakingFee._TAKING_FEE_BASE;
 
-        DynamicSuffix.TokenAndAmount[] memory allTokensAndAmounts;
+        bytes memory allTokensAndAmounts = new bytes(tokensAndAmounts.length + 0x40);
         assembly {
-            let emptyPtr := mload(0x40)
-            allTokensAndAmounts := emptyPtr
-            mstore(allTokensAndAmounts, add(tokensAndAmounts.length, 1))
-            emptyPtr := add(emptyPtr, 0x20)
-            calldatacopy(emptyPtr, tokensAndAmounts.offset, mul(tokensAndAmounts.length, 0x40))
-            emptyPtr := add(emptyPtr, mul(tokensAndAmounts.length, 0x40))
-            mstore(emptyPtr, token)
-            mstore(add(emptyPtr, 0x20), add(result, takingFee))
-            mstore(0x40, add(emptyPtr, 0x40))
+            let ptr := add(allTokensAndAmounts, 0x20)
+            calldatacopy(ptr, tokensAndAmounts.offset, tokensAndAmounts.length)
+            ptr := add(ptr, tokensAndAmounts.length)
+            mstore(ptr, token)
+            mstore(add(ptr, 0x20), add(result, takingFee))
         }
 
         if (interactiveData[0] == _FINALIZE_INTERACTION) {
@@ -100,7 +96,7 @@ contract Settlement is ISettlement, FeeBankCharger {
     bytes4 private constant _FILL_ORDER_TO_SELECTOR = 0xe5d7bde6; // IOrderMixin.fillOrderTo.selector
     bytes4 private constant _WRONG_INTERACTION_TARGET_SELECTOR = 0x5b34bf89; // WrongInteractionTarget.selector
 
-    function _settleOrder(bytes calldata data, address resolver, uint256 totalFee, DynamicSuffix.TokenAndAmount[] memory tokensAndAmounts) private {
+    function _settleOrder(bytes calldata data, address resolver, uint256 totalFee, bytes memory tokensAndAmounts) private {
         OrderLib.Order calldata order;
         assembly {
             order := add(data.offset, calldataload(data.offset))
