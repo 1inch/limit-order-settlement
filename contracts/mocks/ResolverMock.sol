@@ -7,6 +7,7 @@ import "../libraries/TokensAndAmounts.sol";
 import "@1inch/solidity-utils/contracts/libraries/SafeERC20.sol";
 
 contract ResolverMock is IResolver {
+    error OnlyOwner();
     error OnlySettlement();
     error FailedExternalCall(uint256 index, bytes reason);
 
@@ -15,18 +16,20 @@ contract ResolverMock is IResolver {
     using AddressLib for Address;
 
     address private immutable _settlement;
+    address private immutable _owner;
 
     constructor(address settlement) {
         _settlement = settlement;
+        _owner = msg.sender;
     }
 
     function resolveOrders(
-        address /* resolver */,
+        address resolver,
         bytes calldata tokensAndAmounts,
         bytes calldata data
     ) external {
         if (msg.sender != _settlement) revert OnlySettlement();
-        // if (resolver != owner()) revert OnlyOwner();
+        if (resolver != _owner) revert OnlyOwner();
 
         bytes32 tokenIndices = bytes32(data);
         if (data.length > 32) {
