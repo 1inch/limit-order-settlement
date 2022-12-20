@@ -174,10 +174,10 @@ describe('Settlement', function () {
         const wethFeeAmount = ether('0.0011'); // (takingAmount + 10% auction) * fee
         const daiFeeAmount = ether('1');
         // send fee amounts to matcher contract
-        await weth.transfer(resolver.address, wethFeeAmount.toString());
-        await dai.connect(addr1).transfer(resolver.address, daiFeeAmount.toString());
+        await weth.transfer(matcher.address, wethFeeAmount.toString());
+        await dai.connect(addr1).transfer(matcher.address, daiFeeAmount.toString());
 
-        const matchingParams = matcher.address + '01' + trim0x(resolver.address) + '0000000000000000000000000000000000000000000000000000000000000000';
+        const matchingParams = matcher.address + '01' + trim0x(resolver.address) + 'ffff000000000000000000000000000000000000000000000000000000000000';
 
         const interaction =
             matcher.address +
@@ -190,7 +190,7 @@ describe('Settlement', function () {
                     ether('0.11'),
                     0,
                     ether('100'),
-                    resolver.address,
+                    matcher.address,
                 ])
                 .substring(10);
 
@@ -209,7 +209,7 @@ describe('Settlement', function () {
                 ether('100'),
                 0,
                 ether('0.11'),
-                resolver.address,
+                matcher.address,
             ]).substring(10),
         );
 
