@@ -41,15 +41,10 @@ describe('Settlement', function () {
         await inch.approve(feeBank.address, ether('100'));
         await feeBank.deposit(ether('100'));
 
-        const ProxySettlement = await ethers.getContractFactory('ProxySettlement');
-        const proxy = await ProxySettlement.deploy(matcher.address, inch.address, feeBank.address);
-        await proxy.deployed();
-        await inch.mint(proxy.address, ether('100'));
-
         const ResolverMock = await ethers.getContractFactory('ResolverMock');
-        const resolver = await ResolverMock.deploy();
+        const resolver = await ResolverMock.deploy(matcher.address);
 
-        return { dai, weth, swap, matcher, feeBank, proxy, resolver };
+        return { dai, weth, swap, matcher, feeBank, resolver };
     }
 
     it('opposite direction recursive swap', async function () {
@@ -89,7 +84,7 @@ describe('Settlement', function () {
         const signature = await signOrder(order, chainId, swap.address, addr);
         const signatureBackOrder = await signOrder(backOrder, chainId, swap.address, addr1);
 
-        const matchingParams = matcher.address + '01' + trim0x(resolver.address);
+        const matchingParams = matcher.address + '01' + trim0x(resolver.address) + 'ffff000000000000000000000000000000000000000000000000000000000000';
 
         const interaction =
             matcher.address +
@@ -102,7 +97,7 @@ describe('Settlement', function () {
                     ether('0.11'),
                     0,
                     ether('100'),
-                    resolver.address,
+                    matcher.address,
                 ])
                 .substring(10);
 
@@ -119,7 +114,7 @@ describe('Settlement', function () {
                 ether('100'),
                 0,
                 ether('0.11'),
-                resolver.address,
+                matcher.address,
             ]).substring(10),
         );
 
@@ -174,10 +169,10 @@ describe('Settlement', function () {
         const wethFeeAmount = ether('0.0011'); // (takingAmount + 10% auction) * fee
         const daiFeeAmount = ether('1');
         // send fee amounts to matcher contract
-        await weth.transfer(resolver.address, wethFeeAmount.toString());
-        await dai.connect(addr1).transfer(resolver.address, daiFeeAmount.toString());
+        await weth.transfer(matcher.address, wethFeeAmount.toString());
+        await dai.connect(addr1).transfer(matcher.address, daiFeeAmount.toString());
 
-        const matchingParams = matcher.address + '01' + trim0x(resolver.address);
+        const matchingParams = matcher.address + '01' + trim0x(resolver.address) + 'ffff000000000000000000000000000000000000000000000000000000000000';
 
         const interaction =
             matcher.address +
@@ -190,7 +185,7 @@ describe('Settlement', function () {
                     ether('0.11'),
                     0,
                     ether('100'),
-                    resolver.address,
+                    matcher.address,
                 ])
                 .substring(10);
 
@@ -209,7 +204,7 @@ describe('Settlement', function () {
                 ether('100'),
                 0,
                 ether('0.11'),
-                resolver.address,
+                matcher.address,
             ]).substring(10),
         );
 
@@ -264,17 +259,14 @@ describe('Settlement', function () {
             matcher.address +
             '01' +
             trim0x(resolver.address) +
+            'ffff000000000000000000000000000000000000000000000000000000000000' +
             trim0x(abiCoder.encode(['address[]', 'bytes[]'], [
-                [weth.address, dai.address],
+                [weth.address],
                 [
                     weth.interface.encodeFunctionData('transferFrom', [
                         addr.address,
-                        resolver.address,
+                        matcher.address,
                         ether('0.0275'),
-                    ]),
-                    dai.interface.encodeFunctionData('transfer', [
-                        addr.address,
-                        ether('25'),
                     ]),
                 ],
             ]));
@@ -290,7 +282,7 @@ describe('Settlement', function () {
                     ether('15'),
                     0,
                     ether('0.015'),
-                    resolver.address,
+                    addr.address,
                 ])
                 .substring(10);
 
@@ -308,7 +300,7 @@ describe('Settlement', function () {
                 ether('10'),
                 0,
                 ether('0.01'),
-                resolver.address,
+                addr.address,
             ]).substring(10),
         );
 
@@ -373,7 +365,7 @@ describe('Settlement', function () {
         const signature2 = await signOrder(order2, chainId, swap.address, addr1);
         const signatureBackOrder = await signOrder(backOrder, chainId, swap.address, addr);
 
-        const matchingParams = matcher.address + '01' + trim0x(resolver.address);
+        const matchingParams = matcher.address + '01' + trim0x(resolver.address) + 'ffffff0000000000000000000000000000000000000000000000000000000000';
 
         const internalInteraction =
             matcher.address +
@@ -386,7 +378,7 @@ describe('Settlement', function () {
                     ether('0.0275'),
                     0,
                     ether('25'),
-                    resolver.address,
+                    matcher.address,
                 ])
                 .substring(10);
 
@@ -401,7 +393,7 @@ describe('Settlement', function () {
                     ether('15'),
                     0,
                     ether('0.015'),
-                    resolver.address,
+                    matcher.address,
                 ])
                 .substring(10);
 
@@ -418,7 +410,7 @@ describe('Settlement', function () {
                 ether('10'),
                 0,
                 ether('0.01'),
-                resolver.address,
+                matcher.address,
             ]).substring(10),
         );
 
@@ -482,15 +474,15 @@ describe('Settlement', function () {
                 matcher.address +
                 '01' +
                 trim0x(resolver.address) +
+                'ffff000000000000000000000000000000000000000000000000000000000000' +
                 trim0x(abiCoder.encode(['address[]', 'bytes[]'], [
-                    [weth.address, dai.address],
+                    [weth.address],
                     [
                         weth.interface.encodeFunctionData('transferFrom', [
                             addr.address,
-                            resolver.address,
+                            matcher.address,
                             actualTakingAmount,
                         ]),
-                        dai.interface.encodeFunctionData('transfer', [addr.address, makingAmount]),
                     ],
                 ]));
 
@@ -532,7 +524,7 @@ describe('Settlement', function () {
                     makingAmount,
                     0,
                     takingAmount,
-                    resolver.address,
+                    addr.address,
                 ]).substring(10),
             );
 
@@ -601,15 +593,15 @@ describe('Settlement', function () {
                     matcher.address +
                     '01' +
                     trim0x(resolver.address) +
+                    'ffff000000000000000000000000000000000000000000000000000000000000' +
                     trim0x(abiCoder.encode(['address[]', 'bytes[]'], [
-                        [weth.address, dai.address],
+                        [weth.address],
                         [
                             weth.interface.encodeFunctionData('transferFrom', [
                                 addr.address,
-                                resolver.address,
+                                matcher.address,
                                 actualTakingAmount,
                             ]),
-                            dai.interface.encodeFunctionData('transfer', [addr.address, makingAmount]),
                         ],
                     ]));
                 await weth.approve(resolver.address, actualTakingAmount);
@@ -629,7 +621,7 @@ describe('Settlement', function () {
                         makingAmount,
                         0,
                         takingAmount,
-                        resolver.address,
+                        addr.address,
                     ]).substring(10),
                 );
 
@@ -656,15 +648,15 @@ describe('Settlement', function () {
                     matcher.address +
                     '01' +
                     trim0x(resolver.address) +
+                    'ffff000000000000000000000000000000000000000000000000000000000000' +
                     trim0x(abiCoder.encode(['address[]', 'bytes[]'], [
-                        [weth.address, dai.address],
+                        [weth.address],
                         [
                             weth.interface.encodeFunctionData('transferFrom', [
                                 addr.address,
-                                resolver.address,
+                                matcher.address,
                                 actualTakingAmount,
                             ]),
-                            dai.interface.encodeFunctionData('transfer', [addr.address, makingAmount]),
                         ],
                     ]));
                 await weth.approve(resolver.address, actualTakingAmount);
@@ -684,7 +676,7 @@ describe('Settlement', function () {
                         makingAmount,
                         0,
                         takingAmount,
-                        resolver.address,
+                        addr.address,
                     ]).substring(10),
                 );
 
@@ -722,7 +714,7 @@ describe('Settlement', function () {
                     makingAmount,
                     0,
                     takingAmount,
-                    resolver.address,
+                    addr.address,
                 ]).substring(10),
             );
 
@@ -760,7 +752,7 @@ describe('Settlement', function () {
                     makingAmount,
                     0,
                     takingAmount,
-                    resolver.address,
+                    addr.address,
                 ]).substring(10),
             );
 
@@ -805,7 +797,7 @@ describe('Settlement', function () {
         const signature = await signOrder(order, chainId, swap.address, addr);
         const signatureBackOrder = await signOrder(backOrder, chainId, swap.address, addr1);
 
-        const matchingParams = matcher.address + '01' + trim0x(resolver.address);
+        const matchingParams = matcher.address + '01' + trim0x(resolver.address) + 'ffff000000000000000000000000000000000000000000000000000000000000';
 
         const interaction =
             matcher.address +
@@ -818,7 +810,7 @@ describe('Settlement', function () {
                     ether('0.1'),
                     0,
                     ether('100'),
-                    resolver.address,
+                    matcher.address,
                 ])
                 .substring(10);
         const availableCreditBefore = await matcher.availableCredit(addr.address);
@@ -830,78 +822,10 @@ describe('Settlement', function () {
                 ether('100'),
                 0,
                 ether('0.1'),
-                resolver.address,
+                matcher.address,
             ]).substring(10),
         );
         expect(await matcher.availableCredit(addr.address)).to.equal(
-            availableCreditBefore.toBigInt() - basePoints * (orderFee + backOrderFee),
-        );
-    });
-
-    it('should change availableCredit with non-zero fee, proxy contract', async function () {
-        const { dai, weth, swap, matcher, proxy, resolver } = await loadFixture(initContracts);
-
-        const order = await buildOrder(
-            {
-                salt: buildSalt({ orderStartTime: await defaultExpiredAuctionTimestamp(), fee: orderFee }),
-                makerAsset: dai.address,
-                takerAsset: weth.address,
-                makingAmount: ether('100'),
-                takingAmount: ether('0.1'),
-                from: addr.address,
-            },
-            {
-                whitelistedAddrs: [proxy.address],
-                whitelistedCutOffs: [0],
-            },
-        );
-        const backOrder = await buildOrder(
-            {
-                salt: buildSalt({ orderStartTime: await defaultExpiredAuctionTimestamp(), fee: backOrderFee }),
-                makerAsset: weth.address,
-                takerAsset: dai.address,
-                makingAmount: ether('0.1'),
-                takingAmount: ether('100'),
-                from: addr1.address,
-            },
-            {
-                whitelistedAddrs: [proxy.address],
-                whitelistedCutOffs: [0],
-            },
-        );
-        const signature = await signOrder(order, chainId, swap.address, addr);
-        const signatureBackOrder = await signOrder(backOrder, chainId, swap.address, addr1);
-
-        const matchingParams = matcher.address + '01' + trim0x(resolver.address);
-
-        const interaction =
-            matcher.address +
-            '00' +
-            swap.interface
-                .encodeFunctionData('fillOrderTo', [
-                    backOrder,
-                    signatureBackOrder,
-                    matchingParams,
-                    ether('0.1'),
-                    0,
-                    ether('100'),
-                    resolver.address,
-                ])
-                .substring(10);
-        await proxy.deposit(ether('100'));
-        const availableCreditBefore = await matcher.availableCredit(proxy.address);
-        await proxy.settleOrders(
-            '0x' + swap.interface.encodeFunctionData('fillOrderTo', [
-                order,
-                signature,
-                interaction,
-                ether('100'),
-                0,
-                ether('0.1'),
-                resolver.address,
-            ]).substring(10),
-        );
-        expect(await matcher.availableCredit(proxy.address)).to.equal(
             availableCreditBefore.toBigInt() - basePoints * (orderFee + backOrderFee),
         );
     });
@@ -940,7 +864,7 @@ describe('Settlement', function () {
         const signature = await signOrder(order, chainId, swap.address, addr);
         const signatureBackOrder = await signOrder(backOrder, chainId, swap.address, addr1);
 
-        const matchingParams = matcher.address + '01' + trim0x(resolver.address);
+        const matchingParams = matcher.address + '01' + trim0x(resolver.address) + 'ffff000000000000000000000000000000000000000000000000000000000000';
 
         const interaction =
             matcher.address +
@@ -1010,7 +934,7 @@ describe('Settlement', function () {
             const signature = await signOrder(order, chainId, swap.address, addr);
             const signatureBackOrder = await signOrder(backOrder, chainId, swap.address, addr1);
 
-            const matchingParams = matcher.address + '01' + trim0x(resolver.address);
+            const matchingParams = matcher.address + '01' + trim0x(resolver.address) + 'ffff000000000000000000000000000000000000000000000000000000000000';
 
             const interaction =
                 matcher.address +
@@ -1023,7 +947,7 @@ describe('Settlement', function () {
                         ether('0.1'),
                         0,
                         ether('100'),
-                        resolver.address,
+                        matcher.address,
                     ])
                     .substring(10);
 
@@ -1036,7 +960,7 @@ describe('Settlement', function () {
                         ether('100'),
                         0,
                         ether('0.1'),
-                        resolver.address,
+                        matcher.address,
                     ]).substring(10),
                 ),
             ).to.be.revertedWithCustomError(matcher, 'ResolverIsNotWhitelisted');
@@ -1049,7 +973,7 @@ describe('Settlement', function () {
                     ether('100'),
                     0,
                     ether('0.1'),
-                    resolver.address,
+                    matcher.address,
                 ]).substring(10),
             );
         });
@@ -1090,7 +1014,7 @@ describe('Settlement', function () {
             const signature = await signOrder(order, chainId, swap.address, addr);
             const signatureBackOrder = await signOrder(backOrder, chainId, swap.address, addr1);
 
-            const matchingParams = matcher.address + '01' + trim0x(resolver.address);
+            const matchingParams = matcher.address + '01' + trim0x(resolver.address) + 'ffff000000000000000000000000000000000000000000000000000000000000';
 
             const interaction =
                 matcher.address +
@@ -1103,7 +1027,7 @@ describe('Settlement', function () {
                         ether('0.1'),
                         0,
                         ether('100'),
-                        resolver.address,
+                        matcher.address,
                     ])
                     .substring(10);
 
@@ -1116,7 +1040,7 @@ describe('Settlement', function () {
                         ether('100'),
                         0,
                         ether('0.1'),
-                        resolver.address,
+                        matcher.address,
                     ]).substring(10),
                 ),
             ).to.be.revertedWithCustomError(matcher, 'ResolverIsNotWhitelisted');
@@ -1129,7 +1053,7 @@ describe('Settlement', function () {
                     ether('100'),
                     0,
                     ether('0.1'),
-                    resolver.address,
+                    matcher.address,
                 ]).substring(10),
             );
         });
