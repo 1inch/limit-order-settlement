@@ -17,10 +17,9 @@ describe('Delegation st1inch', function () {
         await st1inch.connect(user).addPod(delegation.address);
         await delegation
             .connect(user)
-            .functions['register(string,string,uint256)'](
+            .functions['register(string,string)'](
                 `${userIndex}DelegatingToken`,
                 `A${userIndex}DT`,
-                maxPods,
             );
         await delegation.connect(user).delegate(user.address);
     };
