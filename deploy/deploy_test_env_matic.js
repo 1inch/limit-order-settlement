@@ -508,6 +508,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
             await (await feeBank.depositFor(setup.promote.address, setup.promote.stake.toString(), {
                 maxFeePerGas: setup[chainId].maxFeePerGas,
                 maxPriorityFeePerGas: setup[chainId].maxPriorityFeePerGas,
+                gasLimit: '300000',
             })).wait();
         }
         console.log('depositFor');
