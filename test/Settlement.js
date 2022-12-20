@@ -41,15 +41,10 @@ describe('Settlement', function () {
         await inch.approve(feeBank.address, ether('100'));
         await feeBank.deposit(ether('100'));
 
-        const ProxySettlement = await ethers.getContractFactory('ProxySettlement');
-        const proxy = await ProxySettlement.deploy(matcher.address, inch.address, feeBank.address);
-        await proxy.deployed();
-        await inch.mint(proxy.address, ether('100'));
-
         const ResolverMock = await ethers.getContractFactory('ResolverMock');
         const resolver = await ResolverMock.deploy(matcher.address);
 
-        return { dai, weth, swap, matcher, feeBank, proxy, resolver };
+        return { dai, weth, swap, matcher, feeBank, resolver };
     }
 
     it('opposite direction recursive swap', async function () {
@@ -831,74 +826,6 @@ describe('Settlement', function () {
             ]).substring(10),
         );
         expect(await matcher.availableCredit(addr.address)).to.equal(
-            availableCreditBefore.toBigInt() - basePoints * (orderFee + backOrderFee),
-        );
-    });
-
-    it('should change availableCredit with non-zero fee, proxy contract', async function () {
-        const { dai, weth, swap, matcher, proxy, resolver } = await loadFixture(initContracts);
-
-        const order = await buildOrder(
-            {
-                salt: buildSalt({ orderStartTime: await defaultExpiredAuctionTimestamp(), fee: orderFee }),
-                makerAsset: dai.address,
-                takerAsset: weth.address,
-                makingAmount: ether('100'),
-                takingAmount: ether('0.1'),
-                from: addr.address,
-            },
-            {
-                whitelistedAddrs: [proxy.address],
-                whitelistedCutOffs: [0],
-            },
-        );
-        const backOrder = await buildOrder(
-            {
-                salt: buildSalt({ orderStartTime: await defaultExpiredAuctionTimestamp(), fee: backOrderFee }),
-                makerAsset: weth.address,
-                takerAsset: dai.address,
-                makingAmount: ether('0.1'),
-                takingAmount: ether('100'),
-                from: addr1.address,
-            },
-            {
-                whitelistedAddrs: [proxy.address],
-                whitelistedCutOffs: [0],
-            },
-        );
-        const signature = await signOrder(order, chainId, swap.address, addr);
-        const signatureBackOrder = await signOrder(backOrder, chainId, swap.address, addr1);
-
-        const matchingParams = matcher.address + '01' + trim0x(resolver.address) + 'ffff000000000000000000000000000000000000000000000000000000000000';
-
-        const interaction =
-            matcher.address +
-            '00' +
-            swap.interface
-                .encodeFunctionData('fillOrderTo', [
-                    backOrder,
-                    signatureBackOrder,
-                    matchingParams,
-                    ether('0.1'),
-                    0,
-                    ether('100'),
-                    matcher.address,
-                ])
-                .substring(10);
-        await proxy.deposit(ether('100'));
-        const availableCreditBefore = await matcher.availableCredit(proxy.address);
-        await proxy.settleOrders(
-            '0x' + swap.interface.encodeFunctionData('fillOrderTo', [
-                order,
-                signature,
-                interaction,
-                ether('100'),
-                0,
-                ether('0.1'),
-                matcher.address,
-            ]).substring(10),
-        );
-        expect(await matcher.availableCredit(proxy.address)).to.equal(
             availableCreditBefore.toBigInt() - basePoints * (orderFee + backOrderFee),
         );
     });
