@@ -39,6 +39,7 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
     uint256 public constant MAX_LOCK_PERIOD = 2 * 365 days;
     uint256 private constant _VOTING_POWER_DIVIDER = 20;
     uint256 private constant _POD_CALL_GAS_LIMIT = 200_000;
+    uint256 private constant _PODS_LIMIT = 5;
     uint256 private constant _ONE = 1e9;
 
     IERC20 public immutable oneInch;
@@ -56,8 +57,8 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
     address public feeReceiver;
     address public defaultFarm;
 
-    constructor(IERC20 oneInch_, uint256 expBase_, uint256 podsLimit)
-        ERC20Pods(podsLimit, _POD_CALL_GAS_LIMIT)
+    constructor(IERC20 oneInch_, uint256 expBase_)
+        ERC20Pods(_PODS_LIMIT, _POD_CALL_GAS_LIMIT)
         ERC20("Staking 1INCH", "st1INCH")
         VotingPowerCalculator(expBase_, block.timestamp)
     {
