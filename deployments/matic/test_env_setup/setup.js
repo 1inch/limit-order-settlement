@@ -3,6 +3,7 @@ const { ether } = require('@1inch/solidity-utils');
 const setup = {
     delegatorsFilePath: './deployments/matic/test_env_setup/delegators.json',
     resolversFilePath: './deployments/matic/test_env_setup/resolvers.json',
+    oldResolversFilePath: './deployments/matic/test_env_setup/old_resolvers.json',
     deployOldResolvers: false,
     deployResolvers: false,
     deployFarms: false,

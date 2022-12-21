@@ -9,32 +9,9 @@ const BASE_EXP = '999999952502977513';
 const ROUTER_V5_ADDR = '0x1111111254EEB25477B68fb85Ed929f73A960582';
 // const INCH_TOKEN = '0x111111111117dC0aa78b770fA6A738034120C302';
 
-const oldResolvers = [
-    {
-        address: '0x21e06E695c39C2634245300d33CC6486BE326C8e',
-        stake: ether('100000'),
-    },
-    {
-        address: '0xF8157c9e721d345f6c7bc092cE5819f37313eBA3',
-        stake: ether('100000'),
-    },
-    {
-        address: '0x9E2AF6D683AF03F68b1Ba1A70a641E2ae293711A',
-        stake: ether('90000'),
-    },
-    {
-        address: '0xB06AcCe0d74579987170e91688f75178Affb03F9',
-        stake: ether('80000'),
-    },
-    {
-        address: '0x8aF9a0089Fee80cF188aF59Cd0134556f7831138',
-        stake: ether('70000'),
-    },
-];
-
-const OLD_RESOLVERS_PRIVATE_KEYS = process.env.OLD_RESOLVERS.split(', ');
-const RESOLVERS_PRIVATE_KEYS = process.env.RESOLVERS.split(', ');
-const DELEGATORS_PRIVATE_KEYS = process.env.DELEGATORS.split(', ');
+const OLD_RESOLVERS_PRIVATE_KEYS = process.env.OLD_RESOLVERS.replace(/ /g,'').split(',');
+const RESOLVERS_PRIVATE_KEYS = process.env.RESOLVERS.replace(/ /g,'').split(',');
+const DELEGATORS_PRIVATE_KEYS = process.env.DELEGATORS.replace(/ /g,'').split(',');
 
 const serialize = (data, path) => {
     fs.writeFileSync(
@@ -79,6 +56,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
 
     const delegators = deserialize(setup.delegatorsFilePath);
     const resolvers = deserialize(setup.resolversFilePath);
+    const oldResolvers = deserialize(setup.oldResolversFilePath);
 
     const provider = new ethers.providers.JsonRpcProvider(networks[deployments.getNetworkName()].url);
     let feeData = await provider.getFeeData();
