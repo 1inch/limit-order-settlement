@@ -8,7 +8,6 @@ describe('Delegation st1inch', function () {
     let accounts;
     const threshold = ether('0.05');
     const MAX_WHITELISTED = 3;
-    const maxPods = 5;
     const commonLockDuration = time.duration.days('40');
 
     const stakeAndRegisterInDelegation = async (st1inch, delegation, user, amount, userIndex) => {
