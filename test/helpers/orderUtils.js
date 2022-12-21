@@ -87,7 +87,7 @@ const buildOrder = async (
         throw new Error('auction length mismatch');
     }
 
-    const auctionParams = auctionBumps.map((b, i) => auctionDelays[i].toString(16).padStart(2, '0') + b.toString(16).padStart(6, '0')).join('');
+    const auctionParams = auctionBumps.map((b, i) => auctionDelays[i].toString(16).padStart(4, '0') + b.toString(16).padStart(6, '0')).join('');
 
     const whitelist = whitelistedAddrs.map((a, i) => whitelistedCutOffs[i].toString(16).padStart(8, '0') + trim0x(a)).join('') +
         publicCutOff.toString(16).padStart(8, '0');
