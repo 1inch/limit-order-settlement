@@ -3,6 +3,7 @@
 pragma solidity 0.8.17;
 
 contract VotingPowerCalculator {
+    error OriginInTheFuture();
     uint256 private constant _ONE = 1e18;
 
     uint256 public immutable origin;
@@ -40,6 +41,8 @@ contract VotingPowerCalculator {
     uint256 private immutable _expTable29;
 
     constructor(uint256 expBase_, uint256 origin_) {
+        if (origin_ > block.timestamp) revert OriginInTheFuture();
+
         origin = origin_;
         expBase = expBase_;
         _expTable0 = expBase_;
