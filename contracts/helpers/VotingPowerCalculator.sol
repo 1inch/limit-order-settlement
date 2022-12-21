@@ -4,6 +4,7 @@ pragma solidity 0.8.17;
 
 contract VotingPowerCalculator {
     error OriginInTheFuture();
+
     uint256 private constant _ONE = 1e18;
 
     uint256 public immutable origin;
@@ -78,6 +79,7 @@ contract VotingPowerCalculator {
     }
 
     function _votingPowerAt(uint256 balance, uint256 timestamp) internal view returns (uint256 votingPower) {
+        timestamp = timestamp < origin ? origin : timestamp;  // logic in timestamps before origin is undefined
         unchecked {
             uint256 t = timestamp - origin;
             votingPower = balance;
@@ -176,6 +178,7 @@ contract VotingPowerCalculator {
     }
 
     function _balanceAt(uint256 votingPower, uint256 timestamp) internal view returns (uint256 balance) {
+        timestamp = timestamp < origin ? origin : timestamp;  // logic in timestamps before origin is undefined
         unchecked {
             uint256 t = timestamp - origin;
             balance = votingPower;
