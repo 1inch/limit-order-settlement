@@ -9,7 +9,7 @@ import "./St1inch.sol";
 
 contract BasicDelegationPodWithVotingPower is BasicDelegationPod, VotingPowerCalculator, IVotable {
     constructor(string memory name_, string memory symbol_, St1inch st1inch)
-        BasicDelegationPod(name_, symbol_, address(st1inch))
+        BasicDelegationPod(name_, symbol_, st1inch)
         VotingPowerCalculator(st1inch.expBase(), st1inch.origin())
     {}
 
