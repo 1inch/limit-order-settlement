@@ -31,7 +31,7 @@ contract FeeBank is Ownable {
      * @param amount The amount of 1INCH sender pay for incresing.
      * @return totalAvailableCredit The total sender's availableCredit after deposit.
      */
-    function deposit(uint256 amount) external returns (uint256) {
+    function deposit(uint256 amount) external returns (uint256 totalAvailableCredit) {
         return _depositFor(msg.sender, amount);
     }
 
@@ -41,7 +41,7 @@ contract FeeBank is Ownable {
      * @param amount The amount of 1INCH sender pay for incresing.
      * @return totalAvailableCredit The total account's availableCredit after deposit.
      */
-    function depositFor(address account, uint256 amount) external returns (uint256) {
+    function depositFor(address account, uint256 amount) external returns (uint256 totalAvailableCredit) {
         return _depositFor(account, amount);
     }
 
@@ -51,7 +51,7 @@ contract FeeBank is Ownable {
      * @param permit The data with sender's permission via token.
      * @return totalAvailableCredit The total sender's availableCredit after deposit.
      */
-    function depositWithPermit(uint256 amount, bytes calldata permit) external returns (uint256) {
+    function depositWithPermit(uint256 amount, bytes calldata permit) external returns (uint256 totalAvailableCredit) {
         return depositForWithPermit(msg.sender, amount, permit);
     }
 
@@ -62,7 +62,7 @@ contract FeeBank is Ownable {
         address account,
         uint256 amount,
         bytes calldata permit
-    ) public returns (uint256) {
+    ) public returns (uint256 totalAvailableCredit) {
         _token.safePermit(permit);
         return _depositFor(account, amount);
     }
@@ -72,7 +72,7 @@ contract FeeBank is Ownable {
      * @param amount The amount of 1INCH sender returns.
      * @return totalAvailableCredit The total sender's availableCredit after withdrawal.
      */
-    function withdraw(uint256 amount) external returns (uint256) {
+    function withdraw(uint256 amount) external returns (uint256 totalAvailableCredit) {
         return _withdrawTo(msg.sender, amount);
     }
 
@@ -82,7 +82,7 @@ contract FeeBank is Ownable {
      * @param amount The amount of withdrawaled tokens.
      * @return totalAvailableCredit The total sender's availableCredit after withdrawal.
      */
-    function withdrawTo(address account, uint256 amount) external returns (uint256) {
+    function withdrawTo(address account, uint256 amount) external returns (uint256 totalAvailableCredit) {
         return _withdrawTo(account, amount);
     }
 

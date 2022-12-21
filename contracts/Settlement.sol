@@ -26,7 +26,7 @@ contract Settlement is ISettlement, FeeBankCharger {
     error ResolverIsNotWhitelisted();
     error WrongInteractionTarget();
 
-    bytes32 private constant _FINALIZE_INTERACTION = bytes1(0x01);
+    bytes1 private constant _FINALIZE_INTERACTION = 0x01;
     uint256 private constant _ORDER_FEE_BASE_POINTS = 1e15;
     uint256 private constant _BASE_POINTS = 10_000_000; // 100%
 
