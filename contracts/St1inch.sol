@@ -285,7 +285,7 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
             if (loss > maxLoss) revert MaxLossIsNotMet();
             if (loss > amount * maxLossRatio / _ONE) revert LossIsTooBig();
 
-            _withdraw(depositor, amount, balance);
+            _withdraw(depositor, balance);
             oneInch.safeTransfer(to, ret);
             oneInch.safeTransfer(feeReceiver, loss);
         }
@@ -325,13 +325,13 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
 
         uint256 amount = depositor.amount;
         if (amount > 0) {
-            _withdraw(depositor, amount, balanceOf(msg.sender));
+            _withdraw(depositor, balanceOf(msg.sender));
             oneInch.safeTransfer(to, amount);
         }
     }
 
-    function _withdraw(Depositor memory depositor, uint256 amount, uint256 balance) private {
-        totalDeposits -= amount;
+    function _withdraw(Depositor memory depositor, uint256 balance) private {
+        totalDeposits -= depositor.amount;
         depositor.amount = 0;
         // keep unlockTime in storage for next tx optimization
         depositor.unlockTime = uint40(Math.min(depositor.unlockTime, block.timestamp));
