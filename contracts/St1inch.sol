@@ -44,6 +44,7 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
     error ExpBaseTooBig();
     error ExpBaseTooSmall();
     error DefaultFarmTokenMismatch();
+    error DepositsDisabled();
 
     /// @notice The minimum allowed staking period
     uint256 public constant MIN_LOCK_PERIOD = 30 days;
@@ -227,6 +228,7 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
     }
 
     function _deposit(address account, uint256 amount, uint256 duration) private {
+        if (emergencyExit) revert DepositsDisabled();
         Depositor memory depositor = depositors[account]; // SLOAD
 
         uint256 lockedTill = Math.max(depositor.unlockTime, block.timestamp) + duration;
