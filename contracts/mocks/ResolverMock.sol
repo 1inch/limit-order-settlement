@@ -33,10 +33,10 @@ contract ResolverMock is IResolver {
 
         bytes32 tokenIndices = bytes32(data);
         if (data.length > 32) {
-            (address[] memory targets, bytes[] memory calldatas) = abi.decode(data[32:], (address[],bytes[]));
+            (Address[] memory targets, bytes[] memory calldatas) = abi.decode(data[32:], (Address[],bytes[]));
             for (uint256 i = 0; i < targets.length; i++) {
                 // solhint-disable-next-line avoid-low-level-calls
-                (bool success, bytes memory reason) = targets[i].call(calldatas[i]);
+                (bool success, bytes memory reason) = targets[i].get().call(calldatas[i]);
                 if (!success) revert FailedExternalCall(i, reason);
             }
         }
