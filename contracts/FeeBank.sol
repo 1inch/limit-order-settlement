@@ -96,8 +96,9 @@ contract FeeBank is IFeeBank, Ownable {
         uint256 accountsLength = accounts.length;
         for (uint256 i = 0; i < accountsLength; ++i) {
             address account = accounts[i];
-            uint256 accountFee = _accountDeposits[account] - _charger.availableCredit(account);
-            _accountDeposits[account] -= accountFee;
+            uint256 accountDeposit = _accountDeposits[account];
+            uint256 accountFee = accountDeposit - _charger.availableCredit(account);
+            _accountDeposits[account] = accountDeposit - accountFee;
             totalAccountFees += accountFee;
         }
         _token.safeTransfer(msg.sender, totalAccountFees);
