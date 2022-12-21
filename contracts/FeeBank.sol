@@ -94,7 +94,7 @@ contract FeeBank is IFeeBank, Ownable {
      */
     function gatherFees(address[] memory accounts) external onlyOwner returns (uint256 totalAccountFees) {
         uint256 accountsLength = accounts.length;
-        for (uint256 i = 0; i < accountsLength; i++) {
+        for (uint256 i = 0; i < accountsLength; ++i) {
             uint256 accountFee = _accountDeposits[accounts[i]] - _charger.availableCredit(accounts[i]);
             _accountDeposits[accounts[i]] -= accountFee;
             totalAccountFees += accountFee;

@@ -118,14 +118,14 @@ contract WhitelistRegistry is Ownable {
         address[] memory addresses = set.items.get();
         uint256 addressesLength = addresses.length;
         uint256[] memory balances = new uint256[](addressesLength);
-        for (uint256 i = 0; i < addressesLength; i++) {
+        for (uint256 i = 0; i < addressesLength; ++i) {
             balances[i] = token.balanceOf(addresses[i]);
             if (balances[i] > balances[richestIndex]) {
                 richestIndex = i;
             }
         }
 
-        for (uint256 i = size; i < addressesLength; i++) {
+        for (uint256 i = size; i < addressesLength; ++i) {
             if (balances[i] <= balances[richestIndex]) {
                 // Swap i-th and richest-th elements
                 (addresses[i], addresses[richestIndex]) = (addresses[richestIndex], addresses[i]);
@@ -133,7 +133,7 @@ contract WhitelistRegistry is Ownable {
 
                 // Find new richest in first size elements
                 richestIndex = 0;
-                for (uint256 j = 1; j < size; j++) {
+                for (uint256 j = 1; j < size; ++j) {
                     if (balances[j] > balances[richestIndex]) {
                         richestIndex = j;
                     }
@@ -142,7 +142,7 @@ contract WhitelistRegistry is Ownable {
         }
 
         // Remove poorest elements from set
-        for (uint256 i = 0; i < size; i++) {
+        for (uint256 i = 0; i < size; ++i) {
             _removeFromWhitelist(addresses[i]);
         }
     }
