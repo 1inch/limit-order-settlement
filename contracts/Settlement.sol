@@ -74,7 +74,8 @@ contract Settlement is ISettlement, FeeBankCharger {
 
         if (interactiveData[0] == _FINALIZE_INTERACTION) {
             _chargeFee(suffix.resolver.get(), suffix.totalFee);
-            (address target, bytes calldata data) = _decodeTargetAndCalldata(interaction);
+            address target = address(bytes20(interaction));
+            bytes calldata data = interaction[20:];
             IResolver(target).resolveOrders(suffix.resolver.get(), allTokensAndAmounts, data);
         } else {
             _settleOrder(
@@ -148,14 +149,6 @@ contract Settlement is ISettlement, FeeBankCharger {
                 returndatacopy(ptr, 0, returndatasize())
                 revert(ptr, returndatasize())
             }
-        }
-    }
-
-    function _decodeTargetAndCalldata(bytes calldata cd) private pure returns (address target, bytes calldata data) {
-        assembly {
-            target := shr(96, calldataload(cd.offset))
-            data.offset := add(cd.offset, 20)
-            data.length := sub(cd.length, 20)
         }
     }
 }
