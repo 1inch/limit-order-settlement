@@ -6,9 +6,10 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@1inch/solidity-utils/contracts/libraries/SafeERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./interfaces/IFeeBankCharger.sol";
+import "./interfaces/IFeeBank.sol";
 
 /// @title Contract with fee mechanism for solvers to pay for using the system
-contract FeeBank is Ownable {
+contract FeeBank is IFeeBank, Ownable {
     using SafeERC20 for IERC20;
 
     IERC20 private immutable _token;
