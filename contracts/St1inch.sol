@@ -45,6 +45,7 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
     error ExpBaseTooSmall();
     error DefaultFarmTokenMismatch();
     error DepositsDisabled();
+    error ZeroAddress();
 
     /// @notice The minimum allowed staking period
     uint256 public constant MIN_LOCK_PERIOD = 30 days;
@@ -101,6 +102,7 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
      * @param feeReceiver_ The receiver contract address
      */
     function setFeeReceiver(address feeReceiver_) external onlyOwner {
+        if (feeReceiver_ == address(0)) revert ZeroAddress();
         feeReceiver = feeReceiver_;
         emit FeeReceiverSet(feeReceiver_);
     }
