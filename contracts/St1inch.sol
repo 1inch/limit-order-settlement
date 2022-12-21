@@ -15,7 +15,7 @@ import "./interfaces/IVotable.sol";
 /**
  * @title 1inch staking contract
  * @notice The contract provides the following features: staking, delegation, farming
- * How lock period works: 
+ * How lock period works:
  * - balances and voting power
  * - Lock min and max
  * - Add lock
@@ -51,13 +51,14 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
     /// @notice The maximum allowed staking period
     /// @dev WARNING: It is not enough to change the constant only but voting power decrease curve should be revised also
     uint256 public constant MAX_LOCK_PERIOD = 2 * 365 days;
-    /// @notice Voting power decreased to 1/_VOTING_POWER_DIVIDER after lock expires 
+    /// @notice Voting power decreased to 1/_VOTING_POWER_DIVIDER after lock expires
     /// @dev WARNING: It is not enough to change the constant only but voting power decrease curve should be revised also
     uint256 private constant _VOTING_POWER_DIVIDER = 20;
+    uint256 private constant _PODS_LIMIT = 5;
     /// @notice Maximum allowed gas spent by each attached pod. If there not enough gas for pod execution then
     /// transaction is reverted. If pod uses more gas then its execution is reverted silently, not affection the
-    /// main transaction 
-    uint256 private constant _POD_CALL_GAS_LIMIT = 200_000;
+    /// main transaction
+    uint256 private constant _POD_CALL_GAS_LIMIT = 500_000;
     uint256 private constant _ONE = 1e9;
 
     IERC20 public immutable oneInch;
@@ -66,7 +67,7 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
     struct Depositor {
         // Unix time in seconds
         uint40 unlockTime;
-        // Staked 1inch token amount 
+        // Staked 1inch token amount
         uint216 amount;
     }
 
@@ -82,10 +83,9 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
      * @notice Initializes the contract
      * @param oneInch_ The token to be staked
      * @param expBase_ The rate for the voting power decrease over time
-     * @param podsLimit The maximum number of pods that a user could use with the contract
      */
-    constructor(IERC20 oneInch_, uint256 expBase_, uint256 podsLimit)
-        ERC20Pods(podsLimit, _POD_CALL_GAS_LIMIT)
+    constructor(IERC20 oneInch_, uint256 expBase_)
+        ERC20Pods(_PODS_LIMIT, _POD_CALL_GAS_LIMIT)
         ERC20("Staking 1INCH", "st1INCH")
         VotingPowerCalculator(expBase_, block.timestamp)
     {
@@ -98,7 +98,7 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
 
     /**
      * @notice Sets the new contract that would recieve early withdrawal fees
-     * @param feeReceiver_ The receiver contract address 
+     * @param feeReceiver_ The receiver contract address
      */
     function setFeeReceiver(address feeReceiver_) external onlyOwner {
         feeReceiver = feeReceiver_;
@@ -106,8 +106,8 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
     }
 
     /**
-     * @notice Sets the new farm that all staking users will automatically join after staking for reward farming 
-     * @param defaultFarm_ The farm contract address 
+     * @notice Sets the new farm that all staking users will automatically join after staking for reward farming
+     * @param defaultFarm_ The farm contract address
      */
     function setDefaultFarm(address defaultFarm_) external onlyOwner {
         if (defaultFarm_ != address(0) && Pod(defaultFarm_).token() != address(this)) revert DefaultFarmTokenMismatch();
@@ -154,7 +154,7 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
      * as it was staked for the maximum lock time. If a staker locks its stake for less than the maximum
      * then at the moment of deposit its balance is recorded as it was staked for the maximum but time
      * equal to `max lock period-lock time` has passed. It makes available voting power calculation
-     * available at any point in time within the maximum lock period. 
+     * available at any point in time within the maximum lock period.
      * @param account The address of an account to get voting power for
      * @param timestamp The timestamp to calculate voting power at
      * @return votingPower The voting power available at the moment of `timestamp`
@@ -164,7 +164,7 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
     }
 
     /**
-     * @notice Gets the voting power for the provided balance at the current timestamp assuming that 
+     * @notice Gets the voting power for the provided balance at the current timestamp assuming that
      * the balance is a balance at the moment of the maximum lock time
      * @param balance The balance for the maximum lock time
      * @return votingPower The voting power available at the block timestamp
@@ -174,7 +174,7 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
     }
 
     /**
-     * @notice Gets the voting power for the provided balance at the current timestamp assuming that 
+     * @notice Gets the voting power for the provided balance at the current timestamp assuming that
      * the balance is a balance at the moment of the maximum lock time
      * @param balance The balance for the maximum lock time
      * @param timestamp The timestamp to calculate the voting power at
@@ -258,7 +258,7 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
      * The more time is passed the less would be the loss.
      * Formula to calculate return amount = (deposit - voting power)) / 0.95
      * @param minReturn The minumum amount of stake acceptable for return. If actual amount is less then the transaction is reverted
-     * @param maxLoss The maximum amount of loss acceptable. If actual loss is bigger then the transaction is reverted 
+     * @param maxLoss The maximum amount of loss acceptable. If actual loss is bigger then the transaction is reverted
      */
     function earlyWithdraw(uint256 minReturn, uint256 maxLoss) external {
         earlyWithdrawTo(msg.sender, minReturn, maxLoss);
@@ -271,7 +271,7 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
      * Formula to calculate return amount = (deposit - voting power)) / 0.95
      * @param to The account to withdraw the stake to
      * @param minReturn The minumum amount of stake acceptable for return. If actual amount is less then the transaction is reverted
-     * @param maxLoss The maximum amount of loss acceptable. If actual loss is bigger then the transaction is reverted 
+     * @param maxLoss The maximum amount of loss acceptable. If actual loss is bigger then the transaction is reverted
      */
     // ret(balance) = (deposit - vp(balance)) / 0.95
     function earlyWithdrawTo(address to, uint256 minReturn, uint256 maxLoss) public {
@@ -294,9 +294,9 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
     /**
      * @notice Gets the loss amount if the staker do early withdrawal at the current block
      * @param account The account to calculate early withdrawal loss for
-     * @return loss The loss amount amount 
+     * @return loss The loss amount amount
      * @return ret The return amount
-     * @return canWithdraw  True if the staker can withdraw without penalty, false otherwise 
+     * @return canWithdraw  True if the staker can withdraw without penalty, false otherwise
      */
     function earlyWithdrawLoss(address account) external view returns (uint256 loss, uint256 ret, bool canWithdraw) {
         uint256 amount = depositors[account].amount;
@@ -309,14 +309,14 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
         loss = depAmount - ret;
     }
 
-    /** 
+    /**
      * @notice Withdraws stake if lock period expired
      */
     function withdraw() external {
         withdrawTo(msg.sender);
     }
 
-    /** 
+    /**
      * @notice Withdraws stake if lock period expired to the given address
      */
     function withdrawTo(address to) public {

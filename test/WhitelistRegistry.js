@@ -15,7 +15,7 @@ describe('WhitelistRegistry', function () {
     before(async function () {
         addrs = await ethers.getSigners();
         const St1inch = await ethers.getContractFactory('St1inch');
-        st1inch = await St1inch.deploy(constants.ZERO_ADDRESS, expBase, 1);
+        st1inch = await St1inch.deploy(constants.ZERO_ADDRESS, expBase);
         await st1inch.deployed();
     });
 

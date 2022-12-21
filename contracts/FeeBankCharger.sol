@@ -39,10 +39,12 @@ contract FeeBankCharger is IFeeBankCharger {
     }
 
     function _chargeFee(address account, uint256 fee) internal {
-        uint256 currentAllowance = _creditAllowance[account];
-        if (currentAllowance < fee) revert NotEnoughCredit();
-        unchecked {
-            _creditAllowance[account] = currentAllowance - fee;
+        if (fee > 0) {
+            uint256 currentAllowance = _creditAllowance[account];
+            if (currentAllowance < fee) revert NotEnoughCredit();
+            unchecked {
+                _creditAllowance[account] = currentAllowance - fee;
+            }
         }
     }
 }

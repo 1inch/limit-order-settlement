@@ -64,7 +64,7 @@ describe('St1inch', function () {
         const { oneInch } = await deployInch();
 
         const St1inch = await ethers.getContractFactory('St1inch');
-        const st1inch = await St1inch.deploy(oneInch.address, expBase, maxPods);
+        const st1inch = await St1inch.deploy(oneInch.address, expBase);
         await st1inch.deployed();
 
         await oneInch.transfer(addr1.address, ether('100'));
@@ -80,7 +80,7 @@ describe('St1inch', function () {
         const { oneInch } = await deployInch();
 
         const St1inch = await ethers.getContractFactory('St1inchMock');
-        const st1inch = await St1inch.deploy(oneInch.address, expBase, maxPods);
+        const st1inch = await St1inch.deploy(oneInch.address, expBase);
         await st1inch.deployed();
 
         const PodMock = await ethers.getContractFactory('PodMock');

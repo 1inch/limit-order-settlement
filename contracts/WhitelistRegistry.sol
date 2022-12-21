@@ -6,7 +6,6 @@ import "@1inch/solidity-utils/contracts/libraries/UniERC20.sol";
 import "@1inch/solidity-utils/contracts/libraries/AddressSet.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./interfaces/IVotable.sol";
-import "./helpers/VotingPowerCalculator.sol";
 
 /// @title Contract with trades resolvers whitelist
 contract WhitelistRegistry is Ownable {

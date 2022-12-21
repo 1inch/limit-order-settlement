@@ -117,8 +117,8 @@ contract Settlement is ISettlement, FeeBankCharger {
             let interactionLength := calldataload(add(data.offset, interactionLengthOffset))
 
             { // stack too deep
-                let target := shr(96, calldataload(add(data.offset, add(interactionLengthOffset, 0x20))))
-                if iszero(eq(target, address())) {
+                let target := shr(96, calldataload(add(data.offset, interactionOffset)))
+                if or(lt(interactionLength, 20), iszero(eq(target, address()))) {
                     mstore(0, _WRONG_INTERACTION_TARGET_SELECTOR)
                     revert(0, 4)
                 }
