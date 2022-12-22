@@ -32,7 +32,7 @@
     "@openzeppelin/contracts": "4.8.0"
   },
   "devDependencies": {
-    "@1inch/farming": "1.2.3",
+    "@1inch/farming": "1.2.4",
     "@nomiclabs/hardhat-etherscan": "3.1.2",
     "@nomiclabs/hardhat-ethers": "2.2.1",
     "@nomicfoundation/hardhat-chai-matchers": "1.0.4",
