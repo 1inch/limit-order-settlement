@@ -49,14 +49,12 @@ contract ResolverMock is IResolver {
                 uint256 j = i;
                 uint256 next = uint8(tokenIndices[i]);
                 if (next != 0xff) {
-                    while (next != 0) {
+                    do {
                         totalAmount += items[j].amount;
                         tokenIndices |= bytes32(_INDICES_MASK) >> (j << 3);
                         j = next;
                         next = uint8(tokenIndices[next]);
-                    }
-                    totalAmount += items[j].amount;
-                        tokenIndices |= bytes32(_INDICES_MASK) >> (j << 3);
+                    } while (j != 0);
 
                     IERC20(items[i].token.get()).safeTransfer(msg.sender, totalAmount);
                 }
