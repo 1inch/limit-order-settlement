@@ -2,12 +2,12 @@
 
 pragma solidity 0.8.17;
 
-import "@1inch/delegating/contracts/interfaces/IRewardableDelegationPod.sol";
+import "@1inch/delegating/contracts/interfaces/ITokenizedDelegationPod.sol";
 
 contract ResolverMetadata {
     error NotRegisteredDelegatee();
 
-    IRewardableDelegationPod public immutable delegation;
+    ITokenizedDelegationPod public immutable delegation;
     mapping (address => string) public getUrl;
 
     modifier onlyRegistered {
@@ -15,7 +15,7 @@ contract ResolverMetadata {
         _;
     }
 
-    constructor(IRewardableDelegationPod delegation_) {
+    constructor(ITokenizedDelegationPod delegation_) {
         delegation = delegation_;
     }
 

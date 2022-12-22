@@ -8,7 +8,6 @@ describe('Delegation st1inch', function () {
     let accounts;
     const threshold = ether('0.05');
     const MAX_WHITELISTED = 3;
-    const maxPods = 5;
     const commonLockDuration = time.duration.days('40');
 
     const stakeAndRegisterInDelegation = async (st1inch, delegation, user, amount, userIndex) => {
@@ -17,10 +16,9 @@ describe('Delegation st1inch', function () {
         await st1inch.connect(user).addPod(delegation.address);
         await delegation
             .connect(user)
-            .functions['register(string,string,uint256)'](
+            .functions['register(string,string)'](
                 `${userIndex}DelegatingToken`,
                 `A${userIndex}DT`,
-                maxPods,
             );
         await delegation.connect(user).delegate(user.address);
     };
@@ -32,13 +30,13 @@ describe('Delegation st1inch', function () {
         await oneInch.transfer(addr1.address, ether('100'));
 
         const St1inch = await ethers.getContractFactory('St1inch');
-        const st1inch = await St1inch.deploy(oneInch.address, expBase, maxPods);
+        const st1inch = await St1inch.deploy(oneInch.address, expBase);
         await st1inch.deployed();
         await oneInch.approve(st1inch.address, ether('100'));
         await oneInch.connect(addr1).approve(st1inch.address, ether('100'));
 
-        const RewardableDelegation = await ethers.getContractFactory('RewardableDelegationPodWithVotingPower');
-        const delegation = await RewardableDelegation.deploy('Rewardable', 'RWD', st1inch.address);
+        const PowerPod = await ethers.getContractFactory('PowerPod');
+        const delegation = await PowerPod.deploy('PowerPod', 'PP', st1inch.address);
         await delegation.deployed();
         const WhitelistRegistry = await ethers.getContractFactory('WhitelistRegistry');
         const whitelistRegistry = await WhitelistRegistry.deploy(delegation.address, threshold, MAX_WHITELISTED);

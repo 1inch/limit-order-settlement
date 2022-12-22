@@ -2,30 +2,31 @@
 # yarn lockfile v1
 
 
-"@1inch/delegating@0.0.13":
-  version "0.0.13"
-  resolved "https://registry.yarnpkg.com/@1inch/delegating/-/delegating-0.0.13.tgz#987e35ac95c761bf9ce1d4173f79b711f901522a"
-  integrity sha512-xXvQgr6bEk/DuxL0x6MtLm4uoGWmEvbSMLH7X2Bbrbo91bEDaOrmAd7+9HC4N6HKDkGTOGKVjmkRMDd0reYqzw==
+"@1inch/delegating@0.0.19":
+  version "0.0.19"
+  resolved "https://registry.yarnpkg.com/@1inch/delegating/-/delegating-0.0.19.tgz#4b046e0d3ec29f91a930d137256df5086a45132f"
+  integrity sha512-6Javsed7mYKPd96rCEVBKPXLuJu+FvPFY6jmuhliV9AOjfF+n1SK0gs586prwgYXMzVmHzqSJq8yFjthx3th4w==
   dependencies:
-    "@1inch/erc20-pods" "0.0.13"
-    "@1inch/solidity-utils" "2.2.2"
+    "@1inch/erc20-pods" "0.0.16"
+    "@1inch/farming" "1.2.4"
+    "@1inch/solidity-utils" "2.2.5"
     "@openzeppelin/contracts" "4.8.0"
     hardhat-dependency-compiler "1.1.3"
 
-"@1inch/erc20-pods@0.0.13":
-  version "0.0.13"
-  resolved "https://registry.yarnpkg.com/@1inch/erc20-pods/-/erc20-pods-0.0.13.tgz#2a9b46226a5267c07fb3cc7b27e1a6c7e49b9359"
-  integrity sha512-JsJyZhLUQRfIndnZBIi9TrMrlIrWI8yiPDD+vcZv/RCL9RSLfn8NIu5BbxqupOzbcIBf1HOjQX5q1K7wttWmng==
+"@1inch/erc20-pods@0.0.16":
+  version "0.0.16"
+  resolved "https://registry.yarnpkg.com/@1inch/erc20-pods/-/erc20-pods-0.0.16.tgz#01973e1e770430e00f4aab04fa7015a32e820585"
+  integrity sha512-m1LGMmI875qX+PWBsD8xzhTLOsfZbSHLQw42Yq6QTYBAeBmUdzThknoVh2F5xFee3hiWifq5IYiWaYcismbZqA==
   dependencies:
-    "@1inch/solidity-utils" "2.2.2"
+    "@1inch/solidity-utils" "2.2.5"
     "@openzeppelin/contracts" "4.8.0"
 
-"@1inch/farming@1.1.3":
-  version "1.1.3"
-  resolved "https://registry.yarnpkg.com/@1inch/farming/-/farming-1.1.3.tgz#04c6ea6d4f17d49f93f72bf1079606f12b987877"
-  integrity sha512-pYnBHRrcUOWKiq3QReiclZuZbp92lm/OrrCMqPLfkX6XvHni8EdBGckSCgGg9cb508+lpfJQliwWfJxDMowD2Q==
+"@1inch/farming@1.2.4":
+  version "1.2.4"
+  resolved "https://registry.yarnpkg.com/@1inch/farming/-/farming-1.2.4.tgz#65dcf48c2263e73be737c2fc944e471e0b481118"
+  integrity sha512-pBJfNAQZEwLrrER3FlOkMp0QiB7B3WkAmrlctpgM971gYuQ0F/WHLiyzC86s1KTtnW3K0mBhOzdyrbd0rGl4nA==
   dependencies:
-    "@1inch/erc20-pods" "0.0.13"
+    "@1inch/erc20-pods" "0.0.16"
     "@1inch/solidity-utils" "2.2.2"
     "@openzeppelin/contracts" "4.8.0"
 
@@ -51,10 +52,10 @@
     ethers "5.7.1"
     hardhat "2.11.2"
 
-"@1inch/solidity-utils@2.2.3":
-  version "2.2.3"
-  resolved "https://registry.yarnpkg.com/@1inch/solidity-utils/-/solidity-utils-2.2.3.tgz#6163e862a12b6df30ec1caa067596dedf493b398"
-  integrity sha512-c/zVP+mrIu6Rizi87dv62dWsVYz0EMIwe5f5a3rq+XoJu6SBYXdG6WJIQkJFWHCKfvN7d2YKnzjqeSeejR8znA==
+"@1inch/solidity-utils@2.2.5":
+  version "2.2.5"
+  resolved "https://registry.yarnpkg.com/@1inch/solidity-utils/-/solidity-utils-2.2.5.tgz#1d372065cdd8bae096aa831867f22f4b2baeef30"
+  integrity sha512-zdrFYmQYQS0eTkoxgylRq9/2sFMSCMIT73pNLfcYIf4zmkB2cvNzQCiU3W9GvnQTktTMJrmIdbxsCyo/ZZkgbg==
   dependencies:
     "@metamask/eth-sig-util" "4.0.1"
     "@nomicfoundation/hardhat-network-helpers" "1.0.6"

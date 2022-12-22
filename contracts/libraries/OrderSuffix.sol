@@ -20,49 +20,60 @@ library OrderSuffix {
 
     uint256 private constant _HAS_TAKING_FEE_FLAG = 0x80;
     uint256 private constant _RESOLVERS_LENGTH_MASK = 0x78;
-    uint256 private constant _RESOLVERS_LENGTH_OFFSET = 3;
+    uint256 private constant _RESOLVERS_LENGTH_BIT_SHIFT = 3;
     uint256 private constant _POINTS_LENGTH_MASK = 0x07;
-    uint256 private constant _POINTS_LENGTH_OFFSET = 0;
+    uint256 private constant _POINTS_LENGTH_BIT_SHIFT = 0;
 
-    function flags(OrderLib.Order calldata order) internal pure returns (uint256 ret) {
-        bytes calldata interactions = order.interactions;
-        assembly {
-            let ptr := sub(add(interactions.offset, interactions.length), 1)
-            ret := shr(248, calldataload(ptr))
-        }
-    }
+    uint256 private constant _TAKING_FEE_BYTES_SIZE = 32;
+
+    uint256 private constant _PUBLIC_TIME_LIMIT_BYTES_SIZE = 4;
+    uint256 private constant _PUBLIC_TIME_LIMIT_BIT_SHIFT = 224; // 256 - _PUBLIC_TIME_LIMIT_BYTES_SIZE * 8
+
+    uint256 private constant _AUCTION_POINT_DELAY_BYTES_SIZE = 2;
+    uint256 private constant _AUCTION_POINT_BUMP_BYTES_SIZE = 3;
+    uint256 private constant _AUCTION_POINT_BYTES_SIZE = 5; // _AUCTION_POINT_DELAY_BYTES_SIZE + _AUCTION_POINT_BUMP_BYTES_SIZE;
+    uint256 private constant _AUCTION_POINT_DELAY_BIT_SHIFT = 240; // 256 - _AUCTION_POINT_DELAY_BYTES_SIZE * 8;
+    uint256 private constant _AUCTION_POINT_BUMP_BIT_SHIFT = 232; // 256 - _AUCTION_POINT_BUMP_BYTES_SIZE * 8;
+
+    uint256 private constant _RESOLVER_TIME_LIMIT_BYTES_SIZE = 4;
+    uint256 private constant _RESOLVER_ADDRESS_BYTES_SIZE = 20;
+    uint256 private constant _RESOLVER_BYTES_SIZE = 24; // _RESOLVER_TIME_LIMIT_BYTES_SIZE + _RESOLVER_ADDRESS_BYTES_SIZE;
+    uint256 private constant _RESOLVER_TIME_LIMIT_BIT_SHIFT = 224; // 256 - _RESOLVER_TIME_LIMIT_BYTES_SIZE * 8;
+    uint256 private constant _RESOLVER_ADDRESS_BIT_SHIFT = 96; // 256 - _RESOLVER_ADDRESS_BYTES_SIZE * 8;
 
     function takingFee(OrderLib.Order calldata order) internal pure returns (TakingFee.Data ret) {
         bytes calldata interactions = order.interactions;
-        if (flags(order) & _HAS_TAKING_FEE_FLAG != 0) {
-            assembly {
-                let ptr := sub(add(interactions.offset, interactions.length), 33)
-                ret := calldataload(ptr)
+        assembly {
+            let ptr := sub(add(interactions.offset, interactions.length), 1)
+            if and(_HAS_TAKING_FEE_FLAG, byte(0, calldataload(ptr))) {
+                ret := calldataload(sub(ptr, _TAKING_FEE_BYTES_SIZE))
             }
         }
     }
 
     function checkResolver(OrderLib.Order calldata order, address resolver) internal view returns (bool valid) {
         bytes calldata interactions = order.interactions;
-        uint256 flags_ = flags(order);
-        uint256 resolversCount = (flags_ & _RESOLVERS_LENGTH_MASK) >> _RESOLVERS_LENGTH_OFFSET;
         assembly {
-            let ptr := sub(add(interactions.offset, interactions.length), 5)
-            if and(flags_, _HAS_TAKING_FEE_FLAG) {
-                ptr := sub(ptr, 32)
+            let ptr := sub(add(interactions.offset, interactions.length), 1)
+            let flags := byte(0, calldataload(ptr))
+            ptr := sub(ptr, _PUBLIC_TIME_LIMIT_BYTES_SIZE)
+            if and(flags, _HAS_TAKING_FEE_FLAG) {
+                ptr := sub(ptr, _TAKING_FEE_BYTES_SIZE)
             }
 
+            let resolversCount := shr(_RESOLVERS_LENGTH_BIT_SHIFT, and(flags, _RESOLVERS_LENGTH_MASK))
+
             // Check public time limit
-            let publicLimit := shr(224, calldataload(ptr))
+            let publicLimit := shr(_PUBLIC_TIME_LIMIT_BIT_SHIFT, calldataload(ptr))
             valid := gt(timestamp(), publicLimit)
 
             // Check resolvers and corresponding time limits
             if not(valid) {
-                for { let end := sub(ptr, mul(24, resolversCount)) } gt(ptr, end) { } {
-                    ptr := sub(ptr, 20)
-                    let account := shr(96, calldataload(ptr))
-                    ptr := sub(ptr, 4)
-                    let limit := shr(224, calldataload(ptr))
+                for { let end := sub(ptr, mul(_RESOLVER_BYTES_SIZE, resolversCount)) } gt(ptr, end) { } {
+                    ptr := sub(ptr, _RESOLVER_ADDRESS_BYTES_SIZE)
+                    let account := shr(_RESOLVER_ADDRESS_BIT_SHIFT, calldataload(ptr))
+                    ptr := sub(ptr, _RESOLVER_TIME_LIMIT_BYTES_SIZE)
+                    let limit := shr(_RESOLVER_TIME_LIMIT_BIT_SHIFT, calldataload(ptr))
                     if eq(account, resolver) {
                         valid := iszero(lt(timestamp(), limit))
                         break
@@ -82,14 +93,7 @@ library OrderSuffix {
             return 0;
         }
 
-        uint256 ptr;
-
-        {  // stack too deep
-            bytes calldata interactions = order.interactions;
-            assembly {
-                ptr := sub(add(interactions.offset, interactions.length), 1)
-            }
-        }
+        bytes calldata interactions = order.interactions;
         assembly {
             function linearInterpolation(t1, t2, v1, v2, t) -> v {
                 v := div(
@@ -98,26 +102,28 @@ library OrderSuffix {
                 )
             }
 
+            let ptr := sub(add(interactions.offset, interactions.length), 1)
+
             // move ptr to the last point
             let pointsCount
             {  // stack too deep
-                let flags_ := shr(248, calldataload(ptr))
-                let resolversCount := shr(3, and(flags_, _RESOLVERS_LENGTH_MASK))
-                pointsCount := and(flags_, _POINTS_LENGTH_MASK)
-                if and(flags_, _HAS_TAKING_FEE_FLAG) {
-                    ptr := sub(ptr, 32)
+                let flags := byte(0, calldataload(ptr))
+                let resolversCount := shr(_RESOLVERS_LENGTH_BIT_SHIFT, and(flags, _RESOLVERS_LENGTH_MASK))
+                pointsCount := and(flags, _POINTS_LENGTH_MASK)
+                if and(flags, _HAS_TAKING_FEE_FLAG) {
+                    ptr := sub(ptr, _TAKING_FEE_BYTES_SIZE)
                 }
-                ptr := sub(ptr, add(mul(24, resolversCount), 4)) // 24 byte for each wl entry + 4 bytes for public time limit
+                ptr := sub(ptr, add(mul(_RESOLVER_BYTES_SIZE, resolversCount), _PUBLIC_TIME_LIMIT_BYTES_SIZE)) // 24 byte for each wl entry + 4 bytes for public time limit
             }
 
             // Check points sequentially
             let prevCoefficient := startBump
             let prevCumulativeTime := cumulativeTime
-            for { let end := sub(ptr, mul(4, pointsCount)) } gt(ptr, end) { } {
-                ptr := sub(ptr, 3)
-                let coefficient := shr(232, calldataload(ptr))
-                ptr := sub(ptr, 1)
-                let delay := shr(248, calldataload(ptr))
+            for { let end := sub(ptr, mul(_AUCTION_POINT_BYTES_SIZE, pointsCount)) } gt(ptr, end) { } {
+                ptr := sub(ptr, _AUCTION_POINT_BUMP_BYTES_SIZE)
+                let coefficient := shr(_AUCTION_POINT_BUMP_BIT_SHIFT, calldataload(ptr))
+                ptr := sub(ptr, _AUCTION_POINT_DELAY_BYTES_SIZE)
+                let delay := shr(_AUCTION_POINT_DELAY_BIT_SHIFT, calldataload(ptr))
                 cumulativeTime := add(cumulativeTime, delay)
                 if gt(cumulativeTime, timestamp()) {
                     // prevCumulativeTime <passed> time <elapsed> cumulativeTime

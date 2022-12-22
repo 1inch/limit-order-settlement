@@ -26,7 +26,7 @@ contract Settlement is ISettlement, FeeBankCharger {
     error ResolverIsNotWhitelisted();
     error WrongInteractionTarget();
 
-    bytes32 private constant _FINALIZE_INTERACTION = bytes1(0x01);
+    bytes1 private constant _FINALIZE_INTERACTION = 0x01;
     uint256 private constant _ORDER_FEE_BASE_POINTS = 1e15;
     uint256 private constant _BASE_POINTS = 10_000_000; // 100%
 
@@ -74,7 +74,8 @@ contract Settlement is ISettlement, FeeBankCharger {
 
         if (interactiveData[0] == _FINALIZE_INTERACTION) {
             _chargeFee(suffix.resolver.get(), suffix.totalFee);
-            (address target, bytes calldata data) = _decodeTargetAndCalldata(interaction);
+            address target = address(bytes20(interaction));
+            bytes calldata data = interaction[20:];
             IResolver(target).resolveOrders(suffix.resolver.get(), allTokensAndAmounts, data);
         } else {
             _settleOrder(
@@ -117,8 +118,8 @@ contract Settlement is ISettlement, FeeBankCharger {
             let interactionLength := calldataload(add(data.offset, interactionLengthOffset))
 
             { // stack too deep
-                let target := shr(96, calldataload(add(data.offset, add(interactionLengthOffset, 0x20))))
-                if iszero(eq(target, address())) {
+                let target := shr(96, calldataload(add(data.offset, interactionOffset)))
+                if or(lt(interactionLength, 20), iszero(eq(target, address()))) {
                     mstore(0, _WRONG_INTERACTION_TARGET_SELECTOR)
                     revert(0, 4)
                 }
@@ -148,14 +149,6 @@ contract Settlement is ISettlement, FeeBankCharger {
                 returndatacopy(ptr, 0, returndatasize())
                 revert(ptr, returndatasize())
             }
-        }
-    }
-
-    function _decodeTargetAndCalldata(bytes calldata cd) private pure returns (address target, bytes calldata data) {
-        assembly {
-            target := shr(96, calldataload(cd.offset))
-            data.offset := add(cd.offset, 20)
-            data.length := sub(cd.length, 20)
         }
     }
 }

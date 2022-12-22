@@ -6,9 +6,10 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@1inch/solidity-utils/contracts/libraries/SafeERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./interfaces/IFeeBankCharger.sol";
+import "./interfaces/IFeeBank.sol";
 
 /// @title Contract with fee mechanism for solvers to pay for using the system
-contract FeeBank is Ownable {
+contract FeeBank is IFeeBank, Ownable {
     using SafeERC20 for IERC20;
 
     IERC20 private immutable _token;
@@ -31,7 +32,7 @@ contract FeeBank is Ownable {
      * @param amount The amount of 1INCH sender pay for incresing.
      * @return totalAvailableCredit The total sender's availableCredit after deposit.
      */
-    function deposit(uint256 amount) external returns (uint256) {
+    function deposit(uint256 amount) external returns (uint256 totalAvailableCredit) {
         return _depositFor(msg.sender, amount);
     }
 
@@ -41,7 +42,7 @@ contract FeeBank is Ownable {
      * @param amount The amount of 1INCH sender pay for incresing.
      * @return totalAvailableCredit The total account's availableCredit after deposit.
      */
-    function depositFor(address account, uint256 amount) external returns (uint256) {
+    function depositFor(address account, uint256 amount) external returns (uint256 totalAvailableCredit) {
         return _depositFor(account, amount);
     }
 
@@ -51,7 +52,7 @@ contract FeeBank is Ownable {
      * @param permit The data with sender's permission via token.
      * @return totalAvailableCredit The total sender's availableCredit after deposit.
      */
-    function depositWithPermit(uint256 amount, bytes calldata permit) external returns (uint256) {
+    function depositWithPermit(uint256 amount, bytes calldata permit) external returns (uint256 totalAvailableCredit) {
         return depositForWithPermit(msg.sender, amount, permit);
     }
 
@@ -62,7 +63,7 @@ contract FeeBank is Ownable {
         address account,
         uint256 amount,
         bytes calldata permit
-    ) public returns (uint256) {
+    ) public returns (uint256 totalAvailableCredit) {
         _token.safePermit(permit);
         return _depositFor(account, amount);
     }
@@ -72,7 +73,7 @@ contract FeeBank is Ownable {
      * @param amount The amount of 1INCH sender returns.
      * @return totalAvailableCredit The total sender's availableCredit after withdrawal.
      */
-    function withdraw(uint256 amount) external returns (uint256) {
+    function withdraw(uint256 amount) external returns (uint256 totalAvailableCredit) {
         return _withdrawTo(msg.sender, amount);
     }
 
@@ -82,7 +83,7 @@ contract FeeBank is Ownable {
      * @param amount The amount of withdrawaled tokens.
      * @return totalAvailableCredit The total sender's availableCredit after withdrawal.
      */
-    function withdrawTo(address account, uint256 amount) external returns (uint256) {
+    function withdrawTo(address account, uint256 amount) external returns (uint256 totalAvailableCredit) {
         return _withdrawTo(account, amount);
     }
 
@@ -93,10 +94,12 @@ contract FeeBank is Ownable {
      */
     function gatherFees(address[] memory accounts) external onlyOwner returns (uint256 totalAccountFees) {
         uint256 accountsLength = accounts.length;
-        for (uint256 i = 0; i < accountsLength; i++) {
-            uint256 accountFee = _accountDeposits[accounts[i]] - _charger.availableCredit(accounts[i]);
-            _accountDeposits[accounts[i]] -= accountFee;
-            totalAccountFees += accountFee;
+        for (uint256 i = 0; i < accountsLength; ++i) {
+            address account = accounts[i];
+            uint256 accountDeposit = _accountDeposits[account];
+            uint256 availableCredit_ = _charger.availableCredit(account);
+            _accountDeposits[account] = availableCredit_;
+            totalAccountFees += accountDeposit - availableCredit_;
         }
         _token.safeTransfer(msg.sender, totalAccountFees);
     }
