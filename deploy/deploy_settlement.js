@@ -1,5 +1,6 @@
-const { getChainId } = require('hardhat');
-const { idempotentDeploy } = require('../test/helpers/utils.js');
+const { getChainId, ethers } = require('hardhat');
+const { idempotentDeployGetContract } = require('../test/helpers/utils.js');
+const { networks } = require('../hardhat.networks');
 
 const INCH = {
     1: '0x111111111117dC0aa78b770fA6A738034120C302', // Mainnet
@@ -16,12 +17,21 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
 
     const { deployer } = await getNamedAccounts();
 
-    await idempotentDeploy(
+    const provider = new ethers.providers.JsonRpcProvider(networks[deployments.getNetworkName()].url);
+    const feeData = await provider.getFeeData();
+
+    const settlement = await idempotentDeployGetContract(
         'Settlement',
         [ROUTER_V5_ADDR, INCH[chainId]],
         deployments,
         deployer,
+        feeData,
+        'Settlement',
+        true,
     );
+
+    const feeBankAddress = await settlement.feeBank();
+    console.log('feeBankAddress', feeBankAddress);
 };
 
 module.exports.skip = async () => true;

@@ -80,7 +80,7 @@ const idempotentDeploy = async (
         args: constructorArgs,
         from: deployer,
         contract: contractName,
-        priorityFeePerGas: feeData.maxPriorityFeePerGas,
+        priorityFeePerGas: '6000000000',
     });
     await _delay(10000);
 

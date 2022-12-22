@@ -3,6 +3,7 @@ const { ether } = require('@1inch/solidity-utils');
 const setup = {
     delegatorsFilePath: './deployments/matic/test_env_setup/delegators.json',
     resolversFilePath: './deployments/matic/test_env_setup/resolvers.json',
+    oldResolversFilePath: './deployments/matic/test_env_setup/old_resolvers.json',
     deployOldResolvers: false,
     deployResolvers: false,
     deployFarms: false,
@@ -14,9 +15,16 @@ const setup = {
         addedBalance: ether('0.1'),
         deployerPrivateKey: process.env.MAINNET_PRIVATE_KEY,
     },
+    56: {
+        maxFeePerGas: '5000000000',
+        maxPriorityFeePerGas: '5000000000',
+        minBalance: ether('0.009'),
+        addedBalance: ether('0.04'),
+        deployerPrivateKey: process.env.BSC_PRIVATE_KEY,
+    },
     137: {
-        maxFeePerGas: '65000000000',
-        maxPriorityFeePerGas: '45000000000',
+        maxFeePerGas: '115000000000',
+        maxPriorityFeePerGas: '40000000000',
         minBalance: ether('0.4'),
         addedBalance: ether('0.5'),
         deployerPrivateKey: process.env.MATIC_PRIVATE_KEY,
@@ -28,7 +36,7 @@ const setup = {
     },
     returnFee: false,
     feeRecive: {
-        percent: '500000000', // 50%
+        percent: '900000000', // 90%
     },
 };
 
