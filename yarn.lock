@@ -51,19 +51,6 @@
     ethers "5.7.1"
     hardhat "2.11.2"
 
-"@1inch/solidity-utils@2.2.3":
-  version "2.2.3"
-  resolved "https://registry.yarnpkg.com/@1inch/solidity-utils/-/solidity-utils-2.2.3.tgz#6163e862a12b6df30ec1caa067596dedf493b398"
-  integrity sha512-c/zVP+mrIu6Rizi87dv62dWsVYz0EMIwe5f5a3rq+XoJu6SBYXdG6WJIQkJFWHCKfvN7d2YKnzjqeSeejR8znA==
-  dependencies:
-    "@metamask/eth-sig-util" "4.0.1"
-    "@nomicfoundation/hardhat-network-helpers" "1.0.6"
-    "@nomiclabs/hardhat-ethers" "2.1.1"
-    "@openzeppelin/contracts" "4.7.3"
-    ethereumjs-util "7.1.5"
-    ethers "5.7.1"
-    hardhat "2.11.2"
-
 "@1inch/solidity-utils@2.2.5":
   version "2.2.5"
   resolved "https://registry.yarnpkg.com/@1inch/solidity-utils/-/solidity-utils-2.2.5.tgz#1d372065cdd8bae096aa831867f22f4b2baeef30"
