@@ -14,7 +14,7 @@ contract St1inchPreview is VotingPowerCalculator {
     }
 
     function previewBalance(address account, uint256 amount, uint256 duration) external view returns (uint256) {
-        (uint40 unlockTime, uint216 balance) = st1INCH.depositors(account);
+        (, uint40 unlockTime, uint176 balance) = st1INCH.depositors(account);
         uint256 lockedTill = Math.max(unlockTime, block.timestamp) + duration;
         return _balanceAt(balance + amount, lockedTill) / _VOTING_POWER_DIVIDER;
     }
@@ -24,7 +24,7 @@ contract St1inchPreview is VotingPowerCalculator {
     }
 
     function previewPowerOfAtTime(address account, uint256 amount, uint256 duration, uint256 timestamp) public view returns (uint256) {
-        (uint40 unlockTime, uint216 balance) = st1INCH.depositors(account);
+        (, uint40 unlockTime, uint176 balance) = st1INCH.depositors(account);
         uint256 lockedTill = Math.max(unlockTime, block.timestamp) + duration;
         return _votingPowerAt(_balanceAt(balance + amount, lockedTill) / _VOTING_POWER_DIVIDER, timestamp);
     }

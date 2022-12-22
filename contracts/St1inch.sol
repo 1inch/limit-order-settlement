@@ -27,6 +27,7 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
 
     event EmergencyExitSet(bool status);
     event MaxLossRatioSet(uint256 ratio);
+    event MinLockPeriodRatioSet(uint256 ratio);
     event FeeReceiverSet(address receiver);
     event DefaultFarmSet(address defaultFarm);
 
@@ -36,6 +37,7 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
     error LockTimeLessMinLock();
     error UnlockTimeHasNotCome();
     error StakeUnlocked();
+    error MinLockPeriodRatioNotReached();
     error MinReturnIsNotMet();
     error MaxLossIsNotMet();
     error MaxLossOverflow();
@@ -66,10 +68,9 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
 
     /// @notice The stucture to store stake information for a staker
     struct Depositor {
-        // Unix time in seconds
-        uint40 unlockTime;
-        // Staked 1inch token amount
-        uint216 amount;
+        uint40 lockTime;    // Unix time in seconds
+        uint40 unlockTime;  // Unix time in seconds
+        uint176 amount;     // Staked 1inch token amount
     }
 
     mapping(address => Depositor) public depositors;
@@ -77,6 +78,7 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
     uint256 public totalDeposits;
     bool public emergencyExit;
     uint256 public maxLossRatio;
+    uint256 public minLockPeriodRatio;
     address public feeReceiver;
     address public defaultFarm;
 
@@ -129,6 +131,17 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
         if (maxLossRatio_ > _ONE) revert MaxLossOverflow();
         maxLossRatio = maxLossRatio_;
         emit MaxLossRatioSet(maxLossRatio_);
+    }
+
+    /**
+     * @notice Sets the minimum allowed lock period ratio for early withdrawal. If the ratio is not met, actual is more than allowed,
+     * then early withdrawal will revert.
+     * @param minLockPeriodRatio_ The maximum loss allowed (9 decimals).
+     */
+    function setMinLockPeriodRatio(uint256 minLockPeriodRatio_) external onlyOwner {
+        if (minLockPeriodRatio_ > _ONE) revert MaxLossOverflow();
+        minLockPeriodRatio = minLockPeriodRatio_;
+        emit MinLockPeriodRatioSet(minLockPeriodRatio_);
     }
 
     /**
@@ -239,8 +252,9 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
         if (lockLeft > MAX_LOCK_PERIOD) revert LockTimeMoreMaxLock();
         uint256 balanceDiff = _balanceAt(depositor.amount + amount, lockedTill) / _VOTING_POWER_DIVIDER - balanceOf(account);
 
+        depositor.lockTime = uint40(duration == 0 ? depositor.lockTime : block.timestamp);
         depositor.unlockTime = uint40(lockedTill);
-        depositor.amount += uint216(amount);
+        depositor.amount += uint176(amount);
         depositors[account] = depositor; // SSTORE
         totalDeposits += amount;
         _mint(account, balanceDiff);
@@ -279,6 +293,9 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
     function earlyWithdrawTo(address to, uint256 minReturn, uint256 maxLoss) public {
         Depositor memory depositor = depositors[msg.sender]; // SLOAD
         if (emergencyExit || block.timestamp >= depositor.unlockTime) revert StakeUnlocked();
+        uint256 allowedExitTime = depositor.lockTime + (depositor.unlockTime - depositor.lockTime) * minLockPeriodRatio / _ONE;
+        if (block.timestamp < allowedExitTime) revert MinLockPeriodRatioNotReached();
+
         uint256 amount = depositor.amount;
         if (amount > 0) {
             uint256 balance = balanceOf(msg.sender);
