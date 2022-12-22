@@ -112,7 +112,7 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
      * @param defaultFarm_ The farm contract address
      */
     function setDefaultFarm(address defaultFarm_) external onlyOwner {
-        if (defaultFarm_ != address(0) && Pod(defaultFarm_).token() != address(this)) revert DefaultFarmTokenMismatch();
+        if (defaultFarm_ != address(0) && Pod(defaultFarm_).token() != this) revert DefaultFarmTokenMismatch();
         defaultFarm = defaultFarm_;
         emit DefaultFarmSet(defaultFarm_);
     }

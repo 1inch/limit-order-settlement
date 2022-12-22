@@ -2,38 +2,30 @@
 # yarn lockfile v1
 
 
-"@1inch/delegating@0.0.14":
-  version "0.0.14"
-  resolved "https://registry.yarnpkg.com/@1inch/delegating/-/delegating-0.0.14.tgz#e3b6c5e129f6aa31fe21345b01d1c78d967612c3"
-  integrity sha512-ACjub1QHPBKVDsPgfhH8GmFG+2fYVDVqZEwpWAGAaowpFKMPigflm/AUWlAXGGpvZmcaEWHXf3cvOeO96q0kqA==
+"@1inch/delegating@0.0.15":
+  version "0.0.15"
+  resolved "https://registry.yarnpkg.com/@1inch/delegating/-/delegating-0.0.15.tgz#caec06848564d2cc785d7b74ba0d65d7b265a963"
+  integrity sha512-ogaP6kumCtJttSmyOTXUfoxd7WrP3taGbcfHcAJen69mQbom3h4nwDtuON/jmZGpr1nSfTO2vhJtJYOHlNVg6w==
   dependencies:
-    "@1inch/erc20-pods" "0.0.14"
+    "@1inch/erc20-pods" "0.0.15"
     "@1inch/solidity-utils" "2.2.5"
     "@openzeppelin/contracts" "4.8.0"
     hardhat-dependency-compiler "1.1.3"
 
-"@1inch/erc20-pods@0.0.13":
-  version "0.0.13"
-  resolved "https://registry.yarnpkg.com/@1inch/erc20-pods/-/erc20-pods-0.0.13.tgz#2a9b46226a5267c07fb3cc7b27e1a6c7e49b9359"
-  integrity sha512-JsJyZhLUQRfIndnZBIi9TrMrlIrWI8yiPDD+vcZv/RCL9RSLfn8NIu5BbxqupOzbcIBf1HOjQX5q1K7wttWmng==
+"@1inch/erc20-pods@0.0.15":
+  version "0.0.15"
+  resolved "https://registry.yarnpkg.com/@1inch/erc20-pods/-/erc20-pods-0.0.15.tgz#bfa09e0ee89603b67610fe4c72c6c643c9a4d8e8"
+  integrity sha512-vpQTwYRS2cf/eHpebk4JKEWUZzNhru8vlMDwvB8raIet27sUDZY7bI5Dru2Xsr1zgW4F+o7kWmUxyWEBwxRCiA==
   dependencies:
-    "@1inch/solidity-utils" "2.2.2"
+    "@1inch/solidity-utils" "2.2.5"
     "@openzeppelin/contracts" "4.8.0"
 
-"@1inch/erc20-pods@0.0.14":
-  version "0.0.14"
-  resolved "https://registry.yarnpkg.com/@1inch/erc20-pods/-/erc20-pods-0.0.14.tgz#d872ec13f0fe9d12b7e4e78ca0c1951d95cf84c3"
-  integrity sha512-0cyWtUcGxjf1uAm1o7QuZ/sROo4/CT8VFoBffF6+HQ0Yh0P2UdwBCJtxKCMJo3c369weJUHmBqi1nQAGeueTGQ==
+"@1inch/farming@1.1.6":
+  version "1.1.6"
+  resolved "https://registry.yarnpkg.com/@1inch/farming/-/farming-1.1.6.tgz#fbf9a2bd19e68f0b59256e863c7b37bce0a19e24"
+  integrity sha512-eLztTNRPO7xM7nYEg/Izwn7jE4r9K6ka2ZOdyPUmz6r3dVA5GxWYd5CIfNPoAMj0l6B5+0Of/qh19dSEfR4P1w==
   dependencies:
-    "@1inch/solidity-utils" "2.2.2"
-    "@openzeppelin/contracts" "4.8.0"
-
-"@1inch/farming@1.1.3":
-  version "1.1.3"
-  resolved "https://registry.yarnpkg.com/@1inch/farming/-/farming-1.1.3.tgz#04c6ea6d4f17d49f93f72bf1079606f12b987877"
-  integrity sha512-pYnBHRrcUOWKiq3QReiclZuZbp92lm/OrrCMqPLfkX6XvHni8EdBGckSCgGg9cb508+lpfJQliwWfJxDMowD2Q==
-  dependencies:
-    "@1inch/erc20-pods" "0.0.13"
+    "@1inch/erc20-pods" "0.0.15"
     "@1inch/solidity-utils" "2.2.2"
     "@openzeppelin/contracts" "4.8.0"
 
