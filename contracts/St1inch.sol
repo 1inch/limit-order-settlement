@@ -87,7 +87,7 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
      */
     constructor(IERC20 oneInch_, uint256 expBase_)
         ERC20Pods(_PODS_LIMIT, _POD_CALL_GAS_LIMIT)
-        ERC20("Staking 1INCH", "st1INCH")
+        ERC20("Staking 1INCH v2", "st1INCH")
         VotingPowerCalculator(expBase_, block.timestamp)
     {
         // voting power after MAX_LOCK_PERIOD should be equal to staked amount divided by _VOTING_POWER_DIVIDER
