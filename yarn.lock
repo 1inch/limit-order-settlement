@@ -20,12 +20,20 @@
     "@1inch/solidity-utils" "2.2.5"
     "@openzeppelin/contracts" "4.8.0"
 
-"@1inch/farming@1.1.6":
-  version "1.1.6"
-  resolved "https://registry.yarnpkg.com/@1inch/farming/-/farming-1.1.6.tgz#fbf9a2bd19e68f0b59256e863c7b37bce0a19e24"
-  integrity sha512-eLztTNRPO7xM7nYEg/Izwn7jE4r9K6ka2ZOdyPUmz6r3dVA5GxWYd5CIfNPoAMj0l6B5+0Of/qh19dSEfR4P1w==
+"@1inch/erc20-pods@0.0.16":
+  version "0.0.16"
+  resolved "https://registry.yarnpkg.com/@1inch/erc20-pods/-/erc20-pods-0.0.16.tgz#01973e1e770430e00f4aab04fa7015a32e820585"
+  integrity sha512-m1LGMmI875qX+PWBsD8xzhTLOsfZbSHLQw42Yq6QTYBAeBmUdzThknoVh2F5xFee3hiWifq5IYiWaYcismbZqA==
   dependencies:
-    "@1inch/erc20-pods" "0.0.15"
+    "@1inch/solidity-utils" "2.2.5"
+    "@openzeppelin/contracts" "4.8.0"
+
+"@1inch/farming@1.2.4":
+  version "1.2.4"
+  resolved "https://registry.yarnpkg.com/@1inch/farming/-/farming-1.2.4.tgz#65dcf48c2263e73be737c2fc944e471e0b481118"
+  integrity sha512-pBJfNAQZEwLrrER3FlOkMp0QiB7B3WkAmrlctpgM971gYuQ0F/WHLiyzC86s1KTtnW3K0mBhOzdyrbd0rGl4nA==
+  dependencies:
+    "@1inch/erc20-pods" "0.0.16"
     "@1inch/solidity-utils" "2.2.2"
     "@openzeppelin/contracts" "4.8.0"
 
