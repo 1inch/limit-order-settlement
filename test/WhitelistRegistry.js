@@ -20,14 +20,8 @@ describe('WhitelistRegistry', function () {
     });
 
     async function initContracts() {
-        const RewardableDelegationPod = await ethers.getContractFactory(
-            'RewardableDelegationPodWithVotingPowerMock',
-        );
-        const rewardableDelegationPod = await RewardableDelegationPod.deploy(
-            'reward1INCH',
-            'reward1INCH',
-            st1inch.address,
-        );
+        const PowerPodMock = await ethers.getContractFactory('PowerPodMock');
+        const rewardableDelegationPod = await PowerPodMock.deploy('reward1INCH', 'reward1INCH', st1inch.address);
         await rewardableDelegationPod.deployed();
         const WhitelistRegistry = await ethers.getContractFactory('WhitelistRegistry');
         const whitelistRegistry = await WhitelistRegistry.deploy(

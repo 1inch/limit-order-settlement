@@ -2,23 +2,16 @@
 # yarn lockfile v1
 
 
-"@1inch/delegating@0.0.15":
-  version "0.0.15"
-  resolved "https://registry.yarnpkg.com/@1inch/delegating/-/delegating-0.0.15.tgz#caec06848564d2cc785d7b74ba0d65d7b265a963"
-  integrity sha512-ogaP6kumCtJttSmyOTXUfoxd7WrP3taGbcfHcAJen69mQbom3h4nwDtuON/jmZGpr1nSfTO2vhJtJYOHlNVg6w==
+"@1inch/delegating@0.0.19":
+  version "0.0.19"
+  resolved "https://registry.yarnpkg.com/@1inch/delegating/-/delegating-0.0.19.tgz#4b046e0d3ec29f91a930d137256df5086a45132f"
+  integrity sha512-6Javsed7mYKPd96rCEVBKPXLuJu+FvPFY6jmuhliV9AOjfF+n1SK0gs586prwgYXMzVmHzqSJq8yFjthx3th4w==
   dependencies:
-    "@1inch/erc20-pods" "0.0.15"
+    "@1inch/erc20-pods" "0.0.16"
+    "@1inch/farming" "1.2.4"
     "@1inch/solidity-utils" "2.2.5"
     "@openzeppelin/contracts" "4.8.0"
     hardhat-dependency-compiler "1.1.3"
-
-"@1inch/erc20-pods@0.0.15":
-  version "0.0.15"
-  resolved "https://registry.yarnpkg.com/@1inch/erc20-pods/-/erc20-pods-0.0.15.tgz#bfa09e0ee89603b67610fe4c72c6c643c9a4d8e8"
-  integrity sha512-vpQTwYRS2cf/eHpebk4JKEWUZzNhru8vlMDwvB8raIet27sUDZY7bI5Dru2Xsr1zgW4F+o7kWmUxyWEBwxRCiA==
-  dependencies:
-    "@1inch/solidity-utils" "2.2.5"
-    "@openzeppelin/contracts" "4.8.0"
 
 "@1inch/erc20-pods@0.0.16":
   version "0.0.16"

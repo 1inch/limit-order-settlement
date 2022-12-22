@@ -25,8 +25,8 @@
     "test:ci": "hardhat test"
   },
   "dependencies": {
-    "@1inch/delegating": "0.0.15",
-    "@1inch/erc20-pods": "0.0.15",
+    "@1inch/delegating": "0.0.19",
+    "@1inch/erc20-pods": "0.0.16",
     "@1inch/limit-order-protocol-contract": "3.0.0",
     "@1inch/solidity-utils": "2.2.5",
     "@openzeppelin/contracts": "4.8.0"

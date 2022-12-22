@@ -35,8 +35,8 @@ describe('Delegation st1inch', function () {
         await oneInch.approve(st1inch.address, ether('100'));
         await oneInch.connect(addr1).approve(st1inch.address, ether('100'));
 
-        const RewardableDelegation = await ethers.getContractFactory('RewardableDelegationPodWithVotingPower');
-        const delegation = await RewardableDelegation.deploy('Rewardable', 'RWD', st1inch.address);
+        const PowerPod = await ethers.getContractFactory('PowerPod');
+        const delegation = await PowerPod.deploy('PowerPod', 'PP', st1inch.address);
         await delegation.deployed();
         const WhitelistRegistry = await ethers.getContractFactory('WhitelistRegistry');
         const whitelistRegistry = await WhitelistRegistry.deploy(delegation.address, threshold, MAX_WHITELISTED);
