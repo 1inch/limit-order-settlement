@@ -21,15 +21,6 @@
     "@1inch/solidity-utils" "2.2.5"
     "@openzeppelin/contracts" "4.8.0"
 
-"@1inch/farming@1.2.4":
-  version "1.2.4"
-  resolved "https://registry.yarnpkg.com/@1inch/farming/-/farming-1.2.4.tgz#65dcf48c2263e73be737c2fc944e471e0b481118"
-  integrity sha512-pBJfNAQZEwLrrER3FlOkMp0QiB7B3WkAmrlctpgM971gYuQ0F/WHLiyzC86s1KTtnW3K0mBhOzdyrbd0rGl4nA==
-  dependencies:
-    "@1inch/erc20-pods" "0.0.16"
-    "@1inch/solidity-utils" "2.2.2"
-    "@openzeppelin/contracts" "4.8.0"
-
 "@1inch/farming@1.2.5":
   version "1.2.5"
   resolved "https://registry.yarnpkg.com/@1inch/farming/-/farming-1.2.5.tgz#558c27240d8f1fe5a236868570bdb290c9a65a53"
