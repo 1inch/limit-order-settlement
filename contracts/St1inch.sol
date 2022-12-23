@@ -98,7 +98,6 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
         oneInch = oneInch_;
     }
 
-
     /**
      * @notice Sets the new contract that would recieve early withdrawal fees
      * @param feeReceiver_ The receiver contract address
