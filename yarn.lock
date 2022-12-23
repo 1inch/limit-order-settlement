@@ -2,10 +2,10 @@
 # yarn lockfile v1
 
 
-"@1inch/delegating@0.0.20":
-  version "0.0.20"
-  resolved "https://registry.yarnpkg.com/@1inch/delegating/-/delegating-0.0.20.tgz#e77092dbb25ec3d3fb055bf3b86c9c14a3fa0447"
-  integrity sha512-OEMsaFAnuX2L8Nu7sFWL16UZLtNTltVsJg7uMlAkiY/E85UxDEwmpp88afU3SN+Qnf/ci0PjxAtMFjO0NOR2hg==
+"@1inch/delegating@0.0.21":
+  version "0.0.21"
+  resolved "https://registry.yarnpkg.com/@1inch/delegating/-/delegating-0.0.21.tgz#3ea173f9c470407c8a747568d8041392a3b75fd2"
+  integrity sha512-m72d6amUYcaF94RRxn0oYwaVqBj+weaESFX+WLQ+7YpP4r4d4klS8RNKC294WRvI+B2Hg59TAL+KU/wcsZ2PXg==
   dependencies:
     "@1inch/erc20-pods" "0.0.16"
     "@1inch/farming" "1.2.5"
