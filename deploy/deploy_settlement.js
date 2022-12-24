@@ -35,11 +35,11 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     }
 
     if ((await st1inch.maxLossRatio()).toBigInt() === 0n) {
-        await (await st1inch.setMaxLossRatio('900000000')).wait();  // 90%
+        await (await st1inch.setMaxLossRatio('900000000')).wait(); // 90%
     }
 
     if ((await st1inch.minLockPeriodRatio()).toBigInt() === 0n) {
-        await (await st1inch.setMinLockPeriodRatio('100000000')).wait();  // 10%
+        await (await st1inch.setMinLockPeriodRatio('100000000')).wait(); // 10%
     }
 
     const st1inchFarm = await idempotentDeployGetContract(
