@@ -25,7 +25,7 @@ const _tryRun = async (f, n = 10) => {
                 break;
             }
             console.error(error);
-            await _delay(5000);
+            await _delay(2000);
             if (i > n) {
                 throw new Error(`Couldn't verify deploy in ${n} runs`);
             }
@@ -63,7 +63,6 @@ const idempotentDeploy = async (
     constructorArgs,
     deployments,
     deployer,
-    feeData,
     deploymentName = contractName,
     skipVerify = false,
 ) => {
@@ -80,13 +79,15 @@ const idempotentDeploy = async (
         args: constructorArgs,
         from: deployer,
         contract: contractName,
-        priorityFeePerGas: '6000000000',
+        // gasPrice: 5_000_000_000n,
+        maxPriorityFeePerGas: BigInt(500_000_000n).toString(),
+        maxFeePerGas: BigInt(30_000_000_000n).toString(),
     });
-    await _delay(10000);
 
     console.log(`${deploymentName} deployed to: ${contract.address}`);
 
     if (!skipVerify) {
+        await _delay(2000);
         await _tryRun(() =>
             hre.run('verify:verify', {
                 address: contract.address,
@@ -103,7 +104,6 @@ const idempotentDeployGetContract = async (
     constructorArgs,
     deployments,
     deployer,
-    feeData,
     deploymentName = contractName,
     skipVerify = false,
 ) => {
@@ -112,7 +112,6 @@ const idempotentDeployGetContract = async (
         constructorArgs,
         deployments,
         deployer,
-        feeData,
         deploymentName,
         skipVerify,
     );

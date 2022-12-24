@@ -9,9 +9,9 @@ const BASE_EXP = '999999952502977513';
 const ROUTER_V5_ADDR = '0x1111111254EEB25477B68fb85Ed929f73A960582';
 // const INCH_TOKEN = '0x111111111117dC0aa78b770fA6A738034120C302';
 
-const OLD_RESOLVERS_PRIVATE_KEYS = process.env.OLD_RESOLVERS.replace(/ /g, '').split(',');
-const RESOLVERS_PRIVATE_KEYS = process.env.RESOLVERS.replace(/ /g, '').split(',');
-const DELEGATORS_PRIVATE_KEYS = process.env.DELEGATORS.replace(/ /g, '').split(',');
+const OLD_RESOLVERS_PRIVATE_KEYS = (process.env.OLD_RESOLVERS || '').replace(/ /g, '').split(',');
+const RESOLVERS_PRIVATE_KEYS = (process.env.RESOLVERS || '').replace(/ /g, '').split(',');
+const DELEGATORS_PRIVATE_KEYS = (process.env.DELEGATORS || '').replace(/ /g, '').split(',');
 
 const serialize = (data, path) => {
     fs.writeFileSync(
@@ -604,4 +604,4 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     }
 };
 
-module.exports.skip = async () => false;
+module.exports.skip = async () => true;
