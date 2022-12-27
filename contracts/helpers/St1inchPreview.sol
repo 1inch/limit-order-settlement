@@ -36,7 +36,7 @@ contract St1inchPreview is VotingPowerCalculator, Ownable {
     function previewUnlockTime(address account) public view returns (uint256 allowedExitTime) {
         (uint40 lockTime, uint40 unlockTime,) = st1INCH.depositors(account);
         allowedExitTime = lockTime + (unlockTime - lockTime) * st1INCH.minLockPeriodRatio() / _ONE;
-        allowedExitTime = Math.max(allowedExitTime, unlockTime - 730 days + durationUntilMaxAllowedLoss);
+        allowedExitTime = Math.max(allowedExitTime, unlockTime - st1INCH.MAX_LOCK_PERIOD() + durationUntilMaxAllowedLoss);
     }
 
     function setDurationUntilMaxAllowedLoss(uint256 duration) external onlyOwner {
