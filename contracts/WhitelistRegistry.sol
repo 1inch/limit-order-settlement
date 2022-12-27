@@ -64,12 +64,14 @@ contract WhitelistRegistry is Ownable {
         if (whitelistLength == whitelistLimit) {
             address minResolver = msg.sender;
             uint256 minBalance = token.balanceOf(msg.sender);
-            for (uint256 i = 0; i < whitelistLength; ++i) {
-                address curWhitelisted = _whitelist.at(i);
-                uint256 balance = token.balanceOf(curWhitelisted);
-                if (balance < minBalance) {
-                    minResolver = curWhitelisted;
-                    minBalance = balance;
+            unchecked {
+                for (uint256 i = 0; i < whitelistLength; ++i) {
+                    address curWhitelisted = _whitelist.at(i);
+                    uint256 balance = token.balanceOf(curWhitelisted);
+                    if (balance < minBalance) {
+                        minResolver = curWhitelisted;
+                        minBalance = balance;
+                    }
                 }
             }
             if (minResolver == msg.sender) revert NotEnoughBalance();
@@ -118,32 +120,34 @@ contract WhitelistRegistry is Ownable {
         address[] memory addresses = set.items.get();
         uint256 addressesLength = addresses.length;
         uint256[] memory balances = new uint256[](addressesLength);
-        for (uint256 i = 0; i < addressesLength; ++i) {
-            balances[i] = token.balanceOf(addresses[i]);
-            if (balances[i] > balances[richestIndex]) {
-                richestIndex = i;
+        unchecked {
+            for (uint256 i = 0; i < addressesLength; ++i) {
+                balances[i] = token.balanceOf(addresses[i]);
+                if (balances[i] > balances[richestIndex]) {
+                    richestIndex = i;
+                }
             }
-        }
 
-        for (uint256 i = size; i < addressesLength; ++i) {
-            if (balances[i] <= balances[richestIndex]) {
-                // Swap i-th and richest-th elements
-                (addresses[i], addresses[richestIndex]) = (addresses[richestIndex], addresses[i]);
-                (balances[i], balances[richestIndex]) = (balances[richestIndex], balances[i]);
+            for (uint256 i = size; i < addressesLength; ++i) {
+                if (balances[i] <= balances[richestIndex]) {
+                    // Swap i-th and richest-th elements
+                    (addresses[i], addresses[richestIndex]) = (addresses[richestIndex], addresses[i]);
+                    (balances[i], balances[richestIndex]) = (balances[richestIndex], balances[i]);
 
-                // Find new richest in first size elements
-                richestIndex = 0;
-                for (uint256 j = 1; j < size; ++j) {
-                    if (balances[j] > balances[richestIndex]) {
-                        richestIndex = j;
+                    // Find new richest in first size elements
+                    richestIndex = 0;
+                    for (uint256 j = 1; j < size; ++j) {
+                        if (balances[j] > balances[richestIndex]) {
+                            richestIndex = j;
+                        }
                     }
                 }
             }
-        }
 
-        // Remove poorest elements from set
-        for (uint256 i = 0; i < size; ++i) {
-            _removeFromWhitelist(addresses[i]);
+            // Remove poorest elements from set
+            for (uint256 i = 0; i < size; ++i) {
+                _removeFromWhitelist(addresses[i]);
+            }
         }
     }
 

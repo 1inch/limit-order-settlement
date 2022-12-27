@@ -94,25 +94,31 @@ contract FeeBank is IFeeBank, Ownable {
      */
     function gatherFees(address[] memory accounts) external onlyOwner returns (uint256 totalAccountFees) {
         uint256 accountsLength = accounts.length;
-        for (uint256 i = 0; i < accountsLength; ++i) {
-            address account = accounts[i];
-            uint256 accountDeposit = _accountDeposits[account];
-            uint256 availableCredit_ = _charger.availableCredit(account);
-            _accountDeposits[account] = availableCredit_;
-            totalAccountFees += accountDeposit - availableCredit_;
+        unchecked {
+            for (uint256 i = 0; i < accountsLength; ++i) {
+                address account = accounts[i];
+                uint256 accountDeposit = _accountDeposits[account];
+                uint256 availableCredit_ = _charger.availableCredit(account);
+                _accountDeposits[account] = availableCredit_;
+                totalAccountFees += accountDeposit - availableCredit_;  // overflow is impossible due to checks in FeeBankCharger
+            }
         }
         _token.safeTransfer(msg.sender, totalAccountFees);
     }
 
     function _depositFor(address account, uint256 amount) internal returns (uint256 totalAvailableCredit) {
         _token.safeTransferFrom(msg.sender, address(this), amount);
-        _accountDeposits[account] += amount;
+        unchecked {
+            _accountDeposits[account] += amount;  // overflow is impossible due to limited _token supply
+        }
         totalAvailableCredit = _charger.increaseAvailableCredit(account, amount);
     }
 
     function _withdrawTo(address account, uint256 amount) internal returns (uint256 totalAvailableCredit) {
         totalAvailableCredit = _charger.decreaseAvailableCredit(msg.sender, amount);
-        _accountDeposits[msg.sender] -= amount;
+        unchecked {
+            _accountDeposits[msg.sender] -= amount;  // overflow is impossible due to checks in FeeBankCharger
+        }
         _token.safeTransfer(account, amount);
     }
 }
