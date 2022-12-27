@@ -62,7 +62,7 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
     /// transaction is reverted. If pod uses more gas then its execution is reverted silently, not affection the
     /// main transaction
     uint256 private constant _POD_CALL_GAS_LIMIT = 500_000;
-    uint256 private constant _ONE = 1e9;
+    uint256 private constant _ONE_E9 = 1e9;
 
     IERC20 public immutable oneInch;
 
@@ -127,7 +127,7 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
      * @param maxLossRatio_ The maximum loss allowed (9 decimals).
      */
     function setMaxLossRatio(uint256 maxLossRatio_) external onlyOwner {
-        if (maxLossRatio_ > _ONE) revert MaxLossOverflow();
+        if (maxLossRatio_ > _ONE_E9) revert MaxLossOverflow();
         maxLossRatio = maxLossRatio_;
         emit MaxLossRatioSet(maxLossRatio_);
     }
@@ -138,7 +138,7 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
      * @param minLockPeriodRatio_ The maximum loss allowed (9 decimals).
      */
     function setMinLockPeriodRatio(uint256 minLockPeriodRatio_) external onlyOwner {
-        if (minLockPeriodRatio_ > _ONE) revert MaxLossOverflow();
+        if (minLockPeriodRatio_ > _ONE_E9) revert MaxLossOverflow();
         minLockPeriodRatio = minLockPeriodRatio_;
         emit MinLockPeriodRatioSet(minLockPeriodRatio_);
     }
@@ -292,7 +292,7 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
     function earlyWithdrawTo(address to, uint256 minReturn, uint256 maxLoss) public {
         Depositor memory depositor = depositors[msg.sender]; // SLOAD
         if (emergencyExit || block.timestamp >= depositor.unlockTime) revert StakeUnlocked();
-        uint256 allowedExitTime = depositor.lockTime + (depositor.unlockTime - depositor.lockTime) * minLockPeriodRatio / _ONE;
+        uint256 allowedExitTime = depositor.lockTime + (depositor.unlockTime - depositor.lockTime) * minLockPeriodRatio / _ONE_E9;
         if (block.timestamp < allowedExitTime) revert MinLockPeriodRatioNotReached();
 
         uint256 amount = depositor.amount;
@@ -301,7 +301,7 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
             (uint256 loss, uint256 ret) = _earlyWithdrawLoss(amount, balance);
             if (ret < minReturn) revert MinReturnIsNotMet();
             if (loss > maxLoss) revert MaxLossIsNotMet();
-            if (loss > amount * maxLossRatio / _ONE) revert LossIsTooBig();
+            if (loss > amount * maxLossRatio / _ONE_E9) revert LossIsTooBig();
 
             _withdraw(depositor, balance);
             oneInch.safeTransfer(to, ret);
@@ -319,7 +319,7 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
     function earlyWithdrawLoss(address account) external view returns (uint256 loss, uint256 ret, bool canWithdraw) {
         uint256 amount = depositors[account].amount;
         (loss, ret) = _earlyWithdrawLoss(amount, balanceOf(account));
-        canWithdraw = loss <= amount * maxLossRatio / _ONE;
+        canWithdraw = loss <= amount * maxLossRatio / _ONE_E9;
     }
 
     function _earlyWithdrawLoss(uint256 depAmount, uint256 stBalance) private view returns (uint256 loss, uint256 ret) {

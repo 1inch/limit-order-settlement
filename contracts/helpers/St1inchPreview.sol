@@ -10,7 +10,7 @@ import "../St1inch.sol";
 contract St1inchPreview is VotingPowerCalculator, Ownable {
     St1inch public immutable st1INCH;
     uint256 private constant _VOTING_POWER_DIVIDER = 20;
-    uint256 private constant _ONE = 1e9;
+    uint256 private constant _ONE_E9 = 1e9;
     uint256 public durationUntilMaxAllowedLoss;  // log(0.95 * maxAllowedLoss + 0.05) / log(baseExp)
 
     constructor(St1inch st1INCH_) VotingPowerCalculator(st1INCH_.expBase(), st1INCH_.origin()) {
@@ -35,7 +35,7 @@ contract St1inchPreview is VotingPowerCalculator, Ownable {
 
     function previewUnlockTime(address account) public view returns (uint256 allowedExitTime) {
         (uint40 lockTime, uint40 unlockTime,) = st1INCH.depositors(account);
-        allowedExitTime = lockTime + (unlockTime - lockTime) * st1INCH.minLockPeriodRatio() / _ONE;
+        allowedExitTime = lockTime + (unlockTime - lockTime) * st1INCH.minLockPeriodRatio() / _ONE_E9;
         allowedExitTime = Math.max(allowedExitTime, unlockTime - st1INCH.MAX_LOCK_PERIOD() + durationUntilMaxAllowedLoss);
     }
 
