@@ -12,6 +12,8 @@ import "./interfaces/IFeeBank.sol";
 contract FeeBank is IFeeBank, Ownable {
     using SafeERC20 for IERC20;
 
+    error ZeroAddress();
+
     IERC20 private immutable _token;
     IFeeBankCharger private immutable _charger;
 
@@ -107,6 +109,7 @@ contract FeeBank is IFeeBank, Ownable {
     }
 
     function _depositFor(address account, uint256 amount) internal returns (uint256 totalAvailableCredit) {
+        if (account == address(0)) revert ZeroAddress();
         _token.safeTransferFrom(msg.sender, address(this), amount);
         unchecked {
             _accountDeposits[account] += amount;  // overflow is impossible due to limited _token supply
