@@ -10,7 +10,7 @@ library AddressLib {
     }
 
     function getFlag(Address a, uint256 flag) internal pure returns (bool) {
-        return Address.unwrap(a) & flag != 0;
+        return Address.unwrap(a) & flag == flag;
     }
 
     function getUint32(Address a, uint256 offset) internal pure returns (uint32) {
