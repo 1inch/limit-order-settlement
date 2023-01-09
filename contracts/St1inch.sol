@@ -324,7 +324,7 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
     }
 
     function _earlyWithdrawLoss(uint256 depAmount, uint256 stBalance) private view returns (uint256 loss, uint256 ret) {
-        ret = (depAmount - _votingPowerAt(stBalance, block.timestamp)) * 100 / 95;
+        ret = (depAmount - _votingPowerAt(stBalance, block.timestamp)) * _VOTING_POWER_DIVIDER / (_VOTING_POWER_DIVIDER - 1);
         loss = depAmount - ret;
     }
 
