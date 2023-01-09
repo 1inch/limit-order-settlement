@@ -8,13 +8,6 @@ library TakingFee {
     uint256 internal constant _TAKING_FEE_BASE = 1e9;
     uint256 private constant _TAKING_FEE_RATIO_OFFSET = 160;
 
-    function init(address receiver_, uint256 ratio_) internal pure returns (Data) {
-        if (ratio_ == 0) {
-            return Data.wrap(uint160(receiver_));
-        }
-        return Data.wrap(uint160(receiver_) | (ratio_ << _TAKING_FEE_RATIO_OFFSET));
-    }
-
     function enabled(Data self) internal pure returns (bool) {
         return ratio(self) != 0;
     }
