@@ -353,7 +353,7 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
         totalDeposits -= depositor.amount;
         depositor.amount = 0;
         // keep unlockTime in storage for next tx optimization
-        depositor.unlockTime = uint40(Math.min(depositor.unlockTime, block.timestamp));
+        depositor.unlockTime = uint40(block.timestamp);
         depositors[msg.sender] = depositor; // SSTORE
         _burn(msg.sender, balance);
     }

@@ -279,7 +279,7 @@ describe('St1inch', function () {
 
         await st1inch.withdraw();
 
-        expect((await st1inch.depositors(addr.address)).unlockTime).to.equal(unlockTime);
+        expect((await st1inch.depositors(addr.address)).unlockTime).to.equal(await time.latest());
     });
 
     it('should withdraw users deposit and send tokens to other address', async function () {
