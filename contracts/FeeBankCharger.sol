@@ -28,13 +28,15 @@ contract FeeBankCharger is IFeeBankCharger {
 
     function increaseAvailableCredit(address account, uint256 amount) external onlyFeeBank returns (uint256 allowance) {
         allowance = _creditAllowance[account];
-        allowance += amount;
+        unchecked {
+            allowance += amount;  // overflow is impossible due to limited _token supply
+        }
         _creditAllowance[account] = allowance;
     }
 
     function decreaseAvailableCredit(address account, uint256 amount) external onlyFeeBank returns (uint256 allowance) {
         allowance = _creditAllowance[account];
-        allowance -= amount;
+        allowance -= amount;  // checked math is needed to prevent underflow
         _creditAllowance[account] = allowance;
     }
 
