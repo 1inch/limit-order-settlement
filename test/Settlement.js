@@ -57,6 +57,7 @@ describe('Settlement', function () {
                 makingAmount: ether('100'),
                 takingAmount: ether('0.1'),
                 salt: buildSalt({ orderStartTime: await time.latest() }),
+                allowedSender: matcher.address,
                 from: addr.address,
             },
             {
@@ -72,6 +73,7 @@ describe('Settlement', function () {
                 takerAsset: dai.address,
                 makingAmount: ether('0.11'),
                 takingAmount: ether('100'),
+                allowedSender: matcher.address,
                 from: addr1.address,
             },
             {
@@ -135,6 +137,7 @@ describe('Settlement', function () {
                 makingAmount: ether('100'),
                 takingAmount: ether('0.1'),
                 salt: buildSalt({ orderStartTime: await time.latest() }),
+                allowedSender: matcher.address,
                 from: addr.address,
             },
             {
@@ -152,6 +155,7 @@ describe('Settlement', function () {
                 takerAsset: dai.address,
                 makingAmount: ether('0.11'),
                 takingAmount: ether('100'),
+                allowedSender: matcher.address,
                 from: addr1.address,
             },
             {
@@ -227,6 +231,7 @@ describe('Settlement', function () {
                 makingAmount: ether('10'),
                 takingAmount: ether('0.01'),
                 salt: buildSalt({ orderStartTime: await time.latest() }),
+                allowedSender: matcher.address,
                 from: addr1.address,
             },
             {
@@ -243,6 +248,7 @@ describe('Settlement', function () {
                 makingAmount: ether('15'),
                 takingAmount: ether('0.015'),
                 salt: buildSalt({ orderStartTime: await time.latest() }),
+                allowedSender: matcher.address,
                 from: addr1.address,
             },
             {
@@ -321,6 +327,7 @@ describe('Settlement', function () {
                 makingAmount: ether('10'),
                 takingAmount: ether('0.01'),
                 salt: buildSalt({ orderStartTime: await time.latest() }),
+                allowedSender: matcher.address,
                 from: addr1.address,
             },
             {
@@ -337,6 +344,7 @@ describe('Settlement', function () {
                 makingAmount: ether('15'),
                 takingAmount: ether('0.015'),
                 salt: buildSalt({ orderStartTime: await time.latest() }),
+                allowedSender: matcher.address,
                 from: addr1.address,
             },
             {
@@ -352,6 +360,7 @@ describe('Settlement', function () {
                 takerAsset: dai.address,
                 makingAmount: ether('0.0275'),
                 takingAmount: ether('25'),
+                allowedSender: matcher.address,
                 from: addr.address,
             },
             {
@@ -444,6 +453,7 @@ describe('Settlement', function () {
                     takerAsset,
                     makingAmount,
                     takingAmount,
+                    allowedSender: matcher.address,
                     from: addr1.address,
                 },
                 {
@@ -543,6 +553,7 @@ describe('Settlement', function () {
                 dai,
                 weth,
                 swap,
+                matcher,
             }) {
                 const makerAsset = dai.address;
                 const takerAsset = weth.address;
@@ -555,6 +566,7 @@ describe('Settlement', function () {
                         takerAsset,
                         makingAmount,
                         takingAmount,
+                        allowedSender: matcher.address,
                         from: addr1.address,
                     },
                     {
@@ -585,6 +597,7 @@ describe('Settlement', function () {
                     dai,
                     weth,
                     swap,
+                    matcher,
                 });
 
                 const actualTakingAmount = ether('0.109');
@@ -640,6 +653,7 @@ describe('Settlement', function () {
                     dai,
                     weth,
                     swap,
+                    matcher,
                 });
 
                 const actualTakingAmount = ether('0.106');
@@ -773,6 +787,7 @@ describe('Settlement', function () {
                 takerAsset: weth.address,
                 makingAmount: ether('100'),
                 takingAmount: ether('0.1'),
+                allowedSender: matcher.address,
                 from: addr.address,
             },
             {
@@ -787,6 +802,7 @@ describe('Settlement', function () {
                 takerAsset: dai.address,
                 makingAmount: ether('0.1'),
                 takingAmount: ether('100'),
+                allowedSender: matcher.address,
                 from: addr1.address,
             },
             {
@@ -840,6 +856,7 @@ describe('Settlement', function () {
                 takerAsset: weth.address,
                 makingAmount: ether('100'),
                 takingAmount: ether('0.1'),
+                allowedSender: matcher.address,
                 from: addr.address,
             },
             {
@@ -854,6 +871,7 @@ describe('Settlement', function () {
                 takerAsset: dai.address,
                 makingAmount: ether('0.1'),
                 takingAmount: ether('100'),
+                allowedSender: matcher.address,
                 from: addr1.address,
             },
             {
@@ -908,6 +926,7 @@ describe('Settlement', function () {
                     takerAsset: weth.address,
                     makingAmount: ether('100'),
                     takingAmount: ether('0.1'),
+                    allowedSender: matcher.address,
                     from: addr.address,
                 },
                 {
@@ -923,6 +942,7 @@ describe('Settlement', function () {
                     takerAsset: dai.address,
                     makingAmount: ether('0.1'),
                     takingAmount: ether('100'),
+                    allowedSender: matcher.address,
                     from: addr1.address,
                 },
                 {
@@ -988,6 +1008,7 @@ describe('Settlement', function () {
                     takerAsset: weth.address,
                     makingAmount: ether('100'),
                     takingAmount: ether('0.1'),
+                    allowedSender: matcher.address,
                     from: addr.address,
                 },
                 {
@@ -1003,6 +1024,7 @@ describe('Settlement', function () {
                     takerAsset: dai.address,
                     makingAmount: ether('0.1'),
                     takingAmount: ether('100'),
+                    allowedSender: matcher.address,
                     from: addr1.address,
                 },
                 {
