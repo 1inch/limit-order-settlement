@@ -12,7 +12,7 @@ library OrderSuffix {
     using OrderSaltParser for uint256;
 
     // `Order.interactions` suffix structure:
-    // M*(1 + 3 bytes)  - auction points coefficients with seconds delays
+    // M*(2 + 3 bytes)  - auction points coefficients with seconds delays
     // N*(4 + 20 bytes) - resolver with corresponding time limit
     // 4 bytes          - public time limit
     // 32 bytes         - taking fee (optional if flags has _HAS_TAKING_FEE_FLAG)
