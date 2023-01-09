@@ -30,7 +30,7 @@ describe('Delegation st1inch', function () {
         await oneInch.transfer(addr1.address, ether('100'));
 
         const St1inch = await ethers.getContractFactory('St1inch');
-        const st1inch = await St1inch.deploy(oneInch.address, expBase);
+        const st1inch = await St1inch.deploy(oneInch.address, expBase, addr.address);
         await st1inch.deployed();
         await oneInch.approve(st1inch.address, ether('100'));
         await oneInch.connect(addr1).approve(st1inch.address, ether('100'));

@@ -87,7 +87,7 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
      * @param oneInch_ The token to be staked
      * @param expBase_ The rate for the voting power decrease over time
      */
-    constructor(IERC20 oneInch_, uint256 expBase_)
+    constructor(IERC20 oneInch_, uint256 expBase_, address feeReceiver_)
         ERC20Pods(_PODS_LIMIT, _POD_CALL_GAS_LIMIT)
         ERC20("Staking 1INCH v2", "st1INCH")
         VotingPowerCalculator(expBase_, block.timestamp)
@@ -95,6 +95,7 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
         // voting power after MAX_LOCK_PERIOD should be equal to staked amount divided by _VOTING_POWER_DIVIDER
         if (_votingPowerAt(1e18, block.timestamp + MAX_LOCK_PERIOD) * _VOTING_POWER_DIVIDER < 1e18) revert ExpBaseTooBig();
         if (_votingPowerAt(1e18, block.timestamp + MAX_LOCK_PERIOD + 1) * _VOTING_POWER_DIVIDER > 1e18) revert ExpBaseTooSmall();
+        setFeeReceiver(feeReceiver_);
         oneInch = oneInch_;
     }
 
@@ -102,7 +103,7 @@ contract St1inch is ERC20Pods, Ownable, VotingPowerCalculator, IVotable {
      * @notice Sets the new contract that would recieve early withdrawal fees
      * @param feeReceiver_ The receiver contract address
      */
-    function setFeeReceiver(address feeReceiver_) external onlyOwner {
+    function setFeeReceiver(address feeReceiver_) public onlyOwner {
         if (feeReceiver_ == address(0)) revert ZeroAddress();
         feeReceiver = feeReceiver_;
         emit FeeReceiverSet(feeReceiver_);
