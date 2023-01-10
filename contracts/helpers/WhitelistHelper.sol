@@ -4,6 +4,7 @@ pragma solidity 0.8.17;
 
 import "../WhitelistRegistry.sol";
 
+/// @notice Helper contract to read whitelist parameters
 contract WhitelistHelper {
     WhitelistRegistry public immutable whitelistRegistry;
     IERC20 public immutable delegation;
@@ -12,6 +13,7 @@ contract WhitelistHelper {
         whitelistRegistry = whitelistRegistry_;
         delegation = IERC20(whitelistRegistry.token());
     }
+
 
     function getMinAmountForWhitelisted() external view returns (uint256) {
         address [] memory whitelist = whitelistRegistry.getWhitelist();
