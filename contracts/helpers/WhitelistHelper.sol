@@ -14,7 +14,6 @@ contract WhitelistHelper {
         delegation = IERC20(whitelistRegistry.token());
     }
 
-
     function getMinAmountForWhitelisted() external view returns (uint256) {
         address [] memory whitelist = whitelistRegistry.getWhitelist();
         uint256 whitelistLength = whitelist.length;
