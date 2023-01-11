@@ -29,7 +29,7 @@ describe('WhitelistChecker', function () {
 
         const whitelistRegistrySimple = await deploySimpleRegistry();
         const Settlement = await ethers.getContractFactory('Settlement');
-        const matcher = await Settlement.deploy(swap.address, constants.ZERO_ADDRESS);
+        const matcher = await Settlement.deploy(swap.address, weth.address);
         await matcher.deployed();
 
         const ResolverMock = await ethers.getContractFactory('ResolverMock');
