@@ -68,9 +68,9 @@ contract WhitelistRegistry is Ownable {
         if (whitelistLimitNew >= whitelistLength) revert NoShrinkInWhitelist();
         address[] memory addresses = _whitelist.items.get();
         unchecked {
-            for (uint256 i = 0; i < whitelistLength; ++i) {
-                if (token.balanceOf(addresses[i]) <= partition) {
-                    _removeFromWhitelist(addresses[i]);
+            for (int256 i = int256(whitelistLength) - 1; i >= 0; --i) {
+                if (token.balanceOf(addresses[uint256(i)]) <= partition) {
+                    _removeFromWhitelist(addresses[uint256(i)]);
                 }
             }
         }
