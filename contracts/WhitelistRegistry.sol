@@ -18,6 +18,7 @@ contract WhitelistRegistry is Ownable {
     error AlreadyRegistered();
     error NotWhitelisted();
     error WrongPartition();
+    error SamePromotee();
 
     event Registered(address addr);
     event Unregistered(address addr);
@@ -105,6 +106,7 @@ contract WhitelistRegistry is Ownable {
     }
 
     function promote(uint256 chainId, address promotee) external {
+        if (promotions[msg.sender][chainId] == promotee) revert SamePromotee();
         promotions[msg.sender][chainId] = promotee;
         emit Promotion(msg.sender, chainId, promotee);
     }

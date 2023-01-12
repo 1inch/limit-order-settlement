@@ -4,6 +4,7 @@ pragma solidity 0.8.17;
 
 import "../WhitelistRegistry.sol";
 
+/// @notice Helper contract to read whitelist parameters
 contract WhitelistHelper {
     WhitelistRegistry public immutable whitelistRegistry;
     IERC20 public immutable delegation;

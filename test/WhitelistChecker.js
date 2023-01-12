@@ -1,4 +1,4 @@
-const { expect, ether, constants, trim0x } = require('@1inch/solidity-utils');
+const { expect, ether, trim0x } = require('@1inch/solidity-utils');
 const { ethers } = require('hardhat');
 const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
 const { deploySwapTokens, getChainId, deploySimpleRegistry } = require('./helpers/fixtures');
@@ -29,7 +29,7 @@ describe('WhitelistChecker', function () {
 
         const whitelistRegistrySimple = await deploySimpleRegistry();
         const Settlement = await ethers.getContractFactory('Settlement');
-        const matcher = await Settlement.deploy(swap.address, constants.ZERO_ADDRESS);
+        const matcher = await Settlement.deploy(swap.address, weth.address);
         await matcher.deployed();
 
         const ResolverMock = await ethers.getContractFactory('ResolverMock');
