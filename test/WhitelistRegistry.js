@@ -204,8 +204,10 @@ describe('WhitelistRegistry', function () {
     }
 
     describe('shrinkWhitelist', function () {
-        it('should not shrink empty whitelist', async function () {
+        it('should shrink when whitelist length less than new limit size', async function () {
             const { whitelistRegistry } = await loadFixture(setupRegistry);
+            const whitelistLimitNew = WHITELIST_SIZE - 1;
+            await whitelistRegistry.setWhitelistLimit(whitelistLimitNew);
             // to clear whitelist
             const resolverThreshold = await whitelistRegistry.resolverThreshold();
             await whitelistRegistry.setResolverThreshold(constants.MAX_UINT256);
@@ -213,17 +215,8 @@ describe('WhitelistRegistry', function () {
             await whitelistRegistry.setResolverThreshold(resolverThreshold);
             expect(await whitelistRegistry.getWhitelist()).to.eql([]);
             // try shrink whitelist
-            await expect(
-                whitelistRegistry.shrinkWhitelist(0),
-            ).to.eventually.be.rejectedWith('EmptytWhitelist()');
-        });
-
-        it('should not shrink when whitelist length less than new limit size', async function () {
-            const { whitelistRegistry } = await loadFixture(setupRegistry);
-            await whitelistRegistry.setWhitelistLimit(WHITELIST_LIMIT - 1);
-            await expect(
-                whitelistRegistry.shrinkWhitelist(0),
-            ).to.eventually.be.rejectedWith('NoShrinkInWhitelist()');
+            await whitelistRegistry.shrinkWhitelist(0);
+            expect(await whitelistRegistry.whitelistLimit()).to.equal(whitelistLimitNew);
         });
 
         it('should not save more than new limit size', async function () {

@@ -17,14 +17,13 @@ contract WhitelistRegistry is Ownable {
     error NotEnoughBalance();
     error AlreadyRegistered();
     error NotWhitelisted();
-    error NoShrinkInWhitelist();
-    error EmptytWhitelist();
     error WrongPartition();
 
     event Registered(address addr);
     event Unregistered(address addr);
     event ResolverThresholdSet(uint256 resolverThreshold);
     event WhitelistLimitSet(uint256 whitelistLimit);
+    event WhitelistLimitDecreaseRequest(uint256 whitelistLimit);
     event Promotion(address promoter, uint256 chainId, address promotee);
 
     IVotable public immutable token;
@@ -57,25 +56,29 @@ contract WhitelistRegistry is Ownable {
     function setWhitelistLimit(uint256 whitelistLimit_) external onlyOwner {
         whitelistLimitNew = whitelistLimit_;
         if (whitelistLimitNew >= _whitelist.length()) {
-            whitelistLimit = whitelistLimitNew;
+            _setWhitelistLimit(whitelistLimitNew);
+        } else {
+            emit WhitelistLimitDecreaseRequest(whitelistLimitNew);
         }
-        emit WhitelistLimitSet(whitelistLimit_);
     }
 
     function shrinkWhitelist(uint256 partition) external {
         uint256 whitelistLength = _whitelist.length();
-        if (whitelistLength == 0) revert EmptytWhitelist();
-        if (whitelistLimitNew >= whitelistLength) revert NoShrinkInWhitelist();
-        address[] memory addresses = _whitelist.items.get();
-        unchecked {
-            for (int256 i = int256(whitelistLength) - 1; i >= 0; --i) {
-                if (token.balanceOf(addresses[uint256(i)]) <= partition) {
-                    _removeFromWhitelist(addresses[uint256(i)]);
+        if (whitelistLimitNew < whitelistLength) {
+            unchecked {
+                for (uint256 i = 0; i < whitelistLength; ) {
+                    address curWhitelisted = _whitelist.at(i);
+                    if (token.balanceOf(curWhitelisted) <= partition) {
+                        _removeFromWhitelist(curWhitelisted);
+                        whitelistLength--;
+                    } else {
+                        i++;
+                    }
                 }
             }
+            if (_whitelist.length() != whitelistLimitNew) revert WrongPartition();
         }
-        if (_whitelist.length() != whitelistLimitNew) revert WrongPartition();
-        whitelistLimit = whitelistLimitNew;
+        _setWhitelistLimit(whitelistLimitNew);
     }
 
     function register() external {
