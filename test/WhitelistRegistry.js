@@ -163,6 +163,7 @@ describe('WhitelistRegistry', function () {
             await whitelistRegistry.register();
             await whitelistRegistry.promote(1, addrs[1].address);
             await whitelistRegistry.setWhitelistLimit(0);
+            await whitelistRegistry.shrinkWhitelist(constants.MAX_UINT256);
             const promotees = await whitelistRegistry.getPromotees(1);
             expect(promotees).to.not.contain(addrs[0].address);
             expect(promotees).to.not.contain(addrs[1].address);
@@ -196,11 +197,60 @@ describe('WhitelistRegistry', function () {
     async function setupRegistry() {
         const { rewardableDelegationPod, whitelistRegistry } = await initContracts();
         for (let i = 1; i <= WHITELIST_SIZE; ++i) {
-            await rewardableDelegationPod.mint(addrs[i].address, VOTING_POWER_THRESHOLD);
+            await rewardableDelegationPod.mint(addrs[i].address, VOTING_POWER_THRESHOLD + BigInt(i - 1));
             await whitelistRegistry.connect(addrs[i]).register();
         }
         return { rewardableDelegationPod, whitelistRegistry };
     }
+
+    describe('shrinkWhitelist', function () {
+        it('should not shrink withour decrease request', async function () {
+            const { whitelistRegistry } = await loadFixture(setupRegistry);
+            await expect(
+                whitelistRegistry.shrinkWhitelist(VOTING_POWER_THRESHOLD),
+            ).to.eventually.be.rejectedWith('SameWhitelistSize()');
+        });
+
+        it('should not shrink several times with one request', async function () {
+            const { whitelistRegistry } = await loadFixture(setupRegistry);
+            await whitelistRegistry.setWhitelistLimit(WHITELIST_SIZE - 1);
+            await whitelistRegistry.shrinkWhitelist(VOTING_POWER_THRESHOLD);
+            await expect(
+                whitelistRegistry.shrinkWhitelist(VOTING_POWER_THRESHOLD),
+            ).to.eventually.be.rejectedWith('SameWhitelistSize()');
+        });
+
+        it('should shrink when whitelist length less than new limit size', async function () {
+            const { whitelistRegistry } = await loadFixture(setupRegistry);
+            const whitelistLimitNew = WHITELIST_SIZE - 1;
+            await whitelistRegistry.setWhitelistLimit(whitelistLimitNew);
+            // to clear whitelist
+            const resolverThreshold = await whitelistRegistry.resolverThreshold();
+            await whitelistRegistry.setResolverThreshold(constants.MAX_UINT256);
+            await whitelistRegistry.clean();
+            await whitelistRegistry.setResolverThreshold(resolverThreshold);
+            expect(await whitelistRegistry.getWhitelist()).to.eql([]);
+            // try shrink whitelist
+            await whitelistRegistry.shrinkWhitelist(0);
+            expect(await whitelistRegistry.whitelistLimit()).to.equal(whitelistLimitNew);
+        });
+
+        it('should not save more than new limit size', async function () {
+            const { whitelistRegistry } = await loadFixture(setupRegistry);
+            await whitelistRegistry.setWhitelistLimit(WHITELIST_SIZE - 1);
+            await expect(
+                whitelistRegistry.shrinkWhitelist(VOTING_POWER_THRESHOLD - 1n),
+            ).to.eventually.be.rejectedWith('WrongPartition()');
+        });
+
+        it('should not save less than new limit size', async function () {
+            const { whitelistRegistry } = await loadFixture(setupRegistry);
+            await whitelistRegistry.setWhitelistLimit(WHITELIST_SIZE - 1);
+            await expect(
+                whitelistRegistry.shrinkWhitelist(VOTING_POWER_THRESHOLD + 1n),
+            ).to.eventually.be.rejectedWith('WrongPartition()');
+        });
+    });
 
     describe('setWhitelistLimit', function () {
         async function expectAddrsInWhitelist(whitelistRegistry, indexFrom, indexTo, except = []) {
@@ -270,20 +320,11 @@ describe('WhitelistRegistry', function () {
         });
 
         describe('decrease less than whitelisted amount', function () {
-            it('should remove last added addresses when staking balances are equals', async function () {
+            it('should remove addresses with least staking amount', async function () {
                 const { whitelistRegistry } = await loadFixture(setupRegistry);
                 await whitelistRegistry.setWhitelistLimit(WHITELIST_SIZE - 1);
-                await expectAddrsInWhitelist(whitelistRegistry, 1, WHITELIST_SIZE, [WHITELIST_SIZE]);
-            });
-
-            it('should remove addresses with least staking amount', async function () {
-                const { rewardableDelegationPod, whitelistRegistry } = await loadFixture(setupRegistry);
-                // make the addrs[2] with the least balance
-                for (let i = 1; i <= WHITELIST_SIZE; i++) {
-                    await rewardableDelegationPod.mint(addrs[i].address, i === 2 ? 1 : i * 100);
-                }
-                await whitelistRegistry.setWhitelistLimit(WHITELIST_SIZE - 1);
-                await expectAddrsInWhitelist(whitelistRegistry, 1, WHITELIST_SIZE, [2]);
+                await whitelistRegistry.shrinkWhitelist(VOTING_POWER_THRESHOLD);
+                await expectAddrsInWhitelist(whitelistRegistry, 1, WHITELIST_SIZE, [1]);
             });
 
             it('should decrease max whitelist size', async function () {
@@ -291,8 +332,9 @@ describe('WhitelistRegistry', function () {
 
                 const NEW_WHITELIST_LIMIT = WHITELIST_SIZE - 1;
                 await whitelistRegistry.setWhitelistLimit(NEW_WHITELIST_LIMIT);
+                await whitelistRegistry.shrinkWhitelist(VOTING_POWER_THRESHOLD);
 
-                // add to whitelist additional addr
+                // try add to whitelist additional addr
                 await rewardableDelegationPod.mint(addrs[WHITELIST_SIZE + 1].address, VOTING_POWER_THRESHOLD);
                 await expect(
                     whitelistRegistry.connect(addrs[NEW_WHITELIST_LIMIT + 1]).register(),
@@ -302,7 +344,6 @@ describe('WhitelistRegistry', function () {
             it('should remove addresses with least staking amount when addresses have random balances', async function () {
                 const { rewardableDelegationPod, whitelistRegistry } = await loadFixture(setupRegistry);
 
-                await whitelistRegistry.setWhitelistLimit(WHITELIST_LIMIT);
                 for (let i = WHITELIST_SIZE + 1; i <= WHITELIST_LIMIT; ++i) {
                     await rewardableDelegationPod.mint(addrs[i].address, VOTING_POWER_THRESHOLD);
                     await whitelistRegistry.connect(addrs[i]).register();
@@ -318,11 +359,12 @@ describe('WhitelistRegistry', function () {
                 await rewardableDelegationPod.mint(addrs[7].address, ether('2'));
                 await rewardableDelegationPod.mint(addrs[8].address, ether('6'));
                 await rewardableDelegationPod.mint(addrs[9].address, ether('8'));
-                await rewardableDelegationPod.mint(addrs[10].address, ether('2'));
+                await rewardableDelegationPod.mint(addrs[10].address, ether('8'));
 
                 await whitelistRegistry.setWhitelistLimit(4);
+                await whitelistRegistry.shrinkWhitelist(ether('8'));
 
-                await expectAddrsInWhitelist(whitelistRegistry, 1, WHITELIST_SIZE, [1, 3, 4, 6, 7, 10]);
+                await expectAddrsInWhitelist(whitelistRegistry, 1, WHITELIST_SIZE, [1, 3, 4, 6, 7, 8]);
             });
         });
     });

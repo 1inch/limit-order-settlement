@@ -17,12 +17,15 @@ contract WhitelistRegistry is Ownable {
     error NotEnoughBalance();
     error AlreadyRegistered();
     error NotWhitelisted();
+    error WrongPartition();
+    error SameWhitelistSize();
     error SamePromotee();
 
     event Registered(address addr);
     event Unregistered(address addr);
     event ResolverThresholdSet(uint256 resolverThreshold);
     event WhitelistLimitSet(uint256 whitelistLimit);
+    event WhitelistLimitDecreaseRequest(uint256 whitelistLimit);
     event Promotion(address promoter, uint256 chainId, address promotee);
 
     IVotable public immutable token;
@@ -30,6 +33,7 @@ contract WhitelistRegistry is Ownable {
     mapping(address => mapping(uint256 => address)) public promotions;
     uint256 public resolverThreshold;
     uint256 public whitelistLimit;
+    uint256 public whitelistLimitNew;
 
     AddressSet.Data private _whitelist;
 
@@ -41,6 +45,7 @@ contract WhitelistRegistry is Ownable {
         token = token_;
         _setResolverThreshold(resolverThreshold_);
         _setWhitelistLimit(whitelistLimit_);
+        whitelistLimitNew = whitelistLimit_;
     }
 
     function rescueFunds(IERC20 token_, uint256 amount) external onlyOwner {
@@ -52,11 +57,33 @@ contract WhitelistRegistry is Ownable {
     }
 
     function setWhitelistLimit(uint256 whitelistLimit_) external onlyOwner {
-        uint256 whitelistLength = _whitelist.length();
-        if (whitelistLimit_ < whitelistLength) {
-            _shrinkPoorest(_whitelist, whitelistLength - whitelistLimit_);
+        if (whitelistLimit == whitelistLimit_) revert SameWhitelistSize();
+        whitelistLimitNew = whitelistLimit_;
+        if (whitelistLimitNew > _whitelist.length()) {
+            _setWhitelistLimit(whitelistLimitNew);
+        } else {
+            emit WhitelistLimitDecreaseRequest(whitelistLimitNew);
         }
-        _setWhitelistLimit(whitelistLimit_);
+    }
+
+    function shrinkWhitelist(uint256 partition) external {
+        if (whitelistLimit == whitelistLimitNew) revert SameWhitelistSize();
+        uint256 whitelistLength = _whitelist.length();
+        if (whitelistLimitNew < whitelistLength) {
+            unchecked {
+                for (uint256 i = 0; i < whitelistLength; ) {
+                    address curWhitelisted = _whitelist.at(i);
+                    if (token.balanceOf(curWhitelisted) <= partition) {
+                        _removeFromWhitelist(curWhitelisted);
+                        whitelistLength--;
+                    } else {
+                        i++;
+                    }
+                }
+            }
+            if (whitelistLength != whitelistLimitNew) revert WrongPartition();
+        }
+        _setWhitelistLimit(whitelistLimitNew);
     }
 
     function register() external {
@@ -113,42 +140,6 @@ contract WhitelistRegistry is Ownable {
             uint256 len = promotees.length;
             for (uint256 i = 0; i < len; ++i) {
                 promotees[i] = promotions[promotees[i]][chainId];
-            }
-        }
-    }
-
-    function _shrinkPoorest(AddressSet.Data storage set, uint256 size) private {
-        uint256 richestIndex = 0;
-        address[] memory addresses = set.items.get();
-        uint256 addressesLength = addresses.length;
-        uint256[] memory balances = new uint256[](addressesLength);
-        unchecked {
-            for (uint256 i = 0; i < addressesLength; ++i) {
-                balances[i] = token.balanceOf(addresses[i]);
-                if (balances[i] > balances[richestIndex]) {
-                    richestIndex = i;
-                }
-            }
-
-            for (uint256 i = size; i < addressesLength; ++i) {
-                if (balances[i] <= balances[richestIndex]) {
-                    // Swap i-th and richest-th elements
-                    (addresses[i], addresses[richestIndex]) = (addresses[richestIndex], addresses[i]);
-                    (balances[i], balances[richestIndex]) = (balances[richestIndex], balances[i]);
-
-                    // Find new richest in first size elements
-                    richestIndex = 0;
-                    for (uint256 j = 1; j < size; ++j) {
-                        if (balances[j] > balances[richestIndex]) {
-                            richestIndex = j;
-                        }
-                    }
-                }
-            }
-
-            // Remove poorest elements from set
-            for (uint256 i = 0; i < size; ++i) {
-                _removeFromWhitelist(addresses[i]);
             }
         }
     }
