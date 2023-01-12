@@ -18,6 +18,7 @@ contract WhitelistRegistry is Ownable {
     error AlreadyRegistered();
     error NotWhitelisted();
     error WrongPartition();
+    error NoDecreaseRequest();
     error SamePromotee();
 
     event Registered(address addr);
@@ -44,6 +45,7 @@ contract WhitelistRegistry is Ownable {
         token = token_;
         _setResolverThreshold(resolverThreshold_);
         _setWhitelistLimit(whitelistLimit_);
+        whitelistLimitNew = whitelistLimit_;
     }
 
     function rescueFunds(IERC20 token_, uint256 amount) external onlyOwner {
@@ -64,6 +66,7 @@ contract WhitelistRegistry is Ownable {
     }
 
     function shrinkWhitelist(uint256 partition) external {
+        if (whitelistLimit == whitelistLimitNew) revert NoDecreaseRequest();
         uint256 whitelistLength = _whitelist.length();
         if (whitelistLimitNew < whitelistLength) {
             unchecked {

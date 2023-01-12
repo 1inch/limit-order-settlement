@@ -204,6 +204,22 @@ describe('WhitelistRegistry', function () {
     }
 
     describe('shrinkWhitelist', function () {
+        it('should not shrink withour decrease request', async function () {
+            const { whitelistRegistry } = await loadFixture(setupRegistry);
+            await expect(
+                whitelistRegistry.shrinkWhitelist(VOTING_POWER_THRESHOLD),
+            ).to.eventually.be.rejectedWith('NoDecreaseRequest()');
+        });
+
+        it('should not shrink several times with one request', async function () {
+            const { whitelistRegistry } = await loadFixture(setupRegistry);
+            await whitelistRegistry.setWhitelistLimit(WHITELIST_SIZE - 1);
+            await whitelistRegistry.shrinkWhitelist(VOTING_POWER_THRESHOLD);
+            await expect(
+                whitelistRegistry.shrinkWhitelist(VOTING_POWER_THRESHOLD),
+            ).to.eventually.be.rejectedWith('NoDecreaseRequest()');
+        });
+
         it('should shrink when whitelist length less than new limit size', async function () {
             const { whitelistRegistry } = await loadFixture(setupRegistry);
             const whitelistLimitNew = WHITELIST_SIZE - 1;
