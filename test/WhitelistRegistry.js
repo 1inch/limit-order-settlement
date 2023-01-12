@@ -208,7 +208,7 @@ describe('WhitelistRegistry', function () {
             const { whitelistRegistry } = await loadFixture(setupRegistry);
             await expect(
                 whitelistRegistry.shrinkWhitelist(VOTING_POWER_THRESHOLD),
-            ).to.eventually.be.rejectedWith('NoDecreaseRequest()');
+            ).to.eventually.be.rejectedWith('SameWhitelistSize()');
         });
 
         it('should not shrink several times with one request', async function () {
@@ -217,7 +217,7 @@ describe('WhitelistRegistry', function () {
             await whitelistRegistry.shrinkWhitelist(VOTING_POWER_THRESHOLD);
             await expect(
                 whitelistRegistry.shrinkWhitelist(VOTING_POWER_THRESHOLD),
-            ).to.eventually.be.rejectedWith('NoDecreaseRequest()');
+            ).to.eventually.be.rejectedWith('SameWhitelistSize()');
         });
 
         it('should shrink when whitelist length less than new limit size', async function () {
@@ -344,7 +344,6 @@ describe('WhitelistRegistry', function () {
             it('should remove addresses with least staking amount when addresses have random balances', async function () {
                 const { rewardableDelegationPod, whitelistRegistry } = await loadFixture(setupRegistry);
 
-                await whitelistRegistry.setWhitelistLimit(WHITELIST_LIMIT);
                 for (let i = WHITELIST_SIZE + 1; i <= WHITELIST_LIMIT; ++i) {
                     await rewardableDelegationPod.mint(addrs[i].address, VOTING_POWER_THRESHOLD);
                     await whitelistRegistry.connect(addrs[i]).register();

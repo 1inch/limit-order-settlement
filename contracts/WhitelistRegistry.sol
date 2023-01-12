@@ -18,7 +18,7 @@ contract WhitelistRegistry is Ownable {
     error AlreadyRegistered();
     error NotWhitelisted();
     error WrongPartition();
-    error NoDecreaseRequest();
+    error SameWhitelistSize();
     error SamePromotee();
 
     event Registered(address addr);
@@ -57,8 +57,9 @@ contract WhitelistRegistry is Ownable {
     }
 
     function setWhitelistLimit(uint256 whitelistLimit_) external onlyOwner {
+        if (whitelistLimit == whitelistLimit_) revert SameWhitelistSize();
         whitelistLimitNew = whitelistLimit_;
-        if (whitelistLimitNew >= _whitelist.length()) {
+        if (whitelistLimitNew > _whitelist.length()) {
             _setWhitelistLimit(whitelistLimitNew);
         } else {
             emit WhitelistLimitDecreaseRequest(whitelistLimitNew);
@@ -66,7 +67,7 @@ contract WhitelistRegistry is Ownable {
     }
 
     function shrinkWhitelist(uint256 partition) external {
-        if (whitelistLimit == whitelistLimitNew) revert NoDecreaseRequest();
+        if (whitelistLimit == whitelistLimitNew) revert SameWhitelistSize();
         uint256 whitelistLength = _whitelist.length();
         if (whitelistLimitNew < whitelistLength) {
             unchecked {
@@ -80,7 +81,7 @@ contract WhitelistRegistry is Ownable {
                     }
                 }
             }
-            if (_whitelist.length() != whitelistLimitNew) revert WrongPartition();
+            if (whitelistLength != whitelistLimitNew) revert WrongPartition();
         }
         _setWhitelistLimit(whitelistLimitNew);
     }
