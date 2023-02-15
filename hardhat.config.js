@@ -9,15 +9,32 @@ require('dotenv').config();
 
 const { networks, etherscan } = require('./hardhat.networks');
 
+const DEFAULT_COMPILER_SETTINGS = {
+    version: '0.8.17',
+    settings: {
+        optimizer: {
+            enabled: true,
+            runs: 1000000,
+        },
+    },
+};
+
+const LOW_OPTIMIZER_COMPILER_SETTINGS = {
+    version: '0.8.17',
+    settings: {
+        optimizer: {
+            enabled: true,
+            runs: 10000,
+        },
+    },
+};
+
 module.exports = {
     etherscan,
     solidity: {
-        version: '0.8.17',
-        settings: {
-            optimizer: {
-                enabled: true,
-                runs: 1000000,
-            },
+        compilers: [DEFAULT_COMPILER_SETTINGS],
+        overrides: {
+            'contracts/PowerPod.sol': LOW_OPTIMIZER_COMPILER_SETTINGS,
         },
     },
     networks,
