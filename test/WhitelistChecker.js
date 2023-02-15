@@ -68,7 +68,7 @@ describe('WhitelistChecker', function () {
         const signature0 = await signOrder(order0, chainId, swap.address, addr);
         const signature1 = await signOrder(order1, chainId, swap.address, addr1);
 
-        const matchingParams = matcher.address + '01' + trim0x(resolver.address) + 'ffff000000000000000000000000000000000000000000000000000000000000';
+        const matchingParams = matcher.address + '01' + trim0x(resolver.address);
 
         const interaction =
             matcher.address +
@@ -81,19 +81,22 @@ describe('WhitelistChecker', function () {
                     ether('0.1'),
                     0,
                     ether('100'),
-                    matcher.address,
+                    resolver.address,
                 ])
                 .substring(10);
         await settleOrderMethod(
-            '0x' + swap.interface.encodeFunctionData('fillOrderTo', [
-                order0,
-                signature0,
-                interaction,
-                ether('100'),
-                0,
-                ether('0.1'),
-                matcher.address,
-            ]).substring(10),
+            '0x' +
+                swap.interface
+                    .encodeFunctionData('fillOrderTo', [
+                        order0,
+                        signature0,
+                        interaction,
+                        ether('100'),
+                        0,
+                        ether('0.1'),
+                        resolver.address,
+                    ])
+                    .substring(10),
         );
     }
 
@@ -109,9 +112,18 @@ describe('WhitelistChecker', function () {
             });
             await expect(
                 matcher.settleOrders(
-                    '0x' + swap.interface.encodeFunctionData('fillOrderTo', [
-                        order1, '0x', '0x', ether('10'), 0, ether('0.01'), matcher.address,
-                    ]).substring(10),
+                    '0x' +
+                        swap.interface
+                            .encodeFunctionData('fillOrderTo', [
+                                order1,
+                                '0x',
+                                '0x',
+                                ether('10'),
+                                0,
+                                ether('0.01'),
+                                matcher.address,
+                            ])
+                            .substring(10),
                 ),
             ).to.be.revertedWithCustomError(matcher, 'ResolverIsNotWhitelisted');
         });

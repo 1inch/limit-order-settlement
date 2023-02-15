@@ -86,7 +86,7 @@ describe('Settlement', function () {
         const signature = await signOrder(order, chainId, swap.address, addr);
         const signatureBackOrder = await signOrder(backOrder, chainId, swap.address, addr1);
 
-        const matchingParams = matcher.address + '01' + trim0x(resolver.address) + 'ffff000000000000000000000000000000000000000000000000000000000000';
+        const matchingParams = matcher.address + '01' + trim0x(resolver.address);
 
         const interaction =
             matcher.address +
@@ -99,7 +99,7 @@ describe('Settlement', function () {
                     ether('0.11'),
                     0,
                     ether('100'),
-                    matcher.address,
+                    resolver.address,
                 ])
                 .substring(10);
 
@@ -109,15 +109,18 @@ describe('Settlement', function () {
         const addr1dai = await dai.balanceOf(addr1.address);
 
         await matcher.settleOrders(
-            '0x' + swap.interface.encodeFunctionData('fillOrderTo', [
-                order,
-                signature,
-                interaction,
-                ether('100'),
-                0,
-                ether('0.11'),
-                matcher.address,
-            ]).substring(10),
+            '0x' +
+                swap.interface
+                    .encodeFunctionData('fillOrderTo', [
+                        order,
+                        signature,
+                        interaction,
+                        ether('100'),
+                        0,
+                        ether('0.11'),
+                        resolver.address,
+                    ])
+                    .substring(10),
         );
 
         assertRoughlyEqualValues(await weth.balanceOf(addr.address), addrweth.add(ether('0.11')), 1e-4);
@@ -172,11 +175,11 @@ describe('Settlement', function () {
 
         const wethFeeAmount = ether('0.0011'); // (takingAmount + 10% auction) * fee
         const daiFeeAmount = ether('1');
-        // send fee amounts to matcher contract
-        await weth.transfer(matcher.address, wethFeeAmount.toString());
-        await dai.connect(addr1).transfer(matcher.address, daiFeeAmount.toString());
+        // send fee amounts to resolver contract
+        await weth.transfer(resolver.address, wethFeeAmount.toString());
+        await dai.connect(addr1).transfer(resolver.address, daiFeeAmount.toString());
 
-        const matchingParams = matcher.address + '01' + trim0x(resolver.address) + 'ffff000000000000000000000000000000000000000000000000000000000000';
+        const matchingParams = matcher.address + '01' + trim0x(resolver.address);
 
         const interaction =
             matcher.address +
@@ -189,7 +192,7 @@ describe('Settlement', function () {
                     ether('0.11'),
                     0,
                     ether('100'),
-                    matcher.address,
+                    resolver.address,
                 ])
                 .substring(10);
 
@@ -201,15 +204,18 @@ describe('Settlement', function () {
         const addr2dai = await dai.balanceOf(addr2.address);
 
         await matcher.settleOrders(
-            '0x' + swap.interface.encodeFunctionData('fillOrderTo', [
-                order,
-                signature,
-                interaction,
-                ether('100'),
-                0,
-                ether('0.11'),
-                matcher.address,
-            ]).substring(10),
+            '0x' +
+                swap.interface
+                    .encodeFunctionData('fillOrderTo', [
+                        order,
+                        signature,
+                        interaction,
+                        ether('100'),
+                        0,
+                        ether('0.11'),
+                        resolver.address,
+                    ])
+                    .substring(10),
         );
 
         assertRoughlyEqualValues(await weth.balanceOf(addr.address), addrweth.add(ether('0.11')), 1e-3);
@@ -265,17 +271,21 @@ describe('Settlement', function () {
             matcher.address +
             '01' +
             trim0x(resolver.address) +
-            'ffff000000000000000000000000000000000000000000000000000000000000' +
-            trim0x(abiCoder.encode(['address[]', 'bytes[]'], [
-                [weth.address],
-                [
-                    weth.interface.encodeFunctionData('transferFrom', [
-                        addr.address,
-                        matcher.address,
-                        ether('0.0275'),
-                    ]),
-                ],
-            ]));
+            trim0x(
+                abiCoder.encode(
+                    ['address[]', 'bytes[]'],
+                    [
+                        [weth.address],
+                        [
+                            weth.interface.encodeFunctionData('transferFrom', [
+                                addr.address,
+                                resolver.address,
+                                ether('0.0275'),
+                            ]),
+                        ],
+                    ],
+                ),
+            );
 
         const interaction =
             matcher.address +
@@ -299,15 +309,18 @@ describe('Settlement', function () {
 
         await weth.approve(resolver.address, ether('0.0275'));
         await matcher.settleOrders(
-            '0x' + swap.interface.encodeFunctionData('fillOrderTo', [
-                order,
-                signature,
-                interaction,
-                ether('10'),
-                0,
-                ether('0.01'),
-                addr.address,
-            ]).substring(10),
+            '0x' +
+                swap.interface
+                    .encodeFunctionData('fillOrderTo', [
+                        order,
+                        signature,
+                        interaction,
+                        ether('10'),
+                        0,
+                        ether('0.01'),
+                        addr.address,
+                    ])
+                    .substring(10),
         );
 
         expect(await weth.balanceOf(addr.address)).to.equal(addrweth.sub(ether('0.0275')));
@@ -374,7 +387,7 @@ describe('Settlement', function () {
         const signature2 = await signOrder(order2, chainId, swap.address, addr1);
         const signatureBackOrder = await signOrder(backOrder, chainId, swap.address, addr);
 
-        const matchingParams = matcher.address + '01' + trim0x(resolver.address) + 'ffffff0000000000000000000000000000000000000000000000000000000000';
+        const matchingParams = matcher.address + '01' + trim0x(resolver.address);
 
         const internalInteraction =
             matcher.address +
@@ -387,7 +400,7 @@ describe('Settlement', function () {
                     ether('0.0275'),
                     0,
                     ether('25'),
-                    matcher.address,
+                    resolver.address,
                 ])
                 .substring(10);
 
@@ -402,7 +415,7 @@ describe('Settlement', function () {
                     ether('15'),
                     0,
                     ether('0.015'),
-                    matcher.address,
+                    resolver.address,
                 ])
                 .substring(10);
 
@@ -412,15 +425,18 @@ describe('Settlement', function () {
         const addr1dai = await dai.balanceOf(addr1.address);
 
         await matcher.settleOrders(
-            '0x' + swap.interface.encodeFunctionData('fillOrderTo', [
-                order1,
-                signature1,
-                externalInteraction,
-                ether('10'),
-                0,
-                ether('0.01'),
-                matcher.address,
-            ]).substring(10),
+            '0x' +
+                swap.interface
+                    .encodeFunctionData('fillOrderTo', [
+                        order1,
+                        signature1,
+                        externalInteraction,
+                        ether('10'),
+                        0,
+                        ether('0.01'),
+                        resolver.address,
+                    ])
+                    .substring(10),
         );
 
         expect(await weth.balanceOf(addr.address)).to.equal(addrweth.sub(ether('0.0275')));
@@ -484,17 +500,21 @@ describe('Settlement', function () {
                 matcher.address +
                 '01' +
                 trim0x(resolver.address) +
-                'ffff000000000000000000000000000000000000000000000000000000000000' +
-                trim0x(abiCoder.encode(['address[]', 'bytes[]'], [
-                    [weth.address],
-                    [
-                        weth.interface.encodeFunctionData('transferFrom', [
-                            addr.address,
-                            matcher.address,
-                            actualTakingAmount,
-                        ]),
-                    ],
-                ]));
+                trim0x(
+                    abiCoder.encode(
+                        ['address[]', 'bytes[]'],
+                        [
+                            [weth.address],
+                            [
+                                weth.interface.encodeFunctionData('transferFrom', [
+                                    addr.address,
+                                    resolver.address,
+                                    actualTakingAmount,
+                                ]),
+                            ],
+                        ],
+                    ),
+                );
 
             await weth.approve(resolver.address, actualTakingAmount);
             return {
@@ -527,15 +547,18 @@ describe('Settlement', function () {
             const addr1Dai = await dai.balanceOf(addr1.address);
 
             await matcher.settleOrders(
-                '0x' + swap.interface.encodeFunctionData('fillOrderTo', [
-                    order,
-                    signature,
-                    interaction,
-                    makingAmount,
-                    0,
-                    takingAmount,
-                    addr.address,
-                ]).substring(10),
+                '0x' +
+                    swap.interface
+                        .encodeFunctionData('fillOrderTo', [
+                            order,
+                            signature,
+                            interaction,
+                            makingAmount,
+                            0,
+                            takingAmount,
+                            addr.address,
+                        ])
+                        .substring(10),
             );
 
             expect(await weth.balanceOf(addr1.address)).to.equal(addr1weth.add(ether('0.11')));
@@ -606,17 +629,21 @@ describe('Settlement', function () {
                     matcher.address +
                     '01' +
                     trim0x(resolver.address) +
-                    'ffff000000000000000000000000000000000000000000000000000000000000' +
-                    trim0x(abiCoder.encode(['address[]', 'bytes[]'], [
-                        [weth.address],
-                        [
-                            weth.interface.encodeFunctionData('transferFrom', [
-                                addr.address,
-                                matcher.address,
-                                actualTakingAmount,
-                            ]),
-                        ],
-                    ]));
+                    trim0x(
+                        abiCoder.encode(
+                            ['address[]', 'bytes[]'],
+                            [
+                                [weth.address],
+                                [
+                                    weth.interface.encodeFunctionData('transferFrom', [
+                                        addr.address,
+                                        resolver.address,
+                                        actualTakingAmount,
+                                    ]),
+                                ],
+                            ],
+                        ),
+                    );
                 await weth.approve(resolver.address, actualTakingAmount);
 
                 await timeIncreaseTo(currentTimestamp + 239n);
@@ -627,15 +654,18 @@ describe('Settlement', function () {
                 const addr1Dai = await dai.balanceOf(addr1.address);
 
                 await matcher.settleOrders(
-                    '0x' + swap.interface.encodeFunctionData('fillOrderTo', [
-                        order,
-                        signature,
-                        interaction,
-                        makingAmount,
-                        0,
-                        takingAmount,
-                        addr.address,
-                    ]).substring(10),
+                    '0x' +
+                        swap.interface
+                            .encodeFunctionData('fillOrderTo', [
+                                order,
+                                signature,
+                                interaction,
+                                makingAmount,
+                                0,
+                                takingAmount,
+                                addr.address,
+                            ])
+                            .substring(10),
                 );
 
                 expect(await weth.balanceOf(addr1.address)).to.equal(addr1weth.add(ether('0.109')));
@@ -662,17 +692,21 @@ describe('Settlement', function () {
                     matcher.address +
                     '01' +
                     trim0x(resolver.address) +
-                    'ffff000000000000000000000000000000000000000000000000000000000000' +
-                    trim0x(abiCoder.encode(['address[]', 'bytes[]'], [
-                        [weth.address],
-                        [
-                            weth.interface.encodeFunctionData('transferFrom', [
-                                addr.address,
-                                matcher.address,
-                                actualTakingAmount,
-                            ]),
-                        ],
-                    ]));
+                    trim0x(
+                        abiCoder.encode(
+                            ['address[]', 'bytes[]'],
+                            [
+                                [weth.address],
+                                [
+                                    weth.interface.encodeFunctionData('transferFrom', [
+                                        addr.address,
+                                        resolver.address,
+                                        actualTakingAmount,
+                                    ]),
+                                ],
+                            ],
+                        ),
+                    );
                 await weth.approve(resolver.address, actualTakingAmount);
 
                 await timeIncreaseTo(currentTimestamp + 759n);
@@ -683,15 +717,18 @@ describe('Settlement', function () {
                 const addr1Dai = await dai.balanceOf(addr1.address);
 
                 await matcher.settleOrders(
-                    '0x' + swap.interface.encodeFunctionData('fillOrderTo', [
-                        order,
-                        signature,
-                        interaction,
-                        makingAmount,
-                        0,
-                        takingAmount,
-                        addr.address,
-                    ]).substring(10),
+                    '0x' +
+                        swap.interface
+                            .encodeFunctionData('fillOrderTo', [
+                                order,
+                                signature,
+                                interaction,
+                                makingAmount,
+                                0,
+                                takingAmount,
+                                addr.address,
+                            ])
+                            .substring(10),
                 );
 
                 expect(await weth.balanceOf(addr1.address)).to.equal(addr1weth.add(ether('0.106')));
@@ -721,15 +758,18 @@ describe('Settlement', function () {
             const addr1Dai = await dai.balanceOf(addr1.address);
 
             await matcher.settleOrders(
-                '0x' + swap.interface.encodeFunctionData('fillOrderTo', [
-                    order,
-                    signature,
-                    interaction,
-                    makingAmount,
-                    0,
-                    takingAmount,
-                    addr.address,
-                ]).substring(10),
+                '0x' +
+                    swap.interface
+                        .encodeFunctionData('fillOrderTo', [
+                            order,
+                            signature,
+                            interaction,
+                            makingAmount,
+                            0,
+                            takingAmount,
+                            addr.address,
+                        ])
+                        .substring(10),
             );
 
             expect(await weth.balanceOf(addr.address)).to.equal(addrweth.sub(ether('0.12')));
@@ -759,15 +799,18 @@ describe('Settlement', function () {
             const addr1Dai = await dai.balanceOf(addr1.address);
 
             await matcher.settleOrders(
-                '0x' + swap.interface.encodeFunctionData('fillOrderTo', [
-                    order,
-                    signature,
-                    interaction,
-                    makingAmount,
-                    0,
-                    takingAmount,
-                    addr.address,
-                ]).substring(10),
+                '0x' +
+                    swap.interface
+                        .encodeFunctionData('fillOrderTo', [
+                            order,
+                            signature,
+                            interaction,
+                            makingAmount,
+                            0,
+                            takingAmount,
+                            addr.address,
+                        ])
+                        .substring(10),
             );
 
             expect(await weth.balanceOf(addr.address)).to.equal(addrweth.sub(ether('0.105')));
@@ -813,7 +856,7 @@ describe('Settlement', function () {
         const signature = await signOrder(order, chainId, swap.address, addr);
         const signatureBackOrder = await signOrder(backOrder, chainId, swap.address, addr1);
 
-        const matchingParams = matcher.address + '01' + trim0x(resolver.address) + 'ffff000000000000000000000000000000000000000000000000000000000000';
+        const matchingParams = matcher.address + '01' + trim0x(resolver.address);
 
         const interaction =
             matcher.address +
@@ -826,20 +869,23 @@ describe('Settlement', function () {
                     ether('0.1'),
                     0,
                     ether('100'),
-                    matcher.address,
+                    resolver.address,
                 ])
                 .substring(10);
         const availableCreditBefore = await matcher.availableCredit(addr.address);
         await matcher.settleOrders(
-            '0x' + swap.interface.encodeFunctionData('fillOrderTo', [
-                order,
-                signature,
-                interaction,
-                ether('100'),
-                0,
-                ether('0.1'),
-                matcher.address,
-            ]).substring(10),
+            '0x' +
+                swap.interface
+                    .encodeFunctionData('fillOrderTo', [
+                        order,
+                        signature,
+                        interaction,
+                        ether('100'),
+                        0,
+                        ether('0.1'),
+                        resolver.address,
+                    ])
+                    .substring(10),
         );
         expect(await matcher.availableCredit(addr.address)).to.equal(
             availableCreditBefore.toBigInt() - basePoints * (orderFee + backOrderFee),
@@ -882,7 +928,7 @@ describe('Settlement', function () {
         const signature = await signOrder(order, chainId, swap.address, addr);
         const signatureBackOrder = await signOrder(backOrder, chainId, swap.address, addr1);
 
-        const matchingParams = matcher.address + '01' + trim0x(resolver.address) + 'ffff000000000000000000000000000000000000000000000000000000000000';
+        const matchingParams = matcher.address + '01' + trim0x(resolver.address);
 
         const interaction =
             matcher.address +
@@ -895,20 +941,23 @@ describe('Settlement', function () {
                     ether('0.1'),
                     0,
                     ether('100'),
-                    matcher.address,
+                    resolver.address,
                 ])
                 .substring(10);
         await expect(
             matcher.settleOrders(
-                '0x' + swap.interface.encodeFunctionData('fillOrderTo', [
-                    order,
-                    signature,
-                    interaction,
-                    ether('100'),
-                    0,
-                    ether('0.1'),
-                    matcher.address,
-                ]).substring(10),
+                '0x' +
+                    swap.interface
+                        .encodeFunctionData('fillOrderTo', [
+                            order,
+                            signature,
+                            interaction,
+                            ether('100'),
+                            0,
+                            ether('0.1'),
+                            resolver.address,
+                        ])
+                        .substring(10),
             ),
         ).to.be.revertedWithCustomError(matcher, 'NotEnoughCredit');
     });
@@ -928,6 +977,7 @@ describe('Settlement', function () {
                     takingAmount: ether('0.1'),
                     allowedSender: matcher.address,
                     from: addr.address,
+                    receiver: resolver.address,
                 },
                 {
                     whitelistedAddrs: [addr.address],
@@ -944,6 +994,7 @@ describe('Settlement', function () {
                     takingAmount: ether('100'),
                     allowedSender: matcher.address,
                     from: addr1.address,
+                    receiver: resolver.address,
                 },
                 {
                     whitelistedAddrs: [addr.address],
@@ -954,7 +1005,7 @@ describe('Settlement', function () {
             const signature = await signOrder(order, chainId, swap.address, addr);
             const signatureBackOrder = await signOrder(backOrder, chainId, swap.address, addr1);
 
-            const matchingParams = matcher.address + '01' + trim0x(resolver.address) + 'ffff000000000000000000000000000000000000000000000000000000000000';
+            const matchingParams = matcher.address + '01' + trim0x(resolver.address);
 
             const interaction =
                 matcher.address +
@@ -967,34 +1018,40 @@ describe('Settlement', function () {
                         ether('0.1'),
                         0,
                         ether('100'),
-                        matcher.address,
+                        resolver.address,
                     ])
                     .substring(10);
 
             await expect(
                 matcher.settleOrders(
-                    '0x' + swap.interface.encodeFunctionData('fillOrderTo', [
-                        order,
-                        signature,
-                        interaction,
-                        ether('100'),
-                        0,
-                        ether('0.1'),
-                        matcher.address,
-                    ]).substring(10),
+                    '0x' +
+                        swap.interface
+                            .encodeFunctionData('fillOrderTo', [
+                                order,
+                                signature,
+                                interaction,
+                                ether('100'),
+                                0,
+                                ether('0.1'),
+                                resolver.address,
+                            ])
+                            .substring(10),
                 ),
             ).to.be.revertedWithCustomError(matcher, 'ResolverIsNotWhitelisted');
             await timeIncreaseTo(currentTime + oneWeek + 1n);
             await matcher.settleOrders(
-                '0x' + swap.interface.encodeFunctionData('fillOrderTo', [
-                    order,
-                    signature,
-                    interaction,
-                    ether('100'),
-                    0,
-                    ether('0.1'),
-                    matcher.address,
-                ]).substring(10),
+                '0x' +
+                    swap.interface
+                        .encodeFunctionData('fillOrderTo', [
+                            order,
+                            signature,
+                            interaction,
+                            ether('100'),
+                            0,
+                            ether('0.1'),
+                            resolver.address,
+                        ])
+                        .substring(10),
             );
         });
 
@@ -1036,7 +1093,7 @@ describe('Settlement', function () {
             const signature = await signOrder(order, chainId, swap.address, addr);
             const signatureBackOrder = await signOrder(backOrder, chainId, swap.address, addr1);
 
-            const matchingParams = matcher.address + '01' + trim0x(resolver.address) + 'ffff000000000000000000000000000000000000000000000000000000000000';
+            const matchingParams = matcher.address + '01' + trim0x(resolver.address);
 
             const interaction =
                 matcher.address +
@@ -1049,34 +1106,40 @@ describe('Settlement', function () {
                         ether('0.1'),
                         0,
                         ether('100'),
-                        matcher.address,
+                        resolver.address,
                     ])
                     .substring(10);
 
             await expect(
                 matcher.settleOrders(
-                    '0x' + swap.interface.encodeFunctionData('fillOrderTo', [
-                        order,
-                        signature,
-                        interaction,
-                        ether('100'),
-                        0,
-                        ether('0.1'),
-                        matcher.address,
-                    ]).substring(10),
+                    '0x' +
+                        swap.interface
+                            .encodeFunctionData('fillOrderTo', [
+                                order,
+                                signature,
+                                interaction,
+                                ether('100'),
+                                0,
+                                ether('0.1'),
+                                resolver.address,
+                            ])
+                            .substring(10),
                 ),
             ).to.be.revertedWithCustomError(matcher, 'ResolverIsNotWhitelisted');
             await timeIncreaseTo(BigInt(await time.latest()) + 100n);
             await matcher.settleOrders(
-                '0x' + swap.interface.encodeFunctionData('fillOrderTo', [
-                    order,
-                    signature,
-                    interaction,
-                    ether('100'),
-                    0,
-                    ether('0.1'),
-                    matcher.address,
-                ]).substring(10),
+                '0x' +
+                    swap.interface
+                        .encodeFunctionData('fillOrderTo', [
+                            order,
+                            signature,
+                            interaction,
+                            ether('100'),
+                            0,
+                            ether('0.1'),
+                            resolver.address,
+                        ])
+                        .substring(10),
             );
         });
     });
