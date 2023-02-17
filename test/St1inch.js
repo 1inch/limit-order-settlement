@@ -9,7 +9,6 @@ const { shouldBehaveLikeERC20Pods } = require('@1inch/erc20-pods/test/behaviors/
 describe('St1inch', function () {
     let addr, addr1;
     const votingPowerDivider = 20n;
-    const maxPods = 5;
     let chainId;
 
     const exp = (point, t) => {
@@ -78,20 +77,20 @@ describe('St1inch', function () {
 
     async function initContractsBehavior() {
         const { oneInch } = await deployInch();
+        const POD_LIMITS = 5;
 
         const St1inch = await ethers.getContractFactory('St1inchMock');
         const st1inch = await St1inch.deploy(oneInch.address, expBase, addr.address);
         await st1inch.deployed();
 
-        const PodMock = await ethers.getContractFactory('PodMock');
-        const pods = [];
-        for (let i = 0; i < maxPods; i++) {
-            pods[i] = await PodMock.deploy(`POD_TOKEN_${i}`, `PT${i}`, st1inch.address);
-            await pods[i].deployed();
-        }
-        const amount = ether('1');
+        await oneInch.approve(st1inch.address, ether('1'));
+
+        let amount = ether('1');
         const erc20Pods = st1inch;
-        return { erc20Pods, pods, amount };
+
+        await st1inch.deposit(amount, time.duration.days('30'));
+        amount = await st1inch.balanceOf(addr.address);
+        return { erc20Pods, POD_LIMITS, amount };
     }
 
     before(async function () {
