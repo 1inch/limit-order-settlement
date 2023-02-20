@@ -68,7 +68,7 @@ library OrderSuffix {
             valid := gt(timestamp(), publicLimit)
 
             // Check resolvers and corresponding time limits
-            if not(valid) {
+            if iszero(valid) {
                 for { let end := sub(ptr, mul(_RESOLVER_BYTES_SIZE, resolversCount)) } gt(ptr, end) { } {
                     ptr := sub(ptr, _RESOLVER_ADDRESS_BYTES_SIZE)
                     let account := shr(_RESOLVER_ADDRESS_BIT_SHIFT, calldataload(ptr))
