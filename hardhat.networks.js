@@ -15,7 +15,7 @@ function register(name, chainId, url, privateKey, etherscanNetworkName, ethersca
     }
 }
 
-function registerCustom (name, chainId, url, privateKey, etherscanKey, apiURL, browserURL) {
+function registerCustom(name, chainId, url, privateKey, etherscanKey, apiURL, browserURL) {
     if (url && privateKey && etherscanKey) {
         register(name, chainId, url, privateKey, name, etherscanKey);
         etherscan.customChains.push({ network: name, chainId, urls: { apiURL, browserURL } });
