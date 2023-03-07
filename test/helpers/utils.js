@@ -80,8 +80,8 @@ const idempotentDeploy = async (
         from: deployer,
         contract: contractName,
         // gasPrice: 5_000_000_000n,
-        maxPriorityFeePerGas: BigInt(500_000_000n).toString(),
-        maxFeePerGas: BigInt(30_000_000_000n).toString(),
+        // maxPriorityFeePerGas: BigInt(500_000_000n).toString(),
+        // maxFeePerGas: BigInt(30_000_000_000n).toString(),
     });
 
     console.log(`${deploymentName} deployed to: ${contract.address}`);
