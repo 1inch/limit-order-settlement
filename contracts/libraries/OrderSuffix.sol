@@ -36,10 +36,11 @@ library OrderSuffix {
     uint256 private constant _AUCTION_POINT_BUMP_BIT_SHIFT = 232; // 256 - _AUCTION_POINT_BUMP_BYTES_SIZE * 8;
 
     uint256 private constant _RESOLVER_TIME_LIMIT_BYTES_SIZE = 4;
-    uint256 private constant _RESOLVER_ADDRESS_BYTES_SIZE = 20;
-    uint256 private constant _RESOLVER_BYTES_SIZE = 24; // _RESOLVER_TIME_LIMIT_BYTES_SIZE + _RESOLVER_ADDRESS_BYTES_SIZE;
+    uint256 private constant _RESOLVER_ADDRESS_BYTES_SIZE = 10;
+    uint256 private constant _RESOLVER_ADDRESS_MASK = 0xffffffffffffffffffff;
+    uint256 private constant _RESOLVER_BYTES_SIZE = 14; // _RESOLVER_TIME_LIMIT_BYTES_SIZE + _RESOLVER_ADDRESS_BYTES_SIZE;
     uint256 private constant _RESOLVER_TIME_LIMIT_BIT_SHIFT = 224; // 256 - _RESOLVER_TIME_LIMIT_BYTES_SIZE * 8;
-    uint256 private constant _RESOLVER_ADDRESS_BIT_SHIFT = 96; // 256 - _RESOLVER_ADDRESS_BYTES_SIZE * 8;
+    uint256 private constant _RESOLVER_ADDRESS_BIT_SHIFT = 176; // 256 - _RESOLVER_ADDRESS_BYTES_SIZE * 8;
 
     function takingFee(OrderLib.Order calldata order) internal pure returns (TakingFee.Data ret) {
         bytes calldata interactions = order.interactions;
@@ -74,7 +75,7 @@ library OrderSuffix {
                     let account := shr(_RESOLVER_ADDRESS_BIT_SHIFT, calldataload(ptr))
                     ptr := sub(ptr, _RESOLVER_TIME_LIMIT_BYTES_SIZE)
                     let limit := shr(_RESOLVER_TIME_LIMIT_BIT_SHIFT, calldataload(ptr))
-                    if eq(account, resolver) {
+                    if eq(account, and(resolver, _RESOLVER_ADDRESS_MASK)) {
                         valid := iszero(lt(timestamp(), limit))
                         break
                     }

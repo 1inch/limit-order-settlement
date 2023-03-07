@@ -89,7 +89,7 @@ const buildOrder = async (
 
     const auctionParams = auctionBumps.map((b, i) => auctionDelays[i].toString(16).padStart(4, '0') + b.toString(16).padStart(6, '0')).join('');
 
-    const whitelist = whitelistedAddrs.map((a, i) => whitelistedCutOffs[i].toString(16).padStart(8, '0') + trim0x(a)).join('') +
+    const whitelist = whitelistedAddrs.map((a, i) => whitelistedCutOffs[i].toString(16).padStart(8, '0') + trim0x(a).substring(20)).join('') +
         publicCutOff.toString(16).padStart(8, '0');
 
     const takingFeeData = takerFeeReceiver === constants.ZERO_ADDRESS || takerFeeRatio === 0
