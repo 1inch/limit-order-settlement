@@ -16,6 +16,7 @@ const DEFAULT_COMPILER_SETTINGS = {
             enabled: true,
             runs: 1000000,
         },
+        viaIR: true,
     },
 };
 
