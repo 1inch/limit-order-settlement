@@ -68,11 +68,14 @@ contract Settlement is ISettlement, FeeBankCharger {
         uint256 /* remainingMakingAmount */,
         bytes calldata extraData
     ) external onlyThis(taker) onlyLimitOrderProtocol returns(uint256 offeredTakingAmount) {
-        offeredTakingAmount = takingAmount * (_BASE_POINTS + order.rateBump()) / _BASE_POINTS;
-        Address takingFee = order.takingFee();
+        bytes calldata fusionDetails = extraData[:extraData.detailsLength()];
+
+        offeredTakingAmount = takingAmount * (_BASE_POINTS + fusionDetails.rateBump()) / _BASE_POINTS;
+        Address takingFee = fusionDetails.takingFee();
         uint256 takingFeeAmount = offeredTakingAmount * takingFee.getUint32(_TAKING_FEE_RATIO_OFFSET) / _TAKING_FEE_BASE;
 
         (DynamicSuffix.Data calldata suffix, bytes calldata tokensAndAmounts, bytes calldata interaction) = extraData.decodeSuffix();
+        interaction = interaction[fusionDetails.length:];  // remove fusion details
         IERC20 token = IERC20(order.takerAsset.get());
 
         // TODO: avoid double copying
@@ -89,7 +92,7 @@ contract Settlement is ISettlement, FeeBankCharger {
             _chargeFee(suffix.resolver.get(), suffix.resolverFee);
             IResolver(address(bytes20(interaction))).resolveOrders(suffix.resolver.get(), allTokensAndAmounts, interaction[20:]);
         } else {
-            _settleOrder(interaction, suffix.resolver.get(), suffix.resolverFee, tokensAndAmounts);
+            _settleOrder(interaction, suffix.resolver.get(), suffix.resolverFee, allTokensAndAmounts);
         }
 
         if (takingFeeAmount > 0) {
@@ -98,11 +101,11 @@ contract Settlement is ISettlement, FeeBankCharger {
         token.forceApprove(address(_limitOrderProtocol), offeredTakingAmount);
     }
 
-    bytes4 private constant _FILL_ORDER_TO_SELECTOR = 0xe5d7bde6; // IOrderMixin.fillOrderTo.selector
+    bytes4 private constant _FILL_ORDER_TO_SELECTOR = 0xe5d7bde6; // IOrderMixin.fillOrderTo.selector TODO fix
     bytes4 private constant _WRONG_INTERACTION_TARGET_SELECTOR = 0x5b34bf89; // WrongInteractionTarget.selector
 
     error IncorrectSelector();
-    error OrderConstraintsAreWrong();
+    error FusionDetailsMismatch();
 
     struct FillOrderToArgs {
         IOrderMixin.Order order;
@@ -121,92 +124,80 @@ contract Settlement is ISettlement, FeeBankCharger {
         TakerTraits takerTraits;
         address target;
         bytes interaction;
-        bytes permit;
+        // bytes permit;
     }
 
-    function _settleOrder(bytes calldata data, address resolver, uint256 resolverFee, bytes memory tokensAndAmounts) private {
+    function _getInteraction(bytes calldata data) internal pure returns(bytes calldata interaction) {
         bytes4 selector = bytes4(data);
-        if (selector == IOrderMixin.fillOrderTo.selector) {
+        if (selector == _FILL_ORDER_TO_SELECTOR) {
             FillOrderToArgs calldata args;
             assembly ("memory-safe") {
                 args := add(data.offset, 4)
             }
-            _settleOrderEOA(args, resolver, resolverFee, tokensAndAmounts);
+            interaction = args.interaction;
         }
         else if (selector == IOrderMixin.fillContractOrder.selector) {
             FillContractOrderArgs calldata args;
             assembly ("memory-safe") {
                 args := add(data.offset, 4)
             }
-            _settleOrderContract(args, resolver, resolverFee, tokensAndAmounts);
+            interaction = args.interaction;
         }
         else {
             revert IncorrectSelector();
         }
     }
 
-    // input: [op1][op2][op3]
-    // iter0:      [op2][op3][accumulator-suffix]
-    // iter1:           [op3][accumulator-suffix]
-    // iter2:                [accumulator-suffix]
+    function _settleOrder(bytes calldata args, address resolver, uint256 resolverFee, bytes memory tokensAndAmounts) private {
+        bytes calldata interaction = _getInteraction(args);
+        bytes calldata fusionDetails = interaction[:interaction.detailsLength()];
 
-    function _settleOrderEOA(FillOrderToArgs calldata args, address resolver, uint256 resolverFee, bytes memory tokensAndAmounts) private {
+        {
+            bytes calldata targetAndInteraction = interaction[fusionDetails.length:];
+            if (targetAndInteraction.length < 20 || address(bytes20(targetAndInteraction)) != address(this)) revert WrongInteractionTarget();
+        }
 
-        if (uint256(keccak256(args.interaction)) & type(uint160).max != args.order.salt & type(uint160).max) revert OrderConstraintsAreWrong();
+        if (uint256(keccak256(fusionDetails)) & type(uint160).max != uint256(bytes32(args)) & type(uint160).max) revert FusionDetailsMismatch();
 
-        // if (!order.checkResolver(resolver)) revert ResolverIsNotWhitelisted();
-        // Address takingFeeData = order.takingFee();
-        // resolverFee += order.salt.getFee() * _ORDER_FEE_BASE_POINTS;
+        if (!fusionDetails.checkResolver(resolver)) revert ResolverIsNotWhitelisted();
 
-        // uint256 rateBump = order.rateBump();
-        // uint256 suffixLength = DynamicSuffix._STATIC_DATA_SIZE + tokensAndAmounts.length + 0x20;
-        // IOrderMixin limitOrderProtocol = _limitOrderProtocol;
+        // todo: unchecked
+        resolverFee += fusionDetails.resolverFee() * _ORDER_FEE_BASE_POINTS;
 
-        // assembly {
-        //     function memcpy(dst, src, len) {
-        //         pop(staticcall(gas(), 0x4, src, len, dst, len))
-        //     }
+        // todo: unchecked
+        uint256 suffixLength = DynamicSuffix._STATIC_DATA_SIZE + tokensAndAmounts.length + 0x20;
+        IOrderMixin limitOrderProtocol = _limitOrderProtocol;
 
-        //     let interactionLengthOffset := calldataload(add(data.offset, 0x40))
-        //     let interactionOffset := add(interactionLengthOffset, 0x20)
-        //     let interactionLength := calldataload(add(data.offset, interactionLengthOffset))
+        assembly {
+            function memcpy(dst, src, len) {
+                pop(staticcall(gas(), 0x4, src, len, dst, len))
+            }
 
-        //     { // stack too deep
-        //         let target := shr(96, calldataload(add(data.offset, interactionOffset)))
-        //         if or(lt(interactionLength, 20), iszero(eq(target, address()))) {
-        //             mstore(0, _WRONG_INTERACTION_TARGET_SELECTOR)
-        //             revert(0, 4)
-        //         }
-        //     }
+            let interactionOffset := sub(interaction.offset, args.offset)
+            let interactionLengthOffset := sub(interactionOffset, 0x20)
 
-        //     // Copy calldata and patch interaction.length
-        //     let ptr := mload(0x40)
-        //     mstore(ptr, _FILL_ORDER_TO_SELECTOR)
-        //     calldatacopy(add(ptr, 4), data.offset, data.length)
-        //     mstore(add(add(ptr, interactionLengthOffset), 4), add(interactionLength, suffixLength))
+            // Copy calldata and patch interaction.length
+            let ptr := mload(0x40)
+            mstore(ptr, _FILL_ORDER_TO_SELECTOR)
+            ptr := add(ptr, 4)
+            calldatacopy(ptr, args.offset, args.length)
+            mstore(add(ptr, interactionLengthOffset), add(interaction.length, suffixLength))
 
-        //     {  // stack too deep
-        //         // Append suffix fields
-        //         let offset := add(add(ptr, interactionOffset), interactionLength)
-        //         mstore(add(offset, 0x04), resolverFee)
-        //         mstore(add(offset, 0x24), resolver)
-        //         mstore(add(offset, 0x44), calldataload(add(order, 0x40)))  // takerAsset
-        //         mstore(add(offset, 0x64), rateBump)
-        //         mstore(add(offset, 0x84), takingFeeData)
-        //         let tokensAndAmountsLength := mload(tokensAndAmounts)
-        //         memcpy(add(offset, 0xa4), add(tokensAndAmounts, 0x20), tokensAndAmountsLength)
-        //         mstore(add(offset, add(0xa4, tokensAndAmountsLength)), tokensAndAmountsLength)
-        //     }
+            {  // stack too deep
+                // Append suffix fields
+                let offset := add(add(ptr, interactionOffset), interaction.length)
+                mstore(add(offset, 0x00), resolver)
+                mstore(add(offset, 0x20), resolverFee)
+                let tokensAndAmountsLength := mload(tokensAndAmounts)
+                memcpy(add(offset, 0x40), add(tokensAndAmounts, 0x20), tokensAndAmountsLength)
+                mstore(add(offset, add(0x40, tokensAndAmountsLength)), tokensAndAmountsLength)
+            }
 
-        //     // Call fillOrderTo
-        //     if iszero(call(gas(), limitOrderProtocol, 0, ptr, add(add(4, suffixLength), data.length), ptr, 0)) {
-        //         returndatacopy(ptr, 0, returndatasize())
-        //         revert(ptr, returndatasize())
-        //     }
-        // }
-    }
-
-    function _settleOrderContract(FillContractOrderArgs calldata args, address resolver, uint256 resolverFee, bytes memory tokensAndAmounts) private {
-        if (uint256(keccak256(args.interaction)) & type(uint160).max != args.order.salt & type(uint160).max) revert OrderConstraintsAreWrong();
+            // Call fillOrderTo
+            if iszero(call(gas(), limitOrderProtocol, 0, sub(ptr, 4), add(args.length, suffixLength), 0, 0)) {
+                returndatacopy(ptr, 0, returndatasize())
+                revert(ptr, returndatasize())
+            }
+        }
     }
 }
