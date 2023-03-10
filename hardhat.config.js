@@ -25,8 +25,9 @@ const LOW_OPTIMIZER_COMPILER_SETTINGS = {
     settings: {
         optimizer: {
             enabled: true,
-            runs: 10000,
+            runs: 500,
         },
+        viaIR: true,
     },
 };
 
@@ -36,6 +37,7 @@ module.exports = {
         compilers: [DEFAULT_COMPILER_SETTINGS],
         overrides: {
             'contracts/PowerPod.sol': LOW_OPTIMIZER_COMPILER_SETTINGS,
+            '@1inch/limit-order-protocol-contract/contracts/LimitOrderProtocol.sol': LOW_OPTIMIZER_COMPILER_SETTINGS,
         },
     },
     networks,
