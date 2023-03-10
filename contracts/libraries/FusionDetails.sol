@@ -2,11 +2,9 @@
 
 pragma solidity 0.8.19;
 
-import "@1inch/limit-order-protocol-contract/contracts/OrderLib.sol";
-
 // Placed in the end of the order interactions data
 // Last byte contains flags and lengths, can have up to 15 resolvers and 7 points
-library OrderPrefix {
+library FusionDetails {
     // Order `interaction` prefix structure:
     // 1 bytes          - flags
     // 4 bytes          - order time start
@@ -92,11 +90,10 @@ library OrderPrefix {
     }
 
     function rateBump(bytes calldata interaction) internal view returns (uint256 bump) {
-        uint256 startBump;//  = uint256(bytes32((interaction[_INITIAL_RATE_BUMP_BYTES_OFFSET:]))) >> _INITIAL_RATE_BUMP_BIT_SHIFT;
-        uint256 cumulativeTime; // = salt.getStartTime();
-        uint256 lastTime; // = cumulativeTime + salt.getDuration();
-
-        assembly {
+        uint256 startBump;
+        uint256 cumulativeTime;
+        uint256 lastTime;
+        assembly ("memory-safe") {
             startBump := shr(_INITIAL_RATE_BUMP_BIT_SHIFT, calldataload(add(interaction.offset, _INITIAL_RATE_BUMP_BYTES_OFFSET)))
             cumulativeTime := shr(_ORDER_TIME_START_BIT_SHIFT, calldataload(add(interaction.offset, _ORDER_TIME_START_BYTES_OFFSET)))
             lastTime := add(cumulativeTime, shr(_ORDER_DURATION_BIT_SHIFT, calldataload(add(interaction.offset, _ORDER_DURATION_BYTES_OFFSET))))
@@ -108,7 +105,7 @@ library OrderPrefix {
             return 0;
         }
 
-        assembly {
+        assembly ("memory-safe") {
             function linearInterpolation(t1, t2, v1, v2, t) -> v {
                 v := div(
                     add(mul(sub(t, t1), v2), mul(sub(t2, t), v1)),
@@ -165,7 +162,7 @@ library OrderPrefix {
     }
 
     function resolverFee() internal pure returns (uint256 fee) {
-        assembly {
+        assembly ("memory-safe") {
             fee := shr(_RESOLVER_FEE_BIT_SHIFT, calldataload(_RESOLVER_FEE_BYTES_OFFSET))
         }
     }

@@ -8,16 +8,14 @@ import "@1inch/solidity-utils/contracts/libraries/SafeERC20.sol";
 import "./interfaces/ISettlement.sol";
 import "./interfaces/IResolver.sol";
 import "./libraries/DynamicSuffix.sol";
-import "./libraries/OrderSalt.sol";
-import "./libraries/OrderPrefix.sol";
+import "./libraries/FusionDetails.sol";
 import "./FeeBankCharger.sol";
 
 contract Settlement is ISettlement, FeeBankCharger {
     using SafeERC20 for IERC20;
-    using OrderSalt for uint256;
     using DynamicSuffix for bytes;
     using AddressLib for Address;
-    using OrderPrefix for IOrderMixin.Order;
+    using FusionDetails for bytes;
 
     error AccessDenied();
     error IncorrectCalldataParams();
