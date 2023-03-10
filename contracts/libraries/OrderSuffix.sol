@@ -1,22 +1,25 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity 0.8.17;
+pragma solidity 0.8.19;
 
 import "@1inch/limit-order-protocol-contract/contracts/OrderLib.sol";
-import "./OrderSaltParser.sol";
-import "./TakingFee.sol";
+import "./OrderSalt.sol";
 
 // Placed in the end of the order interactions data
 // Last byte contains flags and lengths, can have up to 15 resolvers and 7 points
-library OrderSuffix {
-    using OrderSaltParser for uint256;
+library OrderPrefix {
+    using OrderSalt for uint256;
 
-    // `Order.interactions` suffix structure:
-    // M*(2 + 3 bytes)  - auction points coefficients with seconds delays
-    // N*(4 + 20 bytes) - resolver with corresponding time limit
-    // 4 bytes          - public time limit
-    // 32 bytes         - taking fee (optional if flags has _HAS_TAKING_FEE_FLAG)
+    // Order `interaction` prefix structure:
     // 1 bytes          - flags
+    // 4 bytes          - order time start
+    // 3 bytes          - order duration
+    // 3 bytes          - initial rate bump
+    // 4 bytes          - resolver fee
+    // 4 bytes          - public time limit
+    // N*(4 + 10 bytes) - resolver with corresponding time delay from order time start
+    // M*(2 + 3 bytes)  - auction points coefficients with seconds delays from order time start
+    // 24 bytes         - taking fee (optional if flags has _HAS_TAKING_FEE_FLAG)
 
     uint256 private constant _HAS_TAKING_FEE_FLAG = 0x80;
     uint256 private constant _RESOLVERS_LENGTH_MASK = 0x78;
@@ -24,10 +27,30 @@ library OrderSuffix {
     uint256 private constant _POINTS_LENGTH_MASK = 0x07;
     uint256 private constant _POINTS_LENGTH_BIT_SHIFT = 0;
 
-    uint256 private constant _TAKING_FEE_BYTES_SIZE = 32;
+    uint256 private constant _TAKING_FEE_BYTES_SIZE = 24;
+    uint256 private constant _TAKING_FEE_BIT_SHIFT = 64; // 256 - _TAKING_FEE_BYTES_SIZE * 8
 
+    uint256 private constant _ORDER_TIME_START_BYTES_OFFSET = _TAKING_FEE_BYTES_OFFSET + _TAKING_FEE_BYTES_SIZE;
+    uint256 private constant _ORDER_TIME_START_BYTES_SIZE = 4;
+    uint256 private constant _ORDER_TIME_START_BIT_SHIFT = 224; // 256 - _ORDER_TIME_START_BYTES_SIZE * 8
+
+    uint256 private constant _ORDER_DURATION_BYTES_OFFSET = _ORDER_TIME_START_BYTES_OFFSET + _ORDER_TIME_START_BYTES_SIZE;
+    uint256 private constant _ORDER_DURATION_BYTES_SIZE = 3;
+    uint256 private constant _ORDER_DURATION_BIT_SHIFT = 232; // 256 - _ORDER_DURATION_BYTES_SIZE * 8
+
+    uint256 private constant _INITIAL_RATE_BUMP_BYTES_OFFSET = _ORDER_DURATION_BYTES_OFFSET + _ORDER_DURATION_BYTES_SIZE;
+    uint256 private constant _INITIAL_RATE_BUMP_BYTES_SIZE = 3;
+    uint256 private constant _INITIAL_RATE_BUMP_BIT_SHIFT = 232; // 256 - _INITIAL_RATE_BUMP_BYTES_SIZE * 8
+
+    uint256 private constant _RESOLVER_FEE_BYTES_OFFSET = _INITIAL_RATE_BUMP_BYTES_OFFSET + _INITIAL_RATE_BUMP_BYTES_SIZE;
+    uint256 private constant _RESOLVER_FEE_BYTES_SIZE = 4;
+    uint256 private constant _RESOLVER_FEE_BIT_SHIFT = 224; // 256 - _RESOLVER_FEE_BYTES_SIZE * 8
+
+    uint256 private constant _PUBLIC_TIME_LIMIT_BYTES_OFFSET = _RESOLVER_FEE_BYTES_OFFSET + _RESOLVER_FEE_BYTES_SIZE;
     uint256 private constant _PUBLIC_TIME_LIMIT_BYTES_SIZE = 4;
     uint256 private constant _PUBLIC_TIME_LIMIT_BIT_SHIFT = 224; // 256 - _PUBLIC_TIME_LIMIT_BYTES_SIZE * 8
+
+    uint256 private constant _RESOLVERS_LIST_BYTES_OFFSET = _PUBLIC_TIME_LIMIT_BYTES_OFFSET + _PUBLIC_TIME_LIMIT_BYTES_SIZE;
 
     uint256 private constant _AUCTION_POINT_DELAY_BYTES_SIZE = 2;
     uint256 private constant _AUCTION_POINT_BUMP_BYTES_SIZE = 3;
@@ -42,39 +65,33 @@ library OrderSuffix {
     uint256 private constant _RESOLVER_TIME_LIMIT_BIT_SHIFT = 224; // 256 - _RESOLVER_TIME_LIMIT_BYTES_SIZE * 8;
     uint256 private constant _RESOLVER_ADDRESS_BIT_SHIFT = 176; // 256 - _RESOLVER_ADDRESS_BYTES_SIZE * 8;
 
-    function takingFee(OrderLib.Order calldata order) internal pure returns (TakingFee.Data ret) {
-        bytes calldata interactions = order.interactions;
-        assembly {
-            let ptr := sub(add(interactions.offset, interactions.length), 1)
-            if and(_HAS_TAKING_FEE_FLAG, byte(0, calldataload(ptr))) {
-                ret := calldataload(sub(ptr, _TAKING_FEE_BYTES_SIZE))
+    function takingFee(bytes calldata interaction) internal pure returns (Address ret) {
+        assembly ("memory-safe") {
+            if and(_HAS_TAKING_FEE_FLAG, byte(0, calldataload(interaction.offset))) {
+                let ptr := sub(add(interaction.offset, interaction.length), _TAKING_FEE_BYTES_SIZE)
+                ret := shr(_TAKING_FEE_BIT_SHIFT, calldataload(ptr))
             }
         }
     }
 
-    function checkResolver(OrderLib.Order calldata order, address resolver) internal view returns (bool valid) {
-        bytes calldata interactions = order.interactions;
-        assembly {
-            let ptr := sub(add(interactions.offset, interactions.length), 1)
-            let flags := byte(0, calldataload(ptr))
-            ptr := sub(ptr, _PUBLIC_TIME_LIMIT_BYTES_SIZE)
-            if and(flags, _HAS_TAKING_FEE_FLAG) {
-                ptr := sub(ptr, _TAKING_FEE_BYTES_SIZE)
-            }
-
+    // TODO: fix
+    function checkResolver(bytes calldata interaction, address resolver) internal view returns (bool valid) {
+        assembly ("memory-safe") {
+            let flags := byte(0, calldataload(interaction.offset))
             let resolversCount := shr(_RESOLVERS_LENGTH_BIT_SHIFT, and(flags, _RESOLVERS_LENGTH_MASK))
 
             // Check public time limit
-            let publicLimit := shr(_PUBLIC_TIME_LIMIT_BIT_SHIFT, calldataload(ptr))
+            let publicLimit := shr(_PUBLIC_TIME_LIMIT_BIT_SHIFT, calldataload(add(interaction.offset, _PUBLIC_TIME_LIMIT_BYTES_OFFSET)))
             valid := gt(timestamp(), publicLimit)
 
             // Check resolvers and corresponding time limits
             if iszero(valid) {
-                for { let end := sub(ptr, mul(_RESOLVER_BYTES_SIZE, resolversCount)) } gt(ptr, end) { } {
-                    ptr := sub(ptr, _RESOLVER_ADDRESS_BYTES_SIZE)
-                    let account := shr(_RESOLVER_ADDRESS_BIT_SHIFT, calldataload(ptr))
-                    ptr := sub(ptr, _RESOLVER_TIME_LIMIT_BYTES_SIZE)
+                let ptr := add(interaction.offset, _RESOLVERS_LIST_BYTES_OFFSET)
+                for { let end := add(ptr, mul(_RESOLVER_BYTES_SIZE, resolversCount)) } lt(ptr, end) { } {
                     let limit := shr(_RESOLVER_TIME_LIMIT_BIT_SHIFT, calldataload(ptr))
+                    ptr := add(ptr, _RESOLVER_TIME_LIMIT_BYTES_SIZE)
+                    let account := shr(_RESOLVER_ADDRESS_BIT_SHIFT, calldataload(ptr))
+                    ptr := add(ptr, _RESOLVER_ADDRESS_BYTES_SIZE)
                     if eq(account, and(resolver, _RESOLVER_ADDRESS_MASK)) {
                         valid := iszero(lt(timestamp(), limit))
                         break
@@ -84,17 +101,17 @@ library OrderSuffix {
         }
     }
 
-    function rateBump(OrderLib.Order calldata order) internal view returns (uint256 bump) {
-        uint256 startBump = order.salt.getInitialRateBump();
-        uint256 cumulativeTime = order.salt.getStartTime();
-        uint256 lastTime = cumulativeTime + order.salt.getDuration();
+    // TODO: fix
+    function rateBump(bytes calldata interaction, OrderSalt.Data salt) internal view returns (uint256 bump) {
+        uint256 startBump = salt.getInitialRateBump();
+        uint256 cumulativeTime = salt.getStartTime();
+        uint256 lastTime = cumulativeTime + salt.getDuration();
         if (block.timestamp <= cumulativeTime) {
             return startBump;
         } else if (block.timestamp >= lastTime) {
             return 0;
         }
 
-        bytes calldata interactions = order.interactions;
         assembly {
             function linearInterpolation(t1, t2, v1, v2, t) -> v {
                 v := div(
@@ -103,7 +120,7 @@ library OrderSuffix {
                 )
             }
 
-            let ptr := sub(add(interactions.offset, interactions.length), 1)
+            let ptr := sub(add(interaction.offset, interaction.length), 1)
 
             // move ptr to the last point
             let pointsCount

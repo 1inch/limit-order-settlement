@@ -38,45 +38,32 @@
     "@1inch/solidity-utils" "2.2.5"
     "@openzeppelin/contracts" "4.8.0"
 
-"@1inch/limit-order-protocol-contract@3.0.0":
-  version "3.0.0"
-  resolved "https://registry.yarnpkg.com/@1inch/limit-order-protocol-contract/-/limit-order-protocol-contract-3.0.0.tgz#cca48bc9a2253c4fd964e1032aa1791e354989ab"
-  integrity sha512-6O1T1erbfJfs+yNiLtrD/2rSe38Mptf+h9CwM07Hm2ZM/kba0mGjSLUAanQsZkkGs0MZGrKrop9WyLF+IRMz/A==
+"@1inch/limit-order-protocol-contract@4.0.0-prerelease-1":
+  version "4.0.0-prerelease-1"
+  resolved "https://registry.yarnpkg.com/@1inch/limit-order-protocol-contract/-/limit-order-protocol-contract-4.0.0-prerelease-1.tgz#206ec92ae5d73c3b871bc78bd8b47df7aef9f7c8"
+  integrity sha512-PiRMqn8Zm2H4ciai37eruztiDmefrgM7xHVQCzQBexd6Lh3UwvPrvTyPZSF9bgJoqqB4voZrqydLJ5bpAI2s0A==
   dependencies:
-    "@1inch/solidity-utils" "2.2.2"
-    "@chainlink/contracts" "0.5.1"
-    "@openzeppelin/contracts" "4.7.3"
+    "@1inch/solidity-utils" "2.2.21"
+    "@chainlink/contracts" "0.6.1"
+    "@openzeppelin/contracts" "4.8.2"
 
-"@1inch/solidity-utils@2.2.2":
-  version "2.2.2"
-  resolved "https://registry.yarnpkg.com/@1inch/solidity-utils/-/solidity-utils-2.2.2.tgz#3c7165b0131426a11abd35a556fa244a5ac0c59b"
-  integrity sha512-nO65pP6fgbc0RUbKaI7PrqZdM20KjK6FONrh3iOf5o5y+iH/kf7njcUwXSU9hEB/UmnTUD0lr2LeGOwiCVDCkg==
+"@1inch/solidity-utils@2.2.21":
+  version "2.2.21"
+  resolved "https://registry.yarnpkg.com/@1inch/solidity-utils/-/solidity-utils-2.2.21.tgz#921917234893b0fe6b7190395a4bb9495652a54c"
+  integrity sha512-RDjpfBX6gQcil/FgYV13XH5v2LRD9PatKJmp/cjgv0TJkbaVSX4I40TxsZEZWFR+ssphYCepAGQKD0k+VQIuWg==
   dependencies:
     "@metamask/eth-sig-util" "4.0.1"
     "@nomicfoundation/hardhat-network-helpers" "1.0.6"
     "@nomiclabs/hardhat-ethers" "2.1.1"
     "@openzeppelin/contracts" "4.7.3"
+    "@uniswap/permit2-sdk" "^1.2.0"
     ethereumjs-util "7.1.5"
     ethers "5.7.1"
-    hardhat "2.11.2"
 
 "@1inch/solidity-utils@2.2.5":
   version "2.2.5"
   resolved "https://registry.yarnpkg.com/@1inch/solidity-utils/-/solidity-utils-2.2.5.tgz#1d372065cdd8bae096aa831867f22f4b2baeef30"
   integrity sha512-zdrFYmQYQS0eTkoxgylRq9/2sFMSCMIT73pNLfcYIf4zmkB2cvNzQCiU3W9GvnQTktTMJrmIdbxsCyo/ZZkgbg==
-  dependencies:
-    "@metamask/eth-sig-util" "4.0.1"
-    "@nomicfoundation/hardhat-network-helpers" "1.0.6"
-    "@nomiclabs/hardhat-ethers" "2.1.1"
-    "@openzeppelin/contracts" "4.7.3"
-    ethereumjs-util "7.1.5"
-    ethers "5.7.1"
-    hardhat "2.11.2"
-
-"@1inch/solidity-utils@2.2.6":
-  version "2.2.6"
-  resolved "https://registry.yarnpkg.com/@1inch/solidity-utils/-/solidity-utils-2.2.6.tgz#79a1c2e94e5c3b29f5dfbbc8b3158deb4f292f50"
-  integrity sha512-XYwpPMZA5uIU5fyvkE0Zt/D4Kb/oPZCyGk3MhB8L0F3gAWbc4BD9RpUo9vEQ02K83uR5wMvB2W/Ac0Pe3YkbcQ==
   dependencies:
     "@metamask/eth-sig-util" "4.0.1"
     "@nomicfoundation/hardhat-network-helpers" "1.0.6"
@@ -107,13 +94,14 @@
     chalk "^2.0.0"
     js-tokens "^4.0.0"
 
-"@chainlink/contracts@0.5.1":
-  version "0.5.1"
-  resolved "https://registry.yarnpkg.com/@chainlink/contracts/-/contracts-0.5.1.tgz#68e7447ba8c1eccfbb760bacc93aced2eef60945"
-  integrity sha512-3PDBJ38Sd6Ml9h7FNK/tZQti+kTCdXUq1qzE6E59CnlzycsV9ElPvf2hTvs9Mi9C6pEx2Mmw9yhZMfBktYUInQ==
+"@chainlink/contracts@0.6.1":
+  version "0.6.1"
+  resolved "https://registry.yarnpkg.com/@chainlink/contracts/-/contracts-0.6.1.tgz#8842b57e755793cbdbcbc45277fb5d179c993e19"
+  integrity sha512-EuwijGexttw0UjfrW+HygwhQIrGAbqpf1ue28R55HhWMHBzphEH0PhWm8DQmFfj5OZNy8Io66N4L0nStkZ3QKQ==
   dependencies:
     "@eth-optimism/contracts" "^0.5.21"
-    "@openzeppelin/contracts" "^4.3.3"
+    "@openzeppelin/contracts" "~4.3.3"
+    "@openzeppelin/contracts-upgradeable" "^4.7.3"
     "@openzeppelin/contracts-v0.7" "npm:@openzeppelin/contracts@v3.4.2"
 
 "@eslint/eslintrc@^1.3.3":
@@ -905,6 +893,11 @@
     table "^6.8.0"
     undici "^5.4.0"
 
+"@openzeppelin/contracts-upgradeable@^4.7.3":
+  version "4.8.2"
+  resolved "https://registry.yarnpkg.com/@openzeppelin/contracts-upgradeable/-/contracts-upgradeable-4.8.2.tgz#edef522bdbc46d478481391553bababdd2199e27"
+  integrity sha512-zIggnBwemUmmt9IS73qxi+tumALxCY4QEs3zLCII78k0Gfse2hAOdAkuAeLUzvWUpneMUfFE5sGHzEUSTvn4Ag==
+
 "@openzeppelin/contracts-v0.7@npm:@openzeppelin/contracts@v3.4.2":
   version "3.4.2"
   resolved "https://registry.yarnpkg.com/@openzeppelin/contracts/-/contracts-3.4.2.tgz#d81f786fda2871d1eb8a8c5a73e455753ba53527"
@@ -915,10 +908,20 @@
   resolved "https://registry.yarnpkg.com/@openzeppelin/contracts/-/contracts-4.7.3.tgz#939534757a81f8d69cc854c7692805684ff3111e"
   integrity sha512-dGRS0agJzu8ybo44pCIf3xBaPQN/65AIXNgK8+4gzKd5kbvlqyxryUYVLJv7fK98Seyd2hDZzVEHSWAh0Bt1Yw==
 
-"@openzeppelin/contracts@4.8.0", "@openzeppelin/contracts@^4.3.3":
+"@openzeppelin/contracts@4.8.0":
   version "4.8.0"
   resolved "https://registry.yarnpkg.com/@openzeppelin/contracts/-/contracts-4.8.0.tgz#6854c37df205dd2c056bdfa1b853f5d732109109"
   integrity sha512-AGuwhRRL+NaKx73WKRNzeCxOCOCxpaqF+kp8TJ89QzAipSwZy/NoflkWaL9bywXFRhIzXt8j38sfF7KBKCPWLw==
+
+"@openzeppelin/contracts@4.8.2":
+  version "4.8.2"
+  resolved "https://registry.yarnpkg.com/@openzeppelin/contracts/-/contracts-4.8.2.tgz#d815ade0027b50beb9bcca67143c6bcc3e3923d6"
+  integrity sha512-kEUOgPQszC0fSYWpbh2kT94ltOJwj1qfT2DWo+zVttmGmf97JZ99LspePNaeeaLhCImaHVeBbjaQFZQn7+Zc5g==
+
+"@openzeppelin/contracts@~4.3.3":
+  version "4.3.3"
+  resolved "https://registry.yarnpkg.com/@openzeppelin/contracts/-/contracts-4.3.3.tgz#ff6ee919fc2a1abaf72b22814bfb72ed129ec137"
+  integrity sha512-tDBopO1c98Yk7Cv/PZlHqrvtVjlgK5R4J6jxLwoO7qxK4xqOiZG+zSkIvGFpPZ0ikc3QOED3plgdqjgNTnBc7g==
 
 "@scure/base@~1.1.0":
   version "1.1.1"
@@ -1118,6 +1121,14 @@
   integrity sha512-Da66lEIFeIz9ltsdMZcpQvmrmmoqrfju8pm1BH8WbYjZSwUgCwXLb9C+9XYogwBITnbsSaMdVPb2ekf7TV+03w==
   dependencies:
     "@types/node" "*"
+
+"@uniswap/permit2-sdk@^1.2.0":
+  version "1.2.0"
+  resolved "https://registry.yarnpkg.com/@uniswap/permit2-sdk/-/permit2-sdk-1.2.0.tgz#ed86440a87a6c318169c8e6f161fc263ad040891"
+  integrity sha512-Ietv3FxN7+RCXcPSED/i/8b0a2GUZrMdyX05k3FsSztvYKyPFAMS/hBXojF0NZqYB1bHecqYc7Ej+7tV/rdYXg==
+  dependencies:
+    ethers "^5.3.1"
+    tiny-invariant "^1.3.1"
 
 abbrev@1:
   version "1.1.1"
@@ -2646,7 +2657,7 @@ ethers@^4.0.40:
     uuid "2.0.1"
     xmlhttprequest "1.8.0"
 
-ethers@^5.5.3:
+ethers@^5.3.1, ethers@^5.5.3:
   version "5.7.2"
   resolved "https://registry.yarnpkg.com/ethers/-/ethers-5.7.2.tgz#3a7deeabbb8c030d4126b24f84e525466145872e"
   integrity sha512-wswUsmWo1aOK8rR7DIKiWSw9DbLWe6x98Jrn8wcTflTVvaXhAMaB5zGAXy0GYQEQp9iO1iSHWVyARQm11zUtyg==
@@ -5156,10 +5167,10 @@ solc@0.7.3:
     semver "^5.5.0"
     tmp "0.0.33"
 
-solc@0.8.17:
-  version "0.8.17"
-  resolved "https://registry.yarnpkg.com/solc/-/solc-0.8.17.tgz#c748fec6a64bf029ec406aa9b37e75938d1115ae"
-  integrity sha512-Dtidk2XtTTmkB3IKdyeg6wLYopJnBVxdoykN8oP8VY3PQjN16BScYoUJTXFm2OP7P0hXNAqWiJNmmfuELtLf8g==
+solc@0.8.19:
+  version "0.8.19"
+  resolved "https://registry.yarnpkg.com/solc/-/solc-0.8.19.tgz#cac6541106ae3cff101c740042c7742aa56a2ed3"
+  integrity sha512-yqurS3wzC4LdEvmMobODXqprV4MYJcVtinuxgrp61ac8K2zz40vXA0eSAskSHPgv8dQo7Nux39i3QBsHx4pqyA==
   dependencies:
     command-exists "^1.2.8"
     commander "^8.1.0"
@@ -5501,6 +5512,11 @@ through@^2.3.6:
   version "2.3.8"
   resolved "https://registry.yarnpkg.com/through/-/through-2.3.8.tgz#0dd4c9ffaabc357960b1b724115d7e0e86a2e1f5"
   integrity sha512-w89qg7PI8wAdvX60bMDP+bFoD5Dvhm9oLheFp5O4a2QF0cSBGsBX4qZmadPMvVqlLJBBci+WqGGOAPvcDeNSVg==
+
+tiny-invariant@^1.3.1:
+  version "1.3.1"
+  resolved "https://registry.yarnpkg.com/tiny-invariant/-/tiny-invariant-1.3.1.tgz#8560808c916ef02ecfd55e66090df23a4b7aa642"
+  integrity sha512-AD5ih2NlSssTCwsMznbvwMZpJ1cbhkGd2uueNxzv2jDlEeZdU04JQfRnggJQ8DrcVBGjAsCKwFBbDlVNtEMlzw==
 
 tmp@0.0.33, tmp@^0.0.33:
   version "0.0.33"

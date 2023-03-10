@@ -10,7 +10,7 @@ require('dotenv').config();
 const { networks, etherscan } = require('./hardhat.networks');
 
 const DEFAULT_COMPILER_SETTINGS = {
-    version: '0.8.17',
+    version: '0.8.19',
     settings: {
         optimizer: {
             enabled: true,
@@ -20,7 +20,7 @@ const DEFAULT_COMPILER_SETTINGS = {
 };
 
 const LOW_OPTIMIZER_COMPILER_SETTINGS = {
-    version: '0.8.17',
+    version: '0.8.19',
     settings: {
         optimizer: {
             enabled: true,

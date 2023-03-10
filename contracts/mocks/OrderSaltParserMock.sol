@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity 0.8.17;
+pragma solidity 0.8.19;
 
-import "../libraries/OrderSaltParser.sol";
+import "../libraries/OrderSalt.sol";
 
 contract OrderSaltParserMock {
-    using OrderSaltParser for uint256;
+    using OrderSalt for uint256;
 
     function getStartTime(uint256 orderSalt_) external pure returns (uint256) {
         return orderSalt_.getStartTime();

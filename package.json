@@ -27,8 +27,8 @@
   "dependencies": {
     "@1inch/delegating": "0.0.21",
     "@1inch/erc20-pods": "0.0.17",
-    "@1inch/limit-order-protocol-contract": "3.0.0",
-    "@1inch/solidity-utils": "2.2.6",
+    "@1inch/limit-order-protocol-contract": "4.0.0-prerelease-1",
+    "@1inch/solidity-utils": "2.2.21",
     "@openzeppelin/contracts": "4.8.0"
   },
   "devDependencies": {
@@ -50,7 +50,7 @@
     "hardhat-gas-reporter": "1.0.9",
     "prettier": "2.7.1",
     "prettier-plugin-solidity": "1.0.0-rc.1",
-    "solc": "0.8.17",
+    "solc": "0.8.19",
     "solhint": "3.3.7",
     "solidity-coverage": "0.8.2",
     "solidity-docgen": "0.6.0-beta.30"
