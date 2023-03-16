@@ -23,9 +23,8 @@ contract ResolverMock is IResolver {
         _owner = msg.sender;
     }
 
-    function resolveOrders(address resolver, bytes calldata tokensAndAmounts, bytes calldata data) external {
+    function resolveOrders(bytes calldata tokensAndAmounts, bytes calldata data) external {
         if (msg.sender != _settlement) revert OnlySettlement();
-        if (resolver != _owner) revert OnlyOwner();
 
         if (data.length > 0) {
             (Address[] memory targets, bytes[] memory calldatas) = abi.decode(data, (Address[], bytes[]));

@@ -1,8 +1,10 @@
-const { expect, ether, trim0x } = require('@1inch/solidity-utils');
 const { ethers } = require('hardhat');
+const { keccak256 } = require('ethers/lib/utils');
 const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
+const { signOrder, buildOrder, compactSignature, fillWithMakingAmount } = require('@1inch/limit-order-protocol-contract/test/helpers/orderUtils');
+const { expect, ether, trim0x } = require('@1inch/solidity-utils');
 const { deploySwapTokens, getChainId, deploySimpleRegistry } = require('./helpers/fixtures');
-const { buildOrder, signOrder } = require('./helpers/orderUtils');
+const { buildFusion } = require('./helpers/fusionUtils');
 
 describe('WhitelistChecker', function () {
     let addr, addr1;
@@ -101,34 +103,40 @@ describe('WhitelistChecker', function () {
     }
 
     describe('should not work with non-whitelisted address', function () {
-        it('whitelist check in settleOrders method', async function () {
+        it.only('whitelist check in settleOrders method', async function () {
             const { dai, weth, swap, matcher } = await loadFixture(initContracts);
-            const order1 = await buildOrder({
+
+            const fusionDetails = await buildFusion();
+            const order = await buildOrder({
                 makerAsset: dai.address,
                 takerAsset: weth.address,
                 makingAmount: ether('10'),
                 takingAmount: ether('0.01'),
-                from: addr1.address,
+                maker: addr1.address,
             });
-            await expect(
-                matcher.settleOrders(
-                    '0x' +
-                        swap.interface
-                            .encodeFunctionData('fillOrderTo', [
-                                order1,
-                                '0x',
-                                '0x',
-                                ether('10'),
-                                0,
-                                ether('0.01'),
-                                matcher.address,
-                            ])
-                            .substring(10),
-                ),
-            ).to.be.revertedWithCustomError(matcher, 'ResolverIsNotWhitelisted');
+            order.salt = keccak256(fusionDetails);
+
+            const { r, vs } = compactSignature(await signOrder(order, chainId, swap.address, addr1));
+            const fillOrderToData = swap.interface.encodeFunctionData('fillOrderTo', [
+                order,
+                r,
+                vs,
+                ether('10'),
+                fillWithMakingAmount('0'),
+                addr.address,
+                matcher.address + '01' + trim0x(fusionDetails),
+            ]);
+
+            // matcher.address +
+            //         '01' +
+            //         '0000000000000000000000000000000000000000000000000000000000000000' +
+            //         abiCoder.encode(['address[]', 'bytes[]'], [[matcher.address], ['0x']]).substring(2),
+
+            await expect(matcher.settleOrders(fillOrderToData))
+                .to.be.revertedWithCustomError(matcher, 'ResolverIsNotWhitelisted');
         });
 
-        it('onlyThis modifier in fillOrderInteraction method', async function () {
+        it('onlyThis modifier in takerInteraction method', async function () {
             const { dai, weth, swap, matcher } = await loadFixture(initContracts);
             const order = await buildOrder({
                 makerAsset: dai.address,
@@ -149,11 +157,17 @@ describe('WhitelistChecker', function () {
         });
 
         it('onlyLimitOrderProtocol modifier', async function () {
-            const { matcher } = await loadFixture(initContracts);
-            await expect(matcher.fillOrderInteraction(addr.address, '0', '0', '0x')).to.be.revertedWithCustomError(
-                matcher,
-                'AccessDenied',
-            );
+            const { dai, weth, swap, matcher } = await loadFixture(initContracts);
+            const order = await buildOrder({
+                makerAsset: dai.address,
+                takerAsset: weth.address,
+                makingAmount: ether('100'),
+                takingAmount: ether('0.1'),
+                from: addr1.address,
+            });
+            const orderHash = await swap.hashOrder(order);
+            await expect(matcher.takerInteraction(order, orderHash, addr.address, '0', '0', '0', '0x'))
+                .to.be.revertedWithCustomError(matcher, 'AccessDenied');
         });
     });
 

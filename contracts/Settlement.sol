@@ -89,8 +89,9 @@ contract Settlement is ISettlement, FeeBankCharger {
         }
 
         if (extraData[0] == _FINALIZE_INTERACTION) {
-            _chargeFee(suffix.resolver.get(), suffix.resolverFee);
-            IResolver(address(bytes20(interaction))).resolveOrders(suffix.resolver.get(), allTokensAndAmounts, interaction[20:]);
+            address resolver = suffix.resolver.get();
+            _chargeFee(resolver, suffix.resolverFee);
+            IResolver(resolver).resolveOrders(allTokensAndAmounts, interaction);
         } else {
             _settleOrder(interaction, suffix.resolver.get(), suffix.resolverFee, allTokensAndAmounts);
         }
@@ -100,9 +101,6 @@ contract Settlement is ISettlement, FeeBankCharger {
         }
         token.forceApprove(address(_limitOrderProtocol), offeredTakingAmount);
     }
-
-    bytes4 private constant _FILL_ORDER_TO_SELECTOR = 0xe5d7bde6; // IOrderMixin.fillOrderTo.selector TODO fix
-    bytes4 private constant _WRONG_INTERACTION_TARGET_SELECTOR = 0x5b34bf89; // WrongInteractionTarget.selector
 
     error IncorrectSelector();
     error FusionDetailsMismatch();
@@ -129,7 +127,7 @@ contract Settlement is ISettlement, FeeBankCharger {
 
     function _getInteraction(bytes calldata data) internal pure returns(bytes calldata interaction) {
         bytes4 selector = bytes4(data);
-        if (selector == _FILL_ORDER_TO_SELECTOR) {
+        if (selector == IOrderMixin.fillOrderTo.selector) {
             FillOrderToArgs calldata args;
             assembly ("memory-safe") {
                 args := add(data.offset, 4)
@@ -150,15 +148,11 @@ contract Settlement is ISettlement, FeeBankCharger {
 
     function _settleOrder(bytes calldata args, address resolver, uint256 resolverFee, bytes memory tokensAndAmounts) private {
         bytes calldata interaction = _getInteraction(args);
-        bytes calldata fusionDetails = interaction[:interaction.detailsLength()];
+        bytes calldata fusionDetails = interaction[21:];
+        fusionDetails = fusionDetails[:fusionDetails.detailsLength()];
 
-        {
-            bytes calldata targetAndInteraction = interaction[fusionDetails.length:];
-            if (targetAndInteraction.length < 20 || address(bytes20(targetAndInteraction)) != address(this)) revert WrongInteractionTarget();
-        }
-
-        if (uint256(keccak256(fusionDetails)) & type(uint160).max != uint256(bytes32(args)) & type(uint160).max) revert FusionDetailsMismatch();
-
+        if (interaction.length < 20 || address(bytes20(interaction)) != address(this)) revert WrongInteractionTarget();
+        if (uint256(keccak256(fusionDetails)) & type(uint160).max != uint256(bytes32(args[4:])) & type(uint160).max) revert FusionDetailsMismatch();
         if (!fusionDetails.checkResolver(resolver)) revert ResolverIsNotWhitelisted();
 
         // todo: unchecked
@@ -178,8 +172,6 @@ contract Settlement is ISettlement, FeeBankCharger {
 
             // Copy calldata and patch interaction.length
             let ptr := mload(0x40)
-            mstore(ptr, _FILL_ORDER_TO_SELECTOR)
-            ptr := add(ptr, 4)
             calldatacopy(ptr, args.offset, args.length)
             mstore(add(ptr, interactionLengthOffset), add(interaction.length, suffixLength))
 
@@ -194,7 +186,7 @@ contract Settlement is ISettlement, FeeBankCharger {
             }
 
             // Call fillOrderTo
-            if iszero(call(gas(), limitOrderProtocol, 0, sub(ptr, 4), add(args.length, suffixLength), 0, 0)) {
+            if iszero(call(gas(), limitOrderProtocol, 0, ptr, add(args.length, suffixLength), 0, 0)) {
                 returndatacopy(ptr, 0, returndatasize())
                 revert(ptr, returndatasize())
             }

@@ -5,6 +5,7 @@ require('solidity-coverage');
 require('hardhat-dependency-compiler');
 require('hardhat-deploy');
 require('hardhat-gas-reporter');
+require('hardhat-tracer');
 require('dotenv').config();
 
 const { networks, etherscan } = require('./hardhat.networks');
@@ -33,6 +34,9 @@ const LOW_OPTIMIZER_COMPILER_SETTINGS = {
 
 module.exports = {
     etherscan,
+    tracer: {
+        enableAllOpcodes: true,
+    },
     solidity: {
         compilers: [DEFAULT_COMPILER_SETTINGS],
         overrides: {

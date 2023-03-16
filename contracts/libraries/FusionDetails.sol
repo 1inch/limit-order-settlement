@@ -7,6 +7,8 @@ import "@1inch/solidity-utils/contracts/libraries/AddressLib.sol";
 // Placed in the end of the order interactions data
 // Last byte contains flags and lengths, can have up to 15 resolvers and 7 points
 library FusionDetails {
+    // TODO: make public time limit relative to order time start and fit into 2 bytes
+    // TODO: make resolvers[i].delay to be relative to order time start and fit into 2 bytes
     // Order `interaction` prefix structure:
     // 1 bytes          - flags
     // 4 bytes          - order time start
@@ -57,6 +59,10 @@ library FusionDetails {
     uint256 private constant _RESOLVER_ADDRESS_BIT_SHIFT = 176; // 256 - _RESOLVER_ADDRESS_BYTES_SIZE * 8;
 
     function detailsLength(bytes calldata interaction) internal pure returns (uint256 len) {
+        if (interaction.length == 0) {
+            return 0;
+        }
+
         assembly ("memory-safe") {
             let flags := byte(0, calldataload(interaction.offset))
             let resolversCount := shr(_RESOLVERS_LENGTH_BIT_SHIFT, and(flags, _RESOLVERS_LENGTH_MASK))
