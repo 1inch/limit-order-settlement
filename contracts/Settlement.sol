@@ -47,16 +47,18 @@ contract Settlement is ISettlement, FeeBankCharger {
         _limitOrderProtocol = limitOrderProtocol;
     }
 
-    function settleOrders(bytes calldata data) external {
+    function settleOrders(bytes calldata data) external returns(bool) {
         _settleOrder(data, msg.sender, 0, "");
+        return true;
     }
 
-    function settleOrdersWithPermits(bytes calldata data, bytes[] calldata permits) external {
+    function settleOrdersWithPermits(bytes calldata data, bytes[] calldata permits) external returns(bool) {
         for (uint256 i = 0; i < permits.length; i++) {
             // TODO: concat permits and use 7 bits for each permit length
             IERC20(address(bytes20(permits[i]))).safePermit(permits[i][20:]);
         }
         _settleOrder(data, msg.sender, 0, "");
+        return true;
     }
 
     function takerInteraction(
@@ -68,14 +70,15 @@ contract Settlement is ISettlement, FeeBankCharger {
         uint256 /* remainingMakingAmount */,
         bytes calldata extraData
     ) external onlyThis(taker) onlyLimitOrderProtocol returns(uint256 offeredTakingAmount) {
-        bytes calldata fusionDetails = extraData[:extraData.detailsLength()];
+        bytes calldata fusionDetails = extraData[1:];
+        fusionDetails = fusionDetails[:fusionDetails.detailsLength()];
 
         offeredTakingAmount = takingAmount * (_BASE_POINTS + fusionDetails.rateBump()) / _BASE_POINTS;
         Address takingFee = fusionDetails.takingFee();
         uint256 takingFeeAmount = offeredTakingAmount * takingFee.getUint32(_TAKING_FEE_RATIO_OFFSET) / _TAKING_FEE_BASE;
 
-        (DynamicSuffix.Data calldata suffix, bytes calldata tokensAndAmounts, bytes calldata interaction) = extraData.decodeSuffix();
-        interaction = interaction[fusionDetails.length:];  // remove fusion details
+        (DynamicSuffix.Data calldata suffix, bytes calldata tokensAndAmounts, bytes calldata args) = extraData.decodeSuffix();
+        args = args[fusionDetails.length:];  // remove fusion details
         IERC20 token = IERC20(order.takerAsset.get());
 
         // TODO: avoid double copying
@@ -91,9 +94,9 @@ contract Settlement is ISettlement, FeeBankCharger {
         if (extraData[0] == _FINALIZE_INTERACTION) {
             address resolver = suffix.resolver.get();
             _chargeFee(resolver, suffix.resolverFee);
-            IResolver(resolver).resolveOrders(allTokensAndAmounts, interaction);
+            IResolver(resolver).resolveOrders(allTokensAndAmounts, args);
         } else {
-            _settleOrder(interaction, suffix.resolver.get(), suffix.resolverFee, allTokensAndAmounts);
+            _settleOrder(args, suffix.resolver.get(), suffix.resolverFee, allTokensAndAmounts);
         }
 
         if (takingFeeAmount > 0) {

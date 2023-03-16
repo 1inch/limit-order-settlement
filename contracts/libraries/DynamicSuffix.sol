@@ -17,15 +17,15 @@ library DynamicSuffix {
 
     uint256 internal constant _STATIC_DATA_SIZE = 0x40;
 
-    function decodeSuffix(bytes calldata cd) internal pure returns(Data calldata suffix, bytes calldata tokensAndAmounts, bytes calldata interaction) {
+    function decodeSuffix(bytes calldata cd) internal pure returns(Data calldata suffix, bytes calldata tokensAndAmounts, bytes calldata args) {
         assembly {
             let lengthOffset := sub(add(cd.offset, cd.length), 0x20)
             tokensAndAmounts.length := calldataload(lengthOffset)
             tokensAndAmounts.offset := sub(lengthOffset, tokensAndAmounts.length)
-            
+
             suffix := sub(tokensAndAmounts.offset, _STATIC_DATA_SIZE)
-            interaction.offset := add(cd.offset, 1)
-            interaction.length := sub(suffix, interaction.offset)
+            args.offset := add(cd.offset, 1)
+            args.length := sub(suffix, args.offset)
         }
     }
 }

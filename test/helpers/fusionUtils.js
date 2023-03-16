@@ -3,7 +3,7 @@ const { assert } = require('chai');
 
 async function buildFusion({
     resolvers = [],
-    points = [[0, 1]],
+    points = [],
     timeStart,
     duration = time.duration.hours(1),
     initialRateBump = 0n,

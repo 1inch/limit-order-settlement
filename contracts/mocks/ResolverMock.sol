@@ -3,6 +3,7 @@
 pragma solidity 0.8.19;
 
 import "../interfaces/IResolver.sol";
+import "../interfaces/ISettlement.sol";
 import "../libraries/TokensAndAmounts.sol";
 import "@1inch/solidity-utils/contracts/libraries/SafeERC20.sol";
 
@@ -23,7 +24,13 @@ contract ResolverMock is IResolver {
         _owner = msg.sender;
     }
 
-    function resolveOrders(bytes calldata tokensAndAmounts, bytes calldata data) external {
+    function settleOrders(ISettlement settlement, bytes calldata data) external {
+        if (msg.sender != _owner) revert OnlyOwner();
+
+        settlement.settleOrders(data);
+    }
+
+    function resolveOrders(bytes calldata tokensAndAmounts, bytes calldata data) external returns(bool) {
         if (msg.sender != _settlement) revert OnlySettlement();
 
         if (data.length > 0) {
@@ -39,5 +46,7 @@ contract ResolverMock is IResolver {
         for (uint256 i = 0; i < items.length; i++) {
             IERC20(items[i].token.get()).safeTransfer(msg.sender, items[i].amount);
         }
+
+        return true;
     }
 }

@@ -58,7 +58,7 @@ describe('Settlement', function () {
                 takingAmount: ether('0.1'),
                 salt: buildSalt({ orderStartTime: await time.latest() }),
                 allowedSender: matcher.address,
-                from: addr.address,
+                maker: addr.address,
             },
             {
                 predicate: swap.interface.encodeFunctionData('timestampBelow', [0xff00000000]),
@@ -74,7 +74,7 @@ describe('Settlement', function () {
                 makingAmount: ether('0.11'),
                 takingAmount: ether('100'),
                 allowedSender: matcher.address,
-                from: addr1.address,
+                maker: addr1.address,
             },
             {
                 predicate: swap.interface.encodeFunctionData('timestampBelow', [0xff00000000]),
@@ -141,7 +141,7 @@ describe('Settlement', function () {
                 takingAmount: ether('0.1'),
                 salt: buildSalt({ orderStartTime: await time.latest() }),
                 allowedSender: matcher.address,
-                from: addr.address,
+                maker: addr.address,
             },
             {
                 predicate: swap.interface.encodeFunctionData('timestampBelow', [0xff00000000]),
@@ -159,7 +159,7 @@ describe('Settlement', function () {
                 makingAmount: ether('0.11'),
                 takingAmount: ether('100'),
                 allowedSender: matcher.address,
-                from: addr1.address,
+                maker: addr1.address,
             },
             {
                 predicate: swap.interface.encodeFunctionData('timestampBelow', [0xff00000000]),
@@ -238,7 +238,7 @@ describe('Settlement', function () {
                 takingAmount: ether('0.01'),
                 salt: buildSalt({ orderStartTime: await time.latest() }),
                 allowedSender: matcher.address,
-                from: addr1.address,
+                maker: addr1.address,
             },
             {
                 predicate: swap.interface.encodeFunctionData('timestampBelow', [0xff00000000]),
@@ -255,7 +255,7 @@ describe('Settlement', function () {
                 takingAmount: ether('0.015'),
                 salt: buildSalt({ orderStartTime: await time.latest() }),
                 allowedSender: matcher.address,
-                from: addr1.address,
+                maker: addr1.address,
             },
             {
                 predicate: swap.interface.encodeFunctionData('timestampBelow', [0xff00000000]),
@@ -341,7 +341,7 @@ describe('Settlement', function () {
                 takingAmount: ether('0.01'),
                 salt: buildSalt({ orderStartTime: await time.latest() }),
                 allowedSender: matcher.address,
-                from: addr1.address,
+                maker: addr1.address,
             },
             {
                 predicate: swap.interface.encodeFunctionData('timestampBelow', [0xff00000000]),
@@ -358,7 +358,7 @@ describe('Settlement', function () {
                 takingAmount: ether('0.015'),
                 salt: buildSalt({ orderStartTime: await time.latest() }),
                 allowedSender: matcher.address,
-                from: addr1.address,
+                maker: addr1.address,
             },
             {
                 predicate: swap.interface.encodeFunctionData('timestampBelow', [0xff00000000]),
@@ -374,7 +374,7 @@ describe('Settlement', function () {
                 makingAmount: ether('0.0275'),
                 takingAmount: ether('25'),
                 allowedSender: matcher.address,
-                from: addr.address,
+                maker: addr.address,
             },
             {
                 predicate: swap.interface.encodeFunctionData('timestampBelow', [0xff00000000]),
@@ -470,7 +470,7 @@ describe('Settlement', function () {
                     makingAmount,
                     takingAmount,
                     allowedSender: matcher.address,
-                    from: addr1.address,
+                    maker: addr1.address,
                 },
                 {
                     predicate: swap.interface.encodeFunctionData('timestampBelow', [0xff00000000]),
@@ -590,7 +590,7 @@ describe('Settlement', function () {
                         makingAmount,
                         takingAmount,
                         allowedSender: matcher.address,
-                        from: addr1.address,
+                        maker: addr1.address,
                     },
                     {
                         predicate: swap.interface.encodeFunctionData('timestampBelow', [0xff00000000]),
@@ -831,7 +831,7 @@ describe('Settlement', function () {
                 makingAmount: ether('100'),
                 takingAmount: ether('0.1'),
                 allowedSender: matcher.address,
-                from: addr.address,
+                maker: addr.address,
             },
             {
                 whitelistedAddrs: [addr.address],
@@ -846,7 +846,7 @@ describe('Settlement', function () {
                 makingAmount: ether('0.1'),
                 takingAmount: ether('100'),
                 allowedSender: matcher.address,
-                from: addr1.address,
+                maker: addr1.address,
             },
             {
                 whitelistedAddrs: [addr.address],
@@ -903,7 +903,7 @@ describe('Settlement', function () {
                 makingAmount: ether('100'),
                 takingAmount: ether('0.1'),
                 allowedSender: matcher.address,
-                from: addr.address,
+                maker: addr.address,
             },
             {
                 whitelistedAddrs: [addr.address],
@@ -918,7 +918,7 @@ describe('Settlement', function () {
                 makingAmount: ether('0.1'),
                 takingAmount: ether('100'),
                 allowedSender: matcher.address,
-                from: addr1.address,
+                maker: addr1.address,
             },
             {
                 whitelistedAddrs: [addr.address],
@@ -976,7 +976,7 @@ describe('Settlement', function () {
                     makingAmount: ether('100'),
                     takingAmount: ether('0.1'),
                     allowedSender: matcher.address,
-                    from: addr.address,
+                    maker: addr.address,
                     receiver: resolver.address,
                 },
                 {
@@ -993,7 +993,7 @@ describe('Settlement', function () {
                     makingAmount: ether('0.1'),
                     takingAmount: ether('100'),
                     allowedSender: matcher.address,
-                    from: addr1.address,
+                    maker: addr1.address,
                     receiver: resolver.address,
                 },
                 {
@@ -1066,7 +1066,7 @@ describe('Settlement', function () {
                     makingAmount: ether('100'),
                     takingAmount: ether('0.1'),
                     allowedSender: matcher.address,
-                    from: addr.address,
+                    maker: addr.address,
                 },
                 {
                     whitelistedAddrs: [addr1.address],
@@ -1082,7 +1082,7 @@ describe('Settlement', function () {
                     makingAmount: ether('0.1'),
                     takingAmount: ether('100'),
                     allowedSender: matcher.address,
-                    from: addr1.address,
+                    maker: addr1.address,
                 },
                 {
                     whitelistedAddrs: [addr1.address],

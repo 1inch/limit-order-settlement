@@ -26,7 +26,7 @@ const buildOrder = async (
         takingAmount,
         allowedSender = constants.ZERO_ADDRESS,
         receiver = constants.ZERO_ADDRESS,
-        from: maker = constants.ZERO_ADDRESS,
+        maker = constants.ZERO_ADDRESS,
     },
     {
         makerAssetData = '0x',

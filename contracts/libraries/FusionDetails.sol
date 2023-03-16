@@ -115,14 +115,14 @@ library FusionDetails {
         }
     }
 
-    function rateBump(bytes calldata interaction) internal view returns (uint256 bump) {
+    function rateBump(bytes calldata details) internal view returns (uint256 bump) {
         uint256 startBump;
         uint256 cumulativeTime;
         uint256 lastTime;
         assembly ("memory-safe") {
-            startBump := shr(_INITIAL_RATE_BUMP_BIT_SHIFT, calldataload(add(interaction.offset, _INITIAL_RATE_BUMP_BYTES_OFFSET)))
-            cumulativeTime := shr(_ORDER_TIME_START_BIT_SHIFT, calldataload(add(interaction.offset, _ORDER_TIME_START_BYTES_OFFSET)))
-            lastTime := add(cumulativeTime, shr(_ORDER_DURATION_BIT_SHIFT, calldataload(add(interaction.offset, _ORDER_DURATION_BYTES_OFFSET))))
+            startBump := shr(_INITIAL_RATE_BUMP_BIT_SHIFT, calldataload(add(details.offset, _INITIAL_RATE_BUMP_BYTES_OFFSET)))
+            cumulativeTime := shr(_ORDER_TIME_START_BIT_SHIFT, calldataload(add(details.offset, _ORDER_TIME_START_BYTES_OFFSET)))
+            lastTime := add(cumulativeTime, shr(_ORDER_DURATION_BIT_SHIFT, calldataload(add(details.offset, _ORDER_DURATION_BYTES_OFFSET))))
         }
 
         if (block.timestamp <= cumulativeTime) {
@@ -140,10 +140,10 @@ library FusionDetails {
             }
 
             // move ptr to the first point
-            let ptr := add(interaction.offset, _RESOLVERS_LIST_BYTES_OFFSET)
+            let ptr := add(details.offset, _RESOLVERS_LIST_BYTES_OFFSET)
             let pointsCount
             {
-                let flags := byte(0, calldataload(ptr))
+                let flags := byte(0, calldataload(details.offset))
                 let resolversCount := shr(_RESOLVERS_LENGTH_BIT_SHIFT, and(flags, _RESOLVERS_LENGTH_MASK))
                 ptr := add(ptr, mul(resolversCount, _RESOLVER_BYTES_SIZE))
                 pointsCount := and(flags, _POINTS_LENGTH_MASK)
