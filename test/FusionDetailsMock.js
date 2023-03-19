@@ -51,7 +51,7 @@ describe('FusionDetailsMock', function () {
             takingFeeAmount: BigNumber.from('0'),
             bump: BigNumber.from('49'),
             resolverFee: BigNumber.from('10000'),
-            isValidResolver: true
+            isValidResolver: true,
         });
     });
 });

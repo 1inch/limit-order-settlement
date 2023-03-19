@@ -1,4 +1,4 @@
-const { time } = require('@1inch/solidity-utils');
+const { time, trim0x } = require('@1inch/solidity-utils');
 const { assert } = require('chai');
 
 async function buildFusion({
@@ -9,6 +9,8 @@ async function buildFusion({
     initialRateBump = 0n,
     resolverFee = 0n,
     publicTimeLimit,
+    takerFee = 0n,
+    takerFeeReceiver = undefined,
 } = {}) {
     if (!timeStart) {
         timeStart = await time.latest();
@@ -34,7 +36,7 @@ async function buildFusion({
     assert(BigInt(resolverFee) < (1n << 32n), 'Resolver fee is too big');
     assert(BigInt(publicTimeLimit) < (1n << 32n), 'Public time limit is too big');
 
-    const flags = (resolvers.length << 3) | points.length;
+    const flags = (takerFee > 0 ? 0x80 : 0) | (resolvers.length << 3) | points.length;
     return '0x' + flags.toString(16).padStart(2, '0') +
         timeStart.toString(16).padStart(8, '0') +
         duration.toString(16).padStart(6, '0') +
@@ -42,12 +44,13 @@ async function buildFusion({
         resolverFee.toString(16).padStart(8, '0') +
         publicTimeLimit.toString(16).padStart(8, '0') +
         resolvers.map((resolver, i) => {
-            const delay = timeStart + Math.round((duration * i) / resolvers.length);
+            const delay = i === 0 ? 0 : timeStart + Math.round((duration * i) / resolvers.length);
             return delay.toString(16).padStart(8, '0') + resolver.substring(22);
         }).join('') +
         points.map(([delay, coefficient]) => {
             return delay.toString(16).padStart(4, '0') + coefficient.toString(16).padStart(6, '0');
-        }).join('');
+        }).join('') +
+        (takerFee > 0 ? takerFee.toString(16).padStart(8, '0') + trim0x(takerFeeReceiver) : '');
 }
 
 module.exports = {

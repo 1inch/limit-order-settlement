@@ -160,19 +160,9 @@ describe('WhitelistChecker', function () {
                 matcher.address + '00' + trim0x(fusionDetails0) + trim0x(fillOrderToData1),
             ]);
 
-            // const addrweth = await weth.balanceOf(addr.address);
-            // const addr1weth = await weth.balanceOf(addr1.address);
-            // const addrdai = await dai.balanceOf(addr.address);
-            // const addr1dai = await dai.balanceOf(addr1.address);
-
-            await expect(resolver.settleOrders(matcher.address, fillOrderToData0))
-                .to.changeTokenBalances(dai, [addr, addr1], [ether('-100'), ether('100')])
-                .to.changeTokenBalances(weth, [addr, addr1], [ether('0.1'), ether('-0.1')]);
-
-            // expect(await weth.balanceOf(addr.address)).to.equal(addrweth.add(ether('0.1')));
-            // expect(await weth.balanceOf(addr1.address)).to.equal(addr1weth.sub(ether('0.1')));
-            // expect(await dai.balanceOf(addr.address)).to.equal(addrdai.sub(ether('100')));
-            // expect(await dai.balanceOf(addr1.address)).to.equal(addr1dai.add(ether('100')));
+            const txn = await resolver.settleOrders(matcher.address, fillOrderToData0);
+            await expect(txn).to.changeTokenBalances(dai, [addr, addr1], [ether('-100'), ether('100')]);
+            await expect(txn).to.changeTokenBalances(weth, [addr, addr1], [ether('0.1'), ether('-0.1')]);
         });
     });
 });
