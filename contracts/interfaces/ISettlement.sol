@@ -7,5 +7,4 @@ import "./IFeeBankCharger.sol";
 
 interface ISettlement is ITakerInteraction, IFeeBankCharger {
     function settleOrders(bytes calldata order) external returns(bool);
-    function settleOrdersWithPermits(bytes calldata data, bytes[] calldata permits) external returns(bool);
 }

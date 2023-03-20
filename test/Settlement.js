@@ -97,7 +97,7 @@ describe('Settlement', function () {
             settlement.address + '00' + trim0x(fusionDetails) + trim0x(fillOrderToData1),
         ]);
 
-        const txn = await resolver.settleOrders(settlement.address, fillOrderToData0);
+        const txn = await resolver.settleOrders(fillOrderToData0);
         await expect(txn).to.changeTokenBalances(dai, [addr, addr1], [ether('-100'), ether('100')]);
         await expect(txn).to.changeTokenBalances(weth, [addr, addr1], [ether('0.11'), ether('-0.11')]);
     });
@@ -156,7 +156,7 @@ describe('Settlement', function () {
             settlement.address + '00' + trim0x(fusionDetails) + trim0x(fillOrderToData1),
         ]);
 
-        const txn = await resolver.settleOrders(settlement.address, fillOrderToData0);
+        const txn = await resolver.settleOrders(fillOrderToData0);
         await expect(txn).to.changeTokenBalances(dai, [addr, addr1, addr2], [ether('-100'), ether('100'), ether('1')]);
         await expect(txn).to.changeTokenBalances(weth, [addr, addr1, addr2], [ether('0.1'), ether('-0.1'), ether('0.001')]);
     });
@@ -225,7 +225,7 @@ describe('Settlement', function () {
 
         await weth.approve(resolver.address, ether('0.025'));
 
-        const txn = await resolver.settleOrders(settlement.address, fillOrderToData0);
+        const txn = await resolver.settleOrders(fillOrderToData0);
         await expect(txn).to.changeTokenBalances(dai, [resolver, addr1], [ether('25'), ether('-25')]);
         await expect(txn).to.changeTokenBalances(weth, [addr, addr1], [ether('-0.025'), ether('0.025')]);
     });
@@ -299,7 +299,7 @@ describe('Settlement', function () {
             settlement.address + '00' + trim0x(fusionDetails) + trim0x(fillOrderToData1),
         ]);
 
-        const txn = await resolver.settleOrders(settlement.address, fillOrderToData0);
+        const txn = await resolver.settleOrders(fillOrderToData0);
         await expect(txn).to.changeTokenBalances(weth, [addr, addr1], [ether('-0.025'), ether('0.025')]);
         await expect(txn).to.changeTokenBalances(dai, [addr, addr1], [ether('25'), ether('-25')]);
     });
@@ -381,7 +381,7 @@ describe('Settlement', function () {
                 resolver,
             });
 
-            const txn = await resolver.settleOrders(settlement.address, fillOrderToData);
+            const txn = await resolver.settleOrders(fillOrderToData);
             await expect(txn).to.changeTokenBalances(dai, [resolver, addr1], [ether('100'), ether('-100')]);
             await expect(txn).to.changeTokenBalances(weth, [addr, addr1], [ether('-0.11'), ether('0.11')]);
         });
@@ -470,7 +470,7 @@ describe('Settlement', function () {
 
                 await timeIncreaseTo(currentTimestamp + 239);
 
-                const txn = await resolver.settleOrders(settlement.address, fillOrderToData);
+                const txn = await resolver.settleOrders(fillOrderToData);
                 await expect(txn).to.changeTokenBalances(dai, [resolver, addr1], [ether('100'), ether('-100')]);
                 await expect(txn).to.changeTokenBalances(weth, [addr, addr1], [ether('-0.109'), ether('0.109')]);
             });
@@ -517,7 +517,7 @@ describe('Settlement', function () {
 
                 await timeIncreaseTo(currentTimestamp + 759);
 
-                const txn = await resolver.settleOrders(settlement.address, fillOrderToData);
+                const txn = await resolver.settleOrders(fillOrderToData);
                 await expect(txn).to.changeTokenBalances(dai, [resolver, addr1], [ether('100'), ether('-100')]);
                 await expect(txn).to.changeTokenBalances(weth, [addr, addr1], [ether('-0.106'), ether('0.106')]);
             });
@@ -537,7 +537,7 @@ describe('Settlement', function () {
                 resolver,
             });
 
-            const txn = await resolver.settleOrders(settlement.address, fillOrderToData);
+            const txn = await resolver.settleOrders(fillOrderToData);
             await expect(txn).to.changeTokenBalances(dai, [resolver, addr1], [ether('100'), ether('-100')]);
             await expect(txn).to.changeTokenBalances(weth, [addr, addr1], [ether('-0.12'), ether('0.12')]);
         });
@@ -557,7 +557,7 @@ describe('Settlement', function () {
                 resolver,
             });
 
-            const txn = await resolver.settleOrders(settlement.address, fillOrderToData);
+            const txn = await resolver.settleOrders(fillOrderToData);
             await expect(txn).to.changeTokenBalances(dai, [resolver, addr1], [ether('100'), ether('-100')]);
             await expect(txn).to.changeTokenBalances(weth, [addr, addr1], [ether('-0.105'), ether('0.105')]);
         });
@@ -612,7 +612,7 @@ describe('Settlement', function () {
         ]);
 
         const availableCreditBefore = await settlement.availableCredit(resolver.address);
-        await resolver.settleOrders(settlement.address, fillOrderToData0);
+        await resolver.settleOrders(fillOrderToData0);
         expect(await settlement.availableCredit(resolver.address)).to.equal(
             availableCreditBefore.toBigInt() - basePoints * (orderFee + backOrderFee),
         );
@@ -666,7 +666,7 @@ describe('Settlement', function () {
             settlement.address + '00' + trim0x(fusionDetailsOrder0) + trim0x(fillOrderToData1),
         ]);
 
-        await expect(resolver.settleOrders(settlement.address, fillOrderToData0)).to.be.revertedWithCustomError(settlement, 'NotEnoughCredit');
+        await expect(resolver.settleOrders(fillOrderToData0)).to.be.revertedWithCustomError(settlement, 'NotEnoughCredit');
     });
 
     describe('whitelist lock period', async function () {
@@ -720,11 +720,11 @@ describe('Settlement', function () {
                 settlement.address + '00' + trim0x(fusionDetails) + trim0x(fillOrderToData1),
             ]);
 
-            await expect(resolver.settleOrders(settlement.address, fillOrderToData0)).to.be.revertedWithCustomError(settlement, 'ResolverIsNotWhitelisted');
+            await expect(resolver.settleOrders(fillOrderToData0)).to.be.revertedWithCustomError(settlement, 'ResolverIsNotWhitelisted');
 
             await timeIncreaseTo(currentTime + oneDay + 1);
 
-            await resolver.settleOrders(settlement.address, fillOrderToData0);
+            await resolver.settleOrders(fillOrderToData0);
         });
 
         it('should change by non-whitelisted resolver after publicCutOff', async function () {
@@ -776,9 +776,9 @@ describe('Settlement', function () {
                 settlement.address + '00' + trim0x(fusionDetails0) + trim0x(fillOrderToData1),
             ]);
 
-            await expect(resolver.settleOrders(settlement.address, fillOrderToData0)).to.be.revertedWithCustomError(settlement, 'ResolverIsNotWhitelisted');
+            await expect(resolver.settleOrders(fillOrderToData0)).to.be.revertedWithCustomError(settlement, 'ResolverIsNotWhitelisted');
             await timeIncreaseTo(BigInt(await time.latest()) + 100n);
-            await resolver.settleOrders(settlement.address, fillOrderToData0);
+            await resolver.settleOrders(fillOrderToData0);
         });
     });
 });

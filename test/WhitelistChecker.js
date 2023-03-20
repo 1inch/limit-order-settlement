@@ -30,18 +30,18 @@ describe('WhitelistChecker', function () {
 
         const whitelistRegistrySimple = await deploySimpleRegistry();
         const Settlement = await ethers.getContractFactory('Settlement');
-        const matcher = await Settlement.deploy(swap.address, weth.address);
-        await matcher.deployed();
+        const settlement = await Settlement.deploy(swap.address, weth.address);
+        await settlement.deployed();
 
         const ResolverMock = await ethers.getContractFactory('ResolverMock');
-        const resolver = await ResolverMock.deploy(matcher.address);
+        const resolver = await ResolverMock.deploy(settlement.address);
 
-        return { dai, weth, swap, whitelistRegistrySimple, matcher, resolver };
+        return { dai, weth, swap, whitelistRegistrySimple, settlement, resolver };
     }
 
     describe('should not work with non-whitelisted address', function () {
         it('whitelist check in settleOrders method', async function () {
-            const { dai, weth, swap, matcher } = await loadFixture(initContracts);
+            const { dai, weth, swap, settlement } = await loadFixture(initContracts);
 
             const fusionDetails = await buildFusion();
             const order = await buildOrder({
@@ -61,15 +61,15 @@ describe('WhitelistChecker', function () {
                 ether('10'),
                 fillWithMakingAmount('0'),
                 addr.address,
-                matcher.address + '01' + trim0x(fusionDetails),
+                settlement.address + '01' + trim0x(fusionDetails),
             ]);
 
-            await expect(matcher.settleOrders(fillOrderToData))
-                .to.be.revertedWithCustomError(matcher, 'ResolverIsNotWhitelisted');
+            await expect(settlement.settleOrders(fillOrderToData))
+                .to.be.revertedWithCustomError(settlement, 'ResolverIsNotWhitelisted');
         });
 
         it('onlyThis modifier in takerInteraction method', async function () {
-            const { dai, weth, swap, matcher } = await loadFixture(initContracts);
+            const { dai, weth, swap, settlement } = await loadFixture(initContracts);
 
             const order = await buildOrder({
                 makerAsset: dai.address,
@@ -80,12 +80,12 @@ describe('WhitelistChecker', function () {
             });
 
             const { r, vs } = compactSignature(await signOrder(order, chainId, swap.address, addr1));
-            await expect(swap.fillOrderTo(order, r, vs, ether('10'), fillWithMakingAmount('0'), addr.address, matcher.address + '01'))
-                .to.be.revertedWithCustomError(matcher, 'AccessDenied');
+            await expect(swap.fillOrderTo(order, r, vs, ether('10'), fillWithMakingAmount('0'), addr.address, settlement.address + '01'))
+                .to.be.revertedWithCustomError(settlement, 'AccessDenied');
         });
 
         it('onlyLimitOrderProtocol modifier', async function () {
-            const { dai, weth, swap, matcher } = await loadFixture(initContracts);
+            const { dai, weth, swap, settlement } = await loadFixture(initContracts);
 
             const order = await buildOrder({
                 makerAsset: dai.address,
@@ -96,20 +96,20 @@ describe('WhitelistChecker', function () {
             });
             const orderHash = await swap.hashOrder(order);
 
-            await expect(matcher.takerInteraction(order, orderHash, addr.address, '1', '1', '0', '0x'))
-                .to.be.revertedWithCustomError(matcher, 'AccessDenied');
+            await expect(settlement.takerInteraction(order, orderHash, addr.address, '1', '1', '0', '0x'))
+                .to.be.revertedWithCustomError(settlement, 'AccessDenied');
         });
     });
 
     describe('should work with whitelisted address', function () {
         async function initContractsAndSetStatus() {
-            const { dai, weth, swap, whitelistRegistrySimple, matcher, resolver } = await initContracts();
+            const { dai, weth, swap, whitelistRegistrySimple, settlement, resolver } = await initContracts();
             await whitelistRegistrySimple.setStatus(addr.address, true);
-            return { dai, weth, swap, matcher, resolver };
+            return { dai, weth, swap, settlement, resolver };
         }
 
         it('whitelist check in settleOrders method', async function () {
-            const { dai, weth, swap, matcher, resolver } = await loadFixture(initContractsAndSetStatus);
+            const { dai, weth, swap, settlement, resolver } = await loadFixture(initContractsAndSetStatus);
 
             const fusionDetails0 = await buildFusion({
                 resolvers: [resolver.address],
@@ -146,7 +146,7 @@ describe('WhitelistChecker', function () {
                 ether('0.1'),
                 fillWithMakingAmount('0'),
                 resolver.address,
-                matcher.address + '01' + trim0x(fusionDetails1),
+                settlement.address + '01' + trim0x(fusionDetails1),
             ]);
 
             const { r: r0, vs: vs0 } = compactSignature(await signOrder(order0, chainId, swap.address, addr));
@@ -157,10 +157,10 @@ describe('WhitelistChecker', function () {
                 ether('100'),
                 fillWithMakingAmount('0'),
                 resolver.address,
-                matcher.address + '00' + trim0x(fusionDetails0) + trim0x(fillOrderToData1),
+                settlement.address + '00' + trim0x(fusionDetails0) + trim0x(fillOrderToData1),
             ]);
 
-            const txn = await resolver.settleOrders(matcher.address, fillOrderToData0);
+            const txn = await resolver.settleOrders(fillOrderToData0);
             await expect(txn).to.changeTokenBalances(dai, [addr, addr1], [ether('-100'), ether('100')]);
             await expect(txn).to.changeTokenBalances(weth, [addr, addr1], [ether('0.1'), ether('-0.1')]);
         });

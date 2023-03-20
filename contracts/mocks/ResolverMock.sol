@@ -16,22 +16,27 @@ contract ResolverMock is IResolver {
     using SafeERC20 for IERC20;
     using AddressLib for Address;
 
-    address private immutable _settlement;
+    ISettlement private immutable _settlement;
     address private immutable _owner;
 
-    constructor(address settlement) {
+    constructor(ISettlement settlement) {
         _settlement = settlement;
         _owner = msg.sender;
     }
 
-    function settleOrders(ISettlement settlement, bytes calldata data) external {
+    function settleOrders(bytes calldata data) public {
         if (msg.sender != _owner) revert OnlyOwner();
+        _settlement.settleOrders(data);
+    }
 
-        settlement.settleOrders(data);
+    /// @dev High byte of `packing` contains number of permits, each 2 bits from lowest contains length of permit (index in [92,120,148] array)
+    function settleOrdersWithPermits(bytes calldata data, uint256 packing, bytes calldata packedPermits) external {
+        _performPermits(packing, packedPermits);
+        settleOrders(data);
     }
 
     function resolveOrders(bytes calldata tokensAndAmounts, bytes calldata data) external returns(bool) {
-        if (msg.sender != _settlement) revert OnlySettlement();
+        if (msg.sender != address(_settlement)) revert OnlySettlement();
 
         if (data.length > 0) {
             (Address[] memory targets, bytes[] memory calldatas) = abi.decode(data, (Address[], bytes[]));
@@ -48,5 +53,22 @@ contract ResolverMock is IResolver {
         }
 
         return true;
+    }
+
+    function _performPermits(uint256 packing, bytes calldata packedPermits) private {
+        unchecked {
+            uint256 permitsCount = packing >> 248;
+            uint256 start = 0;
+            for (uint256 i = 0; i < permitsCount; i++) {
+                uint256 length = (packing >> (i << 1)) & 0x03;
+                if (length == 0) length = 92;
+                else if (length == 1) length = 120;
+                else if (length == 2) length = 148;
+
+                bytes calldata permit = packedPermits[start:start + length];
+                IERC20(address(bytes20(permit))).safePermit(permit[20:]);
+                start += length;
+            }
+        }
     }
 }

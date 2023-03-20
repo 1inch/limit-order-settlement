@@ -52,15 +52,6 @@ contract Settlement is ISettlement, FeeBankCharger {
         return true;
     }
 
-    function settleOrdersWithPermits(bytes calldata data, bytes[] calldata permits) external returns(bool) {
-        for (uint256 i = 0; i < permits.length; i++) {
-            // TODO: concat permits and use 7 bits for each permit length
-            IERC20(address(bytes20(permits[i]))).safePermit(permits[i][20:]);
-        }
-        _settleOrder(data, msg.sender, 0, msg.data[:0], IERC20(address(0)), 0);
-        return true;
-    }
-
     function takerInteraction(
         IOrderMixin.Order calldata order,
         bytes32 /* orderHash */,
