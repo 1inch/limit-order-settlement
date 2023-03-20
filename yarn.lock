@@ -86,6 +86,15 @@
     ethers "5.7.1"
     hardhat "2.11.2"
 
+"@1inch/st1inch@2.0.0":
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/@1inch/st1inch/-/st1inch-2.0.0.tgz#88e3773517d2714c6cad73d87294a31fcf70249f"
+  integrity sha512-RPezpRAwL/wdDBiNyLOivEZdmvsWUVlBJkxpP57oHW87DI6Wiuy+QiW2Zul3fwB1bn4BI/p1KtISgnKZDbrkNw==
+  dependencies:
+    "@1inch/erc20-pods" "0.0.16"
+    "@1inch/solidity-utils" "2.2.6"
+    "@openzeppelin/contracts" "4.8.0"
+
 "@babel/code-frame@^7.0.0":
   version "7.18.6"
   resolved "https://registry.yarnpkg.com/@babel/code-frame/-/code-frame-7.18.6.tgz#3b25d38c89600baa2dcc219edfa88a74eb2c427a"

@@ -3,7 +3,7 @@
 pragma solidity 0.8.17;
 
 import "@1inch/farming/contracts/FarmingPod.sol";
-import "./interfaces/ISt1inch.sol";
+import "@1inch/st1inch/contracts/interfaces/ISt1inch.sol";
 
 contract StakingFarmingPod is FarmingPod {
     using SafeERC20 for IERC20;
