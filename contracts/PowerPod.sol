@@ -3,9 +3,9 @@
 pragma solidity 0.8.19;
 
 import "@1inch/delegating/contracts/FarmingDelegationPod.sol";
-import "./helpers/VotingPowerCalculator.sol";
-import "./interfaces/IVotable.sol";
-import "./interfaces/ISt1inch.sol";
+import "@1inch/st1inch/contracts/helpers/VotingPowerCalculator.sol";
+import "@1inch/st1inch/contracts/interfaces/IVotable.sol";
+import "@1inch/st1inch/contracts/interfaces/ISt1inch.sol";
 
 contract PowerPod is FarmingDelegationPod, VotingPowerCalculator, IVotable {
     uint256 private constant _MAX_SHARE_PODS = 3;

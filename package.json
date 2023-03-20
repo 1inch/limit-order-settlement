@@ -1,6 +1,6 @@
 {
   "name": "limit-order-settlement",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "1inch Limit Order Settlement",
   "repository": {
     "type": "git",
@@ -27,6 +27,7 @@
   "dependencies": {
     "@1inch/delegating": "0.0.21",
     "@1inch/erc20-pods": "0.0.17",
+    "@1inch/st1inch": "2.0.0",
     "@1inch/limit-order-protocol-contract": "4.0.0-prerelease-1",
     "@1inch/solidity-utils": "2.2.21",
     "@openzeppelin/contracts": "4.8.2"

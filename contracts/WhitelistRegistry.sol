@@ -4,8 +4,8 @@ pragma solidity 0.8.19;
 
 import "@1inch/solidity-utils/contracts/libraries/UniERC20.sol";
 import "@1inch/solidity-utils/contracts/libraries/AddressSet.sol";
+import "@1inch/st1inch/contracts/interfaces/IVotable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "./interfaces/IVotable.sol";
 
 /// @title Contract with trades resolvers whitelist
 contract WhitelistRegistry is Ownable {

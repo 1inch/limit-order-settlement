@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 pragma abicoder v1;
 
 import "../PowerPod.sol";
-import "../interfaces/ISt1inch.sol";
+import "@1inch/st1inch/contracts/interfaces/ISt1inch.sol";
 
 contract PowerPodMock is PowerPod {
     constructor(string memory name, string memory symbol, ISt1inch st1inch) PowerPod(name, symbol, st1inch) {}
