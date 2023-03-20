@@ -11,7 +11,7 @@ library TokensAndAmounts {
     }
 
     function decode(bytes calldata cd) internal pure returns(Data[] calldata decoded) {
-        assembly {
+        assembly ("memory-safe") {
             decoded.offset := cd.offset
             decoded.length := div(cd.length, 0x40)
         }

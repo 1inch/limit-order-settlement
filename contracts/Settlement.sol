@@ -166,7 +166,7 @@ contract Settlement is ISettlement, FeeBankCharger {
         uint256 suffixLength = DynamicSuffix._STATIC_DATA_SIZE + tokensAndAmounts.length + 0x20;
         IOrderMixin limitOrderProtocol = _limitOrderProtocol;
 
-        assembly {
+        assembly ("memory-safe") {
             function memcpy(dst, src, len) {
                 pop(staticcall(gas(), 0x4, src, len, dst, len))
             }
