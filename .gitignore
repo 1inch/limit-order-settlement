@@ -2,6 +2,7 @@ build
 artifacts
 cache
 **/solcInputs
+contracts/hardhat-dependency-compiler
 
 node_modules
 
