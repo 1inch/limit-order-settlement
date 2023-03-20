@@ -82,27 +82,14 @@
     ethers "5.7.1"
     hardhat "2.11.2"
 
-"@1inch/solidity-utils@2.2.6":
-  version "2.2.6"
-  resolved "https://registry.yarnpkg.com/@1inch/solidity-utils/-/solidity-utils-2.2.6.tgz#79a1c2e94e5c3b29f5dfbbc8b3158deb4f292f50"
-  integrity sha512-XYwpPMZA5uIU5fyvkE0Zt/D4Kb/oPZCyGk3MhB8L0F3gAWbc4BD9RpUo9vEQ02K83uR5wMvB2W/Ac0Pe3YkbcQ==
+"@1inch/st1inch@2.0.3":
+  version "2.0.3"
+  resolved "https://registry.yarnpkg.com/@1inch/st1inch/-/st1inch-2.0.3.tgz#5563fa8a0d722624235f1cec8259ee8d64fd35fa"
+  integrity sha512-FvC56KsgBQNgk+kLO5thCK5tn7DNNagXBeE9nHOKUFFqNupi6EcQlRz1Db4vGMPt8t8EDBW+wJmZDAX4IrwMoA==
   dependencies:
-    "@metamask/eth-sig-util" "4.0.1"
-    "@nomicfoundation/hardhat-network-helpers" "1.0.6"
-    "@nomiclabs/hardhat-ethers" "2.1.1"
-    "@openzeppelin/contracts" "4.7.3"
-    ethereumjs-util "7.1.5"
-    ethers "5.7.1"
-    hardhat "2.11.2"
-
-"@1inch/st1inch@2.0.0":
-  version "2.0.0"
-  resolved "https://registry.yarnpkg.com/@1inch/st1inch/-/st1inch-2.0.0.tgz#88e3773517d2714c6cad73d87294a31fcf70249f"
-  integrity sha512-RPezpRAwL/wdDBiNyLOivEZdmvsWUVlBJkxpP57oHW87DI6Wiuy+QiW2Zul3fwB1bn4BI/p1KtISgnKZDbrkNw==
-  dependencies:
-    "@1inch/erc20-pods" "0.0.16"
-    "@1inch/solidity-utils" "2.2.6"
-    "@openzeppelin/contracts" "4.8.0"
+    "@1inch/erc20-pods" "0.0.17"
+    "@1inch/solidity-utils" "2.2.21"
+    "@openzeppelin/contracts" "4.8.2"
 
 "@babel/code-frame@^7.0.0":
   version "7.18.6"
