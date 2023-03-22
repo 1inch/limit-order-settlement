@@ -47,10 +47,10 @@
     "@1inch/solidity-utils" "2.2.5"
     "@openzeppelin/contracts" "4.8.0"
 
-"@1inch/limit-order-protocol-contract@4.0.0-prerelease-1":
-  version "4.0.0-prerelease-1"
-  resolved "https://registry.yarnpkg.com/@1inch/limit-order-protocol-contract/-/limit-order-protocol-contract-4.0.0-prerelease-1.tgz#206ec92ae5d73c3b871bc78bd8b47df7aef9f7c8"
-  integrity sha512-PiRMqn8Zm2H4ciai37eruztiDmefrgM7xHVQCzQBexd6Lh3UwvPrvTyPZSF9bgJoqqB4voZrqydLJ5bpAI2s0A==
+"@1inch/limit-order-protocol-contract@4.0.0-prerelease-3":
+  version "4.0.0-prerelease-3"
+  resolved "https://registry.yarnpkg.com/@1inch/limit-order-protocol-contract/-/limit-order-protocol-contract-4.0.0-prerelease-3.tgz#7f4d9a2cc64daa8214e0fc13d66bb92211826899"
+  integrity sha512-+2mej3OhJyb5dq5VSx5iA2n7P43D5hRZl5MMFuruzxKrAH0VkdsG5ZUPyFHP8DfwFQ8yLv9j7tuL4J4VPD2piQ==
   dependencies:
     "@1inch/solidity-utils" "2.2.21"
     "@chainlink/contracts" "0.6.1"

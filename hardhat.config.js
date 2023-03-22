@@ -26,7 +26,7 @@ const LOW_OPTIMIZER_COMPILER_SETTINGS = {
     settings: {
         optimizer: {
             enabled: true,
-            runs: 500,
+            runs: 400,
         },
         viaIR: true,
     },
