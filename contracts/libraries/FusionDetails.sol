@@ -16,7 +16,7 @@ library FusionDetails {
     // 3 bytes          - initial rate bump
     // 4 bytes          - resolver fee
     // 4 bytes          - public time limit
-    // N*(4 + 10 bytes) - resolver with corresponding time delay from order time start
+    // N*(2 + 10 bytes) - resolver with corresponding time delay from public time limit
     // M*(2 + 3 bytes)  - auction points coefficients with seconds delays from order time start
     // 24 bytes         - taking fee (optional if flags has _HAS_TAKING_FEE_FLAG)
 
@@ -51,11 +51,11 @@ library FusionDetails {
     uint256 private constant _AUCTION_POINT_DELAY_BIT_SHIFT = 240; // 256 - _AUCTION_POINT_DELAY_BYTES_SIZE * 8;
     uint256 private constant _AUCTION_POINT_BUMP_BIT_SHIFT = 232; // 256 - _AUCTION_POINT_BUMP_BYTES_SIZE * 8;
 
-    uint256 private constant _RESOLVER_TIME_LIMIT_BYTES_SIZE = 4;
+    uint256 private constant _RESOLVER_DELAY_BYTES_SIZE = 2;
     uint256 private constant _RESOLVER_ADDRESS_BYTES_SIZE = 10;
     uint256 private constant _RESOLVER_ADDRESS_MASK = 0xffffffffffffffffffff;
-    uint256 private constant _RESOLVER_BYTES_SIZE = 14; // _RESOLVER_TIME_LIMIT_BYTES_SIZE + _RESOLVER_ADDRESS_BYTES_SIZE;
-    uint256 private constant _RESOLVER_TIME_LIMIT_BIT_SHIFT = 224; // 256 - _RESOLVER_TIME_LIMIT_BYTES_SIZE * 8;
+    uint256 private constant _RESOLVER_BYTES_SIZE = 12; // _RESOLVER_DELAY_BYTES_SIZE + _RESOLVER_ADDRESS_BYTES_SIZE;
+    uint256 private constant _RESOLVER_DELAY_BIT_SHIFT = 240; // 256 - _RESOLVER_DELAY_BYTES_SIZE * 8;
     uint256 private constant _RESOLVER_ADDRESS_BIT_SHIFT = 176; // 256 - _RESOLVER_ADDRESS_BYTES_SIZE * 8;
 
     function detailsLength(bytes calldata interaction) internal pure returns (uint256 len) {
@@ -102,12 +102,12 @@ library FusionDetails {
             if iszero(valid) {
                 let ptr := add(interaction.offset, _RESOLVERS_LIST_BYTES_OFFSET)
                 for { let end := add(ptr, mul(_RESOLVER_BYTES_SIZE, resolversCount)) } lt(ptr, end) { } {
-                    let limit := shr(_RESOLVER_TIME_LIMIT_BIT_SHIFT, calldataload(ptr))
-                    ptr := add(ptr, _RESOLVER_TIME_LIMIT_BYTES_SIZE)
+                    let resolverLimit := sub(publicLimit, shr(_RESOLVER_DELAY_BIT_SHIFT, calldataload(ptr)))
+                    ptr := add(ptr, _RESOLVER_DELAY_BYTES_SIZE)
                     let account := shr(_RESOLVER_ADDRESS_BIT_SHIFT, calldataload(ptr))
                     ptr := add(ptr, _RESOLVER_ADDRESS_BYTES_SIZE)
                     if eq(account, and(resolver, _RESOLVER_ADDRESS_MASK)) {
-                        valid := gt(timestamp(), limit)
+                        valid := gt(timestamp(), resolverLimit)
                         break
                     }
                 }

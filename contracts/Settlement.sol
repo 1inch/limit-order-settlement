@@ -145,7 +145,6 @@ contract Settlement is ISettlement, FeeBankCharger {
         bytes calldata interaction = _getInteraction(args);
         bytes calldata fusionDetails = interaction[21:];
         fusionDetails = fusionDetails[:fusionDetails.detailsLength()];
-
         if (interaction.length < 20 || address(bytes20(interaction)) != address(this)) revert WrongInteractionTarget();
         // salt is the first word in Order struct, and we validate that lower 160 bits of salt are hash of fusionDetails
         if (uint256(keccak256(fusionDetails)) & type(uint160).max != uint256(bytes32(args[4:])) & type(uint160).max) revert FusionDetailsMismatch();

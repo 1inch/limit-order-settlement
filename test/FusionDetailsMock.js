@@ -46,7 +46,7 @@ describe('FusionDetailsMock', function () {
         const result = await fusionDetailsMock.parse(details, fusionDetailsMock.address);
 
         expect(Object.assign({}, result)).to.deep.include({
-            detailsLength: BigNumber.from('43'),
+            detailsLength: BigNumber.from('41'),
             takingFeeReceiver: constants.ZERO_ADDRESS,
             takingFeeAmount: BigNumber.from('0'),
             bump: BigNumber.from('49'),

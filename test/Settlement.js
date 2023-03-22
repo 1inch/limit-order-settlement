@@ -677,6 +677,7 @@ describe('Settlement', function () {
             const oneDay = time.duration.days('1');
 
             const fusionDetails = await buildFusion({ resolvers: [addr1.address, resolver.address], duration: oneDay * 2, resolverFee: orderFee });
+
             const order0 = await buildOrder({
                 maker: addr.address,
                 makerAsset: dai.address,

@@ -25,7 +25,7 @@ async function buildFusion({
     // 3 bytes          - initial rate bump
     // 4 bytes          - resolver fee
     // 4 bytes          - public time limit
-    // N*(4 + 10 bytes) - resolver with corresponding time delay from order time start
+    // N*(2 + 10 bytes) - resolver with corresponding time delay from order time start
     // M*(2 + 3 bytes)  - auction points coefficients with seconds delays from order time start
     // 24 bytes         - taking fee (optional if flags has _HAS_TAKING_FEE_FLAG)
     assert(resolvers.length <= 15, 'Too many resolvers');
@@ -44,8 +44,8 @@ async function buildFusion({
         resolverFee.toString(16).padStart(8, '0') +
         publicTimeLimit.toString(16).padStart(8, '0') +
         resolvers.map((resolver, i) => {
-            const delay = i === 0 ? 0 : timeStart + Math.round((duration * i) / resolvers.length);
-            return delay.toString(16).padStart(8, '0') + resolver.substring(22);
+            const delay = Math.round(duration * (i + 1) / resolvers.length);
+            return delay.toString(16).padStart(4, '0') + resolver.substring(22);
         }).join('') +
         points.map(([delay, coefficient]) => {
             return delay.toString(16).padStart(4, '0') + coefficient.toString(16).padStart(6, '0');
