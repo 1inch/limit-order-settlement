@@ -16,7 +16,7 @@ async function buildFusion({
         timeStart = await time.latest();
     }
     if (!publicTimeLimit) {
-        publicTimeLimit = timeStart + (duration >> 1);
+        publicTimeLimit = (await time.latest()) + duration >> 2;
     }
 
     // 1 bytes          - flags
@@ -44,7 +44,7 @@ async function buildFusion({
         resolverFee.toString(16).padStart(8, '0') +
         publicTimeLimit.toString(16).padStart(8, '0') +
         resolvers.map((resolver, i) => {
-            const delay = Math.round(duration * (i + 1) / resolvers.length);
+            const delay = Math.ceil(publicTimeLimit * i / resolvers.length);
             return delay.toString(16).padStart(4, '0') + resolver.substring(22);
         }).join('') +
         points.map(([delay, coefficient]) => {
