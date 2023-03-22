@@ -674,7 +674,7 @@ describe('Settlement', function () {
             const { dai, weth, swap, settlement, resolver } = await loadFixture(initContracts);
 
             const currentTime = await time.latest();
-            const oneDay = time.duration.days('1');
+            const oneDay = time.duration.hours('3');
 
             const fusionDetails = await buildFusion({ resolvers: [addr1.address, resolver.address], duration: oneDay * 2, resolverFee: orderFee });
 

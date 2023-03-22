@@ -15,10 +15,10 @@ async function buildFusion({
     if (!timeStart) {
         timeStart = await time.latest();
     }
-    if (!publicTimeLimit) {
-        publicTimeLimit = (await time.latest()) + duration >> 2;
-    }
 
+    if (!publicTimeLimit) {
+        publicTimeLimit = timeStart + (duration >> 1);
+    }
     // 1 bytes          - flags
     // 4 bytes          - order time start
     // 3 bytes          - order duration
@@ -44,7 +44,7 @@ async function buildFusion({
         resolverFee.toString(16).padStart(8, '0') +
         publicTimeLimit.toString(16).padStart(8, '0') +
         resolvers.map((resolver, i) => {
-            const delay = Math.ceil(publicTimeLimit * i / resolvers.length);
+            const delay = resolvers.length === 1 ? duration : duration / 4;
             return delay.toString(16).padStart(4, '0') + resolver.substring(22);
         }).join('') +
         points.map(([delay, coefficient]) => {
