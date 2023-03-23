@@ -9,13 +9,13 @@ import "@1inch/solidity-utils/contracts/libraries/AddressLib.sol";
 library FusionDetails {
     // Order `interaction` prefix structure:
     // 1 bytes          - flags
-    // 4 bytes          - order time start
-    // 3 bytes          - order duration
+    // 4 bytes          - auction time start
+    // 3 bytes          - auction duration
     // 3 bytes          - initial rate bump
     // 4 bytes          - resolver fee
     // 4 bytes          - public time limit
-    // N*(2 + 10 bytes) - resolver with corresponding seconds delay until public time limit
-    // M*(2 + 3 bytes)  - auction points coefficients with seconds delays from order time start
+    // N*(2 + 10 bytes) - resolvers with corresponding seconds delay until public time limit
+    // M*(2 + 3 bytes)  - auction points coefficients with seconds delays from auction time start
     // 24 bytes         - taking fee (optional if flags has _HAS_TAKING_FEE_FLAG)
 
     uint256 private constant _HAS_TAKING_FEE_FLAG = 0x80;
@@ -26,13 +26,13 @@ library FusionDetails {
     uint256 private constant _TAKING_FEE_BYTES_SIZE = 24;
     uint256 private constant _TAKING_FEE_BIT_SHIFT = 64; // 256 - _TAKING_FEE_BYTES_SIZE * 8
 
-    uint256 private constant _ORDER_TIME_START_BYTES_OFFSET = 1;
-    uint256 private constant _ORDER_TIME_START_BIT_SHIFT = 224; // 256 - _ORDER_TIME_START_BYTES_SIZE * 8
+    uint256 private constant _AUCTION_TIME_START_BYTES_OFFSET = 1;
+    uint256 private constant _AUCTION_TIME_START_BIT_SHIFT = 224; // 256 - _ORDER_TIME_START_BYTES_SIZE * 8
 
-    uint256 private constant _ORDER_DURATION_BYTES_OFFSET = 5; // _ORDER_TIME_START_BYTES_OFFSET + _ORDER_TIME_START_BYTES_SIZE
-    uint256 private constant _ORDER_DURATION_BIT_SHIFT = 232; // 256 - _ORDER_DURATION_BYTES_SIZE * 8
+    uint256 private constant _AUCTION_DURATION_BYTES_OFFSET = 5; // _AUCTION_TIME_START_BYTES_OFFSET + _ORDER_TIME_START_BYTES_SIZE
+    uint256 private constant _AUCTION_DURATION_BIT_SHIFT = 232; // 256 - _ORDER_DURATION_BYTES_SIZE * 8
 
-    uint256 private constant _INITIAL_RATE_BUMP_BYTES_OFFSET = 8; // _ORDER_DURATION_BYTES_OFFSET + _ORDER_DURATION_BYTES_SIZE
+    uint256 private constant _INITIAL_RATE_BUMP_BYTES_OFFSET = 8; // _AUCTION_DURATION_BYTES_OFFSET + _ORDER_DURATION_BYTES_SIZE
     uint256 private constant _INITIAL_RATE_BUMP_BIT_SHIFT = 232; // 256 - _INITIAL_RATE_BUMP_BYTES_SIZE * 8
 
     uint256 private constant _RESOLVER_FEE_BYTES_OFFSET = 11; // _INITIAL_RATE_BUMP_BYTES_OFFSET + _INITIAL_RATE_BUMP_BYTES_SIZE
@@ -119,8 +119,8 @@ library FusionDetails {
         uint256 lastTime;
         assembly ("memory-safe") {
             startBump := shr(_INITIAL_RATE_BUMP_BIT_SHIFT, calldataload(add(details.offset, _INITIAL_RATE_BUMP_BYTES_OFFSET)))
-            cumulativeTime := shr(_ORDER_TIME_START_BIT_SHIFT, calldataload(add(details.offset, _ORDER_TIME_START_BYTES_OFFSET)))
-            lastTime := add(cumulativeTime, shr(_ORDER_DURATION_BIT_SHIFT, calldataload(add(details.offset, _ORDER_DURATION_BYTES_OFFSET))))
+            cumulativeTime := shr(_AUCTION_TIME_START_BIT_SHIFT, calldataload(add(details.offset, _AUCTION_TIME_START_BYTES_OFFSET)))
+            lastTime := add(cumulativeTime, shr(_AUCTION_DURATION_BIT_SHIFT, calldataload(add(details.offset, _AUCTION_DURATION_BYTES_OFFSET))))
         }
 
         if (block.timestamp <= cumulativeTime) {

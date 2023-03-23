@@ -306,16 +306,16 @@ describe('Settlement', function () {
 
     describe('dutch auction params', function () {
         const prepareSingleOrder = async ({
-            orderStartTime,
-            initialStartRate = 1000000n,
-            duration = 1800,
+            auctionStart,
+            initialRateBump = 1000000n,
+            auctionDuration = 1800,
             dai,
             weth,
             swap,
             settlement,
             resolver,
         }) => {
-            const fusionDetails = await buildFusion({ resolvers: [resolver.address], timeStart: orderStartTime, initialRateBump: initialStartRate, duration });
+            const fusionDetails = await buildFusion({ resolvers: [resolver.address], auctionStart, initialRateBump, auctionDuration });
             const order = await buildOrder({
                 maker: addr1.address,
                 makerAsset: dai.address,
@@ -329,15 +329,14 @@ describe('Settlement', function () {
 
             let actualTakingAmount = ether('0.1');
             const ts = await time.latest();
-            if (ts < orderStartTime + duration) {
+            if (ts < auctionStart + auctionDuration) {
                 // actualTakingAmount = actualTakingAmount * (
-                //    _BASE_POINTS + initialStartRate * (orderTime + duration - currentTimestamp) / duration
+                //    _BASE_POINTS + initialRateBump * (orderTime + auctionDuration - currentTimestamp) / auctionDuration
                 // ) / _BASE_POINTS
-                const minDuration = orderStartTime + duration - ts > duration ? duration : orderStartTime + duration - ts - 2;
+                const minDuration = auctionStart + auctionDuration - ts > auctionDuration ? auctionDuration : auctionStart + auctionDuration - ts - 2;
                 actualTakingAmount =
-                    (actualTakingAmount * (10000000n + (BigInt(initialStartRate) * BigInt(minDuration)) / BigInt(duration))) /
+                    (actualTakingAmount * (10000000n + (BigInt(initialRateBump) * BigInt(minDuration)) / BigInt(auctionDuration))) /
                     10000000n;
-                console.log(actualTakingAmount);
             }
 
             const resolverCalldata = abiCoder.encode(
@@ -373,7 +372,7 @@ describe('Settlement', function () {
 
             const currentTimestamp = await time.latest();
             const fillOrderToData = await prepareSingleOrder({
-                orderStartTime: currentTimestamp + 60,
+                auctionStart: currentTimestamp + 60,
                 dai,
                 weth,
                 swap,
@@ -388,9 +387,9 @@ describe('Settlement', function () {
 
         describe('order with one bump point', async function () {
             async function prepareOrder({
-                orderStartTime,
-                initialStartRate = 1000000n,
-                duration = 1800,
+                auctionStart,
+                initialRateBump = 1000000n,
+                auctionDuration = 1800,
                 dai,
                 weth,
                 swap,
@@ -402,7 +401,7 @@ describe('Settlement', function () {
                 const makingAmount = ether('100');
                 const takingAmount = ether('0.1');
 
-                const fusionDetails = await buildFusion({ resolvers: [resolver.address], timeStart: orderStartTime, initialRateBump: initialStartRate, duration, points: [[240, 900000n]] });
+                const fusionDetails = await buildFusion({ resolvers: [resolver.address], auctionStart, initialRateBump, auctionDuration, points: [[240, 900000n]] });
                 const order = await buildOrder({
                     maker: addr1.address,
                     makerAsset,
@@ -432,7 +431,7 @@ describe('Settlement', function () {
 
                 const currentTimestamp = await time.latest();
                 const { order, r, vs, fusionDetails } = await prepareOrder({
-                    orderStartTime: currentTimestamp,
+                    auctionStart: currentTimestamp,
                     dai,
                     weth,
                     swap,
@@ -480,7 +479,7 @@ describe('Settlement', function () {
 
                 const currentTimestamp = await time.latest();
                 const { order, r, vs, fusionDetails } = await prepareOrder({
-                    orderStartTime: currentTimestamp,
+                    auctionStart: currentTimestamp,
                     dai,
                     weth,
                     swap,
@@ -528,8 +527,8 @@ describe('Settlement', function () {
 
             const currentTimestamp = await time.latest();
             const fillOrderToData = await prepareSingleOrder({
-                orderStartTime: currentTimestamp + 60,
-                initialStartRate: 2000000n,
+                auctionStart: currentTimestamp + 60,
+                initialRateBump: 2000000n,
                 dai,
                 weth,
                 swap,
@@ -542,14 +541,14 @@ describe('Settlement', function () {
             await expect(txn).to.changeTokenBalances(weth, [addr, addr1], [ether('-0.12'), ether('0.12')]);
         });
 
-        it('set duration', async function () {
+        it('set auctionDuration', async function () {
             const { dai, weth, swap, settlement, resolver } = await loadFixture(initContracts);
 
             const currentTimestamp = await time.latest();
             const fillOrderToData = await prepareSingleOrder({
-                orderStartTime: currentTimestamp - 448,
-                initialStartRate: 1000000n,
-                duration: 900,
+                auctionStart: currentTimestamp - 448,
+                initialRateBump: 1000000n,
+                auctionDuration: 900,
                 dai,
                 weth,
                 swap,
@@ -676,7 +675,7 @@ describe('Settlement', function () {
             const currentTime = await time.latest();
             const threeHours = time.duration.hours('3');
 
-            const fusionDetails = await buildFusion({ resolvers: [addr1.address, resolver.address], duration: threeHours * 2, resolverFee: orderFee });
+            const fusionDetails = await buildFusion({ resolvers: [addr1.address, resolver.address], auctionDuration: threeHours * 2, resolverFee: orderFee });
 
             const order0 = await buildOrder({
                 maker: addr.address,
