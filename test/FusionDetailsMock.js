@@ -34,11 +34,11 @@ describe('FusionDetailsMock', function () {
         const details = buildFusion({
             resolvers: [fusionDetailsMock.address],
             points: [[10n, 100n], [5n, 50n]],
-            auctionStart: (await time.latest()) + 100,
+            startTime: (await time.latest()) + 100,
             auctionDuration: time.duration.hours(2),
             initialRateBump: 200n,
             resolverFee: 10000n,
-            publicTimeLimit: (await time.latest()) + time.duration.hours(1),
+            publicTimeDelay: time.duration.hours(1),
         });
 
         await time.increase(time.duration.minutes(2));
