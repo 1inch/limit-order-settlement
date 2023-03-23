@@ -674,9 +674,9 @@ describe('Settlement', function () {
             const { dai, weth, swap, settlement, resolver } = await loadFixture(initContracts);
 
             const currentTime = await time.latest();
-            const oneDay = time.duration.hours('3');
+            const threeHours = time.duration.hours('3');
 
-            const fusionDetails = await buildFusion({ resolvers: [addr1.address, resolver.address], duration: oneDay * 2, resolverFee: orderFee });
+            const fusionDetails = await buildFusion({ resolvers: [addr1.address, resolver.address], duration: threeHours * 2, resolverFee: orderFee });
 
             const order0 = await buildOrder({
                 maker: addr.address,
@@ -723,7 +723,7 @@ describe('Settlement', function () {
 
             await expect(resolver.settleOrders(fillOrderToData0)).to.be.revertedWithCustomError(settlement, 'ResolverIsNotWhitelisted');
 
-            await timeIncreaseTo(currentTime + oneDay + 1);
+            await timeIncreaseTo(currentTime + threeHours + 1);
 
             await resolver.settleOrders(fillOrderToData0);
         });

@@ -45,9 +45,11 @@ async function buildFusion({
         publicTimeLimit.toString(16).padStart(8, '0') +
         resolvers.map((resolver, i) => {
             const delay = resolvers.length === 1 ? duration : duration / 4;
+            assert(BigInt(delay) < (1n << 16n), 'Resolver delay is too big');
             return delay.toString(16).padStart(4, '0') + resolver.substring(22);
         }).join('') +
         points.map(([delay, coefficient]) => {
+            assert(BigInt(delay) < (1n << 16n), 'Point delay is too big');
             return delay.toString(16).padStart(4, '0') + coefficient.toString(16).padStart(6, '0');
         }).join('') +
         (takerFee > 0 ? takerFee.toString(16).padStart(8, '0') + trim0x(takerFeeReceiver) : '');

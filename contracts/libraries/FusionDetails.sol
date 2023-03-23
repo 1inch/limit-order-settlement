@@ -7,8 +7,6 @@ import "@1inch/solidity-utils/contracts/libraries/AddressLib.sol";
 // Placed in the end of the order interactions data
 // Last byte contains flags and lengths, can have up to 15 resolvers and 7 points
 library FusionDetails {
-    // TODO: make public time limit relative to order time start and fit into 2 bytes
-    // TODO: make resolvers[i].delay to be relative to order time start and fit into 2 bytes
     // Order `interaction` prefix structure:
     // 1 bytes          - flags
     // 4 bytes          - order time start
@@ -16,7 +14,7 @@ library FusionDetails {
     // 3 bytes          - initial rate bump
     // 4 bytes          - resolver fee
     // 4 bytes          - public time limit
-    // N*(2 + 10 bytes) - resolver with corresponding time delay from public time limit
+    // N*(2 + 10 bytes) - resolver with corresponding seconds delay until public time limit
     // M*(2 + 3 bytes)  - auction points coefficients with seconds delays from order time start
     // 24 bytes         - taking fee (optional if flags has _HAS_TAKING_FEE_FLAG)
 
