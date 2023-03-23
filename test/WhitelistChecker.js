@@ -34,7 +34,7 @@ describe('WhitelistChecker', function () {
         await settlement.deployed();
 
         const ResolverMock = await ethers.getContractFactory('ResolverMock');
-        const resolver = await ResolverMock.deploy(settlement.address);
+        const resolver = await ResolverMock.deploy(settlement.address, swap.address);
 
         return { dai, weth, swap, whitelistRegistrySimple, settlement, resolver };
     }

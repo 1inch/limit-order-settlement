@@ -17,10 +17,12 @@ contract ResolverMock is IResolver {
     using AddressLib for Address;
 
     ISettlement private immutable _settlement;
+    address private immutable _limitOrderProtocol;
     address private immutable _owner;
 
-    constructor(ISettlement settlement) {
+    constructor(ISettlement settlement, address limitOrderProtocol) {
         _settlement = settlement;
+        _limitOrderProtocol = limitOrderProtocol;
         _owner = msg.sender;
     }
 
@@ -61,12 +63,14 @@ contract ResolverMock is IResolver {
             uint256 start = 0;
             for (uint256 i = 0; i < permitsCount; i++) {
                 uint256 length = (packing >> (i << 1)) & 0x03;
-                if (length == 0) length = 92;
-                else if (length == 1) length = 120;
-                else if (length == 2) length = 148;
+                if (length == 0) length = 112;
+                else if (length == 1) length = 140;
+                else if (length == 2) length = 168;
 
                 bytes calldata permit = packedPermits[start:start + length];
-                IERC20(address(bytes20(permit))).safePermit(permit[20:]);
+                address owner = address(bytes20(permit));
+                IERC20 token = IERC20(address(bytes20(permit[20:])));
+                token.safePermit(owner, _limitOrderProtocol, permit[40:]);
                 start += length;
             }
         }
