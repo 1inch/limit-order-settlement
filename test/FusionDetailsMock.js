@@ -15,7 +15,7 @@ describe('FusionDetailsMock', function () {
     it('should return default values', async function () {
         const { fusionDetailsMock } = await loadFixture(initContracts);
 
-        const {fusions: [fusionDetails], resolvers} = await buildFusions([{}]);
+        const { fusions: [fusionDetails], resolvers } = await buildFusions([{}]);
         const result = await fusionDetailsMock.parse(fusionDetails, constants.ZERO_ADDRESS, resolvers);
 
         expect(Object.assign({}, result)).to.deep.contain({
@@ -31,7 +31,7 @@ describe('FusionDetailsMock', function () {
     it('should return custom values', async function () {
         const { fusionDetailsMock } = await loadFixture(initContracts);
 
-        const {fusions: [fusionDetails], resolvers} = await buildFusions([{
+        const { fusions: [fusionDetails], resolvers } = await buildFusions([{
             resolvers: [fusionDetailsMock.address],
             points: [[10n, 100n], [5n, 50n]],
             startTime: (await time.latest()) + 100,

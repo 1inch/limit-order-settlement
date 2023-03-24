@@ -1,5 +1,4 @@
 const { ethers } = require('hardhat');
-const { keccak256 } = require('ethers/lib/utils');
 const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
 const { signOrder, buildOrder, compactSignature, fillWithMakingAmount } = require('@1inch/limit-order-protocol-contract/test/helpers/orderUtils');
 const { expect, ether, trim0x } = require('@1inch/solidity-utils');

@@ -5,7 +5,7 @@ const { keccak256 } = require('ethers/lib/utils');
 async function buildFusions(params) {
     const allResolvers = [...new Set(params.flatMap((param) => param.resolvers).filter(item => item !== undefined))];
     const currentTime = await time.latest();
-    let fusions = [];
+    const fusions = [];
 
     for (let {
         resolvers = [],
@@ -68,7 +68,7 @@ async function buildFusions(params) {
                 assert(BigInt(delta) < (1n << 16n), 'Point time delta is too big');
                 return bump.toString(16).padStart(6, '0') + delta.toString(16).padStart(4, '0');
             }).join('') +
-            (takerFee > 0 ? takerFee.toString(16).padStart(8, '0') + trim0x(takerFeeReceiver) : '')
+            (takerFee > 0 ? takerFee.toString(16).padStart(8, '0') + trim0x(takerFeeReceiver) : ''),
         );
     }
 

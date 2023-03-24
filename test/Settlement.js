@@ -327,7 +327,9 @@ describe('Settlement', function () {
             settlement,
             resolver,
         }) => {
-            const { fusions: [fusionDetails], hashes: [fusionDetailsHash], resolvers } = await buildFusions([{ resolvers: [resolver.address], startTime, auctionDelay, auctionDuration, initialRateBump }]);
+            const { fusions: [fusionDetails], hashes: [fusionDetailsHash], resolvers } = await buildFusions([
+                { resolvers: [resolver.address], startTime, auctionDelay, auctionDuration, initialRateBump },
+            ]);
             const order = await buildOrder({
                 maker: addr1.address,
                 makerAsset: dai.address,
@@ -414,7 +416,9 @@ describe('Settlement', function () {
                 const makingAmount = ether('100');
                 const takingAmount = ether('0.1');
 
-                const { fusions: [fusionDetails], hashes: [fusionDetailsHash], resolvers } = await buildFusions([{ resolvers: [resolver.address], startTime, initialRateBump, auctionDuration, points: [[240, 900000n]] }]);
+                const { fusions: [fusionDetails], hashes: [fusionDetailsHash], resolvers } = await buildFusions([
+                    { resolvers: [resolver.address], startTime, initialRateBump, auctionDuration, points: [[240, 900000n]] },
+                ]);
                 const order = await buildOrder({
                     maker: addr1.address,
                     makerAsset,
@@ -580,7 +584,7 @@ describe('Settlement', function () {
 
         const { fusions: [fusionDetails0, fusionDetails1], hashes: [fusionHash0, fusionHash1], resolvers } = await buildFusions([
             { resolvers: [resolver.address], resolverFee: orderFee },
-            { resolvers: [resolver.address], resolverFee: backOrderFee }
+            { resolvers: [resolver.address], resolverFee: backOrderFee },
         ]);
 
         const order0 = await buildOrder({
