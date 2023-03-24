@@ -34,11 +34,11 @@ describe('FusionDetailsMock', function () {
         const details = buildFusion({
             resolvers: [fusionDetailsMock.address],
             points: [[10n, 100n], [5n, 50n]],
-            timeStart: (await time.latest()) + 100,
-            duration: time.duration.hours(2),
+            startTime: (await time.latest()) + 100,
+            auctionDuration: time.duration.hours(2),
             initialRateBump: 200n,
             resolverFee: 10000n,
-            publicTimeLimit: (await time.latest()) + time.duration.hours(1),
+            publicTimeDelay: time.duration.hours(1),
         });
 
         await time.increase(time.duration.minutes(2));
@@ -46,7 +46,7 @@ describe('FusionDetailsMock', function () {
         const result = await fusionDetailsMock.parse(details, fusionDetailsMock.address);
 
         expect(Object.assign({}, result)).to.deep.include({
-            detailsLength: BigNumber.from('43'),
+            detailsLength: BigNumber.from('41'),
             takingFeeReceiver: constants.ZERO_ADDRESS,
             takingFeeAmount: BigNumber.from('0'),
             bump: BigNumber.from('49'),

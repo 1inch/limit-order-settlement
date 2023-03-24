@@ -4,51 +4,61 @@ const { assert } = require('chai');
 async function buildFusion({
     resolvers = [],
     points = [],
-    timeStart,
-    duration = time.duration.hours(1),
+    startTime,
+    auctionDelay = 0n,
+    auctionDuration = time.duration.hours(1),
     initialRateBump = 0n,
     resolverFee = 0n,
-    publicTimeLimit,
+    publicTimeDelay,
     takerFee = 0n,
     takerFeeReceiver = undefined,
 } = {}) {
-    if (!timeStart) {
-        timeStart = await time.latest();
-    }
-    if (!publicTimeLimit) {
-        publicTimeLimit = timeStart + (duration >> 1);
+    if (!startTime) {
+        startTime = await time.latest();
     }
 
-    // 1 bytes          - flags
-    // 4 bytes          - order time start
-    // 3 bytes          - order duration
-    // 3 bytes          - initial rate bump
-    // 4 bytes          - resolver fee
-    // 4 bytes          - public time limit
-    // N*(4 + 10 bytes) - resolver with corresponding time delay from order time start
-    // M*(2 + 3 bytes)  - auction points coefficients with seconds delays from order time start
-    // 24 bytes         - taking fee (optional if flags has _HAS_TAKING_FEE_FLAG)
+    if (!publicTimeDelay) {
+        publicTimeDelay = auctionDuration >> 1;
+    }
+
+    // Order `interaction` prefix structure:
+    // struct Data {
+    //     bytes1 flags;
+    //     bytes4 startTime;
+    //     bytes2 auctionDelay;
+    //     bytes3 auctionDuration;
+    //     bytes3 initialRateBump;
+    //     bytes4 resolverFee;
+    //     bytes2 publicTimeDelay;
+    //     (bytes2,bytes10)[N] resolversAndTimeDeltas;
+    //     (bytes2,bytes3)[M] pointsAndTimeDeltas;
+    //     bytes24? takingFee; // optional if flags has _HAS_TAKING_FEE_FLAG
+    // }
     assert(resolvers.length <= 15, 'Too many resolvers');
     assert(points.length <= 7, 'Too many points');
-    assert(BigInt(timeStart) < (1n << 32n), 'Time start is too big');
-    assert(BigInt(duration) < (1n << 24n), 'Duration is too big');
+    assert(BigInt(startTime) < (1n << 32n), 'Auction start is too big');
+    assert(BigInt(auctionDelay) < (1n << 16n), 'Auction delay is too big');
+    assert(BigInt(auctionDuration) < (1n << 24n), 'Auction duration is too big');
     assert(BigInt(initialRateBump) < (1n << 24n), 'Initial rate bump is too big');
     assert(BigInt(resolverFee) < (1n << 32n), 'Resolver fee is too big');
-    assert(BigInt(publicTimeLimit) < (1n << 32n), 'Public time limit is too big');
+    assert(BigInt(publicTimeDelay) < (1n << 16n), 'Public time delay is too big');
 
     const flags = (takerFee > 0 ? 0x80 : 0) | (resolvers.length << 3) | points.length;
     return '0x' + flags.toString(16).padStart(2, '0') +
-        timeStart.toString(16).padStart(8, '0') +
-        duration.toString(16).padStart(6, '0') +
+        startTime.toString(16).padStart(8, '0') +
+        auctionDelay.toString(16).padStart(4, '0') +
+        auctionDuration.toString(16).padStart(6, '0') +
         initialRateBump.toString(16).padStart(6, '0') +
         resolverFee.toString(16).padStart(8, '0') +
-        publicTimeLimit.toString(16).padStart(8, '0') +
+        publicTimeDelay.toString(16).padStart(4, '0') +
         resolvers.map((resolver, i) => {
-            const delay = i === 0 ? 0 : timeStart + Math.round((duration * i) / resolvers.length);
-            return delay.toString(16).padStart(8, '0') + resolver.substring(22);
+            const delta = i === 0 ? 0 : auctionDuration / resolvers.length;
+            assert(BigInt(delta) < (1n << 16n), 'Resolver time delta is too big');
+            return delta.toString(16).padStart(4, '0') + resolver.substring(22);
         }).join('') +
-        points.map(([delay, coefficient]) => {
-            return delay.toString(16).padStart(4, '0') + coefficient.toString(16).padStart(6, '0');
+        points.map(([delta, bump]) => {
+            assert(BigInt(delta) < (1n << 16n), 'Point time delta is too big');
+            return delta.toString(16).padStart(4, '0') + bump.toString(16).padStart(6, '0');
         }).join('') +
         (takerFee > 0 ? takerFee.toString(16).padStart(8, '0') + trim0x(takerFeeReceiver) : '');
 }

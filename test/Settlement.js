@@ -306,16 +306,17 @@ describe('Settlement', function () {
 
     describe('dutch auction params', function () {
         const prepareSingleOrder = async ({
-            orderStartTime,
-            initialStartRate = 1000000n,
-            duration = 1800,
+            startTime,
+            auctionDelay = 0,
+            initialRateBump = 1000000n,
+            auctionDuration = 1800,
             dai,
             weth,
             swap,
             settlement,
             resolver,
         }) => {
-            const fusionDetails = await buildFusion({ resolvers: [resolver.address], timeStart: orderStartTime, initialRateBump: initialStartRate, duration });
+            const fusionDetails = await buildFusion({ resolvers: [resolver.address], startTime, auctionDelay, auctionDuration, initialRateBump });
             const order = await buildOrder({
                 maker: addr1.address,
                 makerAsset: dai.address,
@@ -329,15 +330,15 @@ describe('Settlement', function () {
 
             let actualTakingAmount = ether('0.1');
             const ts = await time.latest();
-            if (ts < orderStartTime + duration) {
+            // TODO: avoid this shit (as well as any other computations in tests)
+            if (ts < startTime + auctionDelay + auctionDuration) {
                 // actualTakingAmount = actualTakingAmount * (
-                //    _BASE_POINTS + initialStartRate * (orderTime + duration - currentTimestamp) / duration
+                //    _BASE_POINTS + initialRateBump * (startTime + auctionDelay + auctionDuration - currentTimestamp) / auctionDuration
                 // ) / _BASE_POINTS
-                const minDuration = orderStartTime + duration - ts > duration ? duration : orderStartTime + duration - ts - 2;
+                const minDuration = startTime + auctionDelay + auctionDuration - ts > auctionDuration ? auctionDuration : startTime + auctionDelay + auctionDuration - ts - 2;
                 actualTakingAmount =
-                    (actualTakingAmount * (10000000n + (BigInt(initialStartRate) * BigInt(minDuration)) / BigInt(duration))) /
+                    (actualTakingAmount * (10000000n + (BigInt(initialRateBump) * BigInt(minDuration)) / BigInt(auctionDuration))) /
                     10000000n;
-                console.log(actualTakingAmount);
             }
 
             const resolverCalldata = abiCoder.encode(
@@ -371,9 +372,9 @@ describe('Settlement', function () {
         it('matching order before orderTime has maximal rate bump', async function () {
             const { dai, weth, swap, settlement, resolver } = await loadFixture(initContracts);
 
-            const currentTimestamp = await time.latest();
             const fillOrderToData = await prepareSingleOrder({
-                orderStartTime: currentTimestamp + 60,
+                startTime: await time.latest(),
+                auctionDelay: 60,
                 dai,
                 weth,
                 swap,
@@ -388,9 +389,9 @@ describe('Settlement', function () {
 
         describe('order with one bump point', async function () {
             async function prepareOrder({
-                orderStartTime,
-                initialStartRate = 1000000n,
-                duration = 1800,
+                startTime,
+                initialRateBump = 1000000n,
+                auctionDuration = 1800,
                 dai,
                 weth,
                 swap,
@@ -402,7 +403,7 @@ describe('Settlement', function () {
                 const makingAmount = ether('100');
                 const takingAmount = ether('0.1');
 
-                const fusionDetails = await buildFusion({ resolvers: [resolver.address], timeStart: orderStartTime, initialRateBump: initialStartRate, duration, points: [[240, 900000n]] });
+                const fusionDetails = await buildFusion({ resolvers: [resolver.address], startTime, initialRateBump, auctionDuration, points: [[240, 900000n]] });
                 const order = await buildOrder({
                     maker: addr1.address,
                     makerAsset,
@@ -430,9 +431,9 @@ describe('Settlement', function () {
             it('matching order before bump point', async function () {
                 const { dai, weth, swap, settlement, resolver } = await loadFixture(initContracts);
 
-                const currentTimestamp = await time.latest();
+                const startTime = await time.latest();
                 const { order, r, vs, fusionDetails } = await prepareOrder({
-                    orderStartTime: currentTimestamp,
+                    startTime,
                     dai,
                     weth,
                     swap,
@@ -468,7 +469,7 @@ describe('Settlement', function () {
 
                 await weth.approve(resolver.address, actualTakingAmount);
 
-                await timeIncreaseTo(currentTimestamp + 239);
+                await timeIncreaseTo(startTime + 239);
 
                 const txn = await resolver.settleOrders(fillOrderToData);
                 await expect(txn).to.changeTokenBalances(dai, [resolver, addr1], [ether('100'), ether('-100')]);
@@ -478,9 +479,9 @@ describe('Settlement', function () {
             it('matching order after bump point', async function () {
                 const { dai, weth, swap, settlement, resolver } = await loadFixture(initContracts);
 
-                const currentTimestamp = await time.latest();
+                const startTime = await time.latest();
                 const { order, r, vs, fusionDetails } = await prepareOrder({
-                    orderStartTime: currentTimestamp,
+                    startTime,
                     dai,
                     weth,
                     swap,
@@ -515,7 +516,7 @@ describe('Settlement', function () {
 
                 await weth.approve(resolver.address, actualTakingAmount);
 
-                await timeIncreaseTo(currentTimestamp + 759);
+                await timeIncreaseTo(startTime + 759);
 
                 const txn = await resolver.settleOrders(fillOrderToData);
                 await expect(txn).to.changeTokenBalances(dai, [resolver, addr1], [ether('100'), ether('-100')]);
@@ -526,10 +527,10 @@ describe('Settlement', function () {
         it('set initial rate', async function () {
             const { dai, weth, swap, settlement, resolver } = await loadFixture(initContracts);
 
-            const currentTimestamp = await time.latest();
             const fillOrderToData = await prepareSingleOrder({
-                orderStartTime: currentTimestamp + 60,
-                initialStartRate: 2000000n,
+                startTime: await time.latest(),
+                auctionDelay: 60,
+                initialRateBump: 2000000n,
                 dai,
                 weth,
                 swap,
@@ -542,14 +543,13 @@ describe('Settlement', function () {
             await expect(txn).to.changeTokenBalances(weth, [addr, addr1], [ether('-0.12'), ether('0.12')]);
         });
 
-        it('set duration', async function () {
+        it('set auctionDuration', async function () {
             const { dai, weth, swap, settlement, resolver } = await loadFixture(initContracts);
 
-            const currentTimestamp = await time.latest();
             const fillOrderToData = await prepareSingleOrder({
-                orderStartTime: currentTimestamp - 448,
-                initialStartRate: 1000000n,
-                duration: 900,
+                startTime: (await time.latest()) - 448,
+                initialRateBump: 1000000n,
+                auctionDuration: 900,
                 dai,
                 weth,
                 swap,
@@ -674,9 +674,10 @@ describe('Settlement', function () {
             const { dai, weth, swap, settlement, resolver } = await loadFixture(initContracts);
 
             const currentTime = await time.latest();
-            const oneDay = time.duration.days('1');
+            const threeHours = time.duration.hours('3');
 
-            const fusionDetails = await buildFusion({ resolvers: [addr1.address, resolver.address], duration: oneDay * 2, resolverFee: orderFee });
+            const fusionDetails = await buildFusion({ resolvers: [addr1.address, resolver.address], auctionDuration: threeHours * 2, resolverFee: orderFee });
+
             const order0 = await buildOrder({
                 maker: addr.address,
                 makerAsset: dai.address,
@@ -722,7 +723,7 @@ describe('Settlement', function () {
 
             await expect(resolver.settleOrders(fillOrderToData0)).to.be.revertedWithCustomError(settlement, 'ResolverIsNotWhitelisted');
 
-            await timeIncreaseTo(currentTime + oneDay + 1);
+            await timeIncreaseTo(currentTime + threeHours + 1);
 
             await resolver.settleOrders(fillOrderToData0);
         });
@@ -730,7 +731,7 @@ describe('Settlement', function () {
         it('should change by non-whitelisted resolver after publicCutOff', async function () {
             const { dai, weth, swap, settlement, resolver } = await loadFixture(initContracts);
 
-            const fusionDetails0 = await buildFusion({ publicTimeLimit: BigInt(await time.latest()) + 60n, resolverFee: orderFee });
+            const fusionDetails0 = await buildFusion({ publicTimeDelay: 60n, resolverFee: orderFee });
 
             const order0 = await buildOrder({
                 maker: addr.address,
@@ -742,7 +743,7 @@ describe('Settlement', function () {
             });
             order0.salt = keccak256(fusionDetails0);
 
-            const fusionDetails1 = await buildFusion({ publicTimeLimit: BigInt(await time.latest()) + 60n, resolverFee: backOrderFee });
+            const fusionDetails1 = await buildFusion({ publicTimeDelay: 60n, resolverFee: backOrderFee });
             const order1 = await buildOrder({
                 maker: addr1.address,
                 makerAsset: weth.address,
