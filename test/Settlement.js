@@ -1,10 +1,9 @@
 const { time, expect, ether, trim0x, timeIncreaseTo } = require('@1inch/solidity-utils');
 const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
 const { ethers } = require('hardhat');
-const { keccak256 } = require('ethers/lib/utils');
 const { deploySwapTokens, getChainId } = require('./helpers/fixtures');
 const { buildOrder, signOrder, compactSignature, fillWithMakingAmount, buildMakerTraits } = require('@1inch/limit-order-protocol-contract/test/helpers/orderUtils');
-const { buildFusion } = require('./helpers/fusionUtils');
+const { buildFusions } = require('./helpers/fusionUtils');
 
 describe('Settlement', function () {
     const basePoints = ether('0.001'); // 1e15
@@ -52,8 +51,10 @@ describe('Settlement', function () {
     it('opposite direction recursive swap', async function () {
         const { dai, weth, swap, settlement, resolver } = await loadFixture(initContracts);
 
-        const fusionDetails = await buildFusion({ resolvers: [resolver.address] });
-
+        const { fusions: [fusionDetails0, fusionDetails1], hashes: [fusionHash0, fusionHash1], resolvers } = await buildFusions([
+            { resolvers: [resolver.address] },
+            { resolvers: [resolver.address] },
+        ]);
         const order0 = await buildOrder({
             maker: addr.address,
             makerAsset: dai.address,
@@ -62,7 +63,7 @@ describe('Settlement', function () {
             takingAmount: ether('0.11'),
             makerTraits: buildMakerTraits({ allowedSender: settlement.address }),
         });
-        order0.salt = keccak256(fusionDetails);
+        order0.salt = fusionHash0;
 
         const order1 = await buildOrder({
             maker: addr1.address,
@@ -72,7 +73,7 @@ describe('Settlement', function () {
             takingAmount: ether('100'),
             makerTraits: buildMakerTraits({ allowedSender: settlement.address }),
         });
-        order1.salt = keccak256(fusionDetails);
+        order1.salt = fusionHash1;
 
         const { r: r0, vs: vs0 } = compactSignature(await signOrder(order0, chainId, swap.address, addr));
         const { r: r1, vs: vs1 } = compactSignature(await signOrder(order1, chainId, swap.address, addr1));
@@ -84,7 +85,7 @@ describe('Settlement', function () {
             ether('0.11'),
             fillWithMakingAmount('0'),
             resolver.address,
-            settlement.address + '01' + trim0x(fusionDetails),
+            settlement.address + '01' + trim0x(fusionDetails1),
         ]);
 
         const fillOrderToData0 = swap.interface.encodeFunctionData('fillOrderTo', [
@@ -94,8 +95,8 @@ describe('Settlement', function () {
             ether('100'),
             fillWithMakingAmount('0'),
             resolver.address,
-            settlement.address + '00' + trim0x(fusionDetails) + trim0x(fillOrderToData1),
-        ]);
+            settlement.address + '00' + trim0x(fusionDetails0) + trim0x(fillOrderToData1),
+        ]) + trim0x(resolvers);
 
         const txn = await resolver.settleOrders(fillOrderToData0);
         await expect(txn).to.changeTokenBalances(dai, [addr, addr1], [ether('-100'), ether('100')]);
@@ -105,7 +106,10 @@ describe('Settlement', function () {
     it('opposite direction recursive swap with taking fee', async function () {
         const { dai, weth, swap, settlement, resolver } = await loadFixture(initContracts);
 
-        const fusionDetails = await buildFusion({ resolvers: [resolver.address], takerFee: 10000000n, takerFeeReceiver: addr2.address });
+        const { fusions: [fusionDetails0, fusionDetails1], hashes: [fusionHash0, fusionHash1], resolvers } = await buildFusions([
+            { resolvers: [resolver.address], takerFee: 10000000n, takerFeeReceiver: addr2.address },
+            { resolvers: [resolver.address], takerFee: 10000000n, takerFeeReceiver: addr2.address },
+        ]);
 
         const order0 = await buildOrder({
             maker: addr.address,
@@ -115,7 +119,7 @@ describe('Settlement', function () {
             takingAmount: ether('0.1'),
             makerTraits: buildMakerTraits({ allowedSender: settlement.address }),
         });
-        order0.salt = keccak256(fusionDetails);
+        order0.salt = fusionHash0;
 
         const order1 = await buildOrder({
             maker: addr1.address,
@@ -125,7 +129,7 @@ describe('Settlement', function () {
             takingAmount: ether('100'),
             makerTraits: buildMakerTraits({ allowedSender: settlement.address }),
         });
-        order1.salt = keccak256(fusionDetails);
+        order1.salt = fusionHash1;
 
         const { r: r0, vs: vs0 } = compactSignature(await signOrder(order0, chainId, swap.address, addr));
         const { r: r1, vs: vs1 } = compactSignature(await signOrder(order1, chainId, swap.address, addr1));
@@ -143,7 +147,7 @@ describe('Settlement', function () {
             ether('0.1'),
             fillWithMakingAmount('0'),
             resolver.address,
-            settlement.address + '01' + trim0x(fusionDetails),
+            settlement.address + '01' + trim0x(fusionDetails1),
         ]);
 
         const fillOrderToData0 = swap.interface.encodeFunctionData('fillOrderTo', [
@@ -153,8 +157,8 @@ describe('Settlement', function () {
             ether('100'),
             fillWithMakingAmount('0'),
             resolver.address,
-            settlement.address + '00' + trim0x(fusionDetails) + trim0x(fillOrderToData1),
-        ]);
+            settlement.address + '00' + trim0x(fusionDetails0) + trim0x(fillOrderToData1),
+        ]) + trim0x(resolvers);
 
         const txn = await resolver.settleOrders(fillOrderToData0);
         await expect(txn).to.changeTokenBalances(dai, [addr, addr1, addr2], [ether('-100'), ether('100'), ether('1')]);
@@ -164,7 +168,10 @@ describe('Settlement', function () {
     it('unidirectional recursive swap', async function () {
         const { dai, weth, swap, settlement, resolver } = await loadFixture(initContracts);
 
-        const fusionDetails = await buildFusion({ resolvers: [resolver.address] });
+        const { fusions: [fusionDetails0, fusionDetails1], hashes: [fusionHash0, fusionHash1], resolvers } = await buildFusions([
+            { resolvers: [resolver.address] },
+            { resolvers: [resolver.address] },
+        ]);
 
         const order0 = await buildOrder({
             maker: addr1.address,
@@ -174,7 +181,7 @@ describe('Settlement', function () {
             takingAmount: ether('0.01'),
             makerTraits: buildMakerTraits({ allowedSender: settlement.address }),
         });
-        order0.salt = keccak256(fusionDetails);
+        order0.salt = fusionHash0;
 
         const order1 = await buildOrder({
             maker: addr1.address,
@@ -184,7 +191,7 @@ describe('Settlement', function () {
             takingAmount: ether('0.015'),
             makerTraits: buildMakerTraits({ allowedSender: settlement.address }),
         });
-        order1.salt = keccak256(fusionDetails);
+        order1.salt = fusionHash1;
 
         const { r: r0, vs: vs0 } = compactSignature(await signOrder(order0, chainId, swap.address, addr1));
         const { r: r1, vs: vs1 } = compactSignature(await signOrder(order1, chainId, swap.address, addr1));
@@ -210,7 +217,7 @@ describe('Settlement', function () {
             ether('15'),
             fillWithMakingAmount('0'),
             resolver.address,
-            settlement.address + '01' + trim0x(fusionDetails) + trim0x(resolverArgs),
+            settlement.address + '01' + trim0x(fusionDetails1) + trim0x(resolverArgs),
         ]);
 
         const fillOrderToData0 = swap.interface.encodeFunctionData('fillOrderTo', [
@@ -220,8 +227,8 @@ describe('Settlement', function () {
             ether('10'),
             fillWithMakingAmount('0'),
             resolver.address,
-            settlement.address + '00' + trim0x(fusionDetails) + trim0x(fillOrderToData1),
-        ]);
+            settlement.address + '00' + trim0x(fusionDetails0) + trim0x(fillOrderToData1),
+        ]) + trim0x(resolvers);
 
         await weth.approve(resolver.address, ether('0.025'));
 
@@ -233,7 +240,11 @@ describe('Settlement', function () {
     it('triple recursive swap', async function () {
         const { dai, weth, swap, settlement, resolver } = await loadFixture(initContracts);
 
-        const fusionDetails = await buildFusion({ resolvers: [resolver.address] });
+        const { fusions: [fusionDetails0, fusionDetails1, fusionDetails2], hashes: [fusionHash0, fusionHash1, fusionHash2], resolvers } = await buildFusions([
+            { resolvers: [resolver.address] },
+            { resolvers: [resolver.address] },
+            { resolvers: [resolver.address] },
+        ]);
 
         const order0 = await buildOrder({
             maker: addr1.address,
@@ -243,7 +254,7 @@ describe('Settlement', function () {
             takingAmount: ether('0.01'),
             makerTraits: buildMakerTraits({ allowedSender: settlement.address }),
         });
-        order0.salt = keccak256(fusionDetails);
+        order0.salt = fusionHash0;
 
         const order1 = await buildOrder({
             maker: addr1.address,
@@ -253,7 +264,7 @@ describe('Settlement', function () {
             takingAmount: ether('0.015'),
             makerTraits: buildMakerTraits({ allowedSender: settlement.address }),
         });
-        order1.salt = keccak256(fusionDetails);
+        order1.salt = fusionHash1;
 
         const order2 = await buildOrder({
             maker: addr.address,
@@ -263,7 +274,7 @@ describe('Settlement', function () {
             takingAmount: ether('25'),
             allowedSender: settlement.address,
         });
-        order2.salt = keccak256(fusionDetails);
+        order2.salt = fusionHash2;
 
         const { r: r0, vs: vs0 } = compactSignature(await signOrder(order0, chainId, swap.address, addr1));
         const { r: r1, vs: vs1 } = compactSignature(await signOrder(order1, chainId, swap.address, addr1));
@@ -276,7 +287,7 @@ describe('Settlement', function () {
             ether('0.025'),
             fillWithMakingAmount('0'),
             resolver.address,
-            settlement.address + '01' + trim0x(fusionDetails),
+            settlement.address + '01' + trim0x(fusionDetails2),
         ]);
 
         const fillOrderToData1 = swap.interface.encodeFunctionData('fillOrderTo', [
@@ -286,7 +297,7 @@ describe('Settlement', function () {
             ether('15'),
             fillWithMakingAmount('0'),
             resolver.address,
-            settlement.address + '00' + trim0x(fusionDetails) + trim0x(fillOrderToData2),
+            settlement.address + '00' + trim0x(fusionDetails1) + trim0x(fillOrderToData2),
         ]);
 
         const fillOrderToData0 = swap.interface.encodeFunctionData('fillOrderTo', [
@@ -296,8 +307,8 @@ describe('Settlement', function () {
             ether('10'),
             fillWithMakingAmount('0'),
             resolver.address,
-            settlement.address + '00' + trim0x(fusionDetails) + trim0x(fillOrderToData1),
-        ]);
+            settlement.address + '00' + trim0x(fusionDetails0) + trim0x(fillOrderToData1),
+        ]) + trim0x(resolvers);
 
         const txn = await resolver.settleOrders(fillOrderToData0);
         await expect(txn).to.changeTokenBalances(weth, [addr, addr1], [ether('-0.025'), ether('0.025')]);
@@ -316,7 +327,7 @@ describe('Settlement', function () {
             settlement,
             resolver,
         }) => {
-            const fusionDetails = await buildFusion({ resolvers: [resolver.address], startTime, auctionDelay, auctionDuration, initialRateBump });
+            const { fusions: [fusionDetails], hashes: [fusionDetailsHash], resolvers } = await buildFusions([{ resolvers: [resolver.address], startTime, auctionDelay, auctionDuration, initialRateBump }]);
             const order = await buildOrder({
                 maker: addr1.address,
                 makerAsset: dai.address,
@@ -325,7 +336,7 @@ describe('Settlement', function () {
                 takingAmount: ether('0.1'),
                 makerTraits: buildMakerTraits({ allowedSender: settlement.address }),
             });
-            order.salt = keccak256(fusionDetails);
+            order.salt = fusionDetailsHash;
             const { r, vs } = compactSignature(await signOrder(order, chainId, swap.address, addr1));
 
             let actualTakingAmount = ether('0.1');
@@ -363,7 +374,7 @@ describe('Settlement', function () {
                 fillWithMakingAmount('0'),
                 resolver.address,
                 settlement.address + '01' + trim0x(fusionDetails) + trim0x(resolverCalldata),
-            ]);
+            ]) + trim0x(resolvers);
 
             await weth.approve(resolver.address, actualTakingAmount);
             return fillOrderToData;
@@ -403,7 +414,7 @@ describe('Settlement', function () {
                 const makingAmount = ether('100');
                 const takingAmount = ether('0.1');
 
-                const fusionDetails = await buildFusion({ resolvers: [resolver.address], startTime, initialRateBump, auctionDuration, points: [[240, 900000n]] });
+                const { fusions: [fusionDetails], hashes: [fusionDetailsHash], resolvers } = await buildFusions([{ resolvers: [resolver.address], startTime, initialRateBump, auctionDuration, points: [[240, 900000n]] }]);
                 const order = await buildOrder({
                     maker: addr1.address,
                     makerAsset,
@@ -412,7 +423,7 @@ describe('Settlement', function () {
                     takingAmount,
                     makerTraits: buildMakerTraits({ allowedSender: settlement.address }),
                 });
-                order.salt = keccak256(fusionDetails);
+                order.salt = fusionDetailsHash;
 
                 const { r, vs } = compactSignature(await signOrder(order, chainId, swap.address, addr1));
 
@@ -425,6 +436,7 @@ describe('Settlement', function () {
                     makingAmount,
                     takingAmount,
                     fusionDetails,
+                    resolvers,
                 };
             }
 
@@ -432,7 +444,7 @@ describe('Settlement', function () {
                 const { dai, weth, swap, settlement, resolver } = await loadFixture(initContracts);
 
                 const startTime = await time.latest();
-                const { order, r, vs, fusionDetails } = await prepareOrder({
+                const { order, r, vs, fusionDetails, resolvers } = await prepareOrder({
                     startTime,
                     dai,
                     weth,
@@ -465,7 +477,7 @@ describe('Settlement', function () {
                     fillWithMakingAmount('0'),
                     resolver.address,
                     settlement.address + '01' + trim0x(fusionDetails) + trim0x(resolverCalldata),
-                ]);
+                ]) + trim0x(resolvers);
 
                 await weth.approve(resolver.address, actualTakingAmount);
 
@@ -480,7 +492,7 @@ describe('Settlement', function () {
                 const { dai, weth, swap, settlement, resolver } = await loadFixture(initContracts);
 
                 const startTime = await time.latest();
-                const { order, r, vs, fusionDetails } = await prepareOrder({
+                const { order, r, vs, fusionDetails, resolvers } = await prepareOrder({
                     startTime,
                     dai,
                     weth,
@@ -512,7 +524,7 @@ describe('Settlement', function () {
                     fillWithMakingAmount('0'),
                     resolver.address,
                     settlement.address + '01' + trim0x(fusionDetails) + trim0x(resolverCalldata),
-                ]);
+                ]) + trim0x(resolvers);
 
                 await weth.approve(resolver.address, actualTakingAmount);
 
@@ -566,7 +578,11 @@ describe('Settlement', function () {
     it('should change availableCredit with non-zero fee', async function () {
         const { dai, weth, swap, settlement, resolver } = await loadFixture(initContracts);
 
-        const fusionDetailsOrder0 = await buildFusion({ resolvers: [resolver.address], resolverFee: orderFee });
+        const { fusions: [fusionDetails0, fusionDetails1], hashes: [fusionHash0, fusionHash1], resolvers } = await buildFusions([
+            { resolvers: [resolver.address], resolverFee: orderFee },
+            { resolvers: [resolver.address], resolverFee: backOrderFee }
+        ]);
+
         const order0 = await buildOrder({
             maker: addr.address,
             makerAsset: dai.address,
@@ -575,9 +591,8 @@ describe('Settlement', function () {
             takingAmount: ether('0.1'),
             makerTraits: buildMakerTraits({ allowedSender: settlement.address }),
         });
-        order0.salt = keccak256(fusionDetailsOrder0);
+        order0.salt = fusionHash0;
 
-        const fusionDetailsOrder1 = await buildFusion({ resolvers: [resolver.address], resolverFee: backOrderFee });
         const order1 = await buildOrder({
             maker: addr1.address,
             makerAsset: weth.address,
@@ -586,7 +601,7 @@ describe('Settlement', function () {
             takingAmount: ether('100'),
             makerTraits: buildMakerTraits({ allowedSender: settlement.address }),
         });
-        order1.salt = keccak256(fusionDetailsOrder1);
+        order1.salt = fusionHash1;
 
         const { r: r0, vs: vs0 } = compactSignature(await signOrder(order0, chainId, swap.address, addr));
         const { r: r1, vs: vs1 } = compactSignature(await signOrder(order1, chainId, swap.address, addr1));
@@ -598,7 +613,7 @@ describe('Settlement', function () {
             ether('0.1'),
             fillWithMakingAmount('0'),
             resolver.address,
-            settlement.address + '01' + trim0x(fusionDetailsOrder1),
+            settlement.address + '01' + trim0x(fusionDetails1),
         ]);
 
         const fillOrderToData0 = swap.interface.encodeFunctionData('fillOrderTo', [
@@ -608,8 +623,8 @@ describe('Settlement', function () {
             ether('100'),
             fillWithMakingAmount('0'),
             resolver.address,
-            settlement.address + '00' + trim0x(fusionDetailsOrder0) + trim0x(fillOrderToData1),
-        ]);
+            settlement.address + '00' + trim0x(fusionDetails0) + trim0x(fillOrderToData1),
+        ]) + trim0x(resolvers);
 
         const availableCreditBefore = await settlement.availableCredit(resolver.address);
         await resolver.settleOrders(fillOrderToData0);
@@ -621,7 +636,11 @@ describe('Settlement', function () {
     it('should not change when availableCredit is not enough', async function () {
         const { dai, weth, swap, settlement, resolver } = await loadFixture(initContracts);
 
-        const fusionDetailsOrder0 = await buildFusion({ resolvers: [resolver.address], resolverFee: '1000000' });
+        const { fusions: [fusionDetails0, fusionDetails1], hashes: [fusionHash0, fusionHash1], resolvers } = await buildFusions([
+            { resolvers: [resolver.address], resolverFee: '1000000' },
+            { resolvers: [resolver.address], resolverFee: backOrderFee },
+        ]);
+
         const order0 = await buildOrder({
             maker: addr.address,
             makerAsset: dai.address,
@@ -630,9 +649,8 @@ describe('Settlement', function () {
             takingAmount: ether('0.1'),
             makerTraits: buildMakerTraits({ allowedSender: settlement.address }),
         });
-        order0.salt = keccak256(fusionDetailsOrder0);
+        order0.salt = fusionHash0;
 
-        const fusionDetailsOrder1 = await buildFusion({ resolvers: [resolver.address], resolverFee: backOrderFee });
         const order1 = await buildOrder({
             maker: addr1.address,
             makerAsset: weth.address,
@@ -641,7 +659,7 @@ describe('Settlement', function () {
             takingAmount: ether('100'),
             makerTraits: buildMakerTraits({ allowedSender: settlement.address }),
         });
-        order1.salt = keccak256(fusionDetailsOrder1);
+        order1.salt = fusionHash1;
 
         const { r: r0, vs: vs0 } = compactSignature(await signOrder(order0, chainId, swap.address, addr));
         const { r: r1, vs: vs1 } = compactSignature(await signOrder(order1, chainId, swap.address, addr1));
@@ -653,7 +671,7 @@ describe('Settlement', function () {
             ether('0.1'),
             fillWithMakingAmount('0'),
             resolver.address,
-            settlement.address + '01' + trim0x(fusionDetailsOrder1),
+            settlement.address + '01' + trim0x(fusionDetails1),
         ]);
 
         const fillOrderToData0 = swap.interface.encodeFunctionData('fillOrderTo', [
@@ -663,8 +681,8 @@ describe('Settlement', function () {
             ether('100'),
             fillWithMakingAmount('0'),
             resolver.address,
-            settlement.address + '00' + trim0x(fusionDetailsOrder0) + trim0x(fillOrderToData1),
-        ]);
+            settlement.address + '00' + trim0x(fusionDetails0) + trim0x(fillOrderToData1),
+        ]) + trim0x(resolvers);
 
         await expect(resolver.settleOrders(fillOrderToData0)).to.be.revertedWithCustomError(settlement, 'NotEnoughCredit');
     });
@@ -676,7 +694,10 @@ describe('Settlement', function () {
             const currentTime = await time.latest();
             const threeHours = time.duration.hours('3');
 
-            const fusionDetails = await buildFusion({ resolvers: [addr1.address, resolver.address], auctionDuration: threeHours * 2, resolverFee: orderFee });
+            const { fusions: [fusionDetails0, fusionDetails1], hashes: [fusionHash0, fusionHash1], resolvers } = await buildFusions([
+                { resolvers: [addr1.address, resolver.address], auctionDuration: threeHours * 2, resolverFee: orderFee },
+                { resolvers: [addr1.address, resolver.address], auctionDuration: threeHours * 2, resolverFee: orderFee },
+            ]);
 
             const order0 = await buildOrder({
                 maker: addr.address,
@@ -686,7 +707,7 @@ describe('Settlement', function () {
                 takingAmount: ether('0.1'),
                 makerTraits: buildMakerTraits({ allowedSender: settlement.address }),
             });
-            order0.salt = keccak256(fusionDetails);
+            order0.salt = fusionHash0;
 
             const order1 = await buildOrder({
                 maker: addr1.address,
@@ -696,7 +717,7 @@ describe('Settlement', function () {
                 takingAmount: ether('100'),
                 makerTraits: buildMakerTraits({ allowedSender: settlement.address }),
             });
-            order1.salt = keccak256(fusionDetails);
+            order1.salt = fusionHash1;
 
             const { r: r0, vs: vs0 } = compactSignature(await signOrder(order0, chainId, swap.address, addr));
             const { r: r1, vs: vs1 } = compactSignature(await signOrder(order1, chainId, swap.address, addr1));
@@ -708,7 +729,7 @@ describe('Settlement', function () {
                 ether('0.11'),
                 fillWithMakingAmount('0'),
                 resolver.address,
-                settlement.address + '01' + trim0x(fusionDetails),
+                settlement.address + '01' + trim0x(fusionDetails1),
             ]);
 
             const fillOrderToData0 = swap.interface.encodeFunctionData('fillOrderTo', [
@@ -718,8 +739,8 @@ describe('Settlement', function () {
                 ether('100'),
                 fillWithMakingAmount('0'),
                 resolver.address,
-                settlement.address + '00' + trim0x(fusionDetails) + trim0x(fillOrderToData1),
-            ]);
+                settlement.address + '00' + trim0x(fusionDetails0) + trim0x(fillOrderToData1),
+            ]) + trim0x(resolvers);
 
             await expect(resolver.settleOrders(fillOrderToData0)).to.be.revertedWithCustomError(settlement, 'ResolverIsNotWhitelisted');
 
@@ -731,7 +752,10 @@ describe('Settlement', function () {
         it('should change by non-whitelisted resolver after publicCutOff', async function () {
             const { dai, weth, swap, settlement, resolver } = await loadFixture(initContracts);
 
-            const fusionDetails0 = await buildFusion({ publicTimeDelay: 60n, resolverFee: orderFee });
+            const { fusions: [fusionDetails0, fusionDetails1], hashes: [fusionHash0, fusionHash1], resolvers } = await buildFusions([
+                { publicTimeDelay: 60n, resolverFee: orderFee },
+                { publicTimeDelay: 60n, resolverFee: backOrderFee },
+            ]);
 
             const order0 = await buildOrder({
                 maker: addr.address,
@@ -741,9 +765,8 @@ describe('Settlement', function () {
                 takingAmount: ether('0.1'),
                 makerTraits: buildMakerTraits({ allowedSender: settlement.address }),
             });
-            order0.salt = keccak256(fusionDetails0);
+            order0.salt = fusionHash0;
 
-            const fusionDetails1 = await buildFusion({ publicTimeDelay: 60n, resolverFee: backOrderFee });
             const order1 = await buildOrder({
                 maker: addr1.address,
                 makerAsset: weth.address,
@@ -752,7 +775,7 @@ describe('Settlement', function () {
                 takingAmount: ether('100'),
                 makerTraits: buildMakerTraits({ allowedSender: settlement.address }),
             });
-            order1.salt = keccak256(fusionDetails1);
+            order1.salt = fusionHash1;
 
             const { r: r0, vs: vs0 } = compactSignature(await signOrder(order0, chainId, swap.address, addr));
             const { r: r1, vs: vs1 } = compactSignature(await signOrder(order1, chainId, swap.address, addr1));
@@ -775,7 +798,7 @@ describe('Settlement', function () {
                 fillWithMakingAmount('0'),
                 resolver.address,
                 settlement.address + '00' + trim0x(fusionDetails0) + trim0x(fillOrderToData1),
-            ]);
+            ]) + trim0x(resolvers);
 
             await expect(resolver.settleOrders(fillOrderToData0)).to.be.revertedWithCustomError(settlement, 'ResolverIsNotWhitelisted');
             await timeIncreaseTo(BigInt(await time.latest()) + 100n);
