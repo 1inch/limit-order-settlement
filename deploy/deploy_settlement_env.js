@@ -41,6 +41,13 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     const feeBankAddress = await settlement.feeBank();
     console.log('FeeBank deployed to:', feeBankAddress);
 
+    if (chainId !== '31337') {
+        await hre.run('verify:verify', {
+            address: feeBankAddress,
+            constructorArguments: [settlement.address, INCH_ADDR, deployer],
+        });
+    }
+
     const delegation = await idempotentDeployGetContract(
         'PowerPod',
         ['Delegated st1INCH', 'dst1INCH', st1inch.address],

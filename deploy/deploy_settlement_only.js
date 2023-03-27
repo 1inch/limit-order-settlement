@@ -36,6 +36,13 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
 
     console.log('Settlement deployed to:', settlement.address);
 
+    if (chainId !== '31337') {
+        await hre.run('verify:verify', {
+            address: feeBankAddress,
+            constructorArguments: [settlement.address, INCH_ADDR, deployer],
+        });
+    }
+
     const settlementStaging = await idempotentDeployGetContract(
         'Settlement',
         [ROUTER_V5_ADDR, INCH[chainId]],
