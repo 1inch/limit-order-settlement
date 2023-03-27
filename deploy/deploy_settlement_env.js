@@ -1,4 +1,5 @@
-const { getChainId, ethers } = require('hardhat');
+const hre = require('hardhat');
+const { getChainId, ethers } = hre;
 const { idempotentDeployGetContract } = require('../test/helpers/utils.js');
 const { constants, ether } = require('@1inch/solidity-utils');
 

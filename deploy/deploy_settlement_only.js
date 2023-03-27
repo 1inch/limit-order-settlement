@@ -1,4 +1,5 @@
-const { getChainId } = require('hardhat');
+const hre = require('hardhat');
+const { getChainId } = hre;
 const { idempotentDeployGetContract } = require('../test/helpers/utils.js');
 
 const INCH = {
@@ -36,10 +37,13 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
 
     console.log('Settlement deployed to:', settlement.address);
 
+    const feeBankAddress = await settlement.feeBank();
+    console.log('FeeBank deployed to:', feeBankAddress);
+
     if (chainId !== '31337') {
         await hre.run('verify:verify', {
             address: feeBankAddress,
-            constructorArguments: [settlement.address, INCH_ADDR, deployer],
+            constructorArguments: [settlement.address, INCH[chainId], deployer],
         });
     }
 
