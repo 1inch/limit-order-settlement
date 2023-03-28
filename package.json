@@ -33,6 +33,9 @@
     "@openzeppelin/contracts": "4.8.0"
   },
   "devDependencies": {
+    "@matterlabs/hardhat-zksync-deploy": "0.6.3",
+    "@matterlabs/hardhat-zksync-solc": "0.3.14",
+    "@matterlabs/hardhat-zksync-verify": "0.1.4",
     "@1inch/farming": "1.2.5",
     "@nomicfoundation/hardhat-chai-matchers": "1.0.4",
     "@nomicfoundation/hardhat-network-helpers": "1.0.6",
@@ -54,6 +57,7 @@
     "solc": "0.8.17",
     "solhint": "3.3.7",
     "solidity-coverage": "0.8.2",
-    "solidity-docgen": "0.6.0-beta.30"
+    "solidity-docgen": "0.6.0-beta.30",
+    "zksync-web3": "0.14.3"
   }
 }

@@ -1,6 +1,8 @@
 build
 artifacts
 cache
+artifacts-zk
+cache-zk
 **/solcInputs
 
 node_modules

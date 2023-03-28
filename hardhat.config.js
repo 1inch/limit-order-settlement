@@ -1,3 +1,6 @@
+require('@matterlabs/hardhat-zksync-deploy');
+require('@matterlabs/hardhat-zksync-solc');
+require('@matterlabs/hardhat-zksync-verify');
 require('@nomiclabs/hardhat-ethers');
 require('@nomiclabs/hardhat-etherscan');
 require('@nomicfoundation/hardhat-chai-matchers');
@@ -55,5 +58,10 @@ module.exports = {
             '@1inch/limit-order-protocol-contract/contracts/LimitOrderProtocol.sol',
             '@1inch/limit-order-protocol-contract/contracts/mocks/WrappedTokenMock.sol',
         ],
+    },
+    zksolc: {
+        version: '1.3.7',
+        compilerSource: 'binary',
+        settings: {},
     },
 };
