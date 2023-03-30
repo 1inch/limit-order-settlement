@@ -65,7 +65,7 @@ contract ResolverMock is IResolver {
                 uint256 length = (packing >> (i << 1)) & 0x03;
                 if (length == 0) length = 112;
                 else if (length == 1) length = 140;
-                else if (length == 2) length = 168;
+                else if (length == 2) length = 136;
 
                 bytes calldata permit = packedPermits[start:start + length];
                 address owner = address(bytes20(permit));
