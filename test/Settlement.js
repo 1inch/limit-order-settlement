@@ -109,7 +109,10 @@ describe('Settlement', function () {
     it('settle orders with permits, permit', async function () {
         const { dai, weth, swap, settlement, resolver } = await loadFixture(initContracts);
 
-        const fusionDetails = await buildFusion({ resolvers: [resolver.address] });
+        const { fusions: [fusionDetails0, fusionDetails1], hashes: [fusionHash0, fusionHash1], resolvers } = await buildFusions([
+            { resolvers: [resolver.address] },
+            { resolvers: [resolver.address] },
+        ]);
         const order0 = await buildOrder({
             maker: addr.address,
             makerAsset: dai.address,
@@ -118,7 +121,7 @@ describe('Settlement', function () {
             takingAmount: ether('0.11'),
             makerTraits: buildMakerTraits({ allowedSender: settlement.address }),
         });
-        order0.salt = keccak256(fusionDetails);
+        order0.salt = fusionHash0;
 
         const order1 = await buildOrder({
             maker: addr1.address,
@@ -128,7 +131,7 @@ describe('Settlement', function () {
             takingAmount: ether('100'),
             makerTraits: buildMakerTraits({ allowedSender: settlement.address }),
         });
-        order1.salt = keccak256(fusionDetails);
+        order1.salt = fusionHash1;
 
         const { r: r0, vs: vs0 } = compactSignature(await signOrder(order0, chainId, swap.address, addr));
         const { r: r1, vs: vs1 } = compactSignature(await signOrder(order1, chainId, swap.address, addr1));
@@ -140,7 +143,7 @@ describe('Settlement', function () {
             ether('0.11'),
             fillWithMakingAmount('0'),
             resolver.address,
-            settlement.address + '01' + trim0x(fusionDetails),
+            settlement.address + '01' + trim0x(fusionDetails1),
         ]);
 
         const fillOrderToData0 = swap.interface.encodeFunctionData('fillOrderTo', [
@@ -150,8 +153,8 @@ describe('Settlement', function () {
             ether('100'),
             fillWithMakingAmount('0'),
             resolver.address,
-            settlement.address + '00' + trim0x(fusionDetails) + trim0x(fillOrderToData1),
-        ]);
+            settlement.address + '00' + trim0x(fusionDetails0) + trim0x(fillOrderToData1),
+        ]) + trim0x(resolvers);
 
         await dai.connect(addr1).approve(swap.address, ether('100'));
         await weth.connect(addr1).approve(swap.address, ether('0.11'));
@@ -167,7 +170,10 @@ describe('Settlement', function () {
     it('settle orders with permits, permit2', async function () {
         const { dai, weth, swap, settlement, resolver } = await loadFixture(initContracts);
 
-        const fusionDetails = await buildFusion({ resolvers: [resolver.address] });
+        const { fusions: [fusionDetails0, fusionDetails1], hashes: [fusionHash0, fusionHash1], resolvers } = await buildFusions([
+            { resolvers: [resolver.address] },
+            { resolvers: [resolver.address] },
+        ]);
         const order0 = await buildOrder({
             maker: addr.address,
             makerAsset: dai.address,
@@ -176,7 +182,7 @@ describe('Settlement', function () {
             takingAmount: ether('0.11'),
             makerTraits: buildMakerTraits({ allowedSender: settlement.address, usePermit2: true }),
         });
-        order0.salt = keccak256(fusionDetails);
+        order0.salt = fusionHash0;
 
         const order1 = await buildOrder({
             maker: addr1.address,
@@ -186,7 +192,7 @@ describe('Settlement', function () {
             takingAmount: ether('100'),
             makerTraits: buildMakerTraits({ allowedSender: settlement.address, usePermit2: true }),
         });
-        order1.salt = keccak256(fusionDetails);
+        order1.salt = fusionHash1;
 
         const { r: r0, vs: vs0 } = compactSignature(await signOrder(order0, chainId, swap.address, addr));
         const { r: r1, vs: vs1 } = compactSignature(await signOrder(order1, chainId, swap.address, addr1));
@@ -198,7 +204,7 @@ describe('Settlement', function () {
             ether('0.11'),
             fillWithMakingAmount('0'),
             resolver.address,
-            settlement.address + '01' + trim0x(fusionDetails),
+            settlement.address + '01' + trim0x(fusionDetails1),
         ]);
 
         const fillOrderToData0 = swap.interface.encodeFunctionData('fillOrderTo', [
@@ -208,8 +214,8 @@ describe('Settlement', function () {
             ether('100'),
             fillWithMakingAmount('0'),
             resolver.address,
-            settlement.address + '00' + trim0x(fusionDetails) + trim0x(fillOrderToData1),
-        ]);
+            settlement.address + '00' + trim0x(fusionDetails0) + trim0x(fillOrderToData1),
+        ]) + trim0x(resolvers);
 
         const permit2 = await permit2Contract();
         await dai.approve(permit2.address, ether('100'));
