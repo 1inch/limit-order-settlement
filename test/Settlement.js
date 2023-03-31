@@ -1,4 +1,4 @@
-const { time, expect, ether, trim0x, timeIncreaseTo } = require('@1inch/solidity-utils');
+const { time, expect, ether, trim0x, timeIncreaseTo, getPermit, getPermit2, compressPermit, permit2Contract } = require('@1inch/solidity-utils');
 const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
 const { ethers } = require('hardhat');
 const { deploySwapTokens, getChainId } = require('./helpers/fixtures');
@@ -21,16 +21,10 @@ describe('Settlement', function () {
     async function initContracts() {
         const { dai, weth, inch, swap } = await deploySwapTokens();
 
-        await dai.mint(addr.address, ether('100'));
-        await dai.mint(addr1.address, ether('100'));
+        await dai.transfer(addr1.address, ether('100'));
         await inch.mint(addr.address, ether('100'));
         await weth.deposit({ value: ether('1') });
         await weth.connect(addr1).deposit({ value: ether('1') });
-
-        await dai.approve(swap.address, ether('100'));
-        await dai.connect(addr1).approve(swap.address, ether('100'));
-        await weth.approve(swap.address, ether('1'));
-        await weth.connect(addr1).approve(swap.address, ether('1'));
 
         const SettlementMock = await ethers.getContractFactory('SettlementMock');
         const settlement = await SettlementMock.deploy(swap.address, inch.address);
@@ -48,13 +42,22 @@ describe('Settlement', function () {
         return { dai, weth, swap, settlement, feeBank, resolver };
     }
 
+    async function approve(dai, weth, swap) {
+        await dai.approve(swap.address, ether('100'));
+        await dai.connect(addr1).approve(swap.address, ether('100'));
+        await weth.approve(swap.address, ether('1'));
+        await weth.connect(addr1).approve(swap.address, ether('1'));
+    }
+
     it('opposite direction recursive swap', async function () {
         const { dai, weth, swap, settlement, resolver } = await loadFixture(initContracts);
+        await approve(dai, weth, swap);
 
         const { fusions: [fusionDetails0, fusionDetails1], hashes: [fusionHash0, fusionHash1], resolvers } = await buildFusions([
             { resolvers: [resolver.address] },
             { resolvers: [resolver.address] },
         ]);
+
         const order0 = await buildOrder({
             maker: addr.address,
             makerAsset: dai.address,
@@ -103,8 +106,128 @@ describe('Settlement', function () {
         await expect(txn).to.changeTokenBalances(weth, [addr, addr1], [ether('0.11'), ether('-0.11')]);
     });
 
+    it('settle orders with permits, permit', async function () {
+        const { dai, weth, swap, settlement, resolver } = await loadFixture(initContracts);
+
+        const fusionDetails = await buildFusion({ resolvers: [resolver.address] });
+        const order0 = await buildOrder({
+            maker: addr.address,
+            makerAsset: dai.address,
+            takerAsset: weth.address,
+            makingAmount: ether('100'),
+            takingAmount: ether('0.11'),
+            makerTraits: buildMakerTraits({ allowedSender: settlement.address }),
+        });
+        order0.salt = keccak256(fusionDetails);
+
+        const order1 = await buildOrder({
+            maker: addr1.address,
+            makerAsset: weth.address,
+            takerAsset: dai.address,
+            makingAmount: ether('0.11'),
+            takingAmount: ether('100'),
+            makerTraits: buildMakerTraits({ allowedSender: settlement.address }),
+        });
+        order1.salt = keccak256(fusionDetails);
+
+        const { r: r0, vs: vs0 } = compactSignature(await signOrder(order0, chainId, swap.address, addr));
+        const { r: r1, vs: vs1 } = compactSignature(await signOrder(order1, chainId, swap.address, addr1));
+
+        const fillOrderToData1 = swap.interface.encodeFunctionData('fillOrderTo', [
+            order1,
+            r1,
+            vs1,
+            ether('0.11'),
+            fillWithMakingAmount('0'),
+            resolver.address,
+            settlement.address + '01' + trim0x(fusionDetails),
+        ]);
+
+        const fillOrderToData0 = swap.interface.encodeFunctionData('fillOrderTo', [
+            order0,
+            r0,
+            vs0,
+            ether('100'),
+            fillWithMakingAmount('0'),
+            resolver.address,
+            settlement.address + '00' + trim0x(fusionDetails) + trim0x(fillOrderToData1),
+        ]);
+
+        await dai.connect(addr1).approve(swap.address, ether('100'));
+        await weth.connect(addr1).approve(swap.address, ether('0.11'));
+        await weth.approve(swap.address, ether('0.11'));
+        const permit0 = compressPermit(await getPermit(addr, dai, '1', chainId, swap.address, ether('100')));
+        const packing = (1n << 248n) | 1n;
+        const txn = await resolver.settleOrdersWithPermits(fillOrderToData0, packing,
+            addr.address + trim0x(dai.address) + trim0x(permit0));
+        await expect(txn).to.changeTokenBalances(dai, [addr, addr1], [ether('-100'), ether('100')]);
+        await expect(txn).to.changeTokenBalances(weth, [addr, addr1], [ether('0.11'), ether('-0.11')]);
+    });
+
+    it('settle orders with permits, permit2', async function () {
+        const { dai, weth, swap, settlement, resolver } = await loadFixture(initContracts);
+
+        const fusionDetails = await buildFusion({ resolvers: [resolver.address] });
+        const order0 = await buildOrder({
+            maker: addr.address,
+            makerAsset: dai.address,
+            takerAsset: weth.address,
+            makingAmount: ether('100'),
+            takingAmount: ether('0.11'),
+            makerTraits: buildMakerTraits({ allowedSender: settlement.address, usePermit2: true }),
+        });
+        order0.salt = keccak256(fusionDetails);
+
+        const order1 = await buildOrder({
+            maker: addr1.address,
+            makerAsset: weth.address,
+            takerAsset: dai.address,
+            makingAmount: ether('0.11'),
+            takingAmount: ether('100'),
+            makerTraits: buildMakerTraits({ allowedSender: settlement.address, usePermit2: true }),
+        });
+        order1.salt = keccak256(fusionDetails);
+
+        const { r: r0, vs: vs0 } = compactSignature(await signOrder(order0, chainId, swap.address, addr));
+        const { r: r1, vs: vs1 } = compactSignature(await signOrder(order1, chainId, swap.address, addr1));
+
+        const fillOrderToData1 = swap.interface.encodeFunctionData('fillOrderTo', [
+            order1,
+            r1,
+            vs1,
+            ether('0.11'),
+            fillWithMakingAmount('0'),
+            resolver.address,
+            settlement.address + '01' + trim0x(fusionDetails),
+        ]);
+
+        const fillOrderToData0 = swap.interface.encodeFunctionData('fillOrderTo', [
+            order0,
+            r0,
+            vs0,
+            ether('100'),
+            fillWithMakingAmount('0'),
+            resolver.address,
+            settlement.address + '00' + trim0x(fusionDetails) + trim0x(fillOrderToData1),
+        ]);
+
+        const permit2 = await permit2Contract();
+        await dai.approve(permit2.address, ether('100'));
+        await dai.connect(addr1).approve(swap.address, ether('100'));
+        await weth.connect(addr1).approve(permit2.address, ether('0.11'));
+        await weth.approve(swap.address, ether('0.11'));
+        const permit0 = compressPermit(await getPermit2(addr, dai.address, chainId, swap.address, ether('100')));
+        const permit1 = compressPermit(await getPermit2(addr1, weth.address, chainId, swap.address, ether('0.11')));
+        const packing = (2n << 248n) | 2n | 8n;
+        const txn = await resolver.settleOrdersWithPermits(fillOrderToData0, packing,
+            addr.address + trim0x(dai.address) + trim0x(permit0) + trim0x(addr1.address) + trim0x(weth.address) + trim0x(permit1));
+        await expect(txn).to.changeTokenBalances(dai, [addr, addr1], [ether('-100'), ether('100')]);
+        await expect(txn).to.changeTokenBalances(weth, [addr, addr1], [ether('0.11'), ether('-0.11')]);
+    });
+
     it('opposite direction recursive swap with taking fee', async function () {
         const { dai, weth, swap, settlement, resolver } = await loadFixture(initContracts);
+        await approve(dai, weth, swap);
 
         const { fusions: [fusionDetails0, fusionDetails1], hashes: [fusionHash0, fusionHash1], resolvers } = await buildFusions([
             { resolvers: [resolver.address], takerFee: 10000000n, takerFeeReceiver: addr2.address },
@@ -167,6 +290,7 @@ describe('Settlement', function () {
 
     it('unidirectional recursive swap', async function () {
         const { dai, weth, swap, settlement, resolver } = await loadFixture(initContracts);
+        await approve(dai, weth, swap);
 
         const { fusions: [fusionDetails0, fusionDetails1], hashes: [fusionHash0, fusionHash1], resolvers } = await buildFusions([
             { resolvers: [resolver.address] },
@@ -239,6 +363,7 @@ describe('Settlement', function () {
 
     it('triple recursive swap', async function () {
         const { dai, weth, swap, settlement, resolver } = await loadFixture(initContracts);
+        await approve(dai, weth, swap);
 
         const { fusions: [fusionDetails0, fusionDetails1, fusionDetails2], hashes: [fusionHash0, fusionHash1, fusionHash2], resolvers } = await buildFusions([
             { resolvers: [resolver.address] },
@@ -384,6 +509,7 @@ describe('Settlement', function () {
 
         it('matching order before orderTime has maximal rate bump', async function () {
             const { dai, weth, swap, settlement, resolver } = await loadFixture(initContracts);
+            await approve(dai, weth, swap);
 
             const fillOrderToData = await prepareSingleOrder({
                 startTime: await time.latest(),
@@ -446,6 +572,7 @@ describe('Settlement', function () {
 
             it('matching order before bump point', async function () {
                 const { dai, weth, swap, settlement, resolver } = await loadFixture(initContracts);
+                await approve(dai, weth, swap);
 
                 const startTime = await time.latest();
                 const { order, r, vs, fusionDetails, resolvers } = await prepareOrder({
@@ -494,6 +621,7 @@ describe('Settlement', function () {
 
             it('matching order after bump point', async function () {
                 const { dai, weth, swap, settlement, resolver } = await loadFixture(initContracts);
+                await approve(dai, weth, swap);
 
                 const startTime = await time.latest();
                 const { order, r, vs, fusionDetails, resolvers } = await prepareOrder({
@@ -542,6 +670,7 @@ describe('Settlement', function () {
 
         it('set initial rate', async function () {
             const { dai, weth, swap, settlement, resolver } = await loadFixture(initContracts);
+            await approve(dai, weth, swap);
 
             const fillOrderToData = await prepareSingleOrder({
                 startTime: await time.latest(),
@@ -561,6 +690,7 @@ describe('Settlement', function () {
 
         it('set auctionDuration', async function () {
             const { dai, weth, swap, settlement, resolver } = await loadFixture(initContracts);
+            await approve(dai, weth, swap);
 
             const fillOrderToData = await prepareSingleOrder({
                 startTime: (await time.latest()) - 448,
@@ -581,6 +711,7 @@ describe('Settlement', function () {
 
     it('should change availableCredit with non-zero fee', async function () {
         const { dai, weth, swap, settlement, resolver } = await loadFixture(initContracts);
+        await approve(dai, weth, swap);
 
         const { fusions: [fusionDetails0, fusionDetails1], hashes: [fusionHash0, fusionHash1], resolvers } = await buildFusions([
             { resolvers: [resolver.address], resolverFee: orderFee },
@@ -639,6 +770,7 @@ describe('Settlement', function () {
 
     it('should not change when availableCredit is not enough', async function () {
         const { dai, weth, swap, settlement, resolver } = await loadFixture(initContracts);
+        await approve(dai, weth, swap);
 
         const { fusions: [fusionDetails0, fusionDetails1], hashes: [fusionHash0, fusionHash1], resolvers } = await buildFusions([
             { resolvers: [resolver.address], resolverFee: '1000000' },
@@ -694,6 +826,7 @@ describe('Settlement', function () {
     describe('whitelist lock period', async function () {
         it('should change only after whitelistedCutOff', async function () {
             const { dai, weth, swap, settlement, resolver } = await loadFixture(initContracts);
+            await approve(dai, weth, swap);
 
             const currentTime = await time.latest();
             const threeHours = time.duration.hours('3');
@@ -755,6 +888,7 @@ describe('Settlement', function () {
 
         it('should change by non-whitelisted resolver after publicCutOff', async function () {
             const { dai, weth, swap, settlement, resolver } = await loadFixture(initContracts);
+            await approve(dai, weth, swap);
 
             const { fusions: [fusionDetails0, fusionDetails1], hashes: [fusionHash0, fusionHash1], resolvers } = await buildFusions([
                 { publicTimeDelay: 60n, resolverFee: orderFee },

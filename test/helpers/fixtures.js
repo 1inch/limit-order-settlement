@@ -1,12 +1,15 @@
 const { ethers } = require('hardhat');
+const { ether } = require('@1inch/solidity-utils');
 
 async function getChainId() {
     return (await ethers.provider.getNetwork()).chainId;
 }
 
 async function deploySwapTokens() {
+    const [account] = await ethers.getSigners();
     const TokenMock = await ethers.getContractFactory('TokenMock');
-    const dai = await TokenMock.deploy('DAI', 'DAI');
+    const ERC20PermitMock = await ethers.getContractFactory('ERC20PermitMock');
+    const dai = await ERC20PermitMock.deploy('DAI', 'DAI', account.address, ether('1000'));
     await dai.deployed();
     const WrappedTokenMock = await ethers.getContractFactory('WrappedTokenMock');
     const weth = await WrappedTokenMock.deploy('WETH', 'WETH');
