@@ -120,7 +120,6 @@ contract Settlement is ISettlement, FeeBankCharger {
         TakerTraits takerTraits;
         address target;
         bytes interaction;
-        // bytes permit;
     }
 
     function _getInteraction(bytes calldata data) internal pure returns(bytes calldata interaction) {
