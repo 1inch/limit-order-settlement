@@ -1,4 +1,5 @@
-const { getChainId, ethers } = require('hardhat');
+const hre = require('hardhat');
+const { getChainId, ethers } = hre;
 const { idempotentDeployGetContract } = require('../test/helpers/utils.js');
 const { constants, ether } = require('@1inch/solidity-utils');
 
@@ -40,6 +41,13 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
 
     const feeBankAddress = await settlement.feeBank();
     console.log('FeeBank deployed to:', feeBankAddress);
+
+    if (chainId !== '31337') {
+        await hre.run('verify:verify', {
+            address: feeBankAddress,
+            constructorArguments: [settlement.address, INCH_ADDR, deployer],
+        });
+    }
 
     const delegation = await idempotentDeployGetContract(
         'PowerPod',
