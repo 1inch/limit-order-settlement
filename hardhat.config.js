@@ -8,36 +8,43 @@ require('solidity-coverage');
 require('hardhat-dependency-compiler');
 require('hardhat-deploy');
 require('hardhat-gas-reporter');
+require('hardhat-tracer');
 require('dotenv').config();
 
 const { networks, etherscan } = require('./hardhat.networks');
 
 const DEFAULT_COMPILER_SETTINGS = {
-    version: '0.8.17',
+    version: '0.8.19',
     settings: {
         optimizer: {
             enabled: true,
             runs: 1000000,
         },
+        viaIR: true,
     },
 };
 
 const LOW_OPTIMIZER_COMPILER_SETTINGS = {
-    version: '0.8.17',
+    version: '0.8.19',
     settings: {
         optimizer: {
             enabled: true,
-            runs: 10000,
         },
+        viaIR: true,
     },
 };
 
 module.exports = {
     etherscan,
+    tracer: {
+        enableAllOpcodes: true,
+    },
     solidity: {
         compilers: [DEFAULT_COMPILER_SETTINGS],
         overrides: {
             'contracts/PowerPod.sol': LOW_OPTIMIZER_COMPILER_SETTINGS,
+            '@1inch/limit-order-protocol-contract/contracts/LimitOrderProtocol.sol': LOW_OPTIMIZER_COMPILER_SETTINGS,
+            'contracts/hardhat-dependency-compiler/@1inch/limit-order-protocol-contract/contracts/LimitOrderProtocol.sol': LOW_OPTIMIZER_COMPILER_SETTINGS,
         },
     },
     networks,

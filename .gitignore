@@ -4,6 +4,7 @@ cache
 artifacts-zk
 cache-zk
 **/solcInputs
+contracts/hardhat-dependency-compiler
 
 node_modules
 

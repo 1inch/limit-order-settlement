@@ -1,8 +1,10 @@
-const { assertRoughlyEqualValues, time, expect, ether, trim0x, timeIncreaseTo } = require('@1inch/solidity-utils');
+const { time, expect, ether, trim0x, timeIncreaseTo, getPermit, getPermit2, compressPermit, permit2Contract } = require('@1inch/solidity-utils');
 const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
 const { ethers } = require('hardhat');
+const { keccak256 } = require('ethers/lib/utils');
 const { deploySwapTokens, getChainId } = require('./helpers/fixtures');
-const { buildOrder, signOrder, buildSalt, defaultExpiredAuctionTimestamp } = require('./helpers/orderUtils');
+const { buildOrder, signOrder, compactSignature, fillWithMakingAmount, buildMakerTraits } = require('@1inch/limit-order-protocol-contract/test/helpers/orderUtils');
+const { buildFusion } = require('./helpers/fusionUtils');
 
 describe('Settlement', function () {
     const basePoints = ether('0.001'); // 1e15
@@ -20,259 +22,553 @@ describe('Settlement', function () {
     async function initContracts() {
         const { dai, weth, inch, swap } = await deploySwapTokens();
 
-        await dai.mint(addr.address, ether('100'));
-        await dai.mint(addr1.address, ether('100'));
+        await dai.transfer(addr1.address, ether('100'));
         await inch.mint(addr.address, ether('100'));
         await weth.deposit({ value: ether('1') });
         await weth.connect(addr1).deposit({ value: ether('1') });
 
+        const SettlementMock = await ethers.getContractFactory('SettlementMock');
+        const settlement = await SettlementMock.deploy(swap.address, inch.address);
+        await settlement.deployed();
+
+        const FeeBank = await ethers.getContractFactory('FeeBank');
+        const feeBank = await FeeBank.attach(await settlement.feeBank());
+
+        const ResolverMock = await ethers.getContractFactory('ResolverMock');
+        const resolver = await ResolverMock.deploy(settlement.address, swap.address);
+
+        await inch.approve(feeBank.address, ether('100'));
+        await feeBank.depositFor(resolver.address, ether('100'));
+
+        return { dai, weth, swap, settlement, feeBank, resolver };
+    }
+
+    async function approve(dai, weth, swap) {
         await dai.approve(swap.address, ether('100'));
         await dai.connect(addr1).approve(swap.address, ether('100'));
         await weth.approve(swap.address, ether('1'));
         await weth.connect(addr1).approve(swap.address, ether('1'));
-
-        const SettlementMock = await ethers.getContractFactory('SettlementMock');
-        const matcher = await SettlementMock.deploy(swap.address, inch.address);
-        await matcher.deployed();
-
-        const FeeBank = await ethers.getContractFactory('FeeBank');
-        const feeBank = await FeeBank.attach(await matcher.feeBank());
-
-        await inch.approve(feeBank.address, ether('100'));
-        await feeBank.deposit(ether('100'));
-
-        const ResolverMock = await ethers.getContractFactory('ResolverMock');
-        const resolver = await ResolverMock.deploy(matcher.address);
-
-        return { dai, weth, swap, matcher, feeBank, resolver };
     }
 
     it('opposite direction recursive swap', async function () {
-        const { dai, weth, swap, matcher, resolver } = await loadFixture(initContracts);
+        const { dai, weth, swap, settlement, resolver } = await loadFixture(initContracts);
+        await approve(dai, weth, swap);
 
-        const order = await buildOrder(
-            {
-                makerAsset: dai.address,
-                takerAsset: weth.address,
-                makingAmount: ether('100'),
-                takingAmount: ether('0.1'),
-                salt: buildSalt({ orderStartTime: await time.latest() }),
-                allowedSender: matcher.address,
-                from: addr.address,
-            },
-            {
-                predicate: swap.interface.encodeFunctionData('timestampBelow', [0xff00000000]),
-                whitelistedAddrs: [addr.address],
-                whitelistedCutOffs: [0],
-            },
-        );
+        const fusionDetails = await buildFusion({ resolvers: [resolver.address] });
+        const order0 = await buildOrder({
+            maker: addr.address,
+            makerAsset: dai.address,
+            takerAsset: weth.address,
+            makingAmount: ether('100'),
+            takingAmount: ether('0.11'),
+            makerTraits: buildMakerTraits({ allowedSender: settlement.address }),
+        });
+        order0.salt = keccak256(fusionDetails);
 
-        const backOrder = await buildOrder(
-            {
-                makerAsset: weth.address,
-                takerAsset: dai.address,
-                makingAmount: ether('0.11'),
-                takingAmount: ether('100'),
-                allowedSender: matcher.address,
-                from: addr1.address,
-            },
-            {
-                predicate: swap.interface.encodeFunctionData('timestampBelow', [0xff00000000]),
-                whitelistedAddrs: [addr.address],
-                whitelistedCutOffs: [0],
-            },
-        );
+        const order1 = await buildOrder({
+            maker: addr1.address,
+            makerAsset: weth.address,
+            takerAsset: dai.address,
+            makingAmount: ether('0.11'),
+            takingAmount: ether('100'),
+            makerTraits: buildMakerTraits({ allowedSender: settlement.address }),
+        });
+        order1.salt = keccak256(fusionDetails);
 
-        const signature = await signOrder(order, chainId, swap.address, addr);
-        const signatureBackOrder = await signOrder(backOrder, chainId, swap.address, addr1);
+        const { r: r0, vs: vs0 } = compactSignature(await signOrder(order0, chainId, swap.address, addr));
+        const { r: r1, vs: vs1 } = compactSignature(await signOrder(order1, chainId, swap.address, addr1));
 
-        const matchingParams = matcher.address + '01' + trim0x(resolver.address);
+        const fillOrderToData1 = swap.interface.encodeFunctionData('fillOrderTo', [
+            order1,
+            r1,
+            vs1,
+            ether('0.11'),
+            fillWithMakingAmount('0'),
+            resolver.address,
+            settlement.address + '01' + trim0x(fusionDetails),
+        ]);
 
-        const interaction =
-            matcher.address +
-            '00' +
-            swap.interface
-                .encodeFunctionData('fillOrderTo', [
-                    backOrder,
-                    signatureBackOrder,
-                    matchingParams,
-                    ether('0.11'),
-                    0,
-                    ether('100'),
-                    resolver.address,
-                ])
-                .substring(10);
+        const fillOrderToData0 = swap.interface.encodeFunctionData('fillOrderTo', [
+            order0,
+            r0,
+            vs0,
+            ether('100'),
+            fillWithMakingAmount('0'),
+            resolver.address,
+            settlement.address + '00' + trim0x(fusionDetails) + trim0x(fillOrderToData1),
+        ]);
 
-        const addrweth = await weth.balanceOf(addr.address);
-        const addr1weth = await weth.balanceOf(addr1.address);
-        const addrdai = await dai.balanceOf(addr.address);
-        const addr1dai = await dai.balanceOf(addr1.address);
+        const txn = await resolver.settleOrders(fillOrderToData0);
+        await expect(txn).to.changeTokenBalances(dai, [addr, addr1], [ether('-100'), ether('100')]);
+        await expect(txn).to.changeTokenBalances(weth, [addr, addr1], [ether('0.11'), ether('-0.11')]);
+    });
 
-        await matcher.settleOrders(
-            '0x' +
-                swap.interface
-                    .encodeFunctionData('fillOrderTo', [
-                        order,
-                        signature,
-                        interaction,
-                        ether('100'),
-                        0,
-                        ether('0.11'),
-                        resolver.address,
-                    ])
-                    .substring(10),
-        );
+    it('settle orders with permits, permit', async function () {
+        const { dai, weth, swap, settlement, resolver } = await loadFixture(initContracts);
 
-        assertRoughlyEqualValues(await weth.balanceOf(addr.address), addrweth.add(ether('0.11')), 1e-4);
-        // TODO: 6e-5 WETH lost into LimitOrderProtocol contract
-        expect(await weth.balanceOf(addr1.address)).to.equal(addr1weth.sub(ether('0.11')));
-        expect(await dai.balanceOf(addr.address)).to.equal(addrdai.sub(ether('100')));
-        expect(await dai.balanceOf(addr1.address)).to.equal(addr1dai.add(ether('100')));
+        const fusionDetails = await buildFusion({ resolvers: [resolver.address] });
+        const order0 = await buildOrder({
+            maker: addr.address,
+            makerAsset: dai.address,
+            takerAsset: weth.address,
+            makingAmount: ether('100'),
+            takingAmount: ether('0.11'),
+            makerTraits: buildMakerTraits({ allowedSender: settlement.address }),
+        });
+        order0.salt = keccak256(fusionDetails);
+
+        const order1 = await buildOrder({
+            maker: addr1.address,
+            makerAsset: weth.address,
+            takerAsset: dai.address,
+            makingAmount: ether('0.11'),
+            takingAmount: ether('100'),
+            makerTraits: buildMakerTraits({ allowedSender: settlement.address }),
+        });
+        order1.salt = keccak256(fusionDetails);
+
+        const { r: r0, vs: vs0 } = compactSignature(await signOrder(order0, chainId, swap.address, addr));
+        const { r: r1, vs: vs1 } = compactSignature(await signOrder(order1, chainId, swap.address, addr1));
+
+        const fillOrderToData1 = swap.interface.encodeFunctionData('fillOrderTo', [
+            order1,
+            r1,
+            vs1,
+            ether('0.11'),
+            fillWithMakingAmount('0'),
+            resolver.address,
+            settlement.address + '01' + trim0x(fusionDetails),
+        ]);
+
+        const fillOrderToData0 = swap.interface.encodeFunctionData('fillOrderTo', [
+            order0,
+            r0,
+            vs0,
+            ether('100'),
+            fillWithMakingAmount('0'),
+            resolver.address,
+            settlement.address + '00' + trim0x(fusionDetails) + trim0x(fillOrderToData1),
+        ]);
+
+        await dai.connect(addr1).approve(swap.address, ether('100'));
+        await weth.connect(addr1).approve(swap.address, ether('0.11'));
+        await weth.approve(swap.address, ether('0.11'));
+        const permit0 = compressPermit(await getPermit(addr, dai, '1', chainId, swap.address, ether('100')));
+        const packing = (1n << 248n) | 1n;
+        const txn = await resolver.settleOrdersWithPermits(fillOrderToData0, packing,
+            addr.address + trim0x(dai.address) + trim0x(permit0));
+        await expect(txn).to.changeTokenBalances(dai, [addr, addr1], [ether('-100'), ether('100')]);
+        await expect(txn).to.changeTokenBalances(weth, [addr, addr1], [ether('0.11'), ether('-0.11')]);
+    });
+
+    it('settle orders with permits, permit2', async function () {
+        const { dai, weth, swap, settlement, resolver } = await loadFixture(initContracts);
+
+        const fusionDetails = await buildFusion({ resolvers: [resolver.address] });
+        const order0 = await buildOrder({
+            maker: addr.address,
+            makerAsset: dai.address,
+            takerAsset: weth.address,
+            makingAmount: ether('100'),
+            takingAmount: ether('0.11'),
+            makerTraits: buildMakerTraits({ allowedSender: settlement.address, usePermit2: true }),
+        });
+        order0.salt = keccak256(fusionDetails);
+
+        const order1 = await buildOrder({
+            maker: addr1.address,
+            makerAsset: weth.address,
+            takerAsset: dai.address,
+            makingAmount: ether('0.11'),
+            takingAmount: ether('100'),
+            makerTraits: buildMakerTraits({ allowedSender: settlement.address, usePermit2: true }),
+        });
+        order1.salt = keccak256(fusionDetails);
+
+        const { r: r0, vs: vs0 } = compactSignature(await signOrder(order0, chainId, swap.address, addr));
+        const { r: r1, vs: vs1 } = compactSignature(await signOrder(order1, chainId, swap.address, addr1));
+
+        const fillOrderToData1 = swap.interface.encodeFunctionData('fillOrderTo', [
+            order1,
+            r1,
+            vs1,
+            ether('0.11'),
+            fillWithMakingAmount('0'),
+            resolver.address,
+            settlement.address + '01' + trim0x(fusionDetails),
+        ]);
+
+        const fillOrderToData0 = swap.interface.encodeFunctionData('fillOrderTo', [
+            order0,
+            r0,
+            vs0,
+            ether('100'),
+            fillWithMakingAmount('0'),
+            resolver.address,
+            settlement.address + '00' + trim0x(fusionDetails) + trim0x(fillOrderToData1),
+        ]);
+
+        const permit2 = await permit2Contract();
+        await dai.approve(permit2.address, ether('100'));
+        await dai.connect(addr1).approve(swap.address, ether('100'));
+        await weth.connect(addr1).approve(permit2.address, ether('0.11'));
+        await weth.approve(swap.address, ether('0.11'));
+        const permit0 = compressPermit(await getPermit2(addr, dai.address, chainId, swap.address, ether('100')));
+        const permit1 = compressPermit(await getPermit2(addr1, weth.address, chainId, swap.address, ether('0.11')));
+        const packing = (2n << 248n) | 2n | 8n;
+        const txn = await resolver.settleOrdersWithPermits(fillOrderToData0, packing,
+            addr.address + trim0x(dai.address) + trim0x(permit0) + trim0x(addr1.address) + trim0x(weth.address) + trim0x(permit1));
+        await expect(txn).to.changeTokenBalances(dai, [addr, addr1], [ether('-100'), ether('100')]);
+        await expect(txn).to.changeTokenBalances(weth, [addr, addr1], [ether('0.11'), ether('-0.11')]);
     });
 
     it('opposite direction recursive swap with taking fee', async function () {
-        const { dai, weth, swap, matcher, resolver } = await loadFixture(initContracts);
+        const { dai, weth, swap, settlement, resolver } = await loadFixture(initContracts);
+        await approve(dai, weth, swap);
 
-        const order = await buildOrder(
-            {
-                makerAsset: dai.address,
-                takerAsset: weth.address,
-                makingAmount: ether('100'),
-                takingAmount: ether('0.1'),
-                salt: buildSalt({ orderStartTime: await time.latest() }),
-                allowedSender: matcher.address,
-                from: addr.address,
-            },
-            {
-                predicate: swap.interface.encodeFunctionData('timestampBelow', [0xff00000000]),
-                whitelistedAddrs: [addr.address],
-                whitelistedCutOffs: [0],
-                takerFeeReceiver: addr2.address,
-                takerFeeRatio: 10000000n, // 1%
-            },
-        );
+        const fusionDetails = await buildFusion({ resolvers: [resolver.address], takerFee: 10000000n, takerFeeReceiver: addr2.address });
 
-        const backOrder = await buildOrder(
-            {
-                makerAsset: weth.address,
-                takerAsset: dai.address,
-                makingAmount: ether('0.11'),
-                takingAmount: ether('100'),
-                allowedSender: matcher.address,
-                from: addr1.address,
-            },
-            {
-                predicate: swap.interface.encodeFunctionData('timestampBelow', [0xff00000000]),
-                whitelistedAddrs: [addr.address],
-                whitelistedCutOffs: [0],
-                takerFeeReceiver: addr2.address,
-                takerFeeRatio: 10000000n, // 1%
-            },
-        );
+        const order0 = await buildOrder({
+            maker: addr.address,
+            makerAsset: dai.address,
+            takerAsset: weth.address,
+            makingAmount: ether('100'),
+            takingAmount: ether('0.1'),
+            makerTraits: buildMakerTraits({ allowedSender: settlement.address }),
+        });
+        order0.salt = keccak256(fusionDetails);
 
-        const signature = await signOrder(order, chainId, swap.address, addr);
-        const signatureBackOrder = await signOrder(backOrder, chainId, swap.address, addr1);
+        const order1 = await buildOrder({
+            maker: addr1.address,
+            makerAsset: weth.address,
+            takerAsset: dai.address,
+            makingAmount: ether('0.1'),
+            takingAmount: ether('100'),
+            makerTraits: buildMakerTraits({ allowedSender: settlement.address }),
+        });
+        order1.salt = keccak256(fusionDetails);
 
-        const wethFeeAmount = ether('0.0011'); // (takingAmount + 10% auction) * fee
+        const { r: r0, vs: vs0 } = compactSignature(await signOrder(order0, chainId, swap.address, addr));
+        const { r: r1, vs: vs1 } = compactSignature(await signOrder(order1, chainId, swap.address, addr1));
+
+        const wethFeeAmount = ether('0.001');
         const daiFeeAmount = ether('1');
         // send fee amounts to resolver contract
         await weth.transfer(resolver.address, wethFeeAmount.toString());
         await dai.connect(addr1).transfer(resolver.address, daiFeeAmount.toString());
 
-        const matchingParams = matcher.address + '01' + trim0x(resolver.address);
+        const fillOrderToData1 = swap.interface.encodeFunctionData('fillOrderTo', [
+            order1,
+            r1,
+            vs1,
+            ether('0.1'),
+            fillWithMakingAmount('0'),
+            resolver.address,
+            settlement.address + '01' + trim0x(fusionDetails),
+        ]);
 
-        const interaction =
-            matcher.address +
-            '00' +
-            swap.interface
-                .encodeFunctionData('fillOrderTo', [
-                    backOrder,
-                    signatureBackOrder,
-                    matchingParams,
-                    ether('0.11'),
-                    0,
-                    ether('100'),
-                    resolver.address,
-                ])
-                .substring(10);
+        const fillOrderToData0 = swap.interface.encodeFunctionData('fillOrderTo', [
+            order0,
+            r0,
+            vs0,
+            ether('100'),
+            fillWithMakingAmount('0'),
+            resolver.address,
+            settlement.address + '00' + trim0x(fusionDetails) + trim0x(fillOrderToData1),
+        ]);
 
-        const addrweth = await weth.balanceOf(addr.address);
-        const addr1weth = await weth.balanceOf(addr1.address);
-        const addr2weth = await weth.balanceOf(addr2.address);
-        const addrdai = await dai.balanceOf(addr.address);
-        const addr1dai = await dai.balanceOf(addr1.address);
-        const addr2dai = await dai.balanceOf(addr2.address);
-
-        await matcher.settleOrders(
-            '0x' +
-                swap.interface
-                    .encodeFunctionData('fillOrderTo', [
-                        order,
-                        signature,
-                        interaction,
-                        ether('100'),
-                        0,
-                        ether('0.11'),
-                        resolver.address,
-                    ])
-                    .substring(10),
-        );
-
-        assertRoughlyEqualValues(await weth.balanceOf(addr.address), addrweth.add(ether('0.11')), 1e-3);
-        // TODO: 6e-5 WETH lost into LimitOrderProtocol contract
-        expect(await weth.balanceOf(addr1.address)).to.equal(addr1weth.sub(ether('0.11')));
-        expect(await dai.balanceOf(addr.address)).to.equal(addrdai.sub(ether('100')));
-        expect(await dai.balanceOf(addr1.address)).to.equal(addr1dai.add(ether('100')));
-        assertRoughlyEqualValues(await weth.balanceOf(addr2.address), addr2weth.add(wethFeeAmount), 1e-2);
-        assertRoughlyEqualValues(await dai.balanceOf(addr2.address), addr2dai.add(daiFeeAmount), 1e-2);
+        const txn = await resolver.settleOrders(fillOrderToData0);
+        await expect(txn).to.changeTokenBalances(dai, [addr, addr1, addr2], [ether('-100'), ether('100'), ether('1')]);
+        await expect(txn).to.changeTokenBalances(weth, [addr, addr1, addr2], [ether('0.1'), ether('-0.1'), ether('0.001')]);
     });
 
     it('unidirectional recursive swap', async function () {
-        const { dai, weth, swap, matcher, resolver } = await loadFixture(initContracts);
+        const { dai, weth, swap, settlement, resolver } = await loadFixture(initContracts);
+        await approve(dai, weth, swap);
 
-        const order = await buildOrder(
-            {
-                makerAsset: dai.address,
-                takerAsset: weth.address,
-                makingAmount: ether('10'),
-                takingAmount: ether('0.01'),
-                salt: buildSalt({ orderStartTime: await time.latest() }),
-                allowedSender: matcher.address,
-                from: addr1.address,
-            },
-            {
-                predicate: swap.interface.encodeFunctionData('timestampBelow', [0xff00000000]),
-                whitelistedAddrs: [addr.address],
-                whitelistedCutOffs: [0],
-            },
+        const fusionDetails = await buildFusion({ resolvers: [resolver.address] });
+
+        const order0 = await buildOrder({
+            maker: addr1.address,
+            makerAsset: dai.address,
+            takerAsset: weth.address,
+            makingAmount: ether('10'),
+            takingAmount: ether('0.01'),
+            makerTraits: buildMakerTraits({ allowedSender: settlement.address }),
+        });
+        order0.salt = keccak256(fusionDetails);
+
+        const order1 = await buildOrder({
+            maker: addr1.address,
+            makerAsset: dai.address,
+            takerAsset: weth.address,
+            makingAmount: ether('15'),
+            takingAmount: ether('0.015'),
+            makerTraits: buildMakerTraits({ allowedSender: settlement.address }),
+        });
+        order1.salt = keccak256(fusionDetails);
+
+        const { r: r0, vs: vs0 } = compactSignature(await signOrder(order0, chainId, swap.address, addr1));
+        const { r: r1, vs: vs1 } = compactSignature(await signOrder(order1, chainId, swap.address, addr1));
+
+        const resolverArgs = abiCoder.encode(
+            ['address[]', 'bytes[]'],
+            [
+                [weth.address],
+                [
+                    weth.interface.encodeFunctionData('transferFrom', [
+                        addr.address,
+                        resolver.address,
+                        ether('0.025'),
+                    ]),
+                ],
+            ],
         );
 
-        const backOrder = await buildOrder(
-            {
+        const fillOrderToData1 = swap.interface.encodeFunctionData('fillOrderTo', [
+            order1,
+            r1,
+            vs1,
+            ether('15'),
+            fillWithMakingAmount('0'),
+            resolver.address,
+            settlement.address + '01' + trim0x(fusionDetails) + trim0x(resolverArgs),
+        ]);
+
+        const fillOrderToData0 = swap.interface.encodeFunctionData('fillOrderTo', [
+            order0,
+            r0,
+            vs0,
+            ether('10'),
+            fillWithMakingAmount('0'),
+            resolver.address,
+            settlement.address + '00' + trim0x(fusionDetails) + trim0x(fillOrderToData1),
+        ]);
+
+        await weth.approve(resolver.address, ether('0.025'));
+
+        const txn = await resolver.settleOrders(fillOrderToData0);
+        await expect(txn).to.changeTokenBalances(dai, [resolver, addr1], [ether('25'), ether('-25')]);
+        await expect(txn).to.changeTokenBalances(weth, [addr, addr1], [ether('-0.025'), ether('0.025')]);
+    });
+
+    it('triple recursive swap', async function () {
+        const { dai, weth, swap, settlement, resolver } = await loadFixture(initContracts);
+        await approve(dai, weth, swap);
+
+        const fusionDetails = await buildFusion({ resolvers: [resolver.address] });
+
+        const order0 = await buildOrder({
+            maker: addr1.address,
+            makerAsset: dai.address,
+            takerAsset: weth.address,
+            makingAmount: ether('10'),
+            takingAmount: ether('0.01'),
+            makerTraits: buildMakerTraits({ allowedSender: settlement.address }),
+        });
+        order0.salt = keccak256(fusionDetails);
+
+        const order1 = await buildOrder({
+            maker: addr1.address,
+            makerAsset: dai.address,
+            takerAsset: weth.address,
+            makingAmount: ether('15'),
+            takingAmount: ether('0.015'),
+            makerTraits: buildMakerTraits({ allowedSender: settlement.address }),
+        });
+        order1.salt = keccak256(fusionDetails);
+
+        const order2 = await buildOrder({
+            maker: addr.address,
+            makerAsset: weth.address,
+            takerAsset: dai.address,
+            makingAmount: ether('0.025'),
+            takingAmount: ether('25'),
+            allowedSender: settlement.address,
+        });
+        order2.salt = keccak256(fusionDetails);
+
+        const { r: r0, vs: vs0 } = compactSignature(await signOrder(order0, chainId, swap.address, addr1));
+        const { r: r1, vs: vs1 } = compactSignature(await signOrder(order1, chainId, swap.address, addr1));
+        const { r: r2, vs: vs2 } = compactSignature(await signOrder(order2, chainId, swap.address, addr));
+
+        const fillOrderToData2 = swap.interface.encodeFunctionData('fillOrderTo', [
+            order2,
+            r2,
+            vs2,
+            ether('0.025'),
+            fillWithMakingAmount('0'),
+            resolver.address,
+            settlement.address + '01' + trim0x(fusionDetails),
+        ]);
+
+        const fillOrderToData1 = swap.interface.encodeFunctionData('fillOrderTo', [
+            order1,
+            r1,
+            vs1,
+            ether('15'),
+            fillWithMakingAmount('0'),
+            resolver.address,
+            settlement.address + '00' + trim0x(fusionDetails) + trim0x(fillOrderToData2),
+        ]);
+
+        const fillOrderToData0 = swap.interface.encodeFunctionData('fillOrderTo', [
+            order0,
+            r0,
+            vs0,
+            ether('10'),
+            fillWithMakingAmount('0'),
+            resolver.address,
+            settlement.address + '00' + trim0x(fusionDetails) + trim0x(fillOrderToData1),
+        ]);
+
+        const txn = await resolver.settleOrders(fillOrderToData0);
+        await expect(txn).to.changeTokenBalances(weth, [addr, addr1], [ether('-0.025'), ether('0.025')]);
+        await expect(txn).to.changeTokenBalances(dai, [addr, addr1], [ether('25'), ether('-25')]);
+    });
+
+    describe('dutch auction params', function () {
+        const prepareSingleOrder = async ({
+            startTime,
+            auctionDelay = 0,
+            initialRateBump = 1000000n,
+            auctionDuration = 1800,
+            dai,
+            weth,
+            swap,
+            settlement,
+            resolver,
+        }) => {
+            const fusionDetails = await buildFusion({ resolvers: [resolver.address], startTime, auctionDelay, auctionDuration, initialRateBump });
+            const order = await buildOrder({
+                maker: addr1.address,
                 makerAsset: dai.address,
                 takerAsset: weth.address,
-                makingAmount: ether('15'),
-                takingAmount: ether('0.015'),
-                salt: buildSalt({ orderStartTime: await time.latest() }),
-                allowedSender: matcher.address,
-                from: addr1.address,
-            },
-            {
-                predicate: swap.interface.encodeFunctionData('timestampBelow', [0xff00000000]),
-                whitelistedAddrs: [addr.address],
-                whitelistedCutOffs: [0],
-            },
-        );
+                makingAmount: ether('100'),
+                takingAmount: ether('0.1'),
+                makerTraits: buildMakerTraits({ allowedSender: settlement.address }),
+            });
+            order.salt = keccak256(fusionDetails);
+            const { r, vs } = compactSignature(await signOrder(order, chainId, swap.address, addr1));
 
-        const signature = await signOrder(order, chainId, swap.address, addr1);
-        const signatureBackOrder = await signOrder(backOrder, chainId, swap.address, addr1);
+            let actualTakingAmount = ether('0.1');
+            const ts = await time.latest();
+            // TODO: avoid this shit (as well as any other computations in tests)
+            if (ts < startTime + auctionDelay + auctionDuration) {
+                // actualTakingAmount = actualTakingAmount * (
+                //    _BASE_POINTS + initialRateBump * (startTime + auctionDelay + auctionDuration - currentTimestamp) / auctionDuration
+                // ) / _BASE_POINTS
+                const minDuration = startTime + auctionDelay + auctionDuration - ts > auctionDuration ? auctionDuration : startTime + auctionDelay + auctionDuration - ts - 2;
+                actualTakingAmount =
+                    (actualTakingAmount * (10000000n + (BigInt(initialRateBump) * BigInt(minDuration)) / BigInt(auctionDuration))) /
+                    10000000n;
+            }
 
-        const matchingParams =
-            matcher.address +
-            '01' +
-            trim0x(resolver.address) +
-            trim0x(
-                abiCoder.encode(
+            const resolverCalldata = abiCoder.encode(
+                ['address[]', 'bytes[]'],
+                [
+                    [weth.address],
+                    [
+                        weth.interface.encodeFunctionData('transferFrom', [
+                            addr.address,
+                            resolver.address,
+                            actualTakingAmount,
+                        ]),
+                    ],
+                ],
+            );
+
+            const fillOrderToData = swap.interface.encodeFunctionData('fillOrderTo', [
+                order,
+                r,
+                vs,
+                ether('100'),
+                fillWithMakingAmount('0'),
+                resolver.address,
+                settlement.address + '01' + trim0x(fusionDetails) + trim0x(resolverCalldata),
+            ]);
+
+            await weth.approve(resolver.address, actualTakingAmount);
+            return fillOrderToData;
+        };
+
+        it('matching order before orderTime has maximal rate bump', async function () {
+            const { dai, weth, swap, settlement, resolver } = await loadFixture(initContracts);
+            await approve(dai, weth, swap);
+
+            const fillOrderToData = await prepareSingleOrder({
+                startTime: await time.latest(),
+                auctionDelay: 60,
+                dai,
+                weth,
+                swap,
+                settlement,
+                resolver,
+            });
+
+            const txn = await resolver.settleOrders(fillOrderToData);
+            await expect(txn).to.changeTokenBalances(dai, [resolver, addr1], [ether('100'), ether('-100')]);
+            await expect(txn).to.changeTokenBalances(weth, [addr, addr1], [ether('-0.11'), ether('0.11')]);
+        });
+
+        describe('order with one bump point', async function () {
+            async function prepareOrder({
+                startTime,
+                initialRateBump = 1000000n,
+                auctionDuration = 1800,
+                dai,
+                weth,
+                swap,
+                settlement,
+                resolver,
+            }) {
+                const makerAsset = dai.address;
+                const takerAsset = weth.address;
+                const makingAmount = ether('100');
+                const takingAmount = ether('0.1');
+
+                const fusionDetails = await buildFusion({ resolvers: [resolver.address], startTime, initialRateBump, auctionDuration, points: [[240, 900000n]] });
+                const order = await buildOrder({
+                    maker: addr1.address,
+                    makerAsset,
+                    takerAsset,
+                    makingAmount,
+                    takingAmount,
+                    makerTraits: buildMakerTraits({ allowedSender: settlement.address }),
+                });
+                order.salt = keccak256(fusionDetails);
+
+                const { r, vs } = compactSignature(await signOrder(order, chainId, swap.address, addr1));
+
+                return {
+                    order,
+                    r,
+                    vs,
+                    makerAsset,
+                    takerAsset,
+                    makingAmount,
+                    takingAmount,
+                    fusionDetails,
+                };
+            }
+
+            it('matching order before bump point', async function () {
+                const { dai, weth, swap, settlement, resolver } = await loadFixture(initContracts);
+                await approve(dai, weth, swap);
+
+                const startTime = await time.latest();
+                const { order, r, vs, fusionDetails } = await prepareOrder({
+                    startTime,
+                    dai,
+                    weth,
+                    swap,
+                    settlement,
+                    resolver,
+                });
+
+                const actualTakingAmount = ether('0.109');
+
+                const resolverCalldata = abiCoder.encode(
                     ['address[]', 'bytes[]'],
                     [
                         [weth.address],
@@ -280,867 +576,342 @@ describe('Settlement', function () {
                             weth.interface.encodeFunctionData('transferFrom', [
                                 addr.address,
                                 resolver.address,
-                                ether('0.0275'),
+                                actualTakingAmount,
                             ]),
                         ],
                     ],
-                ),
-            );
-
-        const interaction =
-            matcher.address +
-            '00' +
-            swap.interface
-                .encodeFunctionData('fillOrderTo', [
-                    backOrder,
-                    signatureBackOrder,
-                    matchingParams,
-                    ether('15'),
-                    0,
-                    ether('0.015'),
-                    addr.address,
-                ])
-                .substring(10);
-
-        const addrweth = await weth.balanceOf(addr.address);
-        const addr1weth = await weth.balanceOf(addr1.address);
-        const addrdai = await dai.balanceOf(addr.address);
-        const addr1dai = await dai.balanceOf(addr1.address);
-
-        await weth.approve(resolver.address, ether('0.0275'));
-        await matcher.settleOrders(
-            '0x' +
-                swap.interface
-                    .encodeFunctionData('fillOrderTo', [
-                        order,
-                        signature,
-                        interaction,
-                        ether('10'),
-                        0,
-                        ether('0.01'),
-                        addr.address,
-                    ])
-                    .substring(10),
-        );
-
-        expect(await weth.balanceOf(addr.address)).to.equal(addrweth.sub(ether('0.0275')));
-        assertRoughlyEqualValues(await weth.balanceOf(addr1.address), addr1weth.add(ether('0.0275')), 1e-4);
-        // TODO: 3e-5 WETH lost into LimitOrderProtocol contract
-        expect(await dai.balanceOf(addr.address)).to.equal(addrdai.add(ether('25')));
-        expect(await dai.balanceOf(addr1.address)).to.equal(addr1dai.sub(ether('25')));
-    });
-
-    it('triple recursive swap', async function () {
-        const { dai, weth, swap, matcher, resolver } = await loadFixture(initContracts);
-
-        const order1 = await buildOrder(
-            {
-                makerAsset: dai.address,
-                takerAsset: weth.address,
-                makingAmount: ether('10'),
-                takingAmount: ether('0.01'),
-                salt: buildSalt({ orderStartTime: await time.latest() }),
-                allowedSender: matcher.address,
-                from: addr1.address,
-            },
-            {
-                predicate: swap.interface.encodeFunctionData('timestampBelow', [0xff00000000]),
-                whitelistedAddrs: [addr.address],
-                whitelistedCutOffs: [0],
-            },
-        );
-
-        const order2 = await buildOrder(
-            {
-                makerAsset: dai.address,
-                takerAsset: weth.address,
-                makingAmount: ether('15'),
-                takingAmount: ether('0.015'),
-                salt: buildSalt({ orderStartTime: await time.latest() }),
-                allowedSender: matcher.address,
-                from: addr1.address,
-            },
-            {
-                predicate: swap.interface.encodeFunctionData('timestampBelow', [0xff00000000]),
-                whitelistedAddrs: [addr.address],
-                whitelistedCutOffs: [0],
-            },
-        );
-
-        const backOrder = await buildOrder(
-            {
-                makerAsset: weth.address,
-                takerAsset: dai.address,
-                makingAmount: ether('0.0275'),
-                takingAmount: ether('25'),
-                allowedSender: matcher.address,
-                from: addr.address,
-            },
-            {
-                predicate: swap.interface.encodeFunctionData('timestampBelow', [0xff00000000]),
-                whitelistedAddrs: [addr.address],
-                whitelistedCutOffs: [0],
-            },
-        );
-
-        const signature1 = await signOrder(order1, chainId, swap.address, addr1);
-        const signature2 = await signOrder(order2, chainId, swap.address, addr1);
-        const signatureBackOrder = await signOrder(backOrder, chainId, swap.address, addr);
-
-        const matchingParams = matcher.address + '01' + trim0x(resolver.address);
-
-        const internalInteraction =
-            matcher.address +
-            '00' +
-            swap.interface
-                .encodeFunctionData('fillOrderTo', [
-                    backOrder,
-                    signatureBackOrder,
-                    matchingParams,
-                    ether('0.0275'),
-                    0,
-                    ether('25'),
-                    resolver.address,
-                ])
-                .substring(10);
-
-        const externalInteraction =
-            matcher.address +
-            '00' +
-            swap.interface
-                .encodeFunctionData('fillOrderTo', [
-                    order2,
-                    signature2,
-                    internalInteraction,
-                    ether('15'),
-                    0,
-                    ether('0.015'),
-                    resolver.address,
-                ])
-                .substring(10);
-
-        const addrweth = await weth.balanceOf(addr.address);
-        const addr1weth = await weth.balanceOf(addr1.address);
-        const addrdai = await dai.balanceOf(addr.address);
-        const addr1dai = await dai.balanceOf(addr1.address);
-
-        await matcher.settleOrders(
-            '0x' +
-                swap.interface
-                    .encodeFunctionData('fillOrderTo', [
-                        order1,
-                        signature1,
-                        externalInteraction,
-                        ether('10'),
-                        0,
-                        ether('0.01'),
-                        resolver.address,
-                    ])
-                    .substring(10),
-        );
-
-        expect(await weth.balanceOf(addr.address)).to.equal(addrweth.sub(ether('0.0275')));
-        assertRoughlyEqualValues(await weth.balanceOf(addr1.address), addr1weth.add(ether('0.0275')), 1e-4);
-        // TODO: 15e-6 WETH lost into LimitOrderProtocol contract
-        expect(await dai.balanceOf(addr.address)).to.equal(addrdai.add(ether('25')));
-        expect(await dai.balanceOf(addr1.address)).to.equal(addr1dai.sub(ether('25')));
-    });
-
-    describe('dutch auction params', function () {
-        const prepareSingleOrder = async ({
-            orderStartTime,
-            initialStartRate = 1000000,
-            duration = 1800,
-            salt = '1',
-            dai,
-            weth,
-            swap,
-            matcher,
-            resolver,
-        }) => {
-            const makerAsset = dai.address;
-            const takerAsset = weth.address;
-            const makingAmount = ether('100');
-            const takingAmount = ether('0.1');
-            const order = await buildOrder(
-                {
-                    salt: buildSalt({ orderStartTime, initialStartRate, duration, salt }),
-                    makerAsset,
-                    takerAsset,
-                    makingAmount,
-                    takingAmount,
-                    allowedSender: matcher.address,
-                    from: addr1.address,
-                },
-                {
-                    predicate: swap.interface.encodeFunctionData('timestampBelow', [0xff00000000]),
-                    whitelistedAddrs: [addr.address],
-                    whitelistedCutOffs: [0],
-                },
-            );
-            const signature = await signOrder(order, chainId, swap.address, addr1);
-
-            let actualTakingAmount = BigInt(takingAmount.toString());
-            const ts = BigInt(await time.latest());
-            if (ts < orderStartTime + BigInt(duration)) {
-                // actualTakingAmount = actualTakingAmount * (
-                //    _BASE_POINTS + initialStartRate * (orderTime + duration - currentTimestamp) / duration
-                // ) / _BASE_POINTS
-                const minDuration =
-                    orderStartTime + BigInt(duration) - ts > BigInt(duration)
-                        ? BigInt(duration)
-                        : orderStartTime + BigInt(duration) - ts;
-                actualTakingAmount =
-                    (actualTakingAmount *
-                        (BigInt('10000000') + (BigInt(initialStartRate) * minDuration) / BigInt(duration))) /
-                    BigInt('10000000');
-            }
-
-            const matchingParams =
-                matcher.address +
-                '01' +
-                trim0x(resolver.address) +
-                trim0x(
-                    abiCoder.encode(
-                        ['address[]', 'bytes[]'],
-                        [
-                            [weth.address],
-                            [
-                                weth.interface.encodeFunctionData('transferFrom', [
-                                    addr.address,
-                                    resolver.address,
-                                    actualTakingAmount,
-                                ]),
-                            ],
-                        ],
-                    ),
                 );
 
-            await weth.approve(resolver.address, actualTakingAmount);
-            return {
-                order,
-                signature,
-                interaction: matchingParams,
-                makerAsset,
-                takerAsset,
-                makingAmount,
-                takingAmount,
-            };
-        };
-
-        it('matching order before orderTime has maximal rate bump', async function () {
-            const { dai, weth, swap, matcher, resolver } = await loadFixture(initContracts);
-
-            const currentTimestamp = BigInt(await time.latest());
-            const { order, signature, interaction, makingAmount, takingAmount } = await prepareSingleOrder({
-                orderStartTime: currentTimestamp + BigInt(60),
-                dai,
-                weth,
-                swap,
-                matcher,
-                resolver,
-            });
-
-            const addrweth = await weth.balanceOf(addr.address);
-            const addr1weth = await weth.balanceOf(addr1.address);
-            const addrDai = await dai.balanceOf(addr.address);
-            const addr1Dai = await dai.balanceOf(addr1.address);
-
-            await matcher.settleOrders(
-                '0x' +
-                    swap.interface
-                        .encodeFunctionData('fillOrderTo', [
-                            order,
-                            signature,
-                            interaction,
-                            makingAmount,
-                            0,
-                            takingAmount,
-                            addr.address,
-                        ])
-                        .substring(10),
-            );
-
-            expect(await weth.balanceOf(addr1.address)).to.equal(addr1weth.add(ether('0.11')));
-            expect(await weth.balanceOf(addr.address)).to.equal(addrweth.sub(ether('0.11')));
-            expect(await dai.balanceOf(addr1.address)).to.equal(addr1Dai.sub(ether('100')));
-            expect(await dai.balanceOf(addr.address)).to.equal(addrDai.add(ether('100')));
-        });
-
-        describe('order with one bump point', async function () {
-            async function prepareOrder({
-                orderStartTime,
-                initialStartRate = '1000000',
-                duration = '1800',
-                salt = '1',
-                dai,
-                weth,
-                swap,
-                matcher,
-            }) {
-                const makerAsset = dai.address;
-                const takerAsset = weth.address;
-                const makingAmount = ether('100');
-                const takingAmount = ether('0.1');
-                const order = await buildOrder(
-                    {
-                        salt: buildSalt({ orderStartTime, initialStartRate, duration, salt }),
-                        makerAsset,
-                        takerAsset,
-                        makingAmount,
-                        takingAmount,
-                        allowedSender: matcher.address,
-                        from: addr1.address,
-                    },
-                    {
-                        predicate: swap.interface.encodeFunctionData('timestampBelow', [0xff00000000]),
-                        whitelistedAddrs: [addr.address],
-                        whitelistedCutOffs: [0],
-                        auctionBumps: [900000],
-                        auctionDelays: [240],
-                    },
-                );
-                const signature = await signOrder(order, chainId, swap.address, addr1);
-                return {
+                const fillOrderToData = swap.interface.encodeFunctionData('fillOrderTo', [
                     order,
-                    signature,
-                    makerAsset,
-                    takerAsset,
-                    makingAmount,
-                    takingAmount,
-                };
-            }
+                    r,
+                    vs,
+                    ether('100'),
+                    fillWithMakingAmount('0'),
+                    resolver.address,
+                    settlement.address + '01' + trim0x(fusionDetails) + trim0x(resolverCalldata),
+                ]);
 
-            it('matching order before bump point', async function () {
-                const { dai, weth, swap, matcher, resolver } = await loadFixture(initContracts);
-
-                const currentTimestamp = BigInt(await time.latest());
-                const { order, signature, makingAmount, takingAmount } = await prepareOrder({
-                    orderStartTime: currentTimestamp,
-                    dai,
-                    weth,
-                    swap,
-                    matcher,
-                });
-
-                const actualTakingAmount = ether('0.109');
-
-                const interaction =
-                    matcher.address +
-                    '01' +
-                    trim0x(resolver.address) +
-                    trim0x(
-                        abiCoder.encode(
-                            ['address[]', 'bytes[]'],
-                            [
-                                [weth.address],
-                                [
-                                    weth.interface.encodeFunctionData('transferFrom', [
-                                        addr.address,
-                                        resolver.address,
-                                        actualTakingAmount,
-                                    ]),
-                                ],
-                            ],
-                        ),
-                    );
                 await weth.approve(resolver.address, actualTakingAmount);
 
-                await timeIncreaseTo(currentTimestamp + 239n);
+                await timeIncreaseTo(startTime + 239);
 
-                const addrweth = await weth.balanceOf(addr.address);
-                const addr1weth = await weth.balanceOf(addr1.address);
-                const addrDai = await dai.balanceOf(addr.address);
-                const addr1Dai = await dai.balanceOf(addr1.address);
-
-                await matcher.settleOrders(
-                    '0x' +
-                        swap.interface
-                            .encodeFunctionData('fillOrderTo', [
-                                order,
-                                signature,
-                                interaction,
-                                makingAmount,
-                                0,
-                                takingAmount,
-                                addr.address,
-                            ])
-                            .substring(10),
-                );
-
-                expect(await weth.balanceOf(addr1.address)).to.equal(addr1weth.add(ether('0.109')));
-                expect(await weth.balanceOf(addr.address)).to.equal(addrweth.sub(ether('0.109')));
-                expect(await dai.balanceOf(addr1.address)).to.equal(addr1Dai.sub(ether('100')));
-                expect(await dai.balanceOf(addr.address)).to.equal(addrDai.add(ether('100')));
+                const txn = await resolver.settleOrders(fillOrderToData);
+                await expect(txn).to.changeTokenBalances(dai, [resolver, addr1], [ether('100'), ether('-100')]);
+                await expect(txn).to.changeTokenBalances(weth, [addr, addr1], [ether('-0.109'), ether('0.109')]);
             });
 
             it('matching order after bump point', async function () {
-                const { dai, weth, swap, matcher, resolver } = await loadFixture(initContracts);
+                const { dai, weth, swap, settlement, resolver } = await loadFixture(initContracts);
+                await approve(dai, weth, swap);
 
-                const currentTimestamp = BigInt(await time.latest());
-                const { order, signature, makingAmount, takingAmount } = await prepareOrder({
-                    orderStartTime: currentTimestamp,
+                const startTime = await time.latest();
+                const { order, r, vs, fusionDetails } = await prepareOrder({
+                    startTime,
                     dai,
                     weth,
                     swap,
-                    matcher,
+                    settlement,
+                    resolver,
                 });
 
                 const actualTakingAmount = ether('0.106');
-
-                const interaction =
-                    matcher.address +
-                    '01' +
-                    trim0x(resolver.address) +
-                    trim0x(
-                        abiCoder.encode(
-                            ['address[]', 'bytes[]'],
-                            [
-                                [weth.address],
-                                [
-                                    weth.interface.encodeFunctionData('transferFrom', [
-                                        addr.address,
-                                        resolver.address,
-                                        actualTakingAmount,
-                                    ]),
-                                ],
-                            ],
-                        ),
-                    );
-                await weth.approve(resolver.address, actualTakingAmount);
-
-                await timeIncreaseTo(currentTimestamp + 759n);
-
-                const addrweth = await weth.balanceOf(addr.address);
-                const addr1weth = await weth.balanceOf(addr1.address);
-                const addrDai = await dai.balanceOf(addr.address);
-                const addr1Dai = await dai.balanceOf(addr1.address);
-
-                await matcher.settleOrders(
-                    '0x' +
-                        swap.interface
-                            .encodeFunctionData('fillOrderTo', [
-                                order,
-                                signature,
-                                interaction,
-                                makingAmount,
-                                0,
-                                takingAmount,
+                const resolverCalldata = abiCoder.encode(
+                    ['address[]', 'bytes[]'],
+                    [
+                        [weth.address],
+                        [
+                            weth.interface.encodeFunctionData('transferFrom', [
                                 addr.address,
-                            ])
-                            .substring(10),
+                                resolver.address,
+                                actualTakingAmount,
+                            ]),
+                        ],
+                    ],
                 );
 
-                expect(await weth.balanceOf(addr1.address)).to.equal(addr1weth.add(ether('0.106')));
-                expect(await weth.balanceOf(addr.address)).to.equal(addrweth.sub(ether('0.106')));
-                expect(await dai.balanceOf(addr1.address)).to.equal(addr1Dai.sub(ether('100')));
-                expect(await dai.balanceOf(addr.address)).to.equal(addrDai.add(ether('100')));
+                const fillOrderToData = swap.interface.encodeFunctionData('fillOrderTo', [
+                    order,
+                    r,
+                    vs,
+                    ether('100'),
+                    fillWithMakingAmount('0'),
+                    resolver.address,
+                    settlement.address + '01' + trim0x(fusionDetails) + trim0x(resolverCalldata),
+                ]);
+
+                await weth.approve(resolver.address, actualTakingAmount);
+
+                await timeIncreaseTo(startTime + 759);
+
+                const txn = await resolver.settleOrders(fillOrderToData);
+                await expect(txn).to.changeTokenBalances(dai, [resolver, addr1], [ether('100'), ether('-100')]);
+                await expect(txn).to.changeTokenBalances(weth, [addr, addr1], [ether('-0.106'), ether('0.106')]);
             });
         });
 
         it('set initial rate', async function () {
-            const { dai, weth, swap, matcher, resolver } = await loadFixture(initContracts);
+            const { dai, weth, swap, settlement, resolver } = await loadFixture(initContracts);
+            await approve(dai, weth, swap);
 
-            const currentTimestamp = BigInt(await time.latest());
-            const { order, signature, interaction, makingAmount, takingAmount } = await prepareSingleOrder({
-                orderStartTime: currentTimestamp,
-                initialStartRate: '2000000',
+            const fillOrderToData = await prepareSingleOrder({
+                startTime: await time.latest(),
+                auctionDelay: 60,
+                initialRateBump: 2000000n,
                 dai,
                 weth,
                 swap,
-                matcher,
+                settlement,
                 resolver,
             });
 
-            const addrweth = await weth.balanceOf(addr.address);
-            const addr1weth = await weth.balanceOf(addr1.address);
-            const addrDai = await dai.balanceOf(addr.address);
-            const addr1Dai = await dai.balanceOf(addr1.address);
-
-            await matcher.settleOrders(
-                '0x' +
-                    swap.interface
-                        .encodeFunctionData('fillOrderTo', [
-                            order,
-                            signature,
-                            interaction,
-                            makingAmount,
-                            0,
-                            takingAmount,
-                            addr.address,
-                        ])
-                        .substring(10),
-            );
-
-            expect(await weth.balanceOf(addr.address)).to.equal(addrweth.sub(ether('0.12')));
-            assertRoughlyEqualValues(await weth.balanceOf(addr1.address), addr1weth.add(ether('0.12')), 1e-4);
-            expect(await dai.balanceOf(addr1.address)).to.equal(addr1Dai.sub(ether('100')));
-            expect(await dai.balanceOf(addr.address)).to.equal(addrDai.add(ether('100')));
+            const txn = await resolver.settleOrders(fillOrderToData);
+            await expect(txn).to.changeTokenBalances(dai, [resolver, addr1], [ether('100'), ether('-100')]);
+            await expect(txn).to.changeTokenBalances(weth, [addr, addr1], [ether('-0.12'), ether('0.12')]);
         });
 
-        it('set duration', async function () {
-            const { dai, weth, swap, matcher, resolver } = await loadFixture(initContracts);
+        it('set auctionDuration', async function () {
+            const { dai, weth, swap, settlement, resolver } = await loadFixture(initContracts);
+            await approve(dai, weth, swap);
 
-            const currentTimestamp = BigInt(await time.latest());
-            const { order, signature, interaction, makingAmount, takingAmount } = await prepareSingleOrder({
-                orderStartTime: currentTimestamp - BigInt(450),
-                initialStartRate: '1000000',
-                duration: '900',
+            const fillOrderToData = await prepareSingleOrder({
+                startTime: (await time.latest()) - 448,
+                initialRateBump: 1000000n,
+                auctionDuration: 900,
                 dai,
                 weth,
                 swap,
-                matcher,
+                settlement,
                 resolver,
             });
 
-            const addrweth = await weth.balanceOf(addr.address);
-            const addr1weth = await weth.balanceOf(addr1.address);
-            const addrDai = await dai.balanceOf(addr.address);
-            const addr1Dai = await dai.balanceOf(addr1.address);
-
-            await matcher.settleOrders(
-                '0x' +
-                    swap.interface
-                        .encodeFunctionData('fillOrderTo', [
-                            order,
-                            signature,
-                            interaction,
-                            makingAmount,
-                            0,
-                            takingAmount,
-                            addr.address,
-                        ])
-                        .substring(10),
-            );
-
-            expect(await weth.balanceOf(addr.address)).to.equal(addrweth.sub(ether('0.105')));
-            assertRoughlyEqualValues(await weth.balanceOf(addr1.address), addr1weth.add(ether('0.105')), 1e-4);
-            expect(await dai.balanceOf(addr1.address)).to.equal(addr1Dai.sub(ether('100')));
-            expect(await dai.balanceOf(addr.address)).to.equal(addrDai.add(ether('100')));
+            const txn = await resolver.settleOrders(fillOrderToData);
+            await expect(txn).to.changeTokenBalances(dai, [resolver, addr1], [ether('100'), ether('-100')]);
+            await expect(txn).to.changeTokenBalances(weth, [addr, addr1], [ether('-0.105'), ether('0.105')]);
         });
     });
 
     it('should change availableCredit with non-zero fee', async function () {
-        const { dai, weth, swap, matcher, resolver } = await loadFixture(initContracts);
+        const { dai, weth, swap, settlement, resolver } = await loadFixture(initContracts);
+        await approve(dai, weth, swap);
 
-        const order = await buildOrder(
-            {
-                salt: buildSalt({ orderStartTime: await defaultExpiredAuctionTimestamp(), fee: orderFee }),
-                makerAsset: dai.address,
-                takerAsset: weth.address,
-                makingAmount: ether('100'),
-                takingAmount: ether('0.1'),
-                allowedSender: matcher.address,
-                from: addr.address,
-            },
-            {
-                whitelistedAddrs: [addr.address],
-                whitelistedCutOffs: [0],
-            },
-        );
-        const backOrder = await buildOrder(
-            {
-                salt: buildSalt({ orderStartTime: await defaultExpiredAuctionTimestamp(), fee: backOrderFee }),
-                makerAsset: weth.address,
-                takerAsset: dai.address,
-                makingAmount: ether('0.1'),
-                takingAmount: ether('100'),
-                allowedSender: matcher.address,
-                from: addr1.address,
-            },
-            {
-                whitelistedAddrs: [addr.address],
-                whitelistedCutOffs: [0],
-            },
-        );
-        const signature = await signOrder(order, chainId, swap.address, addr);
-        const signatureBackOrder = await signOrder(backOrder, chainId, swap.address, addr1);
+        const fusionDetailsOrder0 = await buildFusion({ resolvers: [resolver.address], resolverFee: orderFee });
+        const order0 = await buildOrder({
+            maker: addr.address,
+            makerAsset: dai.address,
+            takerAsset: weth.address,
+            makingAmount: ether('100'),
+            takingAmount: ether('0.1'),
+            makerTraits: buildMakerTraits({ allowedSender: settlement.address }),
+        });
+        order0.salt = keccak256(fusionDetailsOrder0);
 
-        const matchingParams = matcher.address + '01' + trim0x(resolver.address);
+        const fusionDetailsOrder1 = await buildFusion({ resolvers: [resolver.address], resolverFee: backOrderFee });
+        const order1 = await buildOrder({
+            maker: addr1.address,
+            makerAsset: weth.address,
+            takerAsset: dai.address,
+            makingAmount: ether('0.1'),
+            takingAmount: ether('100'),
+            makerTraits: buildMakerTraits({ allowedSender: settlement.address }),
+        });
+        order1.salt = keccak256(fusionDetailsOrder1);
 
-        const interaction =
-            matcher.address +
-            '00' +
-            swap.interface
-                .encodeFunctionData('fillOrderTo', [
-                    backOrder,
-                    signatureBackOrder,
-                    matchingParams,
-                    ether('0.1'),
-                    0,
-                    ether('100'),
-                    resolver.address,
-                ])
-                .substring(10);
-        const availableCreditBefore = await matcher.availableCredit(addr.address);
-        await matcher.settleOrders(
-            '0x' +
-                swap.interface
-                    .encodeFunctionData('fillOrderTo', [
-                        order,
-                        signature,
-                        interaction,
-                        ether('100'),
-                        0,
-                        ether('0.1'),
-                        resolver.address,
-                    ])
-                    .substring(10),
-        );
-        expect(await matcher.availableCredit(addr.address)).to.equal(
+        const { r: r0, vs: vs0 } = compactSignature(await signOrder(order0, chainId, swap.address, addr));
+        const { r: r1, vs: vs1 } = compactSignature(await signOrder(order1, chainId, swap.address, addr1));
+
+        const fillOrderToData1 = swap.interface.encodeFunctionData('fillOrderTo', [
+            order1,
+            r1,
+            vs1,
+            ether('0.1'),
+            fillWithMakingAmount('0'),
+            resolver.address,
+            settlement.address + '01' + trim0x(fusionDetailsOrder1),
+        ]);
+
+        const fillOrderToData0 = swap.interface.encodeFunctionData('fillOrderTo', [
+            order0,
+            r0,
+            vs0,
+            ether('100'),
+            fillWithMakingAmount('0'),
+            resolver.address,
+            settlement.address + '00' + trim0x(fusionDetailsOrder0) + trim0x(fillOrderToData1),
+        ]);
+
+        const availableCreditBefore = await settlement.availableCredit(resolver.address);
+        await resolver.settleOrders(fillOrderToData0);
+        expect(await settlement.availableCredit(resolver.address)).to.equal(
             availableCreditBefore.toBigInt() - basePoints * (orderFee + backOrderFee),
         );
     });
 
     it('should not change when availableCredit is not enough', async function () {
-        const { dai, weth, swap, matcher, resolver } = await loadFixture(initContracts);
+        const { dai, weth, swap, settlement, resolver } = await loadFixture(initContracts);
+        await approve(dai, weth, swap);
 
-        const order = await buildOrder(
-            {
-                salt: buildSalt({ orderStartTime: await defaultExpiredAuctionTimestamp(), fee: '1000000' }),
-                makerAsset: dai.address,
-                takerAsset: weth.address,
-                makingAmount: ether('100'),
-                takingAmount: ether('0.1'),
-                allowedSender: matcher.address,
-                from: addr.address,
-            },
-            {
-                whitelistedAddrs: [addr.address],
-                whitelistedCutOffs: [0],
-            },
-        );
-        const backOrder = await buildOrder(
-            {
-                salt: buildSalt({ orderStartTime: await defaultExpiredAuctionTimestamp(), fee: backOrderFee }),
-                makerAsset: weth.address,
-                takerAsset: dai.address,
-                makingAmount: ether('0.1'),
-                takingAmount: ether('100'),
-                allowedSender: matcher.address,
-                from: addr1.address,
-            },
-            {
-                whitelistedAddrs: [addr.address],
-                whitelistedCutOffs: [0],
-            },
-        );
-        const signature = await signOrder(order, chainId, swap.address, addr);
-        const signatureBackOrder = await signOrder(backOrder, chainId, swap.address, addr1);
+        const fusionDetailsOrder0 = await buildFusion({ resolvers: [resolver.address], resolverFee: '1000000' });
+        const order0 = await buildOrder({
+            maker: addr.address,
+            makerAsset: dai.address,
+            takerAsset: weth.address,
+            makingAmount: ether('100'),
+            takingAmount: ether('0.1'),
+            makerTraits: buildMakerTraits({ allowedSender: settlement.address }),
+        });
+        order0.salt = keccak256(fusionDetailsOrder0);
 
-        const matchingParams = matcher.address + '01' + trim0x(resolver.address);
+        const fusionDetailsOrder1 = await buildFusion({ resolvers: [resolver.address], resolverFee: backOrderFee });
+        const order1 = await buildOrder({
+            maker: addr1.address,
+            makerAsset: weth.address,
+            takerAsset: dai.address,
+            makingAmount: ether('0.1'),
+            takingAmount: ether('100'),
+            makerTraits: buildMakerTraits({ allowedSender: settlement.address }),
+        });
+        order1.salt = keccak256(fusionDetailsOrder1);
 
-        const interaction =
-            matcher.address +
-            '00' +
-            swap.interface
-                .encodeFunctionData('fillOrderTo', [
-                    backOrder,
-                    signatureBackOrder,
-                    matchingParams,
-                    ether('0.1'),
-                    0,
-                    ether('100'),
-                    resolver.address,
-                ])
-                .substring(10);
-        await expect(
-            matcher.settleOrders(
-                '0x' +
-                    swap.interface
-                        .encodeFunctionData('fillOrderTo', [
-                            order,
-                            signature,
-                            interaction,
-                            ether('100'),
-                            0,
-                            ether('0.1'),
-                            resolver.address,
-                        ])
-                        .substring(10),
-            ),
-        ).to.be.revertedWithCustomError(matcher, 'NotEnoughCredit');
+        const { r: r0, vs: vs0 } = compactSignature(await signOrder(order0, chainId, swap.address, addr));
+        const { r: r1, vs: vs1 } = compactSignature(await signOrder(order1, chainId, swap.address, addr1));
+
+        const fillOrderToData1 = swap.interface.encodeFunctionData('fillOrderTo', [
+            order1,
+            r1,
+            vs1,
+            ether('0.1'),
+            fillWithMakingAmount('0'),
+            resolver.address,
+            settlement.address + '01' + trim0x(fusionDetailsOrder1),
+        ]);
+
+        const fillOrderToData0 = swap.interface.encodeFunctionData('fillOrderTo', [
+            order0,
+            r0,
+            vs0,
+            ether('100'),
+            fillWithMakingAmount('0'),
+            resolver.address,
+            settlement.address + '00' + trim0x(fusionDetailsOrder0) + trim0x(fillOrderToData1),
+        ]);
+
+        await expect(resolver.settleOrders(fillOrderToData0)).to.be.revertedWithCustomError(settlement, 'NotEnoughCredit');
     });
 
     describe('whitelist lock period', async function () {
         it('should change only after whitelistedCutOff', async function () {
-            const { dai, weth, swap, matcher, resolver } = await loadFixture(initContracts);
+            const { dai, weth, swap, settlement, resolver } = await loadFixture(initContracts);
+            await approve(dai, weth, swap);
 
-            const currentTime = BigInt(await time.latest());
-            const oneWeek = BigInt(time.duration.weeks('1'));
-            const order = await buildOrder(
-                {
-                    salt: buildSalt({ orderStartTime: await defaultExpiredAuctionTimestamp(), fee: orderFee }),
-                    makerAsset: dai.address,
-                    takerAsset: weth.address,
-                    makingAmount: ether('100'),
-                    takingAmount: ether('0.1'),
-                    allowedSender: matcher.address,
-                    from: addr.address,
-                    receiver: resolver.address,
-                },
-                {
-                    whitelistedAddrs: [addr.address],
-                    whitelistedCutOffs: [currentTime + oneWeek],
-                    publicCutOff: currentTime + oneWeek * 20n,
-                },
-            );
-            const backOrder = await buildOrder(
-                {
-                    salt: buildSalt({ orderStartTime: await defaultExpiredAuctionTimestamp(), fee: backOrderFee }),
-                    makerAsset: weth.address,
-                    takerAsset: dai.address,
-                    makingAmount: ether('0.1'),
-                    takingAmount: ether('100'),
-                    allowedSender: matcher.address,
-                    from: addr1.address,
-                    receiver: resolver.address,
-                },
-                {
-                    whitelistedAddrs: [addr.address],
-                    whitelistedCutOffs: [currentTime + oneWeek],
-                    publicCutOff: currentTime + oneWeek * 20n,
-                },
-            );
-            const signature = await signOrder(order, chainId, swap.address, addr);
-            const signatureBackOrder = await signOrder(backOrder, chainId, swap.address, addr1);
+            const currentTime = await time.latest();
+            const threeHours = time.duration.hours('3');
 
-            const matchingParams = matcher.address + '01' + trim0x(resolver.address);
+            const fusionDetails = await buildFusion({ resolvers: [addr1.address, resolver.address], auctionDuration: threeHours * 2, resolverFee: orderFee });
 
-            const interaction =
-                matcher.address +
-                '00' +
-                swap.interface
-                    .encodeFunctionData('fillOrderTo', [
-                        backOrder,
-                        signatureBackOrder,
-                        matchingParams,
-                        ether('0.1'),
-                        0,
-                        ether('100'),
-                        resolver.address,
-                    ])
-                    .substring(10);
+            const order0 = await buildOrder({
+                maker: addr.address,
+                makerAsset: dai.address,
+                takerAsset: weth.address,
+                makingAmount: ether('100'),
+                takingAmount: ether('0.1'),
+                makerTraits: buildMakerTraits({ allowedSender: settlement.address }),
+            });
+            order0.salt = keccak256(fusionDetails);
 
-            await expect(
-                matcher.settleOrders(
-                    '0x' +
-                        swap.interface
-                            .encodeFunctionData('fillOrderTo', [
-                                order,
-                                signature,
-                                interaction,
-                                ether('100'),
-                                0,
-                                ether('0.1'),
-                                resolver.address,
-                            ])
-                            .substring(10),
-                ),
-            ).to.be.revertedWithCustomError(matcher, 'ResolverIsNotWhitelisted');
-            await timeIncreaseTo(currentTime + oneWeek + 1n);
-            await matcher.settleOrders(
-                '0x' +
-                    swap.interface
-                        .encodeFunctionData('fillOrderTo', [
-                            order,
-                            signature,
-                            interaction,
-                            ether('100'),
-                            0,
-                            ether('0.1'),
-                            resolver.address,
-                        ])
-                        .substring(10),
-            );
+            const order1 = await buildOrder({
+                maker: addr1.address,
+                makerAsset: weth.address,
+                takerAsset: dai.address,
+                makingAmount: ether('0.1'),
+                takingAmount: ether('100'),
+                makerTraits: buildMakerTraits({ allowedSender: settlement.address }),
+            });
+            order1.salt = keccak256(fusionDetails);
+
+            const { r: r0, vs: vs0 } = compactSignature(await signOrder(order0, chainId, swap.address, addr));
+            const { r: r1, vs: vs1 } = compactSignature(await signOrder(order1, chainId, swap.address, addr1));
+
+            const fillOrderToData1 = swap.interface.encodeFunctionData('fillOrderTo', [
+                order1,
+                r1,
+                vs1,
+                ether('0.11'),
+                fillWithMakingAmount('0'),
+                resolver.address,
+                settlement.address + '01' + trim0x(fusionDetails),
+            ]);
+
+            const fillOrderToData0 = swap.interface.encodeFunctionData('fillOrderTo', [
+                order0,
+                r0,
+                vs0,
+                ether('100'),
+                fillWithMakingAmount('0'),
+                resolver.address,
+                settlement.address + '00' + trim0x(fusionDetails) + trim0x(fillOrderToData1),
+            ]);
+
+            await expect(resolver.settleOrders(fillOrderToData0)).to.be.revertedWithCustomError(settlement, 'ResolverIsNotWhitelisted');
+
+            await timeIncreaseTo(currentTime + threeHours + 1);
+
+            await resolver.settleOrders(fillOrderToData0);
         });
 
         it('should change by non-whitelisted resolver after publicCutOff', async function () {
-            const { dai, weth, swap, matcher, resolver } = await loadFixture(initContracts);
+            const { dai, weth, swap, settlement, resolver } = await loadFixture(initContracts);
+            await approve(dai, weth, swap);
 
-            const order = await buildOrder(
-                {
-                    salt: buildSalt({ orderStartTime: await defaultExpiredAuctionTimestamp(), fee: orderFee }),
-                    makerAsset: dai.address,
-                    takerAsset: weth.address,
-                    makingAmount: ether('100'),
-                    takingAmount: ether('0.1'),
-                    allowedSender: matcher.address,
-                    from: addr.address,
-                },
-                {
-                    whitelistedAddrs: [addr1.address],
-                    whitelistedCutOffs: [0],
-                    publicCutOff: BigInt(await time.latest()) + 60n,
-                },
-            );
-            const backOrder = await buildOrder(
-                {
-                    salt: buildSalt({ orderStartTime: await defaultExpiredAuctionTimestamp(), fee: backOrderFee }),
-                    makerAsset: weth.address,
-                    takerAsset: dai.address,
-                    makingAmount: ether('0.1'),
-                    takingAmount: ether('100'),
-                    allowedSender: matcher.address,
-                    from: addr1.address,
-                },
-                {
-                    whitelistedAddrs: [addr1.address],
-                    whitelistedCutOffs: [0],
-                    publicCutOff: BigInt(await time.latest()) + 60n,
-                },
-            );
-            const signature = await signOrder(order, chainId, swap.address, addr);
-            const signatureBackOrder = await signOrder(backOrder, chainId, swap.address, addr1);
+            const fusionDetails0 = await buildFusion({ publicTimeDelay: 60n, resolverFee: orderFee });
 
-            const matchingParams = matcher.address + '01' + trim0x(resolver.address);
+            const order0 = await buildOrder({
+                maker: addr.address,
+                makerAsset: dai.address,
+                takerAsset: weth.address,
+                makingAmount: ether('100'),
+                takingAmount: ether('0.1'),
+                makerTraits: buildMakerTraits({ allowedSender: settlement.address }),
+            });
+            order0.salt = keccak256(fusionDetails0);
 
-            const interaction =
-                matcher.address +
-                '00' +
-                swap.interface
-                    .encodeFunctionData('fillOrderTo', [
-                        backOrder,
-                        signatureBackOrder,
-                        matchingParams,
-                        ether('0.1'),
-                        0,
-                        ether('100'),
-                        resolver.address,
-                    ])
-                    .substring(10);
+            const fusionDetails1 = await buildFusion({ publicTimeDelay: 60n, resolverFee: backOrderFee });
+            const order1 = await buildOrder({
+                maker: addr1.address,
+                makerAsset: weth.address,
+                takerAsset: dai.address,
+                makingAmount: ether('0.1'),
+                takingAmount: ether('100'),
+                makerTraits: buildMakerTraits({ allowedSender: settlement.address }),
+            });
+            order1.salt = keccak256(fusionDetails1);
 
-            await expect(
-                matcher.settleOrders(
-                    '0x' +
-                        swap.interface
-                            .encodeFunctionData('fillOrderTo', [
-                                order,
-                                signature,
-                                interaction,
-                                ether('100'),
-                                0,
-                                ether('0.1'),
-                                resolver.address,
-                            ])
-                            .substring(10),
-                ),
-            ).to.be.revertedWithCustomError(matcher, 'ResolverIsNotWhitelisted');
+            const { r: r0, vs: vs0 } = compactSignature(await signOrder(order0, chainId, swap.address, addr));
+            const { r: r1, vs: vs1 } = compactSignature(await signOrder(order1, chainId, swap.address, addr1));
+
+            const fillOrderToData1 = swap.interface.encodeFunctionData('fillOrderTo', [
+                order1,
+                r1,
+                vs1,
+                ether('0.1'),
+                fillWithMakingAmount('0'),
+                resolver.address,
+                settlement.address + '01' + trim0x(fusionDetails1),
+            ]);
+
+            const fillOrderToData0 = swap.interface.encodeFunctionData('fillOrderTo', [
+                order0,
+                r0,
+                vs0,
+                ether('100'),
+                fillWithMakingAmount('0'),
+                resolver.address,
+                settlement.address + '00' + trim0x(fusionDetails0) + trim0x(fillOrderToData1),
+            ]);
+
+            await expect(resolver.settleOrders(fillOrderToData0)).to.be.revertedWithCustomError(settlement, 'ResolverIsNotWhitelisted');
             await timeIncreaseTo(BigInt(await time.latest()) + 100n);
-            await matcher.settleOrders(
-                '0x' +
-                    swap.interface
-                        .encodeFunctionData('fillOrderTo', [
-                            order,
-                            signature,
-                            interaction,
-                            ether('100'),
-                            0,
-                            ether('0.1'),
-                            resolver.address,
-                        ])
-                        .substring(10),
-            );
+            await resolver.settleOrders(fillOrderToData0);
         });
     });
 });
