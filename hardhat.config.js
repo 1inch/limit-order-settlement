@@ -26,7 +26,6 @@ const LOW_OPTIMIZER_COMPILER_SETTINGS = {
     settings: {
         optimizer: {
             enabled: true,
-            runs: 400,
         },
         viaIR: true,
     },
@@ -42,6 +41,7 @@ module.exports = {
         overrides: {
             'contracts/PowerPod.sol': LOW_OPTIMIZER_COMPILER_SETTINGS,
             '@1inch/limit-order-protocol-contract/contracts/LimitOrderProtocol.sol': LOW_OPTIMIZER_COMPILER_SETTINGS,
+            'contracts/hardhat-dependency-compiler/@1inch/limit-order-protocol-contract/contracts/LimitOrderProtocol.sol': LOW_OPTIMIZER_COMPILER_SETTINGS,
         },
     },
     networks,
