@@ -28,6 +28,7 @@ contract Settlement is ISettlement, FeeBankCharger {
     uint256 private constant _BASE_POINTS = 10_000_000; // 100%
     uint256 private constant _TAKING_FEE_BASE = 1e9;
     uint256 private constant _TAKING_FEE_RATIO_OFFSET = 160;
+    uint256 private constant _RESOLVER_ADDRESS_BYTES_SIZE = 10;
 
     IOrderMixin private immutable _limitOrderProtocol;
 
@@ -86,7 +87,7 @@ contract Settlement is ISettlement, FeeBankCharger {
             _chargeFee(resolver, suffix.resolverFee);
             unchecked {
                 uint256 resolversLength = uint8(args[args.length - 1]);
-                IResolver(resolver).resolveOrders(allTokensAndAmounts, args[:args.length - 1 - resolversLength * 10]);
+                IResolver(resolver).resolveOrders(allTokensAndAmounts, args[:args.length - 1 - resolversLength * _RESOLVER_ADDRESS_BYTES_SIZE]);
             }
         } else {
             unchecked {
@@ -163,7 +164,7 @@ contract Settlement is ISettlement, FeeBankCharger {
         IOrderMixin limitOrderProtocol = _limitOrderProtocol;
 
         assembly ("memory-safe") {
-            let resolversBytesSize := add(1, mul(10, byte(0, calldataload(sub(add(args.offset, args.length), 1)))))
+            let resolversBytesSize := add(1, mul(_RESOLVER_ADDRESS_BYTES_SIZE, byte(0, calldataload(sub(add(args.offset, args.length), 1)))))
             let interactionOffset := sub(interaction.offset, args.offset)
 
             // Copy calldata and patch interaction.length
