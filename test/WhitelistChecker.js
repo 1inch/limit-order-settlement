@@ -1,10 +1,9 @@
 const { ethers } = require('hardhat');
-const { keccak256 } = require('ethers/lib/utils');
 const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
 const { signOrder, buildOrder, compactSignature, fillWithMakingAmount } = require('@1inch/limit-order-protocol-contract/test/helpers/orderUtils');
 const { expect, ether, trim0x } = require('@1inch/solidity-utils');
 const { deploySwapTokens, getChainId, deploySimpleRegistry } = require('./helpers/fixtures');
-const { buildFusion } = require('./helpers/fusionUtils');
+const { buildFusions } = require('./helpers/fusionUtils');
 
 describe('WhitelistChecker', function () {
     let addr, addr1;
@@ -43,7 +42,8 @@ describe('WhitelistChecker', function () {
         it('whitelist check in settleOrders method', async function () {
             const { dai, weth, swap, settlement } = await loadFixture(initContracts);
 
-            const fusionDetails = await buildFusion();
+            const { fusions: [fusionDetails], hashes: [fusionHash], resolvers } = await buildFusions([{}]);
+
             const order = await buildOrder({
                 makerAsset: dai.address,
                 takerAsset: weth.address,
@@ -51,7 +51,7 @@ describe('WhitelistChecker', function () {
                 takingAmount: ether('0.01'),
                 maker: addr1.address,
             });
-            order.salt = keccak256(fusionDetails);
+            order.salt = fusionHash;
 
             const { r, vs } = compactSignature(await signOrder(order, chainId, swap.address, addr1));
             const fillOrderToData = swap.interface.encodeFunctionData('fillOrderTo', [
@@ -62,7 +62,7 @@ describe('WhitelistChecker', function () {
                 fillWithMakingAmount('0'),
                 addr.address,
                 settlement.address + '01' + trim0x(fusionDetails),
-            ]);
+            ]) + trim0x(resolvers);
 
             await expect(settlement.settleOrders(fillOrderToData))
                 .to.be.revertedWithCustomError(settlement, 'ResolverIsNotWhitelisted');
@@ -111,14 +111,10 @@ describe('WhitelistChecker', function () {
         it('whitelist check in settleOrders method', async function () {
             const { dai, weth, swap, settlement, resolver } = await loadFixture(initContractsAndSetStatus);
 
-            const fusionDetails0 = await buildFusion({
-                resolvers: [resolver.address],
-                initialRateBump: 0n,
-            });
-            const fusionDetails1 = await buildFusion({
-                resolvers: [resolver.address],
-                initialRateBump: 0n,
-            });
+            const { fusions: [fusionDetails0, fusionDetails1], hashes: [fusionHash0, fusionHash1], resolvers } = await buildFusions([
+                { resolvers: [resolver.address], initialRateBump: 0n },
+                { resolvers: [resolver.address], initialRateBump: 0n },
+            ]);
 
             const order0 = await buildOrder({
                 makerAsset: dai.address,
@@ -127,7 +123,7 @@ describe('WhitelistChecker', function () {
                 takingAmount: ether('0.1'),
                 maker: addr.address,
             });
-            order0.salt = keccak256(fusionDetails0);
+            order0.salt = fusionHash0;
 
             const order1 = await buildOrder({
                 makerAsset: weth.address,
@@ -136,7 +132,7 @@ describe('WhitelistChecker', function () {
                 takingAmount: ether('100'),
                 maker: addr1.address,
             });
-            order1.salt = keccak256(fusionDetails1);
+            order1.salt = fusionHash1;
 
             const { r: r1, vs: vs1 } = compactSignature(await signOrder(order1, chainId, swap.address, addr1));
             const fillOrderToData1 = swap.interface.encodeFunctionData('fillOrderTo', [
@@ -158,7 +154,7 @@ describe('WhitelistChecker', function () {
                 fillWithMakingAmount('0'),
                 resolver.address,
                 settlement.address + '00' + trim0x(fusionDetails0) + trim0x(fillOrderToData1),
-            ]);
+            ]) + trim0x(resolvers);
 
             const txn = await resolver.settleOrders(fillOrderToData0);
             await expect(txn).to.changeTokenBalances(dai, [addr, addr1], [ether('-100'), ether('100')]);

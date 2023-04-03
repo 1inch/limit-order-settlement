@@ -42,7 +42,6 @@ module.exports = {
     solidity: {
         compilers: [DEFAULT_COMPILER_SETTINGS],
         overrides: {
-            'contracts/PowerPod.sol': LOW_OPTIMIZER_COMPILER_SETTINGS,
             '@1inch/limit-order-protocol-contract/contracts/LimitOrderProtocol.sol': LOW_OPTIMIZER_COMPILER_SETTINGS,
             'contracts/hardhat-dependency-compiler/@1inch/limit-order-protocol-contract/contracts/LimitOrderProtocol.sol': LOW_OPTIMIZER_COMPILER_SETTINGS,
         },

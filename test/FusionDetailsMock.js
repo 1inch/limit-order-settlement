@@ -2,7 +2,7 @@ const { ethers } = require('hardhat');
 const { BigNumber } = require('ethers');
 const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
 const { expect, constants, time } = require('@1inch/solidity-utils');
-const { buildFusion } = require('./helpers/fusionUtils');
+const { buildFusions } = require('./helpers/fusionUtils');
 
 describe('FusionDetailsMock', function () {
     async function initContracts() {
@@ -15,8 +15,8 @@ describe('FusionDetailsMock', function () {
     it('should return default values', async function () {
         const { fusionDetailsMock } = await loadFixture(initContracts);
 
-        const details = buildFusion();
-        const result = await fusionDetailsMock.parse(details, constants.ZERO_ADDRESS);
+        const { fusions: [fusionDetails], resolvers } = await buildFusions([{}]);
+        const result = await fusionDetailsMock.parse(fusionDetails, constants.ZERO_ADDRESS, resolvers);
 
         expect(Object.assign({}, result)).to.deep.contain({
             detailsLength: BigNumber.from('19'),
@@ -31,7 +31,7 @@ describe('FusionDetailsMock', function () {
     it('should return custom values', async function () {
         const { fusionDetailsMock } = await loadFixture(initContracts);
 
-        const details = buildFusion({
+        const { fusions: [fusionDetails], resolvers } = await buildFusions([{
             resolvers: [fusionDetailsMock.address],
             points: [[10n, 100n], [5n, 50n]],
             startTime: (await time.latest()) + 100,
@@ -39,14 +39,14 @@ describe('FusionDetailsMock', function () {
             initialRateBump: 200n,
             resolverFee: 10000n,
             publicTimeDelay: time.duration.hours(1),
-        });
+        }]);
 
         await time.increase(time.duration.minutes(2));
 
-        const result = await fusionDetailsMock.parse(details, fusionDetailsMock.address);
+        const result = await fusionDetailsMock.parse(fusionDetails, fusionDetailsMock.address, resolvers);
 
         expect(Object.assign({}, result)).to.deep.include({
-            detailsLength: BigNumber.from('41'),
+            detailsLength: BigNumber.from('32'),
             takingFeeReceiver: constants.ZERO_ADDRESS,
             takingFeeAmount: BigNumber.from('0'),
             bump: BigNumber.from('49'),
