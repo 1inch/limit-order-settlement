@@ -48,7 +48,7 @@ contract Settlement is ISettlement, FeeBankCharger {
         _limitOrderProtocol = limitOrderProtocol;
     }
 
-    function settleOrders(bytes calldata data) external virtual returns(bool) {
+    function settleOrders(bytes calldata data) public returns(bool) {
         _settleOrder(data, msg.sender, 0, msg.data[:0], IERC20(address(0)), 0);
         return true;
     }
@@ -61,7 +61,7 @@ contract Settlement is ISettlement, FeeBankCharger {
         uint256 takingAmount,
         uint256 /* remainingMakingAmount */,
         bytes calldata extraData
-    ) external virtual onlyThis(taker) onlyLimitOrderProtocol returns(uint256 offeredTakingAmount) {
+    ) public onlyThis(taker) onlyLimitOrderProtocol returns(uint256 offeredTakingAmount) {
         bytes calldata fusionDetails = extraData[1:];
         fusionDetails = fusionDetails[:fusionDetails.detailsLength()];
 
