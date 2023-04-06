@@ -28,8 +28,8 @@
     "@1inch/delegating": "0.0.21",
     "@1inch/erc20-pods": "0.0.17",
     "@1inch/st1inch": "2.0.3",
-    "@1inch/limit-order-protocol-contract": "4.0.0-prerelease-5",
-    "@1inch/solidity-utils": "2.2.22",
+    "@1inch/limit-order-protocol-contract": "4.0.0-prerelease-6",
+    "@1inch/solidity-utils": "2.2.24",
     "@openzeppelin/contracts": "4.8.2"
   },
   "devDependencies": {

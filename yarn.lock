@@ -47,12 +47,12 @@
     "@1inch/solidity-utils" "2.2.5"
     "@openzeppelin/contracts" "4.8.0"
 
-"@1inch/limit-order-protocol-contract@4.0.0-prerelease-5":
-  version "4.0.0-prerelease-5"
-  resolved "https://registry.yarnpkg.com/@1inch/limit-order-protocol-contract/-/limit-order-protocol-contract-4.0.0-prerelease-5.tgz#a3e011ea002fb488dab9873fafd481fd80a7dc06"
-  integrity sha512-MzQ6N4wg7d60X50wno2tah0jNrSqBsTz4ED2Vngh9TMebqj8EuNFivo0heAW1qp7i4cyNsWSMxqaXgoQLwsrEA==
+"@1inch/limit-order-protocol-contract@4.0.0-prerelease-6":
+  version "4.0.0-prerelease-6"
+  resolved "https://registry.yarnpkg.com/@1inch/limit-order-protocol-contract/-/limit-order-protocol-contract-4.0.0-prerelease-6.tgz#f8dd50cb8b37ffa077feb377da2fa67ea3471818"
+  integrity sha512-FKrYJHMw99M4jW0oLYSUcwZR9WBr0xKbXZM8qywWzKfIB9AzfUEZVESs7NKOpoZ2uL7YbgX5Wrapnl8GznJ2eA==
   dependencies:
-    "@1inch/solidity-utils" "2.2.22"
+    "@1inch/solidity-utils" "2.2.24"
     "@chainlink/contracts" "0.6.1"
     "@openzeppelin/contracts" "4.8.2"
 
@@ -69,10 +69,10 @@
     ethereumjs-util "7.1.5"
     ethers "5.7.1"
 
-"@1inch/solidity-utils@2.2.22":
-  version "2.2.22"
-  resolved "https://registry.yarnpkg.com/@1inch/solidity-utils/-/solidity-utils-2.2.22.tgz#32d1c0b33193b42b675cbb04a74a99d800d84292"
-  integrity sha512-RJL7jUBybgQHumZzoeFd/raNxGxUmu4CvHyY1MqiYgfoddzKQaE/rQVQ0lasGrQH/zTfn5LB+wQbupUiA44SqA==
+"@1inch/solidity-utils@2.2.24":
+  version "2.2.24"
+  resolved "https://registry.yarnpkg.com/@1inch/solidity-utils/-/solidity-utils-2.2.24.tgz#2f160c3c9231b04db2e2b3f3bc4e9c980b4b8511"
+  integrity sha512-HBX9krTA/iVViC+wysAbuigTopmIyjNlPbQSQ7zHZqjgT+bRNMHnmtqcuiWcHlqJ5MVHMLwjEaDWC+2l0wEyNQ==
   dependencies:
     "@metamask/eth-sig-util" "5.0.2"
     "@nomicfoundation/hardhat-network-helpers" "1.0.8"
