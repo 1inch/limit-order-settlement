@@ -2,7 +2,7 @@ const { Wallet } = require('zksync-web3');
 const { Deployer } = require('@matterlabs/hardhat-zksync-deploy');
 
 const USDC = '0x3355df6D4c9C3035724Fd0e3914dE96A5a83aaf4';
-const ROUTER = '0x0036C9E8a1559C01b76855290022e946A8bb242F';
+const ROUTER = '0x9f6BFf99CAf1c9cbeDac15fb84Abd4Eb272EA959';
 
 module.exports = async function (hre) {
     console.log('running deploy script');
