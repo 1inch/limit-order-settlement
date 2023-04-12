@@ -59,17 +59,18 @@ contract WhitelistRegistry is Ownable {
     function setWhitelistLimit(uint256 whitelistLimit_) external onlyOwner {
         if (whitelistLimit == whitelistLimit_) revert SameWhitelistSize();
         whitelistLimitNew = whitelistLimit_;
-        if (whitelistLimitNew > _whitelist.length()) {
-            _setWhitelistLimit(whitelistLimitNew);
+        if (whitelistLimit_ > _whitelist.length()) {
+            _setWhitelistLimit(whitelistLimit_);
         } else {
-            emit WhitelistLimitDecreaseRequest(whitelistLimitNew);
+            emit WhitelistLimitDecreaseRequest(whitelistLimit_);
         }
     }
 
     function shrinkWhitelist(uint256 partition) external {
-        if (whitelistLimit == whitelistLimitNew) revert SameWhitelistSize();
+        uint256 whitelistLimit_ = whitelistLimitNew;
+        if (whitelistLimit == whitelistLimit_) revert SameWhitelistSize();
         uint256 whitelistLength = _whitelist.length();
-        if (whitelistLimitNew < whitelistLength) {
+        if (whitelistLimit_ < whitelistLength) {
             unchecked {
                 for (uint256 i = 0; i < whitelistLength; ) {
                     address curWhitelisted = _whitelist.at(i);
@@ -81,9 +82,9 @@ contract WhitelistRegistry is Ownable {
                     }
                 }
             }
-            if (whitelistLength != whitelistLimitNew) revert WrongPartition();
+            if (whitelistLength != whitelistLimit_) revert WrongPartition();
         }
-        _setWhitelistLimit(whitelistLimitNew);
+        _setWhitelistLimit(whitelistLimit_);
     }
 
     function register() external {
@@ -116,11 +117,12 @@ contract WhitelistRegistry is Ownable {
     }
 
     function clean() external {
+        uint256 resolverThreshold_ = resolverThreshold;
         uint256 whitelistLength = _whitelist.length();
         unchecked {
             for (uint256 i = 0; i < whitelistLength; ) {
                 address curWhitelisted = _whitelist.at(i);
-                if (token.votingPowerOf(curWhitelisted) < resolverThreshold) {
+                if (token.votingPowerOf(curWhitelisted) < resolverThreshold_) {
                     _removeFromWhitelist(curWhitelisted);
                     whitelistLength--;
                 } else {
