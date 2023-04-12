@@ -178,7 +178,7 @@ contract Settlement is ISettlement, FeeBankCharger {
                 calldatacopy(offset, sub(add(args.offset, args.length), resolversBytesSize), resolversBytesSize)
                 offset := add(offset, resolversBytesSize)
                 // Append suffix fields
-                mstore(add(offset, 0x00), resolver)
+                mstore(offset, resolver)
                 mstore(add(offset, 0x20), resolverFee)
                 calldatacopy(add(offset, 0x40), tokensAndAmounts.offset, tokensAndAmounts.length)
 
