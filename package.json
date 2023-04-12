@@ -6,6 +6,12 @@
     "type": "git",
     "url": "git@github.com:1inch/limit-order-settlement.git"
   },
+  "files": [
+    "contracts/*.sol",
+    "contracts/helpers",
+    "contracts/interfaces",
+    "contracts/libraries"
+  ],
   "license": "MIT",
   "scripts": {
     "clean": "rimraf artifacts cache coverage contracts/hardhat-dependency-compiler",
