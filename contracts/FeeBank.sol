@@ -96,7 +96,7 @@ contract FeeBank is IFeeBank, Ownable {
      * @param accounts Accounts whose commissions are being withdrawn.
      * @return totalAccountFees The total amount of accounts commissions.
      */
-    function gatherFees(address[] memory accounts) external onlyOwner returns (uint256 totalAccountFees) {
+    function gatherFees(address[] calldata accounts) external onlyOwner returns (uint256 totalAccountFees) {
         uint256 accountsLength = accounts.length;
         unchecked {
             for (uint256 i = 0; i < accountsLength; ++i) {
