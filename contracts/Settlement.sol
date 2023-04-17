@@ -18,8 +18,6 @@ contract Settlement is ISettlement, FeeBankCharger {
     using FusionDetails for bytes;
 
     error AccessDenied();
-    error IncorrectCalldataParams();
-    error FailedExternalCall();
     error ResolverIsNotWhitelisted();
     error WrongInteractionTarget();
 

@@ -32,7 +32,7 @@ contract FeeBank is IFeeBank, Ownable {
 
     /**
      * @notice Increment sender's availableCredit in Settlement contract.
-     * @param amount The amount of 1INCH sender pay for incresing.
+     * @param amount The amount of 1INCH sender pay for increasing.
      * @return totalAvailableCredit The total sender's availableCredit after deposit.
      */
     function deposit(uint256 amount) external returns (uint256 totalAvailableCredit) {
@@ -42,7 +42,7 @@ contract FeeBank is IFeeBank, Ownable {
     /**
      * @notice Increases account's availableCredit in Settlement contract.
      * @param account The account whose availableCredit is increased by the sender.
-     * @param amount The amount of 1INCH sender pay for incresing.
+     * @param amount The amount of 1INCH sender pay for increasing.
      * @return totalAvailableCredit The total account's availableCredit after deposit.
      */
     function depositFor(address account, uint256 amount) external returns (uint256 totalAvailableCredit) {
@@ -51,7 +51,7 @@ contract FeeBank is IFeeBank, Ownable {
 
     /**
      * @notice See {deposit}. This method uses permit for deposit without prior approves.
-     * @param amount The amount of 1INCH sender pay for incresing.
+     * @param amount The amount of 1INCH sender pay for increasing.
      * @param permit The data with sender's permission via token.
      * @return totalAvailableCredit The total sender's availableCredit after deposit.
      */
