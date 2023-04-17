@@ -22,6 +22,7 @@ library FusionDetails {
     // }
 
     uint256 private constant _HAS_TAKING_FEE_FLAG = 0x80;
+    uint256 private constant _TAKING_FEE_FLAG_BIT_SHIFT = 7;
     uint256 private constant _RESOLVERS_LENGTH_MASK = 0x78;
     uint256 private constant _RESOLVERS_LENGTH_BIT_SHIFT = 3;
     uint256 private constant _POINTS_LENGTH_MASK = 0x07;
@@ -83,7 +84,7 @@ library FusionDetails {
                         mul(resolversCount, _RESOLVER_BYTES_SIZE),
                         mul(pointsCount, _AUCTION_POINT_BYTES_SIZE)
                     ),
-                    mul(_TAKING_FEE_BYTES_SIZE, iszero(iszero(and(_HAS_TAKING_FEE_FLAG, flags))))
+                    mul(_TAKING_FEE_BYTES_SIZE, shr(_TAKING_FEE_FLAG_BIT_SHIFT, flags))
                 )
             )
         }
@@ -124,7 +125,7 @@ library FusionDetails {
                 mstore(ptr, deltaRaw)
                 ptr := add(ptr, _RESOLVER_DELTA_BYTES_SIZE)
             }
-            let takingFeeLength := mul(_TAKING_FEE_BYTES_SIZE, iszero(iszero(and(_HAS_TAKING_FEE_FLAG, flags))))
+            let takingFeeLength := mul(_TAKING_FEE_BYTES_SIZE, shr(_TAKING_FEE_FLAG_BIT_SHIFT, flags))
             calldatacopy(ptr, cdPtr, add(mul(pointsCount, _AUCTION_POINT_BYTES_SIZE), takingFeeLength))
             ptr := add(ptr, add(mul(pointsCount, _AUCTION_POINT_BYTES_SIZE), takingFeeLength))
             mstore(0x40, ptr)
