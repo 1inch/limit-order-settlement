@@ -18,8 +18,6 @@ contract Settlement is ISettlement, FeeBankCharger {
     using FusionDetails for bytes;
 
     error AccessDenied();
-    error IncorrectCalldataParams();
-    error FailedExternalCall();
     error ResolverIsNotWhitelisted();
     error WrongInteractionTarget();
 
@@ -48,7 +46,7 @@ contract Settlement is ISettlement, FeeBankCharger {
         _limitOrderProtocol = limitOrderProtocol;
     }
 
-    function settleOrders(bytes calldata data) external returns(bool) {
+    function settleOrders(bytes calldata data) public virtual returns(bool) {
         _settleOrder(data, msg.sender, 0, msg.data[:0], IERC20(address(0)), 0);
         return true;
     }
@@ -61,7 +59,7 @@ contract Settlement is ISettlement, FeeBankCharger {
         uint256 takingAmount,
         uint256 /* remainingMakingAmount */,
         bytes calldata extraData
-    ) external onlyThis(taker) onlyLimitOrderProtocol returns(uint256 offeredTakingAmount) {
+    ) public virtual onlyThis(taker) onlyLimitOrderProtocol returns(uint256 offeredTakingAmount) {
         bytes calldata fusionDetails = extraData[1:];
         fusionDetails = fusionDetails[:fusionDetails.detailsLength()];
 
@@ -149,7 +147,7 @@ contract Settlement is ISettlement, FeeBankCharger {
         bytes calldata fusionDetails = interaction[21:];
         fusionDetails = fusionDetails[:fusionDetails.detailsLength()];
 
-        if (interaction.length < 20 || address(bytes20(interaction)) != address(this)) revert WrongInteractionTarget();
+        if (address(bytes20(interaction)) != address(this)) revert WrongInteractionTarget();
         // salt is the first word in Order struct, and we validate that lower 160 bits of salt are hash of fusionDetails
         if (uint256(fusionDetails.computeHash(args)) & type(uint160).max != uint256(bytes32(args[4:])) & type(uint160).max) revert FusionDetailsMismatch();
         if (!fusionDetails.checkResolver(resolver, args)) revert ResolverIsNotWhitelisted();
@@ -178,7 +176,7 @@ contract Settlement is ISettlement, FeeBankCharger {
                 calldatacopy(offset, sub(add(args.offset, args.length), resolversBytesSize), resolversBytesSize)
                 offset := add(offset, resolversBytesSize)
                 // Append suffix fields
-                mstore(add(offset, 0x00), resolver)
+                mstore(offset, resolver)
                 mstore(add(offset, 0x20), resolverFee)
                 calldatacopy(add(offset, 0x40), tokensAndAmounts.offset, tokensAndAmounts.length)
 

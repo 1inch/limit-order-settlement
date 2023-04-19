@@ -35,9 +35,7 @@ contract FeeBankCharger is IFeeBankCharger {
     }
 
     function decreaseAvailableCredit(address account, uint256 amount) external onlyFeeBank returns (uint256 allowance) {
-        allowance = _creditAllowance[account];
-        allowance -= amount;  // checked math is needed to prevent underflow
-        _creditAllowance[account] = allowance;
+        return _creditAllowance[account] -= amount;  // checked math is needed to prevent underflow
     }
 
     function _chargeFee(address account, uint256 fee) internal {

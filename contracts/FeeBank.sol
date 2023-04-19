@@ -20,7 +20,6 @@ contract FeeBank is IFeeBank, Ownable {
     mapping(address => uint256) private _accountDeposits;
 
     constructor(IFeeBankCharger charger_, IERC20 inch_, address owner_) {
-        if (address(charger_) == address(0)) revert ZeroAddress();
         if (address(inch_) == address(0)) revert ZeroAddress();
         _charger = charger_;
         _token = inch_;
@@ -33,7 +32,7 @@ contract FeeBank is IFeeBank, Ownable {
 
     /**
      * @notice Increment sender's availableCredit in Settlement contract.
-     * @param amount The amount of 1INCH sender pay for incresing.
+     * @param amount The amount of 1INCH sender pay for increasing.
      * @return totalAvailableCredit The total sender's availableCredit after deposit.
      */
     function deposit(uint256 amount) external returns (uint256 totalAvailableCredit) {
@@ -43,7 +42,7 @@ contract FeeBank is IFeeBank, Ownable {
     /**
      * @notice Increases account's availableCredit in Settlement contract.
      * @param account The account whose availableCredit is increased by the sender.
-     * @param amount The amount of 1INCH sender pay for incresing.
+     * @param amount The amount of 1INCH sender pay for increasing.
      * @return totalAvailableCredit The total account's availableCredit after deposit.
      */
     function depositFor(address account, uint256 amount) external returns (uint256 totalAvailableCredit) {
@@ -52,7 +51,7 @@ contract FeeBank is IFeeBank, Ownable {
 
     /**
      * @notice See {deposit}. This method uses permit for deposit without prior approves.
-     * @param amount The amount of 1INCH sender pay for incresing.
+     * @param amount The amount of 1INCH sender pay for increasing.
      * @param permit The data with sender's permission via token.
      * @return totalAvailableCredit The total sender's availableCredit after deposit.
      */
@@ -96,7 +95,7 @@ contract FeeBank is IFeeBank, Ownable {
      * @param accounts Accounts whose commissions are being withdrawn.
      * @return totalAccountFees The total amount of accounts commissions.
      */
-    function gatherFees(address[] memory accounts) external onlyOwner returns (uint256 totalAccountFees) {
+    function gatherFees(address[] calldata accounts) external onlyOwner returns (uint256 totalAccountFees) {
         uint256 accountsLength = accounts.length;
         unchecked {
             for (uint256 i = 0; i < accountsLength; ++i) {
