@@ -111,7 +111,7 @@ contract FeeBank is IFeeBank, Ownable {
     function _withdrawTo(address account, uint256 amount) internal returns (uint256 totalAvailableCredit) {
         totalAvailableCredit = _charger.decreaseAvailableCredit(msg.sender, amount);
         unchecked {
-            _accountDeposits[msg.sender] -= amount;  // overflow is impossible due to checks in FeeBankCharger
+            _accountDeposits[msg.sender] -= amount;  // underflow is impossible due to checks in FeeBankCharger
         }
         _token.safeTransfer(account, amount);
     }
