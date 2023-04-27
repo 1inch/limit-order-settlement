@@ -67,12 +67,8 @@ library FusionDetails {
     uint256 private constant _RESOLVER_ADDRESS_BYTES_SIZE = 10;
     uint256 private constant _RESOLVER_ADDRESS_MASK = 0xffffffffffffffffffff;
     uint256 private constant _RESOLVER_BYTES_SIZE = 3; // _RESOLVER_DELTA_BYTES_SIZE + _RESOLVER_INDEX_BYTES_SIZE;
-    uint256 private constant _RESOLVER_INDEX_BIT_SHIFT = 248; // 256 - _RESOLVER_INDEX_BYTES_SIZE * 8;
     uint256 private constant _RESOLVER_DELTA_BIT_SHIFT = 240; // 256 - _RESOLVER_DELTA_BYTES_SIZE * 8;
     uint256 private constant _RESOLVER_ADDRESS_BIT_SHIFT = 176; // 256 - _RESOLVER_ADDRESS_BYTES_SIZE * 8;
-
-    uint256 private constant _WHITELIST_LENGTH_BYTES_SIZE = 1;
-    uint256 private constant _WHITELIST_LENGTH_BIT_SHIFT = 248; // 256 - _WHITELIST_LENGTH_BYTES_SIZE * 8;
 
     function detailsLength(bytes calldata details) internal pure returns (uint256 len) {
         if (details.length == 0) {
