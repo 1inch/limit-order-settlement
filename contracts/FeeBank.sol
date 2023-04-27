@@ -26,67 +26,57 @@ contract FeeBank is IFeeBank, Ownable {
         transferOwnership(owner_);
     }
 
+    /**
+     * @notice See {IFeeBank-availableCredit}.
+     */
     function availableCredit(address account) external view returns (uint256) {
         return _charger.availableCredit(account);
     }
 
     /**
-     * @notice Increment sender's availableCredit in Settlement contract.
-     * @param amount The amount of 1INCH sender pay for increasing.
-     * @return totalAvailableCredit The total sender's availableCredit after deposit.
+     * @notice See {IFeeBank-deposit}.
      */
-    function deposit(uint256 amount) external returns (uint256 totalAvailableCredit) {
+    function deposit(uint256 amount) external returns (uint256) {
         return _depositFor(msg.sender, amount);
     }
 
     /**
-     * @notice Increases account's availableCredit in Settlement contract.
-     * @param account The account whose availableCredit is increased by the sender.
-     * @param amount The amount of 1INCH sender pay for increasing.
-     * @return totalAvailableCredit The total account's availableCredit after deposit.
+     * @notice See {IFeeBank-depositFor}.
      */
-    function depositFor(address account, uint256 amount) external returns (uint256 totalAvailableCredit) {
+    function depositFor(address account, uint256 amount) external returns (uint256) {
         return _depositFor(account, amount);
     }
 
     /**
-     * @notice See {deposit}. This method uses permit for deposit without prior approves.
-     * @param amount The amount of 1INCH sender pay for increasing.
-     * @param permit The data with sender's permission via token.
-     * @return totalAvailableCredit The total sender's availableCredit after deposit.
+     * @notice See {IFeeBank-depositWithPermit}.
      */
-    function depositWithPermit(uint256 amount, bytes calldata permit) external returns (uint256 totalAvailableCredit) {
+    function depositWithPermit(uint256 amount, bytes calldata permit) external returns (uint256) {
         return depositForWithPermit(msg.sender, amount, permit);
     }
 
     /**
-     * @notice See {depositFor} and {depositWithPermit}.
+     * @notice See {IFeeBank-depositForWithPermit}.
      */
     function depositForWithPermit(
         address account,
         uint256 amount,
         bytes calldata permit
-    ) public returns (uint256 totalAvailableCredit) {
+    ) public returns (uint256) {
         _token.safePermit(permit);
         return _depositFor(account, amount);
     }
 
     /**
-     * @notice Returns unspent availableCredit.
-     * @param amount The amount of 1INCH sender returns.
-     * @return totalAvailableCredit The total sender's availableCredit after withdrawal.
+     * @notice See {IFeeBank-withdraw}.
      */
-    function withdraw(uint256 amount) external returns (uint256 totalAvailableCredit) {
+    function withdraw(uint256 amount) external returns (uint256) {
         return _withdrawTo(msg.sender, amount);
     }
 
     /**
-     * @notice Returns unspent availableCredit to specific account.
-     * @param account The account which get withdrawaled tokens.
-     * @param amount The amount of withdrawaled tokens.
-     * @return totalAvailableCredit The total sender's availableCredit after withdrawal.
+     * @notice See {IFeeBank-withdrawTo}.
      */
-    function withdrawTo(address account, uint256 amount) external returns (uint256 totalAvailableCredit) {
+    function withdrawTo(address account, uint256 amount) external returns (uint256) {
         return _withdrawTo(account, amount);
     }
 
