@@ -18,7 +18,7 @@ library FusionDetails {
     //     bytes2 publicTimeDelay;
     //     (bytes1,bytes2)[N] resolversIndicesAndTimeDeltas;
     //     (bytes3,bytes2)[M] pointsAndTimeDeltas;
-    //     bytes24? takingFee; // optional if flags has _HAS_TAKING_FEE_FLAG
+    //     bytes24? takingFeeData; // optional if flags has _HAS_TAKING_FEE_FLAG
     // }
 
     uint256 private constant _HAS_TAKING_FEE_FLAG = 0x80;
@@ -27,25 +27,31 @@ library FusionDetails {
     uint256 private constant _RESOLVERS_LENGTH_BIT_SHIFT = 3;
     uint256 private constant _POINTS_LENGTH_MASK = 0x07;
 
-    uint256 private constant _TAKING_FEE_BYTES_SIZE = 24;
-    uint256 private constant _TAKING_FEE_BIT_SHIFT = 64; // 256 - _TAKING_FEE_BYTES_SIZE * 8
+    uint256 private constant _TAKING_FEE_DATA_BYTES_SIZE = 24;
+    uint256 private constant _TAKING_FEE_DATA_BIT_SHIFT = 64; // 256 - _TAKING_FEE_DATA_BYTES_SIZE * 8
 
     uint256 private constant _START_TIME_BYTES_OFFSET = 1;
+    // uint256 private constant _ORDER_TIME_START_BYTES_SIZE = 4;
     uint256 private constant _START_TIME_BIT_SHIFT = 224; // 256 - _ORDER_TIME_START_BYTES_SIZE * 8
 
     uint256 private constant _AUCTION_DELAY_BYTES_OFFSET = 5;
+    // uint256 private constant _ORDER_TIME_START_BYTES_SIZE = 2;
     uint256 private constant _AUCTION_DELAY_BIT_SHIFT = 240; // 256 - _AUCTION_DELAY_BYTES_SIZE * 8
 
     uint256 private constant _AUCTION_DURATION_BYTES_OFFSET = 7; // _AUCTION_DELAY_BYTES_OFFSET + _AUCTION_DELAY_BYTES_SIZE
+    // uint256 private constant _ORDER_DURATION_BYTES_SIZE = 3;
     uint256 private constant _AUCTION_DURATION_BIT_SHIFT = 232; // 256 - _ORDER_DURATION_BYTES_SIZE * 8
 
     uint256 private constant _INITIAL_RATE_BUMP_BYTES_OFFSET = 10; // _AUCTION_DURATION_BYTES_OFFSET + _ORDER_DURATION_BYTES_SIZE
+    // uint256 private constant _INITIAL_RATE_BUMP_BYTES_SIZE = 3;
     uint256 private constant _INITIAL_RATE_BUMP_BIT_SHIFT = 232; // 256 - _INITIAL_RATE_BUMP_BYTES_SIZE * 8
 
     uint256 private constant _RESOLVER_FEE_BYTES_OFFSET = 13; // _INITIAL_RATE_BUMP_BYTES_OFFSET + _INITIAL_RATE_BUMP_BYTES_SIZE
+    // uint256 private constant _RESOLVER_FEE_BYTES_SIZE = 4;
     uint256 private constant _RESOLVER_FEE_BIT_SHIFT = 224; // 256 - _RESOLVER_FEE_BYTES_SIZE * 8
 
     uint256 private constant _PUBLIC_TIME_DELAY_BYTES_OFFSET = 17; // _RESOLVER_FEE_BYTES_OFFSET + _RESOLVER_FEE_BYTES_SIZE
+    // uint256 private constant _PUBLIC_TIME_DELAY_BYTES_SIZE = 2;
     uint256 private constant _PUBLIC_TIME_DELAY_BIT_SHIFT = 240; // 256 - _PUBLIC_TIME_DELAY_BYTES_SIZE * 8
 
     uint256 private constant _RESOLVERS_LIST_BYTES_OFFSET = 19; // _PUBLIC_TIME_DELAY_BYTES_OFFSET + _PUBLIC_TIME_DELAY_BYTES_SIZE
@@ -61,12 +67,8 @@ library FusionDetails {
     uint256 private constant _RESOLVER_ADDRESS_BYTES_SIZE = 10;
     uint256 private constant _RESOLVER_ADDRESS_MASK = 0xffffffffffffffffffff;
     uint256 private constant _RESOLVER_BYTES_SIZE = 3; // _RESOLVER_DELTA_BYTES_SIZE + _RESOLVER_INDEX_BYTES_SIZE;
-    uint256 private constant _RESOLVER_INDEX_BIT_SHIFT = 248; // 256 - _RESOLVER_INDEX_BYTES_SIZE * 8;
     uint256 private constant _RESOLVER_DELTA_BIT_SHIFT = 240; // 256 - _RESOLVER_DELTA_BYTES_SIZE * 8;
     uint256 private constant _RESOLVER_ADDRESS_BIT_SHIFT = 176; // 256 - _RESOLVER_ADDRESS_BYTES_SIZE * 8;
-
-    uint256 private constant _WHITELIST_LENGTH_BYTES_SIZE = 1;
-    uint256 private constant _WHITELIST_LENGTH_BIT_SHIFT = 248; // 256 - _WHITELIST_LENGTH_BYTES_SIZE * 8;
 
     function detailsLength(bytes calldata details) internal pure returns (uint256 len) {
         if (details.length == 0) {
@@ -84,17 +86,17 @@ library FusionDetails {
                         mul(resolversCount, _RESOLVER_BYTES_SIZE),
                         mul(pointsCount, _AUCTION_POINT_BYTES_SIZE)
                     ),
-                    mul(_TAKING_FEE_BYTES_SIZE, shr(_TAKING_FEE_FLAG_BIT_SHIFT, flags))
+                    mul(_TAKING_FEE_DATA_BYTES_SIZE, shr(_TAKING_FEE_FLAG_BIT_SHIFT, flags))
                 )
             )
         }
     }
 
-    function takingFee(bytes calldata details) internal pure returns (Address ret) {
+    function takingFeeData(bytes calldata details) internal pure returns (Address data) {
         assembly ("memory-safe") {
             if and(_HAS_TAKING_FEE_FLAG, byte(0, calldataload(details.offset))) {
-                let ptr := sub(add(details.offset, details.length), _TAKING_FEE_BYTES_SIZE)
-                ret := shr(_TAKING_FEE_BIT_SHIFT, calldataload(ptr))
+                let ptr := sub(add(details.offset, details.length), _TAKING_FEE_DATA_BYTES_SIZE)
+                data := shr(_TAKING_FEE_DATA_BIT_SHIFT, calldataload(ptr))
             }
         }
     }
@@ -125,9 +127,9 @@ library FusionDetails {
                 mstore(ptr, deltaRaw)
                 ptr := add(ptr, _RESOLVER_DELTA_BYTES_SIZE)
             }
-            let takingFeeLength := mul(_TAKING_FEE_BYTES_SIZE, shr(_TAKING_FEE_FLAG_BIT_SHIFT, flags))
-            calldatacopy(ptr, cdPtr, add(mul(pointsCount, _AUCTION_POINT_BYTES_SIZE), takingFeeLength))
-            ptr := add(ptr, add(mul(pointsCount, _AUCTION_POINT_BYTES_SIZE), takingFeeLength))
+            let takingFeeAndRecipientLength := mul(_TAKING_FEE_DATA_BYTES_SIZE, shr(_TAKING_FEE_FLAG_BIT_SHIFT, flags))
+            calldatacopy(ptr, cdPtr, add(mul(pointsCount, _AUCTION_POINT_BYTES_SIZE), takingFeeAndRecipientLength))
+            ptr := add(ptr, add(mul(pointsCount, _AUCTION_POINT_BYTES_SIZE), takingFeeAndRecipientLength))
             mstore(0x40, ptr)
 
             let len := sub(ptr, reconstructed)
