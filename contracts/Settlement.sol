@@ -20,6 +20,8 @@ contract Settlement is ISettlement, FeeBankCharger {
     error AccessDenied();
     error ResolverIsNotWhitelisted();
     error WrongInteractionTarget();
+    error IncorrectSelector();
+    error FusionDetailsMismatch();
 
     bytes1 private constant _FINALIZE_INTERACTION = 0x01;
     uint256 private constant _ORDER_FEE_BASE_POINTS = 1e15;
@@ -98,9 +100,6 @@ contract Settlement is ISettlement, FeeBankCharger {
         }
         token.forceApprove(address(_limitOrderProtocol), offeredTakingAmount);
     }
-
-    error IncorrectSelector();
-    error FusionDetailsMismatch();
 
     struct FillOrderToArgs {
         IOrderMixin.Order order;
