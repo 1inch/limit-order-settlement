@@ -20,8 +20,8 @@ contract FusionDetailsMock {
         bool isValidResolver
     ) {
         detailsLength = details.detailsLength();
-        takingFeeReceiver = details.takingFee().get();
-        takingFeeAmount = details.takingFee().getUint32(160);
+        takingFeeReceiver = details.takingFeeData().get();
+        takingFeeAmount = details.takingFeeData().getUint32(160);
         bump = details.rateBump();
         resolverFee = details.resolverFee();
         isValidResolver = details.checkResolver(resolver, whitelist);

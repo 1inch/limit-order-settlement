@@ -66,8 +66,8 @@ contract Settlement is ISettlement, FeeBankCharger {
         fusionDetails = fusionDetails[:fusionDetails.detailsLength()];
 
         offeredTakingAmount = takingAmount * (_BASE_POINTS + fusionDetails.rateBump()) / _BASE_POINTS;
-        Address takingFee = fusionDetails.takingFee();
-        uint256 takingFeeAmount = offeredTakingAmount * takingFee.getUint32(_TAKING_FEE_RATIO_OFFSET) / _TAKING_FEE_BASE;
+        Address takingFeeData = fusionDetails.takingFeeData();
+        uint256 takingFeeAmount = offeredTakingAmount * takingFeeData.getUint32(_TAKING_FEE_RATIO_OFFSET) / _TAKING_FEE_BASE;
 
         (DynamicSuffix.Data calldata suffix, bytes calldata tokensAndAmounts, bytes calldata args) = extraData.decodeSuffix();
         args = args[fusionDetails.length:];  // remove fusion details
@@ -96,7 +96,7 @@ contract Settlement is ISettlement, FeeBankCharger {
         }
 
         if (takingFeeAmount > 0) {
-            token.safeTransfer(takingFee.get(), takingFeeAmount);
+            token.safeTransfer(takingFeeData.get(), takingFeeAmount);
         }
         token.forceApprove(address(_limitOrderProtocol), offeredTakingAmount);
     }

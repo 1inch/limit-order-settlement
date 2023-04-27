@@ -18,7 +18,7 @@ library FusionDetails {
     //     bytes2 publicTimeDelay;
     //     (bytes1,bytes2)[N] resolversIndicesAndTimeDeltas;
     //     (bytes3,bytes2)[M] pointsAndTimeDeltas;
-    //     bytes24? takingFee; // optional if flags has _HAS_TAKING_FEE_FLAG
+    //     bytes24? takingFeeData; // optional if flags has _HAS_TAKING_FEE_FLAG
     // }
 
     uint256 private constant _HAS_TAKING_FEE_FLAG = 0x80;
@@ -27,8 +27,8 @@ library FusionDetails {
     uint256 private constant _RESOLVERS_LENGTH_BIT_SHIFT = 3;
     uint256 private constant _POINTS_LENGTH_MASK = 0x07;
 
-    uint256 private constant _TAKING_FEE_BYTES_SIZE = 24;
-    uint256 private constant _TAKING_FEE_BIT_SHIFT = 64; // 256 - _TAKING_FEE_BYTES_SIZE * 8
+    uint256 private constant _TAKING_FEE_DATA_BYTES_SIZE = 24;
+    uint256 private constant _TAKING_FEE_DATA_BIT_SHIFT = 64; // 256 - _TAKING_FEE_DATA_BYTES_SIZE * 8
 
     uint256 private constant _START_TIME_BYTES_OFFSET = 1;
     // uint256 private constant _ORDER_TIME_START_BYTES_SIZE = 4;
@@ -90,17 +90,17 @@ library FusionDetails {
                         mul(resolversCount, _RESOLVER_BYTES_SIZE),
                         mul(pointsCount, _AUCTION_POINT_BYTES_SIZE)
                     ),
-                    mul(_TAKING_FEE_BYTES_SIZE, shr(_TAKING_FEE_FLAG_BIT_SHIFT, flags))
+                    mul(_TAKING_FEE_DATA_BYTES_SIZE, shr(_TAKING_FEE_FLAG_BIT_SHIFT, flags))
                 )
             )
         }
     }
 
-    function takingFee(bytes calldata details) internal pure returns (Address ret) {
+    function takingFeeData(bytes calldata details) internal pure returns (Address data) {
         assembly ("memory-safe") {
             if and(_HAS_TAKING_FEE_FLAG, byte(0, calldataload(details.offset))) {
-                let ptr := sub(add(details.offset, details.length), _TAKING_FEE_BYTES_SIZE)
-                ret := shr(_TAKING_FEE_BIT_SHIFT, calldataload(ptr))
+                let ptr := sub(add(details.offset, details.length), _TAKING_FEE_DATA_BYTES_SIZE)
+                data := shr(_TAKING_FEE_DATA_BIT_SHIFT, calldataload(ptr))
             }
         }
     }
@@ -131,9 +131,9 @@ library FusionDetails {
                 mstore(ptr, deltaRaw)
                 ptr := add(ptr, _RESOLVER_DELTA_BYTES_SIZE)
             }
-            let takingFeeLength := mul(_TAKING_FEE_BYTES_SIZE, shr(_TAKING_FEE_FLAG_BIT_SHIFT, flags))
-            calldatacopy(ptr, cdPtr, add(mul(pointsCount, _AUCTION_POINT_BYTES_SIZE), takingFeeLength))
-            ptr := add(ptr, add(mul(pointsCount, _AUCTION_POINT_BYTES_SIZE), takingFeeLength))
+            let takingFeeAndRecipientLength := mul(_TAKING_FEE_DATA_BYTES_SIZE, shr(_TAKING_FEE_FLAG_BIT_SHIFT, flags))
+            calldatacopy(ptr, cdPtr, add(mul(pointsCount, _AUCTION_POINT_BYTES_SIZE), takingFeeAndRecipientLength))
+            ptr := add(ptr, add(mul(pointsCount, _AUCTION_POINT_BYTES_SIZE), takingFeeAndRecipientLength))
             mstore(0x40, ptr)
 
             let len := sub(ptr, reconstructed)
