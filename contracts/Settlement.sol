@@ -20,6 +20,8 @@ contract Settlement is ISettlement, FeeBankCharger {
     error AccessDenied();
     error ResolverIsNotWhitelisted();
     error WrongInteractionTarget();
+    error IncorrectSelector();
+    error FusionDetailsMismatch();
 
     bytes1 private constant _FINALIZE_INTERACTION = 0x01;
     uint256 private constant _ORDER_FEE_BASE_POINTS = 1e15;
@@ -64,13 +66,14 @@ contract Settlement is ISettlement, FeeBankCharger {
         fusionDetails = fusionDetails[:fusionDetails.detailsLength()];
 
         offeredTakingAmount = takingAmount * (_BASE_POINTS + fusionDetails.rateBump()) / _BASE_POINTS;
-        Address takingFee = fusionDetails.takingFee();
-        uint256 takingFeeAmount = offeredTakingAmount * takingFee.getUint32(_TAKING_FEE_RATIO_OFFSET) / _TAKING_FEE_BASE;
+        Address takingFeeData = fusionDetails.takingFeeData();
+        uint256 takingFeeAmount = offeredTakingAmount * takingFeeData.getUint32(_TAKING_FEE_RATIO_OFFSET) / _TAKING_FEE_BASE;
 
         (DynamicSuffix.Data calldata suffix, bytes calldata tokensAndAmounts, bytes calldata args) = extraData.decodeSuffix();
         args = args[fusionDetails.length:];  // remove fusion details
         IERC20 token = IERC20(order.takerAsset.get());
 
+        address resolver = suffix.resolver.get();
         if (extraData[0] == _FINALIZE_INTERACTION) {
             bytes memory allTokensAndAmounts = new bytes(tokensAndAmounts.length + 0x40);
             assembly ("memory-safe") {
@@ -81,7 +84,6 @@ contract Settlement is ISettlement, FeeBankCharger {
                 mstore(add(ptr, 0x20), add(offeredTakingAmount, takingFeeAmount))
             }
 
-            address resolver = suffix.resolver.get();
             _chargeFee(resolver, suffix.resolverFee);
             unchecked {
                 uint256 resolversLength = uint8(args[args.length - 1]);
@@ -89,18 +91,15 @@ contract Settlement is ISettlement, FeeBankCharger {
             }
         } else {
             unchecked {
-                _settleOrder(args, suffix.resolver.get(), suffix.resolverFee, tokensAndAmounts, token, offeredTakingAmount + takingFeeAmount);
+                _settleOrder(args, resolver, suffix.resolverFee, tokensAndAmounts, token, offeredTakingAmount + takingFeeAmount);
             }
         }
 
         if (takingFeeAmount > 0) {
-            token.safeTransfer(takingFee.get(), takingFeeAmount);
+            token.safeTransfer(takingFeeData.get(), takingFeeAmount);
         }
         token.forceApprove(address(_limitOrderProtocol), offeredTakingAmount);
     }
-
-    error IncorrectSelector();
-    error FusionDetailsMismatch();
 
     struct FillOrderToArgs {
         IOrderMixin.Order order;
