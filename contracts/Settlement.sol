@@ -73,6 +73,7 @@ contract Settlement is ISettlement, FeeBankCharger {
         args = args[fusionDetails.length:];  // remove fusion details
         IERC20 token = IERC20(order.takerAsset.get());
 
+        address resolver = suffix.resolver.get();
         if (extraData[0] == _FINALIZE_INTERACTION) {
             bytes memory allTokensAndAmounts = new bytes(tokensAndAmounts.length + 0x40);
             assembly ("memory-safe") {
@@ -83,7 +84,6 @@ contract Settlement is ISettlement, FeeBankCharger {
                 mstore(add(ptr, 0x20), add(offeredTakingAmount, takingFeeAmount))
             }
 
-            address resolver = suffix.resolver.get();
             _chargeFee(resolver, suffix.resolverFee);
             unchecked {
                 uint256 resolversLength = uint8(args[args.length - 1]);
@@ -91,7 +91,7 @@ contract Settlement is ISettlement, FeeBankCharger {
             }
         } else {
             unchecked {
-                _settleOrder(args, suffix.resolver.get(), suffix.resolverFee, tokensAndAmounts, token, offeredTakingAmount + takingFeeAmount);
+                _settleOrder(args, resolver, suffix.resolverFee, tokensAndAmounts, token, offeredTakingAmount + takingFeeAmount);
             }
         }
 
