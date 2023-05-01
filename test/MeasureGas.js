@@ -33,7 +33,7 @@ describe('MeasureGas', function () {
 
         const resolvers = [];
         const ResolverMock = await ethers.getContractFactory('ResolverMock');
-        for (let i = 0; i < resolversNumber-1; i++) {
+        for (let i = 0; i < resolversNumber - 1; i++) {
             // resolvers[i] = await deployContract('ResolverMock', [settlement.address, swap.address]);
             resolvers[i] = await ResolverMock.deploy(settlement.address);
         }
@@ -54,7 +54,7 @@ describe('MeasureGas', function () {
         return { dai, weth, swap, settlement, feeBank, resolvers };
     }
 
-    it.only('1 fill for 1 order', async function () {
+    it('1 fill for 1 order', async function () {
         const { dai, weth, swap, settlement, resolvers } = await loadFixture(initContractsAndApproves);
 
         const resolverAddresses = resolvers.map(r => r.address);
@@ -111,7 +111,7 @@ describe('MeasureGas', function () {
                 makingAmount,
                 0,
                 takingAmount,
-                addrs[0].address,
+                resolvers[0].address,
             ]).substring(10),
         );
         console.log(`1 fill for 1 order gasUsed: ${(await tx.wait()).gasUsed}`);
@@ -129,22 +129,32 @@ describe('MeasureGas', function () {
         for (let i = 0; i < 4; i++) {
             orders[i] = await buildOrder(
                 {
+                    salt: buildSalt({
+                        orderStartTime: await time.latest(),
+                        initialStartRate: 0,
+                        duration: time.duration.hours(1),
+                    }),
                     makerAsset: dai.address,
                     takerAsset: weth.address,
                     makingAmount: ether((i + 1).toString()),
                     takingAmount: ether(((i + 1) / 100).toString()),
-                    salt: buildSalt({ orderStartTime: await time.latest() }),
                     from: addrs[1].address,
                 },
                 {
                     whitelistedAddrs: [addrs[0].address, ...resolverAddresses],
                     whitelistedCutOffs: [0, ...whitelistedCutOffsTmp],
+                    publicCutOff: time.duration.minutes(30),
                 },
             );
             signatures[i] = await signOrder(orders[i], chainId, swap.address, addrs[1]);
         }
         orders[4] = await buildOrder(
             {
+                salt: buildSalt({
+                    orderStartTime: await time.latest(),
+                    initialStartRate: 0,
+                    duration: time.duration.hours(1),
+                }),
                 makerAsset: weth.address,
                 takerAsset: dai.address,
                 makingAmount: ether('0.11'), // takingAmount/100 * 1.1
@@ -154,6 +164,7 @@ describe('MeasureGas', function () {
             {
                 whitelistedAddrs: [addrs[0].address, ...resolverAddresses],
                 whitelistedCutOffs: [0, ...whitelistedCutOffsTmp],
+                publicCutOff: time.duration.minutes(30),
             },
         );
         signatures[4] = await signOrder(orders[4], chainId, swap.address, addrs[0]);
@@ -161,7 +172,7 @@ describe('MeasureGas', function () {
         // Encode data for fillingg orders
         const fillOrdersToData = [];
 
-        fillOrdersToData[5] = settlement.address + '01' + trim0x(resolvers[0].address) + 'ffffffffff000000000000000000000000000000000000000000000000000000';
+        fillOrdersToData[5] = settlement.address + '01' + trim0x(resolvers[0].address) + '0000000000000000000000000000000000000000000000000000000000000000';
         fillOrdersToData[4] =
             settlement.address +
             '00' +
@@ -173,7 +184,7 @@ describe('MeasureGas', function () {
                     ether('0.11'),
                     0,
                     ether('10'),
-                    settlement.address,
+                    resolvers[0].address,
                 ])
                 .substring(10);
         for (let i = 3; i >= 1; i--) {
@@ -188,7 +199,7 @@ describe('MeasureGas', function () {
                         ether((i + 1).toString()),
                         0,
                         ether(((i + 1) / 100).toString()),
-                        settlement.address,
+                        resolvers[0].address,
                     ])
                     .substring(10);
         }
@@ -201,7 +212,7 @@ describe('MeasureGas', function () {
                 ether('1'),
                 0,
                 ether('0.01'),
-                settlement.address,
+                resolvers[0].address, // settlement.address,
             ]).substring(10),
         );
         console.log(`1 fill for 5 orders in a batch gasUsed: ${(await tx.wait()).gasUsed}`);
