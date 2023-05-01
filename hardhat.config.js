@@ -4,6 +4,7 @@ require('@nomicfoundation/hardhat-chai-matchers');
 require('solidity-coverage');
 require('hardhat-dependency-compiler');
 require('hardhat-deploy');
+require('hardhat-tracer');
 require('hardhat-gas-reporter');
 require('dotenv').config();
 
@@ -40,5 +41,8 @@ module.exports = {
             '@1inch/limit-order-protocol-contract/contracts/mocks/WrappedTokenMock.sol',
             '@openzeppelin/contracts/token/ERC20/extensions/draft-ERC20Permit',
         ],
+    },
+    tracer: {
+        enableAllOpcodes: true,
     },
 };
