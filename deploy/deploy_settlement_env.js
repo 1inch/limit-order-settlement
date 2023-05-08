@@ -17,19 +17,6 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
 
     const st1inch = (await ethers.getContractFactory('St1inch')).attach(ST1INCH_ADDR);
 
-    const st1inchFarm = await idempotentDeployGetContract(
-        'StakingFarmingPod',
-        [st1inch.address],
-        deployments,
-        deployer,
-        'StakingFarmingPod',
-        // true,
-    );
-
-    if ((await st1inch.defaultFarm()) === constants.ZERO_ADDRESS) {
-        await (await st1inch.setDefaultFarm(st1inchFarm.address)).wait();
-    }
-
     const settlement = await idempotentDeployGetContract(
         'Settlement',
         [ROUTER_V5_ADDR, INCH_ADDR],
