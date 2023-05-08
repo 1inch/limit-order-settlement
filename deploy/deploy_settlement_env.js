@@ -1,7 +1,7 @@
 const hre = require('hardhat');
 const { getChainId, ethers } = hre;
 const { idempotentDeployGetContract } = require('../test/helpers/utils.js');
-const { constants, ether } = require('@1inch/solidity-utils');
+const { ether } = require('@1inch/solidity-utils');
 
 const INCH_ADDR = '0x111111111117dC0aa78b770fA6A738034120C302';
 const ST1INCH_ADDR = '0x9A0C8Ff858d273f57072D714bca7411D717501D7';
