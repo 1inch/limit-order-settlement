@@ -38,7 +38,7 @@
     "@1inch/limit-order-protocol-contract": "4.0.0-prerelease-6",
     "@1inch/solidity-utils": "2.2.24",
     "@1inch/st1inch": "2.0.3",
-    "@openzeppelin/contracts": "4.8.2"
+    "@openzeppelin/contracts": "4.8.3"
   },
   "devDependencies": {
     "@matterlabs/hardhat-zksync-deploy": "0.6.3",
