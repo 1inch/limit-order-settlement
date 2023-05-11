@@ -22,6 +22,7 @@ contract Settlement is ISettlement, FeeBankCharger {
     error WrongInteractionTarget();
     error IncorrectSelector();
     error FusionDetailsMismatch();
+    error ResolveFailed();
 
     bytes1 private constant _FINALIZE_INTERACTION = 0x01;
     uint256 private constant _ORDER_FEE_BASE_POINTS = 1e15;
@@ -87,7 +88,8 @@ contract Settlement is ISettlement, FeeBankCharger {
             _chargeFee(resolver, suffix.resolverFee);
             unchecked {
                 uint256 resolversLength = uint8(args[args.length - 1]);
-                IResolver(resolver).resolveOrders(allTokensAndAmounts, args[:args.length - 1 - resolversLength * _RESOLVER_ADDRESS_BYTES_SIZE]);
+                bool success = IResolver(resolver).resolveOrders(allTokensAndAmounts, args[:args.length - 1 - resolversLength * _RESOLVER_ADDRESS_BYTES_SIZE]);
+                if (!success) revert ResolveFailed();
             }
         } else {
             unchecked {
