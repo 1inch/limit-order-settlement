@@ -1,6 +1,6 @@
 {
   "name": "@1inch/limit-order-settlement",
-  "version": "2.0.0-beta.1",
+  "version": "2.0.0-beta.2",
   "description": "1inch Limit Order Settlement",
   "repository": {
     "type": "git",
@@ -44,7 +44,6 @@
     "@matterlabs/hardhat-zksync-deploy": "0.6.3",
     "@matterlabs/hardhat-zksync-solc": "0.3.16",
     "@matterlabs/hardhat-zksync-verify": "0.1.4",
-    "@1inch/farming": "1.2.6",
     "@nomicfoundation/hardhat-chai-matchers": "1.0.6",
     "@nomicfoundation/hardhat-network-helpers": "1.0.8",
     "@nomiclabs/hardhat-ethers": "2.2.3",

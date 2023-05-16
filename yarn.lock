@@ -38,15 +38,6 @@
     "@1inch/solidity-utils" "2.2.5"
     "@openzeppelin/contracts" "4.8.0"
 
-"@1inch/farming@1.2.6":
-  version "1.2.6"
-  resolved "https://registry.yarnpkg.com/@1inch/farming/-/farming-1.2.6.tgz#fa48d96ab3ace1826758d0cd80421cee965fcbcf"
-  integrity sha512-xmWVg9RxoUnO0w0qfVtWNxk5jbWyVO4Z0uYE+HrkpDABKeqh8XghRd7fklfQdM+0Mm70suH4NeiEKWPElCMHzg==
-  dependencies:
-    "@1inch/erc20-pods" "0.0.16"
-    "@1inch/solidity-utils" "2.2.5"
-    "@openzeppelin/contracts" "4.8.0"
-
 "@1inch/limit-order-protocol-contract@4.0.0-prerelease-6":
   version "4.0.0-prerelease-6"
   resolved "https://registry.yarnpkg.com/@1inch/limit-order-protocol-contract/-/limit-order-protocol-contract-4.0.0-prerelease-6.tgz#f8dd50cb8b37ffa077feb377da2fa67ea3471818"
