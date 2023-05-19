@@ -34,22 +34,16 @@ describe('Settlement', function () {
         await inch.approve(feeBank.address, ether('100'));
         await feeBank.depositFor(resolver.address, ether('100'));
 
+        await dai.approve(swap.address, ether('100'));
+        await dai.connect(addr1).approve(swap.address, ether('100'));
+        await weth.approve(swap.address, ether('1'));
+        await weth.connect(addr1).approve(swap.address, ether('1'));
+
         return {
             contracts: { dai, weth, swap, settlement, feeBank, resolver },
             accounts: { addr, addr1, addr2 },
             other: { chainId, abiCoder, basePoints, orderFee, backOrderFee },
         };
-    }
-
-    async function approve(dataFormFixture) {
-        const {
-            contracts: { dai, weth, swap },
-            accounts: { addr1 },
-        } = dataFormFixture;
-        await dai.approve(swap.address, ether('100'));
-        await dai.connect(addr1).approve(swap.address, ether('100'));
-        await weth.approve(swap.address, ether('1'));
-        await weth.connect(addr1).approve(swap.address, ether('1'));
     }
 
     async function buildCalldataForOrder({
@@ -91,7 +85,6 @@ describe('Settlement', function () {
             contracts: { dai, weth, settlement, resolver },
             accounts: { addr, addr1 },
         } = dataFormFixture;
-        await approve(dataFormFixture);
 
         const fillOrderToData1 = await buildCalldataForOrder({
             orderData: {
@@ -169,6 +162,7 @@ describe('Settlement', function () {
         });
 
         await weth.connect(addr1).approve(swap.address, ether('0.11'));
+        await dai.connect(addr).approve(swap.address, 0n); // remove direct approve
         const permit0 = compressPermit(await getPermit(addr, dai, '1', chainId, swap.address, ether('100')));
         const packing = (1n << 248n) | 1n;
         const txn = await resolver.settleOrdersWithPermits(fillOrderToData0, packing,
@@ -219,6 +213,8 @@ describe('Settlement', function () {
         const permit2 = await permit2Contract();
         await dai.approve(permit2.address, ether('100'));
         await weth.connect(addr1).approve(permit2.address, ether('0.11'));
+        await dai.connect(addr).approve(swap.address, 0n); // remove direct approve
+        await weth.connect(addr1).approve(swap.address, 0n); // remove direct approve
         const permit0 = compressPermit(await getPermit2(addr, dai.address, chainId, swap.address, ether('100')));
         const permit1 = compressPermit(await getPermit2(addr1, weth.address, chainId, swap.address, ether('0.11')));
         const packing = (2n << 248n) | 2n | 8n;
@@ -234,7 +230,6 @@ describe('Settlement', function () {
             contracts: { dai, weth, settlement, resolver },
             accounts: { addr, addr1, addr2 },
         } = dataFormFixture;
-        await approve(dataFormFixture);
 
         const fillOrderToData1 = await buildCalldataForOrder({
             orderData: {
@@ -285,7 +280,6 @@ describe('Settlement', function () {
             accounts: { addr, addr1 },
             other: { abiCoder },
         } = dataFormFixture;
-        await approve(dataFormFixture);
 
         const resolverArgs = abiCoder.encode(
             ['address[]', 'bytes[]'],
@@ -346,7 +340,6 @@ describe('Settlement', function () {
             contracts: { dai, weth, settlement, resolver },
             accounts: { addr, addr1 },
         } = dataFormFixture;
-        await approve(dataFormFixture);
 
         const fillOrderToData2 = await buildCalldataForOrder({
             orderData: {
@@ -402,9 +395,9 @@ describe('Settlement', function () {
     describe('dutch auction params', function () {
         const prepareSingleOrder = async ({
             startTime,
-            auctionDelay = 0, // TODO: add n
+            auctionDelay = 0,
             initialRateBump = 1000000n,
-            auctionDuration = 1800, // TODO: add n
+            auctionDuration = 1800,
             targetTakingAmount = 0n,
             points = [],
             dataFormFixture,
@@ -472,7 +465,6 @@ describe('Settlement', function () {
                 contracts: { dai, weth, resolver },
                 accounts: { addr, addr1 },
             } = dataFormFixture;
-            await approve(dataFormFixture);
 
             const fillOrderToData = await prepareSingleOrder({
                 startTime: await time.latest(),
@@ -492,7 +484,6 @@ describe('Settlement', function () {
                     contracts: { dai, weth, resolver },
                     accounts: { addr, addr1 },
                 } = dataFormFixture;
-                await approve(dataFormFixture);
 
                 const startTime = await time.latest();
                 const actualTakingAmount = ether('0.109');
@@ -518,7 +509,6 @@ describe('Settlement', function () {
                     contracts: { dai, weth, resolver },
                     accounts: { addr, addr1 },
                 } = dataFormFixture;
-                await approve(dataFormFixture);
 
                 const startTime = await time.latest();
                 const actualTakingAmount = ether('0.106');
@@ -544,7 +534,6 @@ describe('Settlement', function () {
                 contracts: { dai, weth, resolver },
                 accounts: { addr, addr1 },
             } = dataFormFixture;
-            await approve(dataFormFixture);
 
             const fillOrderToData = await prepareSingleOrder({
                 startTime: await time.latest(),
@@ -564,7 +553,6 @@ describe('Settlement', function () {
                 contracts: { dai, weth, resolver },
                 accounts: { addr, addr1 },
             } = dataFormFixture;
-            await approve(dataFormFixture);
 
             const fillOrderToData = await prepareSingleOrder({
                 startTime: (await time.latest()) - 448,
@@ -586,7 +574,6 @@ describe('Settlement', function () {
             accounts: { addr, addr1 },
             other: { orderFee, backOrderFee, basePoints },
         } = dataFormFixture;
-        await approve(dataFormFixture);
 
         const fillOrderToData1 = await buildCalldataForOrder({
             orderData: {
@@ -633,7 +620,6 @@ describe('Settlement', function () {
             accounts: { addr, addr1 },
             other: { backOrderFee },
         } = dataFormFixture;
-        await approve(dataFormFixture);
 
         const fillOrderToData1 = await buildCalldataForOrder({
             orderData: {
@@ -677,7 +663,6 @@ describe('Settlement', function () {
                 accounts: { addr, addr1 },
                 other: { orderFee },
             } = dataFormFixture;
-            await approve(dataFormFixture);
 
             const currentTime = await time.latest();
             const threeHours = time.duration.hours('3');
@@ -726,7 +711,6 @@ describe('Settlement', function () {
                 accounts: { addr, addr1 },
                 other: { orderFee, backOrderFee },
             } = dataFormFixture;
-            await approve(dataFormFixture);
 
             const fillOrderToData1 = await buildCalldataForOrder({
                 orderData: {
