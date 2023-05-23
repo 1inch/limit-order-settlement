@@ -108,7 +108,7 @@ describe('WhitelistChecker', function () {
             return { dai, weth, swap, settlement, resolver };
         }
 
-        it.only('whitelist check in settleOrders method', async function () {
+        it('whitelist check in settleOrders method', async function () {
             const { dai, weth, swap, settlement, resolver } = await loadFixture(initContractsAndSetStatus);
 
             const { fusions: [fusionDetails0, fusionDetails1], hashes: [fusionHash0, fusionHash1], resolvers } = await buildFusions([
