@@ -612,7 +612,7 @@ describe('Settlement', function () {
 
         await resolver.settleOrders(fillOrderToData0);
         expect(await settlement.availableCredit(resolver.address)).to.equal(
-            availableCreditBefore.toBigInt() - basePoints * (orderFee + backOrderFee) - 2, // sub 2 becouse 2 order have filled
+            availableCreditBefore.toBigInt() - basePoints * (orderFee + backOrderFee) - 2n, // sub 2 becouse 2 order have filled
         );
     });
 
@@ -666,7 +666,7 @@ describe('Settlement', function () {
         await expect(txn).to.changeTokenBalances(dai, [resolver, addr1], [ether('10') * partialModifier / points, ether('-10') * partialModifier / points]);
         await expect(txn).to.changeTokenBalances(weth, [addr, addr1], [ether('-0.01') * partialModifier / points, ether('0.01') * partialModifier / points]);
         expect(await settlement.availableCredit(resolver.address)).to.equal(
-            availableCreditBefore.toBigInt() - (orderFee * partialModifier / points) * basePoints - 1,
+            availableCreditBefore.toBigInt() - (orderFee * partialModifier / points) * basePoints - 1n,
         );
     });
 
