@@ -554,8 +554,10 @@ describe('Settlement', function () {
                 accounts: { addr, addr1 },
             } = dataFormFixture;
 
+            const normalizeTime = Math.floor(((await time.latest()) + 59) / 60) * 60;
+            await time.increaseTo(normalizeTime);
             const fillOrderToData = await prepareSingleOrder({
-                startTime: (await time.latest()) - 448,
+                startTime: normalizeTime - 448,
                 initialRateBump: 1000000n,
                 auctionDuration: 900,
                 dataFormFixture,
