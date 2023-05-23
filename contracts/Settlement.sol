@@ -74,10 +74,7 @@ contract Settlement is ISettlement, FeeBankCharger {
         IERC20 token = IERC20(order.takerAsset.get());
 
         address resolver = suffix.resolver.get();
-        uint256 resolverFee = suffix.resolverFee;
-        if (fusionDetails.resolverFee() > 0) {
-            resolverFee += (_ORDER_FEE_BASE_POINTS * fusionDetails.resolverFee() * makingAmount + order.makingAmount - 1) / order.makingAmount;
-        }
+        uint256 resolverFee = suffix.resolverFee + (_ORDER_FEE_BASE_POINTS * fusionDetails.resolverFee() * makingAmount + order.makingAmount - 1) / order.makingAmount;
         unchecked {
             if (extraData[0] == _FINALIZE_INTERACTION) {
                 bytes memory allTokensAndAmounts = new bytes(tokensAndAmounts.length + 0x40);
