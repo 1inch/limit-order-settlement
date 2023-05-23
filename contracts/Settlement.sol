@@ -76,7 +76,7 @@ contract Settlement is ISettlement, FeeBankCharger {
         address resolver = suffix.resolver.get();
         uint256 resolverFee = suffix.resolverFee;
         if (fusionDetails.resolverFee() > 0) {
-            resolverFee += _ORDER_FEE_BASE_POINTS * makingAmount * fusionDetails.resolverFee() / order.makingAmount + 1;
+            resolverFee += (_ORDER_FEE_BASE_POINTS * fusionDetails.resolverFee() * makingAmount + order.makingAmount - 1) / order.makingAmount;
         }
         unchecked {
             if (extraData[0] == _FINALIZE_INTERACTION) {
