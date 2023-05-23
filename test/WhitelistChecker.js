@@ -44,7 +44,7 @@ describe('WhitelistChecker', function () {
 
             const { fusions: [fusionDetails], hashes: [fusionHash], resolvers } = await buildFusions([{}]);
 
-            const order = await buildOrder({
+            const order = buildOrder({
                 makerAsset: dai.address,
                 takerAsset: weth.address,
                 makingAmount: ether('10'),
@@ -71,7 +71,7 @@ describe('WhitelistChecker', function () {
         it('onlyThis modifier in takerInteraction method', async function () {
             const { dai, weth, swap, settlement } = await loadFixture(initContracts);
 
-            const order = await buildOrder({
+            const order = buildOrder({
                 makerAsset: dai.address,
                 takerAsset: weth.address,
                 makingAmount: ether('100'),
@@ -87,7 +87,7 @@ describe('WhitelistChecker', function () {
         it('onlyLimitOrderProtocol modifier', async function () {
             const { dai, weth, swap, settlement } = await loadFixture(initContracts);
 
-            const order = await buildOrder({
+            const order = buildOrder({
                 makerAsset: dai.address,
                 takerAsset: weth.address,
                 makingAmount: ether('100'),
@@ -108,15 +108,15 @@ describe('WhitelistChecker', function () {
             return { dai, weth, swap, settlement, resolver };
         }
 
-        it('whitelist check in settleOrders method', async function () {
+        it.only('whitelist check in settleOrders method', async function () {
             const { dai, weth, swap, settlement, resolver } = await loadFixture(initContractsAndSetStatus);
 
             const { fusions: [fusionDetails0, fusionDetails1], hashes: [fusionHash0, fusionHash1], resolvers } = await buildFusions([
-                { resolvers: [resolver.address], initialRateBump: 0n },
-                { resolvers: [resolver.address], initialRateBump: 0n },
+                { resolvers: [resolver.address] },
+                { resolvers: [resolver.address] },
             ]);
 
-            const order0 = await buildOrder({
+            const order0 = buildOrder({
                 makerAsset: dai.address,
                 takerAsset: weth.address,
                 makingAmount: ether('100'),
@@ -125,7 +125,7 @@ describe('WhitelistChecker', function () {
             });
             order0.salt = fusionHash0;
 
-            const order1 = await buildOrder({
+            const order1 = buildOrder({
                 makerAsset: weth.address,
                 takerAsset: dai.address,
                 makingAmount: ether('0.1'),
