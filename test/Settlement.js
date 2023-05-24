@@ -670,6 +670,61 @@ describe('Settlement', function () {
         );
     });
 
+    it('resolver should pay minimal 1 wei fee', async function () {
+        const dataFormFixture = await loadFixture(initContracts);
+        const {
+            contracts: { dai, weth, settlement, resolver },
+            accounts: { addr, addr1 },
+            other: { abiCoder },
+        } = dataFormFixture;
+
+        const minimalPartialModifier = 1n;
+        const points = ether('0.01');
+        const minimalOrderFee = 1n;
+
+        const resolverArgs = abiCoder.encode(
+            ['address[]', 'bytes[]'],
+            [
+                [weth.address],
+                [
+                    weth.interface.encodeFunctionData('transferFrom', [
+                        addr.address,
+                        resolver.address,
+                        ether('0.01') * minimalPartialModifier / points,
+                    ]),
+                ],
+            ],
+        );
+
+        const fillOrderToData0 = await buildCalldataForOrder({
+            orderData: {
+                maker: addr1.address,
+                makerAsset: dai.address,
+                takerAsset: weth.address,
+                makingAmount: ether('10'),
+                takingAmount: ether('0.01'),
+                makerTraits: buildMakerTraits({ allowedSender: settlement.address }),
+            },
+            singleFusionData: { resolvers: [resolver.address], resolverFee: minimalOrderFee },
+            orderSigner: addr1,
+            dataFormFixture,
+            additionalDataForSettlement: resolverArgs,
+            isInnermostOrder: true,
+            needAddResolvers: true,
+            fillingAmount: ether('10') * minimalPartialModifier / points,
+        });
+
+        await weth.approve(resolver.address, ether('0.01'));
+        const availableCreditBefore = await settlement.availableCredit(resolver.address);
+
+        const txn = await resolver.settleOrders(fillOrderToData0);
+        await expect(txn).to.changeTokenBalances(dai, [resolver, addr1], [ether('10') * minimalPartialModifier / points, ether('-10') * minimalPartialModifier / points]);
+        await expect(txn).to.changeTokenBalances(weth, [addr, addr1], [ether('-0.01') * minimalPartialModifier / points, ether('0.01') * minimalPartialModifier / points]);
+        expect(await settlement.availableCredit(resolver.address)).to.equal(
+            availableCreditBefore.toBigInt() - 1n,
+        );
+    });
+
     it('should not change when availableCredit is not enough', async function () {
         const dataFormFixture = await loadFixture(initContracts);
         const {
