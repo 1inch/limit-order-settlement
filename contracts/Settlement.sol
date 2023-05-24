@@ -13,7 +13,7 @@ import "./FeeBankCharger.sol";
 
 /**
  * @title Settlement contract
- * @notice Contract to facilitate limit orders settlement, created by Fusion mode.
+ * @notice Contract to execute limit orders settlement, created by Fusion mode.
  */
 contract Settlement is ISettlement, FeeBankCharger {
     using SafeERC20 for IERC20;
