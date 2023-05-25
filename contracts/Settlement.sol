@@ -11,6 +11,10 @@ import "./libraries/DynamicSuffix.sol";
 import "./libraries/FusionDetails.sol";
 import "./FeeBankCharger.sol";
 
+/**
+ * @title Settlement contract
+ * @notice Contract to execute limit orders settlement, created by Fusion mode.
+ */
 contract Settlement is ISettlement, FeeBankCharger {
     using SafeERC20 for IERC20;
     using DynamicSuffix for bytes;
@@ -23,6 +27,7 @@ contract Settlement is ISettlement, FeeBankCharger {
     error IncorrectSelector();
     error FusionDetailsMismatch();
 
+    // Flag to indicate that the order is the last one in the chain. No interaction will be invoked after its processing.
     bytes1 private constant _FINALIZE_INTERACTION = 0x01;
     uint256 private constant _ORDER_FEE_BASE_POINTS = 1e15;
     uint256 private constant _BASE_POINTS = 10_000_000; // 100%
@@ -32,27 +37,55 @@ contract Settlement is ISettlement, FeeBankCharger {
 
     IOrderMixin private immutable _limitOrderProtocol;
 
+
+    /// @dev Modifier to check if the account is the contract itself.
+    /// @param account The account to check.
     modifier onlyThis(address account) {
         if (account != address(this)) revert AccessDenied();
         _;
     }
 
+    /// @dev Modifier to check if the caller is the limit order protocol contract.
     modifier onlyLimitOrderProtocol {
         if (msg.sender != address(_limitOrderProtocol)) revert AccessDenied();
         _;
     }
 
+    /**
+     * @notice Initializes the contract.
+     * @param limitOrderProtocol The limit order protocol contract.
+     * @param token The token to charge protocol fees in.
+     */
     constructor(IOrderMixin limitOrderProtocol, IERC20 token)
         FeeBankCharger(token)
     {
         _limitOrderProtocol = limitOrderProtocol;
     }
 
+    /**
+     * @notice Settles the order
+     * @param data The order to settle with settlement parameters.
+     * @return Returns a boolean value indicating the success of the function.
+     */
     function settleOrders(bytes calldata data) public virtual returns(bool) {
         _settleOrder(data, msg.sender, 0, msg.data[:0], IERC20(address(0)), 0);
         return true;
     }
 
+    /**
+     * @notice Allows a taker to interact with the order after making amount transfered to taker, 
+     * but before taking amount transfered to maker.
+     * @dev Calls the resolver contract and approves the token to the limit order protocol.
+     * @param order The limit order being filled, which caused the interaction.
+     * @param /orderHash/ The order hash.
+     * @param taker The taker address.
+     * @param /makingAmount/ The making amount.
+     * @param takingAmount The taking amount.
+     * @param /remainingMakingAmount/ The remaining making amount.
+     * @param extraData Filling order supplemental data. In the order of layout:
+     * FINALIZE_INTERACTION flag, {FusionDetails} data, resolver, resolver fee, tokensAndAmounts array.
+     * @return offeredTakingAmount Returns the offered taking amount.
+     */
     function takerInteraction(
         IOrderMixin.Order calldata order,
         bytes32 /* orderHash */,
@@ -120,6 +153,12 @@ contract Settlement is ISettlement, FeeBankCharger {
         bytes interaction;
     }
 
+    /**
+     * @notice Fetches the interaction from calldata.
+     * @dev Based on the selector determines calldata type and fetches the interaction.
+     * @param data The data to process.
+     * @return interaction Returns the interaction data.
+     */
     function _getInteraction(bytes calldata data) internal pure returns(bytes calldata interaction) {
         bytes4 selector = bytes4(data);
         if (selector == IOrderMixin.fillOrderTo.selector) {
@@ -141,7 +180,24 @@ contract Settlement is ISettlement, FeeBankCharger {
         }
     }
 
-    function _settleOrder(bytes calldata args, address resolver, uint256 resolverFee, bytes calldata tokensAndAmounts, IERC20 token, uint256 newAmount) private {
+    /**
+     * @notice Settles a fusion limit order.
+     * @dev Extracts interaction and fusion details from arguments, checks the resolver and executes . Also calculates the resolver fee.
+     * @param args The calldata with fill order args, fusion details and dynamic suffix.
+     * @param resolver The resolver address. The address is checked against the whitelist, interaction is invoked on it, and fees are charged.
+     * @param resolverFee The accumulated resolver fee.
+     * @param tokensAndAmounts The tokens and their respective amounts (from previous recursion steps).
+     * @param token The taker token. Appended to tokensAndAmounts.
+     * @param newAmount The taker amount. Appended to tokensAndAmounts.
+     */
+    function _settleOrder(
+        bytes calldata args,
+        address resolver,
+        uint256 resolverFee,
+        bytes calldata tokensAndAmounts,
+        IERC20 token,
+        uint256 newAmount
+    ) private {
         bytes calldata interaction = _getInteraction(args);
         bytes calldata fusionDetails = interaction[21:];
         fusionDetails = fusionDetails[:fusionDetails.detailsLength()];
