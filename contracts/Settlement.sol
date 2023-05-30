@@ -90,7 +90,7 @@ contract Settlement is ISettlement, FeeBankCharger {
         IOrderMixin.Order calldata order,
         bytes32 /* orderHash */,
         address taker,
-        uint256 /* makingAmount */,
+        uint256 makingAmount,
         uint256 takingAmount,
         uint256 /* remainingMakingAmount */,
         bytes calldata extraData
@@ -107,24 +107,23 @@ contract Settlement is ISettlement, FeeBankCharger {
         IERC20 token = IERC20(order.takerAsset.get());
 
         address resolver = suffix.resolver.get();
-        if (extraData[0] == _FINALIZE_INTERACTION) {
-            bytes memory allTokensAndAmounts = new bytes(tokensAndAmounts.length + 0x40);
-            assembly ("memory-safe") {
-                let ptr := add(allTokensAndAmounts, 0x20)
-                calldatacopy(ptr, tokensAndAmounts.offset, tokensAndAmounts.length)
-                ptr := add(ptr, tokensAndAmounts.length)
-                mstore(ptr, token)
-                mstore(add(ptr, 0x20), add(offeredTakingAmount, takingFeeAmount))
-            }
+        uint256 resolverFee = suffix.resolverFee + (_ORDER_FEE_BASE_POINTS * fusionDetails.resolverFee() * makingAmount + order.makingAmount - 1) / order.makingAmount;
+        unchecked {
+            if (extraData[0] == _FINALIZE_INTERACTION) {
+                bytes memory allTokensAndAmounts = new bytes(tokensAndAmounts.length + 0x40);
+                assembly ("memory-safe") {
+                    let ptr := add(allTokensAndAmounts, 0x20)
+                    calldatacopy(ptr, tokensAndAmounts.offset, tokensAndAmounts.length)
+                    ptr := add(ptr, tokensAndAmounts.length)
+                    mstore(ptr, token)
+                    mstore(add(ptr, 0x20), add(offeredTakingAmount, takingFeeAmount))
+                }
 
-            _chargeFee(resolver, suffix.resolverFee);
-            unchecked {
-                uint256 resolversLength = uint8(args[args.length - 1]);
-                IResolver(resolver).resolveOrders(allTokensAndAmounts, args[:args.length - 1 - resolversLength * _RESOLVER_ADDRESS_BYTES_SIZE]);
-            }
-        } else {
-            unchecked {
-                _settleOrder(args, resolver, suffix.resolverFee, tokensAndAmounts, token, offeredTakingAmount + takingFeeAmount);
+                _chargeFee(resolver, resolverFee);
+                    uint256 resolversLength = uint8(args[args.length - 1]);
+                    IResolver(resolver).resolveOrders(allTokensAndAmounts, args[:args.length - 1 - resolversLength * _RESOLVER_ADDRESS_BYTES_SIZE]);
+            } else {
+                _settleOrder(args, resolver, resolverFee, tokensAndAmounts, token, offeredTakingAmount + takingFeeAmount);
             }
         }
 
@@ -209,7 +208,6 @@ contract Settlement is ISettlement, FeeBankCharger {
 
         uint256 suffixLength;
         unchecked {
-            resolverFee += fusionDetails.resolverFee() * _ORDER_FEE_BASE_POINTS;
             suffixLength = DynamicSuffix._STATIC_DATA_SIZE +
                 tokensAndAmounts.length +
                 (address(token) != address(0) ? 0x60 : 0x20);
@@ -225,26 +223,24 @@ contract Settlement is ISettlement, FeeBankCharger {
             calldatacopy(ptr, args.offset, args.length)
             mstore(add(ptr, sub(interactionOffset, 0x20)), add(add(interaction.length, suffixLength), resolversBytesSize))
 
-            {  // stack too deep
-                let offset := add(add(ptr, interactionOffset), interaction.length)
-                // Append resolvers
-                calldatacopy(offset, sub(add(args.offset, args.length), resolversBytesSize), resolversBytesSize)
-                offset := add(offset, resolversBytesSize)
-                // Append suffix fields
-                mstore(offset, resolver)
-                mstore(add(offset, 0x20), resolverFee)
-                calldatacopy(add(offset, 0x40), tokensAndAmounts.offset, tokensAndAmounts.length)
+            let offset := add(add(ptr, interactionOffset), interaction.length)
+            // Append resolvers
+            calldatacopy(offset, sub(add(args.offset, args.length), resolversBytesSize), resolversBytesSize)
+            offset := add(offset, resolversBytesSize)
+            // Append suffix fields
+            mstore(offset, resolver)
+            mstore(add(offset, 0x20), resolverFee)
+            calldatacopy(add(offset, 0x40), tokensAndAmounts.offset, tokensAndAmounts.length)
 
-                let pointer := add(offset, add(0x40, tokensAndAmounts.length))
-                switch token
-                case 0 {
-                    mstore(pointer, 0)
-                }
-                default {
-                    mstore(pointer, token)
-                    mstore(add(pointer, 0x20), newAmount)
-                    mstore(add(pointer, 0x40), add(tokensAndAmounts.length, 0x40))
-                }
+            let pointer := add(offset, add(0x40, tokensAndAmounts.length))
+            switch token
+            case 0 {
+                mstore(pointer, 0)
+            }
+            default {
+                mstore(pointer, token)
+                mstore(add(pointer, 0x20), newAmount)
+                mstore(add(pointer, 0x40), add(tokensAndAmounts.length, 0x40))
             }
 
             // Call fillOrderTo
