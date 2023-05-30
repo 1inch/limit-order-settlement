@@ -24,7 +24,7 @@ library DynamicSuffix {
             tokensAndAmounts.offset := sub(lengthOffset, tokensAndAmounts.length)
 
             suffix := sub(tokensAndAmounts.offset, _STATIC_DATA_SIZE)
-            args.offset := add(cd.offset, 1)
+            args.offset := cd.offset
             args.length := sub(suffix, args.offset)
         }
     }

@@ -63,15 +63,17 @@ contract Settlement is ISettlement, FeeBankCharger {
         uint256 /* remainingMakingAmount */,
         bytes calldata extraData
     ) public virtual onlyThis(taker) onlyLimitOrderProtocol returns(uint256 offeredTakingAmount) {
-        bytes calldata fusionDetails = extraData[1:];
+        (DynamicSuffix.Data calldata suffix, bytes calldata tokensAndAmounts, bytes calldata args) = extraData.decodeSuffix();
+
+        bytes calldata fusionDetails = args[1:];
         fusionDetails = fusionDetails[:fusionDetails.detailsLength()];
 
         offeredTakingAmount = takingAmount * (_BASE_POINTS + fusionDetails.rateBump()) / _BASE_POINTS;
         Address takingFeeData = fusionDetails.takingFeeData();
         uint256 takingFeeAmount = offeredTakingAmount * takingFeeData.getUint32(_TAKING_FEE_RATIO_OFFSET) / _TAKING_FEE_BASE;
 
-        (DynamicSuffix.Data calldata suffix, bytes calldata tokensAndAmounts, bytes calldata args) = extraData.decodeSuffix();
-        args = args[fusionDetails.length:];  // remove fusion details
+        args = args[1 + fusionDetails.length:];  // remove fusion details
+
         IERC20 token = IERC20(order.takerAsset.get());
 
         address resolver = suffix.resolver.get();
