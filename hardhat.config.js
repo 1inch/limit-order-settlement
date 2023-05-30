@@ -14,6 +14,17 @@ require('dotenv').config();
 const { networks, etherscan } = require('./hardhat.networks');
 
 const DEFAULT_COMPILER_SETTINGS = {
+    version: '0.8.20',
+    settings: {
+        optimizer: {
+            enabled: true,
+            runs: 1000000,
+        },
+        viaIR: true,
+    },
+};
+
+const PREV_SOLC_COMPILER_SETTINGS = {
     version: '0.8.19',
     settings: {
         optimizer: {
@@ -42,6 +53,15 @@ module.exports = {
     solidity: {
         compilers: [DEFAULT_COMPILER_SETTINGS],
         overrides: {
+            '@1inch/limit-order-protocol-contract/contracts/OrderMixin.sol': PREV_SOLC_COMPILER_SETTINGS,
+            '@1inch/limit-order-protocol-contract/contracts/OrderLib.sol': PREV_SOLC_COMPILER_SETTINGS,
+            '@1inch/limit-order-protocol-contract/contracts/helpers/PredicateHelper.sol': PREV_SOLC_COMPILER_SETTINGS,
+            '@1inch/limit-order-protocol-contract/contracts/helpers/AmountCalculator.sol': PREV_SOLC_COMPILER_SETTINGS,
+            '@1inch/limit-order-protocol-contract/contracts/helpers/SeriesEpochManager.sol': PREV_SOLC_COMPILER_SETTINGS,
+            '@1inch/limit-order-protocol-contract/contracts/mocks/WrappedTokenMock.sol': PREV_SOLC_COMPILER_SETTINGS,
+            'contracts/hardhat-dependency-compiler/@1inch/limit-order-protocol-contract/contracts/mocks/WrappedTokenMock.sol': PREV_SOLC_COMPILER_SETTINGS,
+            '@1inch/st1inch/contracts/St1inch.sol': PREV_SOLC_COMPILER_SETTINGS,
+            'contracts/hardhat-dependency-compiler/@1inch/st1inch/contracts/St1inch.sol': PREV_SOLC_COMPILER_SETTINGS,
             '@1inch/limit-order-protocol-contract/contracts/LimitOrderProtocol.sol': LOW_OPTIMIZER_COMPILER_SETTINGS,
             'contracts/hardhat-dependency-compiler/@1inch/limit-order-protocol-contract/contracts/LimitOrderProtocol.sol': LOW_OPTIMIZER_COMPILER_SETTINGS,
         },

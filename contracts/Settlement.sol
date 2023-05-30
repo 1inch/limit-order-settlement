@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity 0.8.19;
+pragma solidity 0.8.20;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@1inch/limit-order-protocol-contract/contracts/interfaces/IOrderMixin.sol";
@@ -73,7 +73,7 @@ contract Settlement is ISettlement, FeeBankCharger {
     }
 
     /**
-     * @notice Allows a taker to interact with the order after making amount transfered to taker, 
+     * @notice Allows a taker to interact with the order after making amount transfered to taker,
      * but before taking amount transfered to maker.
      * @dev Calls the resolver contract and approves the token to the limit order protocol.
      * @param order The limit order being filled, which caused the interaction.

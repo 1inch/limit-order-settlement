@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity 0.8.19;
+pragma solidity 0.8.20;
 
 import "../PowerPod.sol";
 import "@1inch/st1inch/contracts/interfaces/ISt1inch.sol";
