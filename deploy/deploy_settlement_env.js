@@ -1,7 +1,7 @@
 const hre = require('hardhat');
 const { getChainId, ethers } = hre;
 const { idempotentDeployGetContract } = require('../test/helpers/utils.js');
-const { constants, ether } = require('@1inch/solidity-utils');
+const { ether } = require('@1inch/solidity-utils');
 
 const INCH_ADDR = '0x111111111117dC0aa78b770fA6A738034120C302';
 const ST1INCH_ADDR = '0x9A0C8Ff858d273f57072D714bca7411D717501D7';
@@ -16,19 +16,6 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     const { deployer } = await getNamedAccounts();
 
     const st1inch = (await ethers.getContractFactory('St1inch')).attach(ST1INCH_ADDR);
-
-    const st1inchFarm = await idempotentDeployGetContract(
-        'StakingFarmingPod',
-        [st1inch.address],
-        deployments,
-        deployer,
-        'StakingFarmingPod',
-        // true,
-    );
-
-    if ((await st1inch.defaultFarm()) === constants.ZERO_ADDRESS) {
-        await (await st1inch.setDefaultFarm(st1inchFarm.address)).wait();
-    }
 
     const settlement = await idempotentDeployGetContract(
         'Settlement',
