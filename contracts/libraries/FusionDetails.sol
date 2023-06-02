@@ -120,9 +120,9 @@ library FusionDetails {
      * The computation is done by reconstructing the data and hashing it.
      * The reconstruction involves:
      * - The first part of the fusion details data up to the resolvers list
-     * - For each resolver, its associated data combined with a resolver address from the interaction data
+     * - For each resolver, delta is combined with a resolver address from the interaction data
      * - The rest of the details data including the auction points and optionally the taking fee and recipient
-     * @dev The structure for keccak256 is:
+     * @dev The calldata structure for hash function is:
      * bytes1 flags;
      * bytes4 startTime;
      * bytes2 auctionDelay;
@@ -177,6 +177,21 @@ library FusionDetails {
         }
     }
 
+    /**
+     * @notice Checks whether a given resolver is valid at the current timestamp.
+     * 
+     * A resolver is considered valid if the current timestamp is greater than
+     * the sum of the auction start time and the public time delay.
+     * 
+     * If the resolver is not valid at this point, the function iterates over the resolvers list.
+     * If a resolver's address matches the provided address and the current timestamp is greater
+     * than its start time, the resolver is considered valid.
+     *
+     * @param details The calldata representing the fusion details
+     * @param resolver The address of the resolver to be checked
+     * @param interaction The calldata representing the interactions to be used for callback addresses
+     * @return valid Returns true if the resolver is valid at the current timestamp, false otherwise
+     */
     function checkResolver(bytes calldata details, address resolver, bytes calldata interaction) internal view returns (bool valid) {
         assembly ("memory-safe") {
             let flags := byte(0, calldataload(details.offset))
@@ -190,15 +205,16 @@ library FusionDetails {
             // Check resolvers and corresponding time limits
             if iszero(valid) {
                 let resolverTimeStart := startTime
-                let ptr := add(details.offset, _RESOLVERS_LIST_BYTES_OFFSET)
-                let addressPtr := sub(add(interaction.offset, interaction.length), 1)
-                addressPtr := sub(addressPtr, mul(_RESOLVER_ADDRESS_BYTES_SIZE, byte(0, calldataload(addressPtr))))
+                let ptr := add(details.offset, _RESOLVERS_LIST_BYTES_OFFSET)          // moves pointer to the start of the resolvers list
+                let addressPtr := sub(add(interaction.offset, interaction.length), 1) // moves address pointer to the resolvers array length
+                addressPtr := sub(addressPtr, mul(_RESOLVER_ADDRESS_BYTES_SIZE, byte(0, calldataload(addressPtr)))) // moves address pointer to the first resolver address
                 for { let end := add(ptr, mul(_RESOLVER_BYTES_SIZE, resolversCount)) } lt(ptr, end) { } {
-                    let resolverIndex := byte(0, calldataload(ptr))
-                    ptr := add(ptr, _RESOLVER_INDEX_BYTES_SIZE)
-                    resolverTimeStart := add(resolverTimeStart, shr(_RESOLVER_DELTA_BIT_SHIFT, calldataload(ptr)))
-                    ptr := add(ptr, _RESOLVER_DELTA_BYTES_SIZE)
+                    let resolverIndex := byte(0, calldataload(ptr))                   // gets resolver's index
+                    ptr := add(ptr, _RESOLVER_INDEX_BYTES_SIZE)                       // moves pointer to the resolver's delta
+                    resolverTimeStart := add(resolverTimeStart, shr(_RESOLVER_DELTA_BIT_SHIFT, calldataload(ptr))) // gets resolver's time limit
+                    ptr := add(ptr, _RESOLVER_DELTA_BYTES_SIZE)                       // moves pointer to the next resolver
 
+                    // gets resolver's address and checks if it matches the provided address
                     let account := shr(_RESOLVER_ADDRESS_BIT_SHIFT, calldataload(add(addressPtr, mul(resolverIndex, _RESOLVER_ADDRESS_BYTES_SIZE))))
                     if eq(account, and(resolver, _RESOLVER_ADDRESS_MASK)) {
                         valid := gt(timestamp(), resolverTimeStart)
@@ -209,6 +225,17 @@ library FusionDetails {
         }
     }
 
+    /**
+     * @notice Calculates and returns the rate bump for an auction at the current time.
+     * 
+     * If the current time is before the auction's start, the initial rate bump is returned.
+     * If the current time is after the auction's finish, 0 is returned, meaning there is no rate bump after the auction.
+     * If the current time is within the auction duration, the rate bump is calculated based on a linear interpolation 
+     * between the auction's points, each having a specific rate bump and delay time.
+     *
+     * @param details Calldata containing fusion details
+     * @return ret Returns the rate bump at the current timestamp
+     */
     function rateBump(bytes calldata details) internal view returns (uint256 ret) {
         uint256 startBump;
         uint256 auctionStartTime;
@@ -230,6 +257,7 @@ library FusionDetails {
 
         assembly ("memory-safe") {
             function linearInterpolation(t1, t2, v1, v2, t) -> v {
+                // v = ((t - t1) * v2 + (t2 - t) * v1) / (t2 - t1)
                 v := div(
                     add(mul(sub(t, t1), v2), mul(sub(t2, t), v1)),
                     sub(t2, t1)
