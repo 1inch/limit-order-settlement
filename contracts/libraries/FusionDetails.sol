@@ -130,7 +130,7 @@ library FusionDetails {
      * bytes3 initialRateBump;
      * bytes4 resolverFee;
      * bytes2 publicTimeDelay;
-     * (bytes20,bytes2)[N] resolverAddress, resolverDelta;
+     * (bytes10,bytes2)[N] resolverAddress (first 10 bytes), resolverDelta;
      * (bytes3,bytes2) [M] pointsAndTimeDeltas;
      * bytes24? takingFeeData; only present if flags has _HAS_TAKING_FEE_FLAG
      * @param details The fusion details calldata
