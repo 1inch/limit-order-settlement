@@ -8,7 +8,12 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "./interfaces/IFeeBankCharger.sol";
 import "./interfaces/IFeeBank.sol";
 
-/// @title Contract with fee mechanism for solvers to pay for using the system
+/**
+ * @title FeeBank
+ * @notice FeeBank contract stores introduces a credit system for paying fees.
+ * A user can deposit tokens to the FeeBank contract, obtain credits and then use them to pay fees.
+ * @dev FeeBank is coupled with FeeBankCharger to actually charge fees.
+ */
 contract FeeBank is IFeeBank, Ownable {
     using SafeERC20 for IERC20;
 
