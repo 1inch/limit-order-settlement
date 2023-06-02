@@ -83,7 +83,7 @@ contract Settlement is ISettlement, FeeBankCharger {
      * @param takingAmount The taking amount.
      * @param /remainingMakingAmount/ The remaining making amount.
      * @param extraData Filling order supplemental data. In the order of layout:
-     * FINALIZE_INTERACTION flag, {FusionDetails} data, resolver, resolver fee, tokensAndAmounts array.
+     * FINALIZE_INTERACTION flag, {FusionDetails} data, resolver, resolver fee, tokensAndAmounts array. See {DynamicSuffix} for details.
      * @return offeredTakingAmount Returns the offered taking amount.
      */
     function takerInteraction(
