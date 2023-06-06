@@ -31,18 +31,18 @@ library FusionDetails {
     uint256 private constant _TAKING_FEE_DATA_BIT_SHIFT = 64; // 256 - _TAKING_FEE_DATA_BYTES_SIZE * 8
 
     uint256 private constant _START_TIME_BYTES_OFFSET = 1;
-    // uint256 private constant _ORDER_TIME_START_BYTES_SIZE = 4;
-    uint256 private constant _START_TIME_BIT_SHIFT = 224; // 256 - _ORDER_TIME_START_BYTES_SIZE * 8
+    // uint256 private constant _START_TIME_BYTES_SIZE = 4;
+    uint256 private constant _START_TIME_BIT_SHIFT = 224; // 256 - _START_TIME_BYTES_SIZE * 8
 
-    uint256 private constant _AUCTION_DELAY_BYTES_OFFSET = 5;
-    // uint256 private constant _ORDER_TIME_START_BYTES_SIZE = 2;
+    uint256 private constant _AUCTION_DELAY_BYTES_OFFSET = 5; // _START_TIME_BYTES_OFFSET + _START_TIME_BYTES_SIZE
+    // uint256 private constant _AUCTION_DELAY_BYTES_SIZE = 2;
     uint256 private constant _AUCTION_DELAY_BIT_SHIFT = 240; // 256 - _AUCTION_DELAY_BYTES_SIZE * 8
 
     uint256 private constant _AUCTION_DURATION_BYTES_OFFSET = 7; // _AUCTION_DELAY_BYTES_OFFSET + _AUCTION_DELAY_BYTES_SIZE
-    // uint256 private constant _ORDER_DURATION_BYTES_SIZE = 3;
-    uint256 private constant _AUCTION_DURATION_BIT_SHIFT = 232; // 256 - _ORDER_DURATION_BYTES_SIZE * 8
+    // uint256 private constant _AUCTION_DURATION_BYTES_SIZE = 3;
+    uint256 private constant _AUCTION_DURATION_BIT_SHIFT = 232; // 256 - _AUCTION_DURATION_BYTES_SIZE * 8
 
-    uint256 private constant _INITIAL_RATE_BUMP_BYTES_OFFSET = 10; // _AUCTION_DURATION_BYTES_OFFSET + _ORDER_DURATION_BYTES_SIZE
+    uint256 private constant _INITIAL_RATE_BUMP_BYTES_OFFSET = 10; // _AUCTION_DURATION_BYTES_OFFSET + _AUCTION_DURATION_BYTES_SIZE
     // uint256 private constant _INITIAL_RATE_BUMP_BYTES_SIZE = 3;
     uint256 private constant _INITIAL_RATE_BUMP_BIT_SHIFT = 232; // 256 - _INITIAL_RATE_BUMP_BYTES_SIZE * 8
 
