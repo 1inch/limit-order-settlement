@@ -35,7 +35,7 @@ library DynamicSuffix {
             tokensAndAmounts.offset := sub(lengthOffset, tokensAndAmounts.length)  // loads tokensAndAmounts array
 
             suffix := sub(tokensAndAmounts.offset, _STATIC_DATA_SIZE) // loads suffix (resolver, resolverFee) struct
-            args.offset := add(cd.offset, 1)                          // loads fusion details calldata into args
+            args.offset := cd.offset                                  // loads fusion details calldata into args
             args.length := sub(suffix, args.offset)
         }
     }

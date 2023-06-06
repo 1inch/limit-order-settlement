@@ -26,6 +26,7 @@ contract Settlement is ISettlement, FeeBankCharger {
     error WrongInteractionTarget();
     error IncorrectSelector();
     error FusionDetailsMismatch();
+    error ResolveFailed();
 
     // Flag to indicate that the order is the last one in the chain. No interaction will be invoked after its processing.
     bytes1 private constant _FINALIZE_INTERACTION = 0x01;
@@ -73,7 +74,7 @@ contract Settlement is ISettlement, FeeBankCharger {
     }
 
     /**
-     * @notice Allows a taker to interact with the order after making amount transfered to taker, 
+     * @notice Allows a taker to interact with the order after making amount transfered to taker,
      * but before taking amount transfered to maker.
      * @dev Calls the resolver contract and approves the token to the limit order protocol.
      * @param order The limit order being filled, which caused the interaction.
@@ -95,15 +96,17 @@ contract Settlement is ISettlement, FeeBankCharger {
         uint256 /* remainingMakingAmount */,
         bytes calldata extraData
     ) public virtual onlyThis(taker) onlyLimitOrderProtocol returns(uint256 offeredTakingAmount) {
-        bytes calldata fusionDetails = extraData[1:];
+        (DynamicSuffix.Data calldata suffix, bytes calldata tokensAndAmounts, bytes calldata args) = extraData.decodeSuffix();
+
+        bytes calldata fusionDetails = args[1:];
         fusionDetails = fusionDetails[:fusionDetails.detailsLength()];
 
         offeredTakingAmount = takingAmount * (_BASE_POINTS + fusionDetails.rateBump()) / _BASE_POINTS;
         Address takingFeeData = fusionDetails.takingFeeData();
         uint256 takingFeeAmount = offeredTakingAmount * takingFeeData.getUint32(_TAKING_FEE_RATIO_OFFSET) / _TAKING_FEE_BASE;
 
-        (DynamicSuffix.Data calldata suffix, bytes calldata tokensAndAmounts, bytes calldata args) = extraData.decodeSuffix();
-        args = args[fusionDetails.length:];  // remove fusion details
+        args = args[1 + fusionDetails.length:];  // remove fusion details
+
         IERC20 token = IERC20(order.takerAsset.get());
 
         address resolver = suffix.resolver.get();
@@ -120,8 +123,9 @@ contract Settlement is ISettlement, FeeBankCharger {
                 }
 
                 _chargeFee(resolver, resolverFee);
-                    uint256 resolversLength = uint8(args[args.length - 1]);
-                    IResolver(resolver).resolveOrders(allTokensAndAmounts, args[:args.length - 1 - resolversLength * _RESOLVER_ADDRESS_BYTES_SIZE]);
+                uint256 resolversLength = uint8(args[args.length - 1]);
+                bool success = IResolver(resolver).resolveOrders(allTokensAndAmounts, args[:args.length - 1 - resolversLength * _RESOLVER_ADDRESS_BYTES_SIZE]);
+                if (!success) revert ResolveFailed();
             } else {
                 _settleOrder(args, resolver, resolverFee, tokensAndAmounts, token, offeredTakingAmount + takingFeeAmount);
             }
