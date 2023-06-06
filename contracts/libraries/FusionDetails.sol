@@ -72,6 +72,7 @@ library FusionDetails {
     uint256 private constant _RESOLVER_ADDRESS_BIT_SHIFT = 176; // 256 - _RESOLVER_ADDRESS_BYTES_SIZE * 8;
 
     error InvalidDetailsLength();
+    error InvalidWhitelistStructure();
 
     function detailsLength(bytes calldata details) internal pure returns (uint256 len) {
         assembly ("memory-safe") {
@@ -103,12 +104,18 @@ library FusionDetails {
     }
 
     function computeHash(bytes calldata details, bytes calldata interaction) internal pure returns (bytes32 detailsHash) {
+        bytes4 invalidWhitelistStructureError = InvalidWhitelistStructure.selector;
         assembly ("memory-safe") {
             let flags := byte(0, calldataload(details.offset))
             let resolversCount := shr(_RESOLVERS_LENGTH_BIT_SHIFT, and(flags, _RESOLVERS_LENGTH_MASK))
             let pointsCount := and(flags, _POINTS_LENGTH_MASK)
             let addressPtr := sub(add(interaction.offset, interaction.length), 1)
-            addressPtr := sub(addressPtr, mul(_RESOLVER_ADDRESS_BYTES_SIZE, byte(0, calldataload(addressPtr))))
+            let arraySize := byte(0, calldataload(addressPtr))
+            addressPtr := sub(addressPtr, mul(_RESOLVER_ADDRESS_BYTES_SIZE, arraySize))
+            if lt(addressPtr, interaction.offset) {
+                mstore(0, invalidWhitelistStructureError)
+                revert(0, 4)
+            }
 
             let ptr := mload(0x40)
             let reconstructed := ptr
@@ -118,6 +125,10 @@ library FusionDetails {
             let cdPtr := add(details.offset, _RESOLVERS_LIST_BYTES_OFFSET)
             for { let cdEnd := add(cdPtr, mul(_RESOLVER_BYTES_SIZE, resolversCount)) } lt(cdPtr, cdEnd) {} {
                 let resolverIndex := byte(0, calldataload(cdPtr))
+                if iszero(lt(resolverIndex, arraySize)) {
+                    mstore(0, invalidWhitelistStructureError)
+                    revert(0, 4)
+                }
                 cdPtr := add(cdPtr, _RESOLVER_INDEX_BYTES_SIZE)
                 let deltaRaw := calldataload(cdPtr)
                 cdPtr := add(cdPtr, _RESOLVER_DELTA_BYTES_SIZE)
@@ -139,6 +150,7 @@ library FusionDetails {
     }
 
     function checkResolver(bytes calldata details, address resolver, bytes calldata interaction) internal view returns (bool valid) {
+        bytes4 invalidWhitelistStructureError = InvalidWhitelistStructure.selector;
         assembly ("memory-safe") {
             let flags := byte(0, calldataload(details.offset))
             let resolversCount := shr(_RESOLVERS_LENGTH_BIT_SHIFT, and(flags, _RESOLVERS_LENGTH_MASK))
@@ -153,9 +165,19 @@ library FusionDetails {
                 let resolverTimeStart := startTime
                 let ptr := add(details.offset, _RESOLVERS_LIST_BYTES_OFFSET)
                 let addressPtr := sub(add(interaction.offset, interaction.length), 1)
-                addressPtr := sub(addressPtr, mul(_RESOLVER_ADDRESS_BYTES_SIZE, byte(0, calldataload(addressPtr))))
+                let arraySize := byte(0, calldataload(addressPtr))
+                addressPtr := sub(addressPtr, mul(_RESOLVER_ADDRESS_BYTES_SIZE, arraySize))
+                if lt(addressPtr, interaction.offset) {
+                    mstore(0, invalidWhitelistStructureError)
+                    revert(0, 4)
+                }
+
                 for { let end := add(ptr, mul(_RESOLVER_BYTES_SIZE, resolversCount)) } lt(ptr, end) { } {
                     let resolverIndex := byte(0, calldataload(ptr))
+                    if iszero(lt(resolverIndex, arraySize)) {
+                        mstore(0, invalidWhitelistStructureError)
+                        revert(0, 4)
+                    }
                     ptr := add(ptr, _RESOLVER_INDEX_BYTES_SIZE)
                     resolverTimeStart := add(resolverTimeStart, shr(_RESOLVER_DELTA_BIT_SHIFT, calldataload(ptr)))
                     ptr := add(ptr, _RESOLVER_DELTA_BYTES_SIZE)
