@@ -60,7 +60,8 @@ library FusionDetails {
     uint256 private constant _AUCTION_POINT_DELTA_BYTES_SIZE = 2;
     uint256 private constant _AUCTION_POINT_BYTES_SIZE = 5; // _AUCTION_POINT_BUMP_BYTES_SIZE + _AUCTION_POINT_DELTA_BYTES_SIZE;
     uint256 private constant _AUCTION_POINT_BUMP_BIT_SHIFT = 232; // 256 - _AUCTION_POINT_BUMP_BYTES_SIZE * 8;
-    uint256 private constant _AUCTION_POINT_DELTA_BIT_SHIFT = 240; // 256 - _AUCTION_POINT_DELTA_BYTES_SIZE * 8;
+    uint256 private constant _AUCTION_POINT_DELTA_BIT_SHIFT = 216; // 256 - (_AUCTION_POINT_DELTA_BYTES_SIZE + _AUCTION_POINT_BUMP_BYTES_SIZE) * 8;
+    uint256 private constant _AUCTION_POINT_DELTA_MASK = 0xffff;
 
     uint256 private constant _RESOLVER_INDEX_BYTES_SIZE = 1;
     uint256 private constant _RESOLVER_DELTA_BYTES_SIZE = 2;
@@ -211,10 +212,10 @@ library FusionDetails {
             let prevBump := startBump
             let prevPointTime := pointTime
             for { let end := add(ptr, mul(_AUCTION_POINT_BYTES_SIZE, pointsCount)) } lt(ptr, end) { } {
-                let bump := shr(_AUCTION_POINT_BUMP_BIT_SHIFT, calldataload(ptr))
-                ptr := add(ptr, _AUCTION_POINT_BUMP_BYTES_SIZE)
-                let delay := shr(_AUCTION_POINT_DELTA_BIT_SHIFT, calldataload(ptr))
-                ptr := add(ptr, _AUCTION_POINT_DELTA_BYTES_SIZE)
+                let word := calldataload(ptr)
+                let bump := shr(_AUCTION_POINT_BUMP_BIT_SHIFT, word)
+                let delay := and(shr(_AUCTION_POINT_DELTA_BIT_SHIFT, word), _AUCTION_POINT_DELTA_MASK)
+                ptr := add(ptr, add(_AUCTION_POINT_BUMP_BYTES_SIZE, _AUCTION_POINT_DELTA_BYTES_SIZE))
                 pointTime := add(pointTime, delay)
                 if gt(pointTime, timestamp()) {
                     // Compute linear interpolation between prevBump and bump based on the time passed:
