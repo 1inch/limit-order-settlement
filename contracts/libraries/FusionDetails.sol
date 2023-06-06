@@ -71,11 +71,9 @@ library FusionDetails {
     uint256 private constant _RESOLVER_DELTA_BIT_SHIFT = 240; // 256 - _RESOLVER_DELTA_BYTES_SIZE * 8;
     uint256 private constant _RESOLVER_ADDRESS_BIT_SHIFT = 176; // 256 - _RESOLVER_ADDRESS_BYTES_SIZE * 8;
 
-    function detailsLength(bytes calldata details) internal pure returns (uint256 len) {
-        if (details.length == 0) {
-            return 0;
-        }
+    error InvalidDetailsLength();
 
+    function detailsLength(bytes calldata details) internal pure returns (uint256 len) {
         assembly ("memory-safe") {
             let flags := byte(0, calldataload(details.offset))
             let resolversCount := shr(_RESOLVERS_LENGTH_BIT_SHIFT, and(flags, _RESOLVERS_LENGTH_MASK))
@@ -91,6 +89,8 @@ library FusionDetails {
                 )
             )
         }
+
+        if (details.length < len) revert InvalidDetailsLength();
     }
 
     function takingFeeData(bytes calldata details) internal pure returns (Address data) {
