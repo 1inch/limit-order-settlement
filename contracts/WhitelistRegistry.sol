@@ -9,8 +9,8 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 /**
  * @title WhitelistRegistry
- * @notice The contract manages a whitelist for trading resolvers, providing functions to register, 
- * promote and remove addresses, as well as setting various thresholds and limits. It also includes an 
+ * @notice The contract manages a whitelist for trading resolvers, providing functions to register,
+ * promote and remove addresses, as well as setting various thresholds and limits. It also includes an
  * emergency rescue function for tokens sent to the contract accidentally.
  */
 contract WhitelistRegistry is Ownable {
@@ -177,7 +177,7 @@ contract WhitelistRegistry is Ownable {
 
     /**
      * @notice Returns the addresses in the whitelist.
-     * @return /whitelist/ A list of whitelisted addresses.
+     * @return whitelist A list of whitelisted addresses.
      */
     function getWhitelist() external view returns (address[] memory /* whitelist */) {
         return _whitelist.items.get();
