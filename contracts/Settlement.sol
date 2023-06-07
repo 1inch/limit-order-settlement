@@ -77,6 +77,14 @@ contract Settlement is ISettlement, FeeBankCharger {
      * @notice Allows a taker to interact with the order after making amount transfered to taker,
      * but before taking amount transfered to maker.
      * @dev Calls the resolver contract and approves the token to the limit order protocol.
+     * Layout of extra data parameter:
+     * byte1    finalize interaction flag
+     * byte [M] fusion details (variable length, M)
+     * byte [N] arbitrary data (variable length, N)
+     * byte32   resolver address
+     * byte32   resolverFee
+     * (byte32,byte32) [L] tokensAndAmounts bytes
+     * byte32   tokensAndAmounts array length in bytes (the last 32 bytes of calldata)
      * @param order The limit order being filled, which caused the interaction.
      * @param /orderHash/ The order hash.
      * @param taker The taker address.

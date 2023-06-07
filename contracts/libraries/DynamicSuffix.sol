@@ -15,9 +15,9 @@ library DynamicSuffix {
 
     /**
      * @notice Decodes calldata passed to settlement function and returns suffix (resolver, resolverFee) and tokensAndAmounts array.
-     * @dev Layout of dynamic suffix is:
-     * byte1    finalize interaction flag
-     * byte [N] fusion details (variable length, N)
+     * @dev The function reads only the tail of the calldata, as a dynamic suffix. The calldata before the suffix can be arbitrary,
+     * and is loaded into args return parameter.
+     * The dynamic suffix structure is:
      * byte32   resolver address
      * byte32   resolverFee
      * (byte32,byte32) [M] tokensAndAmounts bytes
@@ -35,7 +35,7 @@ library DynamicSuffix {
             tokensAndAmounts.offset := sub(lengthOffset, tokensAndAmounts.length)  // loads tokensAndAmounts array
 
             suffix := sub(tokensAndAmounts.offset, _STATIC_DATA_SIZE) // loads suffix (resolver, resolverFee) struct
-            args.offset := cd.offset                                  // loads fusion details calldata into args
+            args.offset := cd.offset                                  // loads calldata without suffix into args
             args.length := sub(suffix, args.offset)
         }
     }

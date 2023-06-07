@@ -101,8 +101,8 @@ library FusionDetails {
     }
 
     /**
-     * @notice Decodes fusion details calldata and returns an array of structs representing token addresses and amounts.
-     * @dev The structure of taking fee (24 bytes) is:
+     * @notice Decodes fusion details calldata and returns fee recipient address and fee amount.
+     * @dev The taking fee data structure (24 bytes) is:
      * bytes4  taking fee
      * bytes20 taking fee recipient
      * @param details Fusion details calldata.
@@ -145,7 +145,7 @@ library FusionDetails {
             let flags := byte(0, calldataload(details.offset))
             let resolversCount := shr(_RESOLVERS_LENGTH_BIT_SHIFT, and(flags, _RESOLVERS_LENGTH_MASK))
             let pointsCount := and(flags, _POINTS_LENGTH_MASK)
-            // resolver callback address pointer
+            // pointer to the first resolver address in the list
             let addressPtr := sub(add(interaction.offset, interaction.length), 1)
             let arraySize := byte(0, calldataload(addressPtr))
             addressPtr := sub(addressPtr, mul(_RESOLVER_ADDRESS_BYTES_SIZE, arraySize))
