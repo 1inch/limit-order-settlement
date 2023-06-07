@@ -24,7 +24,7 @@ contract PowerPod is FarmingDelegationPod, VotingPowerCalculator, IVotable {
     /**
      * @dev Returns the voting power of the specified account at the current block.
      * @param account The account to get the voting power for.
-     * @return /votingPower/ The voting power of the account.
+     * @return votingPower The voting power of the account.
      */
     function votingPowerOf(address account) external view virtual returns (uint256 /* votingPower */) {
         return _votingPowerAt(balanceOf(account), block.timestamp);
