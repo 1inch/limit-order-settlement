@@ -50,7 +50,7 @@ contract ResolverMock is IResolver {
         }
 
         TokensAndAmounts.Data[] calldata items = tokensAndAmounts.decode();
-        for (uint256 i = 0; i < items.length; i++) {
+        for (uint256 i = 1; i < items.length; i = i + 2) {
             IERC20(items[i].token.get()).safeTransfer(msg.sender, items[i].amount);
         }
 
