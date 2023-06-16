@@ -68,7 +68,7 @@ contract Settlement is ISettlement, FeeBankCharger {
      * @return Returns a boolean value indicating the success of the function.
      */
     function settleOrders(bytes calldata data) public virtual returns(bool) {
-        _settleOrder(data, msg.sender, 0, msg.data[:0], IERC20(address(0)), 0, IERC20(address(0)), 0);
+        _settleOrder(data, msg.sender, 0, msg.data[:0]);
         return true;
     }
 
@@ -110,25 +110,24 @@ contract Settlement is ISettlement, FeeBankCharger {
         address resolver = suffix.resolver.get();
         uint256 resolverFee = suffix.resolverFee + (_ORDER_FEE_BASE_POINTS * fusionDetails.resolverFee() * makingAmount + order.makingAmount - 1) / order.makingAmount;
         unchecked {
+            bytes memory newTokensAndAmounts = new bytes(tokensAndAmounts.length + 0x80);
+            assembly ("memory-safe") {
+                let ptr := add(newTokensAndAmounts, 0x20)
+                calldatacopy(ptr, tokensAndAmounts.offset, tokensAndAmounts.length)
+                ptr := add(ptr, tokensAndAmounts.length)
+                // store making tokens
+                mstore(ptr, makingToken)
+                mstore(add(ptr, 0x20), makingAmount)
+                // store taking tokens
+                mstore(add(ptr, 0x40), takingToken)
+                mstore(add(ptr, 0x60), add(offeredTakingAmount, takingFeeAmount))
+            }
             if (extraData[0] == _FINALIZE_INTERACTION) {
-                bytes memory allTokensAndAmounts = new bytes(tokensAndAmounts.length + 0x80);
-                assembly ("memory-safe") {
-                    let ptr := add(allTokensAndAmounts, 0x20)
-                    calldatacopy(ptr, tokensAndAmounts.offset, tokensAndAmounts.length)
-                    ptr := add(ptr, tokensAndAmounts.length)
-                    // store making tokens
-                    mstore(ptr, makingToken)
-                    mstore(add(ptr, 0x20), makingAmount)
-                    // store taking tokens
-                    mstore(add(ptr, 0x40), takingToken)
-                    mstore(add(ptr, 0x60), add(offeredTakingAmount, takingFeeAmount))
-                }
-
                 _chargeFee(resolver, resolverFee);
                 uint256 resolversLength = uint8(args[args.length - 1]);
-                IResolver(resolver).resolveOrders(allTokensAndAmounts, args[:args.length - 1 - resolversLength * _RESOLVER_ADDRESS_BYTES_SIZE]);
+                IResolver(resolver).resolveOrders(newTokensAndAmounts, args[:args.length - 1 - resolversLength * _RESOLVER_ADDRESS_BYTES_SIZE]);
             } else {
-                _settleOrder(args, resolver, resolverFee, tokensAndAmounts, takingToken, offeredTakingAmount + takingFeeAmount, makingToken, makingAmount);
+                _settleOrder(args, resolver, resolverFee, newTokensAndAmounts);
             }
         }
 
@@ -191,20 +190,12 @@ contract Settlement is ISettlement, FeeBankCharger {
      * @param resolver The resolver address. The address is checked against the whitelist, interaction is invoked on it, and fees are charged.
      * @param resolverFee The accumulated resolver fee.
      * @param tokensAndAmounts The tokens and their respective amounts (from previous recursion steps).
-     * @param takingToken The taker token. Appended to tokensAndAmounts.
-     * @param newAmount The taker amount. Appended to tokensAndAmounts.
-     * @param makingToken The maker token. Appended to tokensAndAmounts.
-     * @param makingAmount The maker amount. Appended to tokensAndAmounts.
      */
     function _settleOrder(
         bytes calldata args,
         address resolver,
         uint256 resolverFee,
-        bytes calldata tokensAndAmounts,
-        IERC20 takingToken,
-        uint256 newAmount,
-        IERC20 makingToken,
-        uint256 makingAmount
+        bytes memory tokensAndAmounts
     ) private {
         bytes calldata interaction = _getInteraction(args);
         bytes calldata fusionDetails = interaction[21:];
@@ -217,9 +208,7 @@ contract Settlement is ISettlement, FeeBankCharger {
 
         uint256 suffixLength;
         unchecked {
-            suffixLength = DynamicSuffix._STATIC_DATA_SIZE +
-                tokensAndAmounts.length +
-                (address(takingToken) != address(0) ? 0xA0 : 0x20);
+            suffixLength = DynamicSuffix._STATIC_DATA_SIZE + tokensAndAmounts.length + 0x20;
         }
         IOrderMixin limitOrderProtocol = _limitOrderProtocol;
 
@@ -239,26 +228,10 @@ contract Settlement is ISettlement, FeeBankCharger {
             // Append suffix fields
             mstore(offset, resolver)
             mstore(add(offset, 0x20), resolverFee)
-            calldatacopy(add(offset, 0x40), tokensAndAmounts.offset, tokensAndAmounts.length)
-
-            let length := add(0x40, tokensAndAmounts.length)
-            let pointer := add(offset, length)
-            if iszero(eq(makingToken, 0x0)) {
-                mstore(pointer, makingToken)
-                mstore(add(pointer, 0x20), makingAmount)
-                pointer := add(pointer, 0x40)
-                length := add(length, 0x40)
-            }
-
-            switch takingToken
-            case 0 {
-                mstore(pointer, 0)
-            }
-            default {
-                mstore(pointer, takingToken)
-                mstore(add(pointer, 0x20), newAmount)
-                mstore(add(pointer, 0x40), length)
-            }
+            offset := add(offset, 0x40)
+            let length := mload(tokensAndAmounts)
+            pop(call(gas(), 0x04, 0, add(tokensAndAmounts, 0x20), length, offset, length))
+            mstore(add(offset, length), length)
 
             // Call fillOrderTo
             if iszero(call(gas(), limitOrderProtocol, 0, ptr, add(add(args.length, suffixLength), resolversBytesSize), 0, 0)) {
