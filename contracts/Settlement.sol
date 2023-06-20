@@ -26,6 +26,7 @@ contract Settlement is ISettlement, FeeBankCharger {
     error WrongInteractionTarget();
     error IncorrectSelector();
     error FusionDetailsMismatch();
+    error ResolveFailed();
 
     // Flag to indicate that the order is the last one in the chain. No interaction will be invoked after its processing.
     bytes1 private constant _FINALIZE_INTERACTION = 0x01;
@@ -73,9 +74,17 @@ contract Settlement is ISettlement, FeeBankCharger {
     }
 
     /**
-     * @notice Allows a taker to interact with the order after making amount transfered to taker, 
+     * @notice Allows a taker to interact with the order after making amount transfered to taker,
      * but before taking amount transfered to maker.
      * @dev Calls the resolver contract and approves the token to the limit order protocol.
+     * Layout of extra data parameter:
+     * byte1    finalize interaction flag
+     * byte [M] fusion details (variable length, M)
+     * byte [N] arbitrary data (variable length, N)
+     * byte32   resolver address
+     * byte32   resolverFee
+     * (byte32,byte32) [L] tokensAndAmounts bytes
+     * byte32   tokensAndAmounts array length in bytes (the last 32 bytes of calldata)
      * @param order The limit order being filled, which caused the interaction.
      * @param /orderHash/ The order hash.
      * @param taker The taker address.
@@ -83,7 +92,7 @@ contract Settlement is ISettlement, FeeBankCharger {
      * @param takingAmount The taking amount.
      * @param /remainingMakingAmount/ The remaining making amount.
      * @param extraData Filling order supplemental data. In the order of layout:
-     * FINALIZE_INTERACTION flag, {FusionDetails} data, resolver, resolver fee, tokensAndAmounts array.
+     * FINALIZE_INTERACTION flag, {FusionDetails} data, resolver, resolver fee, tokensAndAmounts array. See {DynamicSuffix} for details.
      * @return offeredTakingAmount Returns the offered taking amount.
      */
     function takerInteraction(
@@ -95,15 +104,17 @@ contract Settlement is ISettlement, FeeBankCharger {
         uint256 /* remainingMakingAmount */,
         bytes calldata extraData
     ) public virtual onlyThis(taker) onlyLimitOrderProtocol returns(uint256 offeredTakingAmount) {
-        bytes calldata fusionDetails = extraData[1:];
+        (DynamicSuffix.Data calldata suffix, bytes calldata tokensAndAmounts, bytes calldata args) = extraData.decodeSuffix();
+
+        bytes calldata fusionDetails = args[1:];
         fusionDetails = fusionDetails[:fusionDetails.detailsLength()];
 
         offeredTakingAmount = takingAmount * (_BASE_POINTS + fusionDetails.rateBump()) / _BASE_POINTS;
         Address takingFeeData = fusionDetails.takingFeeData();
         uint256 takingFeeAmount = offeredTakingAmount * takingFeeData.getUint32(_TAKING_FEE_RATIO_OFFSET) / _TAKING_FEE_BASE;
 
-        (DynamicSuffix.Data calldata suffix, bytes calldata tokensAndAmounts, bytes calldata args) = extraData.decodeSuffix();
-        args = args[fusionDetails.length:];  // remove fusion details
+        args = args[1 + fusionDetails.length:];  // remove fusion details
+
         IERC20 takingToken = IERC20(order.takerAsset.get());
         IERC20 makingToken = IERC20(order.makerAsset.get());
 
@@ -125,7 +136,8 @@ contract Settlement is ISettlement, FeeBankCharger {
             if (extraData[0] == _FINALIZE_INTERACTION) {
                 _chargeFee(resolver, resolverFee);
                 uint256 resolversLength = uint8(args[args.length - 1]);
-                IResolver(resolver).resolveOrders(newTokensAndAmounts, args[:args.length - 1 - resolversLength * _RESOLVER_ADDRESS_BYTES_SIZE]);
+                bool success = IResolver(resolver).resolveOrders(newTokensAndAmounts, args[:args.length - 1 - resolversLength * _RESOLVER_ADDRESS_BYTES_SIZE]);
+                if (!success) revert ResolveFailed();
             } else {
                 _settleOrder(args, resolver, resolverFee, newTokensAndAmounts);
             }
