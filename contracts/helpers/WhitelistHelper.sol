@@ -4,7 +4,8 @@ pragma solidity 0.8.20;
 
 import "../WhitelistRegistry.sol";
 
-/// @notice Helper contract to read whitelist parameters
+/// @title WhitelistHelper
+/// @notice The contract provides a helper method for retrieving the minimum amount required for a resolver to be whitelisted.
 contract WhitelistHelper {
     WhitelistRegistry public immutable whitelistRegistry;
     IERC20 public immutable delegation;
@@ -14,6 +15,13 @@ contract WhitelistHelper {
         delegation = IERC20(whitelistRegistry.token());
     }
 
+    /**
+     * @notice Retrieves the minimum amount required for a delegatee to be whitelisted.
+     * @dev If the whitelist is not full, this is the set the minimum allowed value, which is required to enter.
+     * If the whitelist is full, this is one more wei more than the balance of the resolver with the smallest balance,
+     * who is currently whitelisted.
+     * @return The minimum amount required for a delegatee to be whitelisted.
+     */
     function getMinAmountForWhitelisted() external view returns (uint256) {
         address [] memory whitelist = whitelistRegistry.getWhitelist();
         uint256 whitelistLength = whitelist.length;

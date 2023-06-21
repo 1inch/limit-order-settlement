@@ -7,7 +7,12 @@ import "@1inch/solidity-utils/contracts/libraries/AddressSet.sol";
 import "@1inch/st1inch/contracts/interfaces/IVotable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-/// @title Contract with trades resolvers whitelist
+/**
+ * @title WhitelistRegistry
+ * @notice The contract manages a whitelist for trading resolvers, providing functions to register,
+ * promote and remove addresses, as well as setting various thresholds and limits. It also includes an
+ * emergency rescue function for tokens sent to the contract accidentally.
+ */
 contract WhitelistRegistry is Ownable {
     using UniERC20 for IERC20;
     using AddressSet for AddressSet.Data;
@@ -21,11 +26,17 @@ contract WhitelistRegistry is Ownable {
     error SameWhitelistSize();
     error SamePromotee();
 
+    /// @notice Emitted after a new resolver is registered.
     event Registered(address addr);
+    /// @notice Emitted when a resolver is pushed out of whitelist.
     event Unregistered(address addr);
+    /// @notice Emitted when the new minimum voting power to get into the whitelist is set.
     event ResolverThresholdSet(uint256 resolverThreshold);
+    /// @notice Emitted when the maximum number of resolvers in the whitelist is set.
     event WhitelistLimitSet(uint256 whitelistLimit);
+    /// @notice Emitted when the maximum number of resolvers on the whitelist limit decreased.
     event WhitelistLimitDecreaseRequest(uint256 whitelistLimit);
+    /// @notice Emitted when a new worker for a resolver is set.
     event Promotion(address promoter, uint256 chainId, address promotee);
 
     IVotable public immutable token;
@@ -48,14 +59,30 @@ contract WhitelistRegistry is Ownable {
         whitelistLimitNew = whitelistLimit_;
     }
 
+    /**
+     * @notice Allows the contract owner to recover any tokens accidentally sent to the contract.
+     * @param token_ The token to recover.
+     * @param amount The amount of tokens to recover.
+     */
     function rescueFunds(IERC20 token_, uint256 amount) external onlyOwner {
         token_.uniTransfer(payable(msg.sender), amount);
     }
 
+    /**
+     * @notice Allows the contract owner to set a new resolver threshold. The resovler threshold is the minimum voting power required to get into the whitelist.
+     * @param resolverThreshold_ The new resolver threshold.
+     */
     function setResolverThreshold(uint256 resolverThreshold_) external onlyOwner {
         _setResolverThreshold(resolverThreshold_);
     }
 
+    /**
+     * @notice Allows the contract owner to set a new whitelist limit.
+     * The whitelist limit is the maximum number of resolvers allowed in the whitelist.
+     * @dev The limit could be increased or decreased. If the limit is decreased, resolvers out-of-limit
+     * will not be removed from the whitelist, until a new resolver registers or the /shrinkWhitelist/ function is called.
+     * @param whitelistLimit_ The new whitelist limit.
+     */
     function setWhitelistLimit(uint256 whitelistLimit_) external onlyOwner {
         if (whitelistLimit == whitelistLimit_) revert SameWhitelistSize();
         whitelistLimitNew = whitelistLimit_;
@@ -66,6 +93,10 @@ contract WhitelistRegistry is Ownable {
         }
     }
 
+    /**
+     * @notice Removes all resolvers from the whitelist that fall below the specified voting power.
+     * @param partition The minimum voting power required to stay in the whitelist.
+     */
     function shrinkWhitelist(uint256 partition) external {
         uint256 whitelistLimit_ = whitelistLimitNew;
         if (whitelistLimit == whitelistLimit_) revert SameWhitelistSize();
@@ -87,6 +118,10 @@ contract WhitelistRegistry is Ownable {
         _setWhitelistLimit(whitelistLimit_);
     }
 
+    /**
+     * @notice Attempts to register the caller in the whitelist.
+     * @dev Reverts if the caller's voting power is below the resolver threshold or the last resolver in the whitelist.
+     */
     function register() external {
         if (token.votingPowerOf(msg.sender) < resolverThreshold) revert BalanceLessThanThreshold();
         uint256 whitelistLength = _whitelist.length();
@@ -110,12 +145,20 @@ contract WhitelistRegistry is Ownable {
         emit Registered(msg.sender);
     }
 
+    /**
+     * @notice Registers a worker for the resolver to settle orders.
+     * @param chainId The chain ID where the worker will assigned.
+     * @param promotee The worker's address.
+     */
     function promote(uint256 chainId, address promotee) external {
         if (promotions[msg.sender][chainId] == promotee) revert SamePromotee();
         promotions[msg.sender][chainId] = promotee;
         emit Promotion(msg.sender, chainId, promotee);
     }
 
+    /**
+     * @notice Cleans the whitelist by removing addresses that fall below the resolver threshold.
+     */
     function clean() external {
         uint256 resolverThreshold_ = resolverThreshold;
         uint256 whitelistLength = _whitelist.length();
@@ -132,10 +175,19 @@ contract WhitelistRegistry is Ownable {
         }
     }
 
-    function getWhitelist() external view returns (address[] memory) {
+    /**
+     * @notice Returns the addresses in the whitelist.
+     * @return whitelist A list of whitelisted addresses.
+     */
+    function getWhitelist() external view returns (address[] memory /* whitelist */) {
         return _whitelist.items.get();
     }
 
+    /**
+     * @notice Returns the worker list for a particular chain ID.
+     * @param chainId The chain ID to get the promoted addresses for.
+     * @return promotees A list of worker addresses.
+     */
     function getPromotees(uint256 chainId) external view returns (address[] memory promotees) {
         promotees = _whitelist.items.get();
         unchecked {
