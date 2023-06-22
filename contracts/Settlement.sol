@@ -69,7 +69,7 @@ contract Settlement is ISettlement, FeeBankCharger {
      * @return Returns a boolean value indicating the success of the function.
      */
     function settleOrders(bytes calldata data) public virtual returns(bool) {
-        _settleOrder(data, msg.sender, 0, msg.data[:0]);
+        _settleOrder(data, msg.sender, 0, "");
         return true;
     }
 
