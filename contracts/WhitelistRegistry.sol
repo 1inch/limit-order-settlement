@@ -19,44 +19,34 @@ contract WhitelistRegistry is Ownable {
     using AddressArray for AddressArray.Data;
 
     error BalanceLessThanThreshold();
-    error NotEnoughBalance();
     error AlreadyRegistered();
     error NotWhitelisted();
-    error WrongPartition();
-    error SameWhitelistSize();
     error SamePromotee();
 
     /// @notice Emitted after a new resolver is registered.
     event Registered(address addr);
     /// @notice Emitted when a resolver is pushed out of whitelist.
     event Unregistered(address addr);
-    /// @notice Emitted when the new minimum voting power to get into the whitelist is set.
-    event ResolverThresholdSet(uint256 resolverThreshold);
-    /// @notice Emitted when the maximum number of resolvers in the whitelist is set.
-    event WhitelistLimitSet(uint256 whitelistLimit);
-    /// @notice Emitted when the maximum number of resolvers on the whitelist limit decreased.
-    event WhitelistLimitDecreaseRequest(uint256 whitelistLimit);
+    /// @notice Emitted when the new minimum total supply percentage to get into the whitelist is set.
+    event resolverPercentageThresholdSet(uint256 resolverPercentageThreshold);
     /// @notice Emitted when a new worker for a resolver is set.
     event Promotion(address promoter, uint256 chainId, address promotee);
 
+    uint256 public constant BASIS_POINTS = 10000;
     IVotable public immutable token;
 
     mapping(address => mapping(uint256 => address)) public promotions;
-    uint256 public resolverThreshold;
-    uint256 public whitelistLimit;
-    uint256 public whitelistLimitNew;
+    // 100% = 10000, 10% = 1000, 1% = 100
+    uint256 public resolverPercentageThreshold;
 
     AddressSet.Data private _whitelist;
 
     constructor(
         IVotable token_,
-        uint256 resolverThreshold_,
-        uint256 whitelistLimit_
+        uint256 resolverPercentageThreshold_
     ) {
         token = token_;
-        _setResolverThreshold(resolverThreshold_);
-        _setWhitelistLimit(whitelistLimit_);
-        whitelistLimitNew = whitelistLimit_;
+        _setResolverPercentageThreshold(resolverPercentageThreshold_);
     }
 
     /**
@@ -69,80 +59,26 @@ contract WhitelistRegistry is Ownable {
     }
 
     /**
-     * @notice Allows the contract owner to set a new resolver threshold. The resovler threshold is the minimum voting power required to get into the whitelist.
-     * @param resolverThreshold_ The new resolver threshold.
+     * @notice Allows the contract owner to set a new resolver threshold.
+     * The resolver threshold is the minimum total supply percentage required to get into the whitelist.
+     * @param resolverPercentageThreshold_ The new resolver threshold.
      */
-    function setResolverThreshold(uint256 resolverThreshold_) external onlyOwner {
-        _setResolverThreshold(resolverThreshold_);
+    function setResolverPercentageThreshold(uint256 resolverPercentageThreshold_) external onlyOwner {
+        _setResolverPercentageThreshold(resolverPercentageThreshold_);
     }
 
-    /**
-     * @notice Allows the contract owner to set a new whitelist limit.
-     * The whitelist limit is the maximum number of resolvers allowed in the whitelist.
-     * @dev The limit could be increased or decreased. If the limit is decreased, resolvers out-of-limit
-     * will not be removed from the whitelist, until a new resolver registers or the /shrinkWhitelist/ function is called.
-     * @param whitelistLimit_ The new whitelist limit.
-     */
-    function setWhitelistLimit(uint256 whitelistLimit_) external onlyOwner {
-        if (whitelistLimit == whitelistLimit_) revert SameWhitelistSize();
-        whitelistLimitNew = whitelistLimit_;
-        if (whitelistLimit_ > _whitelist.length()) {
-            _setWhitelistLimit(whitelistLimit_);
-        } else {
-            emit WhitelistLimitDecreaseRequest(whitelistLimit_);
-        }
-    }
-
-    /**
-     * @notice Removes all resolvers from the whitelist that fall below the specified voting power.
-     * @param partition The minimum voting power required to stay in the whitelist.
-     */
-    function shrinkWhitelist(uint256 partition) external {
-        uint256 whitelistLimit_ = whitelistLimitNew;
-        if (whitelistLimit == whitelistLimit_) revert SameWhitelistSize();
-        uint256 whitelistLength = _whitelist.length();
-        if (whitelistLimit_ < whitelistLength) {
-            unchecked {
-                for (uint256 i = 0; i < whitelistLength; ) {
-                    address curWhitelisted = _whitelist.at(i);
-                    if (token.balanceOf(curWhitelisted) <= partition) {
-                        _removeFromWhitelist(curWhitelisted);
-                        whitelistLength--;
-                    } else {
-                        i++;
-                    }
-                }
-            }
-            if (whitelistLength != whitelistLimit_) revert WrongPartition();
-        }
-        _setWhitelistLimit(whitelistLimit_);
-    }
 
     /**
      * @notice Attempts to register the caller in the whitelist.
-     * @dev Reverts if the caller's voting power is below the resolver threshold or the last resolver in the whitelist.
+     * @dev Reverts if the caller's total supply percentage is below the resolver threshold.
      */
     function register() external {
-        if (token.votingPowerOf(msg.sender) < resolverThreshold) revert BalanceLessThanThreshold();
-        uint256 whitelistLength = _whitelist.length();
-        if (whitelistLength == whitelistLimit) {
-            address minResolver = msg.sender;
-            uint256 minBalance = token.balanceOf(msg.sender);
-            unchecked {
-                for (uint256 i = 0; i < whitelistLength; ++i) {
-                    address curWhitelisted = _whitelist.at(i);
-                    uint256 balance = token.balanceOf(curWhitelisted);
-                    if (balance < minBalance) {
-                        minResolver = curWhitelisted;
-                        minBalance = balance;
-                    }
-                }
-            }
-            if (minResolver == msg.sender) revert NotEnoughBalance();
-            _removeFromWhitelist(minResolver);
-        }
+        // TODO: If totalSupply is 0, then panic exception with code 0x12 (Division or modulo division by zero)
+        uint256 balancePercent = token.balanceOf(msg.sender) * BASIS_POINTS / token.totalSupply();
+        if (balancePercent < resolverPercentageThreshold) revert BalanceLessThanThreshold();
         if (!_whitelist.add(msg.sender)) revert AlreadyRegistered();
         emit Registered(msg.sender);
+        _clean();
     }
 
     /**
@@ -160,19 +96,7 @@ contract WhitelistRegistry is Ownable {
      * @notice Cleans the whitelist by removing addresses that fall below the resolver threshold.
      */
     function clean() external {
-        uint256 resolverThreshold_ = resolverThreshold;
-        uint256 whitelistLength = _whitelist.length();
-        unchecked {
-            for (uint256 i = 0; i < whitelistLength; ) {
-                address curWhitelisted = _whitelist.at(i);
-                if (token.votingPowerOf(curWhitelisted) < resolverThreshold_) {
-                    _removeFromWhitelist(curWhitelisted);
-                    whitelistLength--;
-                } else {
-                    i++;
-                }
-            }
-        }
+        _clean();
     }
 
     /**
@@ -198,18 +122,33 @@ contract WhitelistRegistry is Ownable {
         }
     }
 
-    function _setResolverThreshold(uint256 resolverThreshold_) private {
-        resolverThreshold = resolverThreshold_;
-        emit ResolverThresholdSet(resolverThreshold_);
-    }
-
-    function _setWhitelistLimit(uint256 whitelistLimit_) private {
-        whitelistLimit = whitelistLimit_;
-        emit WhitelistLimitSet(whitelistLimit_);
+    function _setResolverPercentageThreshold(uint256 resolverPercentageThreshold_) private {
+        resolverPercentageThreshold = resolverPercentageThreshold_;
+        emit resolverPercentageThresholdSet(resolverPercentageThreshold_);
     }
 
     function _removeFromWhitelist(address account) private {
         _whitelist.remove(account);
         emit Unregistered(account);
+    }
+
+    function _clean() private {
+        uint256 whitelistLength = _whitelist.length();
+        uint256 totalSupply = token.totalSupply();
+        unchecked {
+            for (uint256 i = 0; i < whitelistLength; ) {
+                address curWhitelisted = _whitelist.at(i);
+                // TODO: If totalSupply is 0, then panic exception with code 0x12 (Division or modulo division by zero)
+                if (
+                    token.balanceOf(curWhitelisted) * BASIS_POINTS / totalSupply <
+                    resolverPercentageThreshold
+                ) {
+                    _removeFromWhitelist(curWhitelisted);
+                    whitelistLength--;
+                } else {
+                    i++;
+                }
+            }
+        }
     }
 }
