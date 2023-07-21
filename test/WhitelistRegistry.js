@@ -94,7 +94,7 @@ describe('WhitelistRegistry', function () {
             ]);
             expect(await ethers.provider.getBalance(whitelistRegistry.address)).to.be.equal(amount);
             await expect(
-                whitelistRegistry.connect(addrs[1]).rescueFunds(constants.ZERO_ADDRESS, amount / 2)
+                whitelistRegistry.connect(addrs[1]).rescueFunds(constants.ZERO_ADDRESS, amount / 2),
             ).to.be.revertedWith('Ownable: caller is not the owner');
             expect(await ethers.provider.getBalance(whitelistRegistry.address)).to.be.equal(amount);
         });
@@ -310,7 +310,7 @@ describe('WhitelistRegistry', function () {
             const { rewardableDelegationPod, whitelistRegistry } = await loadFixture(initContracts);
             expect(await rewardableDelegationPod.totalSupply()).to.be.equal(0n);
             await expect(
-                whitelistRegistry.clean()
+                whitelistRegistry.clean(),
             ).to.be.revertedWithCustomError(whitelistRegistry, 'ZeroTotalSupply');
             expect(await whitelistRegistry.getWhitelist()).to.be.empty;
         });
