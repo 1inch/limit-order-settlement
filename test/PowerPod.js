@@ -35,7 +35,7 @@ describe('PowerPod', function () {
         const PowerPod = await ethers.getContractFactory('PowerPod');
         const delegation = await PowerPod.deploy('PowerPod', 'PP', st1inch.address);
         await delegation.deployed();
-        await stakeAndRegisterInDelegation(st1inch, delegation, addr, amountToStake, 0);
+        await stakeAndRegisterInDelegation(st1inch, delegation, addr1, amountToStake, 0);
 
         return { st1inch, delegation };
     }
@@ -49,12 +49,12 @@ describe('PowerPod', function () {
     describe('Should calculate voting power', function () {
         it('for account with 0 balance', async function () {
             const { delegation } = await loadFixture(initContracts);
-            expect(await delegation.votingPowerOf(addr1.address)).to.equal(0);
+            expect(await delegation.votingPowerOf(addr.address)).to.equal(0);
         });
 
         it('for account with st1inch balance', async function () {
             const { st1inch, delegation } = await loadFixture(initContracts);
-            expect(await delegation.votingPowerOf(addr.address)).to.equal(await st1inch.votingPowerOf(addr.address));
+            expect(await delegation.votingPowerOf(addr1.address)).to.equal(await st1inch.votingPowerOf(addr1.address));
         });
     });
 });
