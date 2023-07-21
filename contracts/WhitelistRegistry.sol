@@ -22,13 +22,14 @@ contract WhitelistRegistry is Ownable {
     error AlreadyRegistered();
     error NotWhitelisted();
     error SamePromotee();
+    error ZeroTotalSupply();
 
     /// @notice Emitted after a new resolver is registered.
     event Registered(address addr);
     /// @notice Emitted when a resolver is pushed out of whitelist.
     event Unregistered(address addr);
     /// @notice Emitted when the new minimum total supply percentage to get into the whitelist is set.
-    event resolverPercentageThresholdSet(uint256 resolverPercentageThreshold);
+    event ResolverPercentageThresholdSet(uint256 resolverPercentageThreshold);
     /// @notice Emitted when a new worker for a resolver is set.
     event Promotion(address promoter, uint256 chainId, address promotee);
 
@@ -73,8 +74,9 @@ contract WhitelistRegistry is Ownable {
      * @dev Reverts if the caller's total supply percentage is below the resolver threshold.
      */
     function register() external {
-        // TODO: If totalSupply is 0, then panic exception with code 0x12 (Division or modulo division by zero)
-        uint256 balancePercent = token.balanceOf(msg.sender) * BASIS_POINTS / token.totalSupply();
+        uint256 totalSupply = token.totalSupply();
+        if (totalSupply == 0) revert ZeroTotalSupply();
+        uint256 balancePercent = token.balanceOf(msg.sender) * BASIS_POINTS / totalSupply;
         if (balancePercent < resolverPercentageThreshold) revert BalanceLessThanThreshold();
         if (!_whitelist.add(msg.sender)) revert AlreadyRegistered();
         emit Registered(msg.sender);
@@ -124,7 +126,7 @@ contract WhitelistRegistry is Ownable {
 
     function _setResolverPercentageThreshold(uint256 resolverPercentageThreshold_) private {
         resolverPercentageThreshold = resolverPercentageThreshold_;
-        emit resolverPercentageThresholdSet(resolverPercentageThreshold_);
+        emit ResolverPercentageThresholdSet(resolverPercentageThreshold_);
     }
 
     function _removeFromWhitelist(address account) private {
@@ -135,10 +137,10 @@ contract WhitelistRegistry is Ownable {
     function _clean() private {
         uint256 whitelistLength = _whitelist.length();
         uint256 totalSupply = token.totalSupply();
+        if (totalSupply == 0) revert ZeroTotalSupply();
         unchecked {
             for (uint256 i = 0; i < whitelistLength; ) {
                 address curWhitelisted = _whitelist.at(i);
-                // TODO: If totalSupply is 0, then panic exception with code 0x12 (Division or modulo division by zero)
                 if (
                     token.balanceOf(curWhitelisted) * BASIS_POINTS / totalSupply <
                     resolverPercentageThreshold

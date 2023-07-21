@@ -56,7 +56,8 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
 
     const whitelist = await idempotentDeployGetContract(
         'WhitelistRegistry',
-        [delegation.address, ether('100').toString(), '5'],
+        // 1000 = 10% threshold
+        [delegation.address, '1000'],
         deployments,
         deployer,
         'WhitelistRegistry',
