@@ -184,18 +184,19 @@ describe('WhitelistRegistry', function () {
         });
 
         describe('should fail to whitelist', function () {
-            it('due to zero total supply', async function () {
+            it('due to zero balance', async function () {
                 const { rewardableDelegationPod, whitelistRegistry } = await loadFixture(initContracts);
-                expect(await rewardableDelegationPod.totalSupply()).to.be.equal(0n);
+                expect(await rewardableDelegationPod.balanceOf(addrs[1].address)).to.be.equal(0n);
                 await expect(whitelistRegistry.connect(addrs[1]).register()).to.be.revertedWithCustomError(
                     whitelistRegistry,
-                    'ZeroTotalSupply',
+                    'BalanceLessThanThreshold',
                 );
+                expect(await whitelistRegistry.getWhitelist()).to.be.empty;
             });
 
             it('due to percentage lower than threshold', async function () {
                 const { rewardableDelegationPod, whitelistRegistry } = await loadFixture(initContracts);
-                // increasing total supply to avoid division by zero
+                // increasing total supply to avoid multiplying by zero
                 await rewardableDelegationPod.mint(addrs[0].address, RESOLVER_BALANCE);
                 await expect(whitelistRegistry.connect(addrs[1]).register()).to.be.revertedWithCustomError(
                     whitelistRegistry,
@@ -306,12 +307,24 @@ describe('WhitelistRegistry', function () {
             await expectAddrsInWhitelist(whitelistRegistry, 0, WHITELIST_LIMIT - 1);
         });
 
-        it('should fail due to zero total supply', async function () {
+        it('should remove from whitelist addresses with zero balance', async function () {
+            const { rewardableDelegationPod, whitelistRegistry } = await loadFixture(initContracts);
+            for (let i = 0; i < WHITELIST_LIMIT; ++i) {
+                await rewardableDelegationPod.mint(addrs[i].address, RESOLVER_BALANCE);
+                await whitelistRegistry.connect(addrs[i]).register();
+                expect(await whitelistRegistry.getWhitelist()).to.contain(addrs[i].address);
+            }
+            for (let i = 0; i < WHITELIST_LIMIT; ++i) {
+                await rewardableDelegationPod.burn(addrs[i].address, RESOLVER_BALANCE);
+            }
+            await whitelistRegistry.clean();
+            expect(await whitelistRegistry.getWhitelist()).to.be.empty;
+        });
+
+        it('should not fail due to zero total supply', async function () {
             const { rewardableDelegationPod, whitelistRegistry } = await loadFixture(initContracts);
             expect(await rewardableDelegationPod.totalSupply()).to.be.equal(0n);
-            await expect(
-                whitelistRegistry.clean(),
-            ).to.be.revertedWithCustomError(whitelistRegistry, 'ZeroTotalSupply');
+            await whitelistRegistry.clean();
             expect(await whitelistRegistry.getWhitelist()).to.be.empty;
         });
     });

@@ -22,7 +22,6 @@ contract WhitelistRegistry is Ownable {
     error AlreadyRegistered();
     error NotWhitelisted();
     error SamePromotee();
-    error ZeroTotalSupply();
 
     /// @notice Emitted after a new resolver is registered.
     event Registered(address addr);
@@ -74,13 +73,13 @@ contract WhitelistRegistry is Ownable {
      * @dev Reverts if the caller's total supply percentage is below the resolver threshold.
      */
     function register() external {
+        uint256 percentageThreshold = resolverPercentageThreshold;
         uint256 totalSupply = token.totalSupply();
-        if (totalSupply == 0) revert ZeroTotalSupply();
-        uint256 balancePercent = token.balanceOf(msg.sender) * BASIS_POINTS / totalSupply;
-        if (balancePercent < resolverPercentageThreshold) revert BalanceLessThanThreshold();
+        uint256 balance = token.balanceOf(msg.sender);
+        if (!_isValidBalance(percentageThreshold, balance, totalSupply)) revert BalanceLessThanThreshold();
         if (!_whitelist.add(msg.sender)) revert AlreadyRegistered();
         emit Registered(msg.sender);
-        _clean();
+        _clean(percentageThreshold, totalSupply);
     }
 
     /**
@@ -98,7 +97,9 @@ contract WhitelistRegistry is Ownable {
      * @notice Cleans the whitelist by removing addresses that fall below the resolver threshold.
      */
     function clean() external {
-        _clean();
+        uint256 percentageThreshold = resolverPercentageThreshold;
+        uint256 totalSupply = token.totalSupply();
+        _clean(percentageThreshold, totalSupply);
     }
 
     /**
@@ -134,17 +135,20 @@ contract WhitelistRegistry is Ownable {
         emit Unregistered(account);
     }
 
-    function _clean() private {
+    function _isValidBalance(uint256 percentageThreshold, uint256 balance, uint256 totalSupply) private pure returns (bool) {
+        return (
+            balance > 0 &&
+            balance * BASIS_POINTS >= totalSupply * percentageThreshold)
+        ;
+    }
+
+    function _clean(uint256 percentageThreshold, uint256 totalSupply) private {
         uint256 whitelistLength = _whitelist.length();
-        uint256 totalSupply = token.totalSupply();
-        if (totalSupply == 0) revert ZeroTotalSupply();
         unchecked {
             for (uint256 i = 0; i < whitelistLength; ) {
                 address curWhitelisted = _whitelist.at(i);
-                if (
-                    token.balanceOf(curWhitelisted) * BASIS_POINTS / totalSupply <
-                    resolverPercentageThreshold
-                ) {
+                uint256 balance = token.balanceOf(curWhitelisted);
+                if (!_isValidBalance(percentageThreshold, balance, totalSupply)) {
                     _removeFromWhitelist(curWhitelisted);
                     whitelistLength--;
                 } else {
