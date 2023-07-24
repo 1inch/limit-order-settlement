@@ -75,8 +75,7 @@ contract WhitelistRegistry is Ownable {
     function register() external {
         uint256 percentageThreshold = resolverPercentageThreshold;
         uint256 totalSupply = token.totalSupply();
-        uint256 balance = token.balanceOf(msg.sender);
-        if (!_isValidBalance(percentageThreshold, balance, totalSupply)) revert BalanceLessThanThreshold();
+        if (!_isValidBalance(percentageThreshold, token.balanceOf(msg.sender), totalSupply)) revert BalanceLessThanThreshold();
         if (!_whitelist.add(msg.sender)) revert AlreadyRegistered();
         emit Registered(msg.sender);
         _clean(percentageThreshold, totalSupply);
@@ -97,9 +96,7 @@ contract WhitelistRegistry is Ownable {
      * @notice Cleans the whitelist by removing addresses that fall below the resolver threshold.
      */
     function clean() external {
-        uint256 percentageThreshold = resolverPercentageThreshold;
-        uint256 totalSupply = token.totalSupply();
-        _clean(percentageThreshold, totalSupply);
+        _clean(resolverPercentageThreshold, token.totalSupply());
     }
 
     /**
