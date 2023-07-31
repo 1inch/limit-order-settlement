@@ -6,9 +6,9 @@ const { expBase } = require('./helpers/utils');
 describe('Delegation st1inch', function () {
     let addr, addr1;
     let accounts;
-    const threshold = ether('0.05');
     const MAX_WHITELISTED = 3;
     const commonLockDuration = time.duration.days('40');
+    const BALANCE_THRESHOLD = 1000; // 10%
 
     const stakeAndRegisterInDelegation = async (st1inch, delegation, user, amount, userIndex) => {
         await st1inch.connect(user).deposit(0, commonLockDuration);
@@ -39,7 +39,7 @@ describe('Delegation st1inch', function () {
         const delegation = await PowerPod.deploy('PowerPod', 'PP', st1inch.address);
         await delegation.deployed();
         const WhitelistRegistry = await ethers.getContractFactory('WhitelistRegistry');
-        const whitelistRegistry = await WhitelistRegistry.deploy(delegation.address, threshold, MAX_WHITELISTED);
+        const whitelistRegistry = await WhitelistRegistry.deploy(delegation.address, BALANCE_THRESHOLD);
         await whitelistRegistry.deployed();
         // fill all whitelist into WhitelistRegistry
         for (let i = 0; i < MAX_WHITELISTED; ++i) {
@@ -71,7 +71,7 @@ describe('Delegation st1inch', function () {
             // addr shouldn't register becouse his st1inch balance less that all of the whitelisted accounts
             await expect(whitelistRegistry.register()).to.be.revertedWithCustomError(
                 whitelistRegistry,
-                'NotEnoughBalance',
+                'BalanceLessThanThreshold',
             );
             // create other stake and delegate to addr
             await depositAndDelegateTo(st1inch, delegation, addr1, addr.address, ether('2'));
@@ -108,7 +108,7 @@ describe('Delegation st1inch', function () {
 
         it('should decrease delegatee balance, if delegator undelegate stake', async function () {
             const { st1inch, delegation, whitelistRegistry } = await loadFixture(initContracts);
-            await depositAndDelegateTo(st1inch, delegation, addr1, addr.address, ether('2'));
+            await depositAndDelegateTo(st1inch, delegation, addr1, addr.address, ether('8'));
             await whitelistRegistry.register();
 
             await delegation.connect(addr1).delegate(constants.ZERO_ADDRESS);
@@ -118,7 +118,7 @@ describe('Delegation st1inch', function () {
 
         it('should decrease delegatee balance, if delegator delegate to other account', async function () {
             const { st1inch, delegation, whitelistRegistry } = await loadFixture(initContracts);
-            await depositAndDelegateTo(st1inch, delegation, addr1, addr.address, ether('2'));
+            await depositAndDelegateTo(st1inch, delegation, addr1, addr.address, ether('8'));
             await whitelistRegistry.register();
 
             await delegation.connect(addr1).delegate(accounts[2].address);

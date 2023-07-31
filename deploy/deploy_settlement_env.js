@@ -1,7 +1,6 @@
 const hre = require('hardhat');
 const { getChainId, ethers } = hre;
 const { idempotentDeployGetContract } = require('../test/helpers/utils.js');
-const { ether } = require('@1inch/solidity-utils');
 
 const INCH_ADDR = '0x111111111117dC0aa78b770fA6A738034120C302';
 const ST1INCH_ADDR = '0x9A0C8Ff858d273f57072D714bca7411D717501D7';
@@ -56,7 +55,8 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
 
     const whitelist = await idempotentDeployGetContract(
         'WhitelistRegistry',
-        [delegation.address, ether('100').toString(), '5'],
+        // 1000 = 10% threshold
+        [delegation.address, '1000'],
         deployments,
         deployer,
         'WhitelistRegistry',
