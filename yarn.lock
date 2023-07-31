@@ -38,14 +38,14 @@
     "@1inch/solidity-utils" "2.2.5"
     "@openzeppelin/contracts" "4.8.0"
 
-"@1inch/limit-order-protocol-contract@4.0.0-prerelease-6":
-  version "4.0.0-prerelease-6"
-  resolved "https://registry.yarnpkg.com/@1inch/limit-order-protocol-contract/-/limit-order-protocol-contract-4.0.0-prerelease-6.tgz#f8dd50cb8b37ffa077feb377da2fa67ea3471818"
-  integrity sha512-FKrYJHMw99M4jW0oLYSUcwZR9WBr0xKbXZM8qywWzKfIB9AzfUEZVESs7NKOpoZ2uL7YbgX5Wrapnl8GznJ2eA==
+"@1inch/limit-order-protocol-contract@4.0.0-prerelease-7":
+  version "4.0.0-prerelease-7"
+  resolved "https://registry.yarnpkg.com/@1inch/limit-order-protocol-contract/-/limit-order-protocol-contract-4.0.0-prerelease-7.tgz#8410a4171641233698f6e5654fa70ca7286a9155"
+  integrity sha512-ZqT4CoY3INKESq4Hi2f2RJyV3FsqEvHd4mcZql+uotTyy6ZW2e2JN9ocPLruHwOtlaLnhi6zVbtWxK0wwRuF4w==
   dependencies:
-    "@1inch/solidity-utils" "2.2.24"
+    "@1inch/solidity-utils" "2.2.27"
     "@chainlink/contracts" "0.6.1"
-    "@openzeppelin/contracts" "4.8.2"
+    "@openzeppelin/contracts" "4.8.3"
 
 "@1inch/solidity-utils@2.2.21":
   version "2.2.21"
@@ -60,10 +60,10 @@
     ethereumjs-util "7.1.5"
     ethers "5.7.1"
 
-"@1inch/solidity-utils@2.2.24":
-  version "2.2.24"
-  resolved "https://registry.yarnpkg.com/@1inch/solidity-utils/-/solidity-utils-2.2.24.tgz#2f160c3c9231b04db2e2b3f3bc4e9c980b4b8511"
-  integrity sha512-HBX9krTA/iVViC+wysAbuigTopmIyjNlPbQSQ7zHZqjgT+bRNMHnmtqcuiWcHlqJ5MVHMLwjEaDWC+2l0wEyNQ==
+"@1inch/solidity-utils@2.2.27":
+  version "2.2.27"
+  resolved "https://registry.yarnpkg.com/@1inch/solidity-utils/-/solidity-utils-2.2.27.tgz#28a131304788674042dae002e817b2cd9346f232"
+  integrity sha512-rybgnA5Bd1+XRrAdIK3sNWWIMXZ5tWl4Ds4IwZVCzAXMLvxdXnJyb6zm//uuko9cRH63aDjct5Mzf+ggg36AJg==
   dependencies:
     "@metamask/eth-sig-util" "5.0.2"
     "@nomicfoundation/hardhat-network-helpers" "1.0.8"
@@ -1207,6 +1207,11 @@
   version "4.8.2"
   resolved "https://registry.yarnpkg.com/@openzeppelin/contracts/-/contracts-4.8.2.tgz#d815ade0027b50beb9bcca67143c6bcc3e3923d6"
   integrity sha512-kEUOgPQszC0fSYWpbh2kT94ltOJwj1qfT2DWo+zVttmGmf97JZ99LspePNaeeaLhCImaHVeBbjaQFZQn7+Zc5g==
+
+"@openzeppelin/contracts@4.8.3":
+  version "4.8.3"
+  resolved "https://registry.yarnpkg.com/@openzeppelin/contracts/-/contracts-4.8.3.tgz#cbef3146bfc570849405f59cba18235da95a252a"
+  integrity sha512-bQHV8R9Me8IaJoJ2vPG4rXcL7seB7YVuskr4f+f5RyOStSZetwzkWtoqDMl5erkBJy0lDRUnIR2WIkPiC0GJlg==
 
 "@openzeppelin/contracts@~4.3.3":
   version "4.3.3"
