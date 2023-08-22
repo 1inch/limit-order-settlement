@@ -214,7 +214,7 @@ contract Settlement is ISettlement, FeeBankCharger {
         IERC20 token,
         uint256 newAmount
     ) private {
-        (bytes calldata interaction) = _getInteraction(args);
+        bytes calldata interaction = _getInteraction(args);
 
         if (address(bytes20(interaction)) != address(this)) revert WrongInteractionTarget();
 
