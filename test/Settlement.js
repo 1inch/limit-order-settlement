@@ -3,7 +3,7 @@ const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
 const { ethers } = require('hardhat');
 const { deploySwapTokens, getChainId } = require('./helpers/fixtures');
 const { buildOrder, signOrder, compactSignature, fillWithMakingAmount, buildMakerTraits } = require('@1inch/limit-order-protocol-contract/test/helpers/orderUtils');
-const { buildFusions } = require('./helpers/fusionUtils');
+const { buildFusion } = require('./helpers/fusionUtils');
 
 describe('Settlement', function () {
     async function initContracts() {
@@ -53,20 +53,16 @@ describe('Settlement', function () {
         dataFormFixture,
         additionalDataForSettlement = '',
         isInnermostOrder = false,
-        needAddResolvers = false,
         fillingAmount = orderData.makingAmount,
     }) {
         const {
             contracts: { swap, settlement, resolver },
             other: { chainId },
         } = dataFormFixture;
-        const {
-            fusions: [fusionDetails],
-            resolvers,
-        } = await buildFusions([singleFusionData]);
+        const fusionDetails = await buildFusion(singleFusionData);
         const order = buildOrder(orderData, { customData: fusionDetails });
         const { r, vs } = compactSignature(await signOrder(order, chainId, swap.address, orderSigner));
-        const fillOrderToData = swap.interface.encodeFunctionData('fillOrderToExt', [
+        return swap.interface.encodeFunctionData('fillOrderToExt', [
             order,
             r,
             vs,
@@ -76,7 +72,6 @@ describe('Settlement', function () {
             order.extension,
             settlement.address + (isInnermostOrder ? '01' : '00') + trim0x(additionalDataForSettlement),
         ]);
-        return needAddResolvers ? fillOrderToData + trim0x(resolvers) : fillOrderToData;
     }
 
     it('opposite direction recursive swap', async function () {
@@ -114,7 +109,6 @@ describe('Settlement', function () {
             orderSigner: addr,
             dataFormFixture,
             additionalDataForSettlement: fillOrderToData1,
-            needAddResolvers: true,
         });
 
         const txn = await resolver.settleOrders(fillOrderToData0);
@@ -158,7 +152,6 @@ describe('Settlement', function () {
             orderSigner: addr,
             dataFormFixture,
             additionalDataForSettlement: fillOrderToData1,
-            needAddResolvers: true,
         });
 
         await weth.connect(addr1).approve(swap.address, ether('0.11'));
@@ -207,7 +200,6 @@ describe('Settlement', function () {
             orderSigner: addr,
             dataFormFixture,
             additionalDataForSettlement: fillOrderToData1,
-            needAddResolvers: true,
         });
 
         const permit2 = await permit2Contract();
@@ -259,7 +251,6 @@ describe('Settlement', function () {
             orderSigner: addr,
             dataFormFixture,
             additionalDataForSettlement: fillOrderToData1,
-            needAddResolvers: true,
         });
 
         const wethFeeAmount = ether('0.001');
@@ -324,7 +315,6 @@ describe('Settlement', function () {
             orderSigner: addr1,
             dataFormFixture,
             additionalDataForSettlement: fillOrderToData1,
-            needAddResolvers: true,
         });
 
         await weth.approve(resolver.address, ether('0.025'));
@@ -384,7 +374,6 @@ describe('Settlement', function () {
             orderSigner: addr1,
             dataFormFixture,
             additionalDataForSettlement: fillOrderToData1,
-            needAddResolvers: true,
         });
 
         const txn = await resolver.settleOrders(fillOrderToData0);
@@ -452,7 +441,6 @@ describe('Settlement', function () {
                 dataFormFixture,
                 additionalDataForSettlement: resolverCalldata,
                 isInnermostOrder: true,
-                needAddResolvers: true,
             });
 
             await weth.approve(resolver.address, actualTakingAmount);
@@ -605,7 +593,6 @@ describe('Settlement', function () {
             orderSigner: addr,
             dataFormFixture,
             additionalDataForSettlement: fillOrderToData1,
-            needAddResolvers: true,
         });
         const availableCreditBefore = await settlement.availableCredit(resolver.address);
 
@@ -654,7 +641,6 @@ describe('Settlement', function () {
             dataFormFixture,
             additionalDataForSettlement: resolverArgs,
             isInnermostOrder: true,
-            needAddResolvers: true,
             fillingAmount: ether('10') * partialModifier / points,
         });
 
@@ -709,7 +695,6 @@ describe('Settlement', function () {
             dataFormFixture,
             additionalDataForSettlement: resolverArgs,
             isInnermostOrder: true,
-            needAddResolvers: true,
             fillingAmount: ether('10') * minimalPartialModifier / points,
         });
 
@@ -760,7 +745,6 @@ describe('Settlement', function () {
             orderSigner: addr,
             dataFormFixture,
             additionalDataForSettlement: fillOrderToData1,
-            needAddResolvers: true,
         });
 
         await expect(resolver.settleOrders(fillOrderToData0)).to.be.revertedWithCustomError(settlement, 'NotEnoughCredit');
@@ -805,7 +789,6 @@ describe('Settlement', function () {
                 orderSigner: addr,
                 dataFormFixture,
                 additionalDataForSettlement: fillOrderToData1,
-                needAddResolvers: true,
             });
 
             await expect(resolver.settleOrders(fillOrderToData0)).to.be.revertedWithCustomError(settlement, 'ResolverIsNotWhitelisted');
@@ -851,7 +834,6 @@ describe('Settlement', function () {
                 orderSigner: addr,
                 dataFormFixture,
                 additionalDataForSettlement: fillOrderToData1,
-                needAddResolvers: true,
             });
 
             await expect(resolver.settleOrders(fillOrderToData0)).to.be.revertedWithCustomError(settlement, 'ResolverIsNotWhitelisted');

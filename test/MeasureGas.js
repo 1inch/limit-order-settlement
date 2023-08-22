@@ -4,7 +4,7 @@ const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
 const { expect, ether, trim0x } = require('@1inch/solidity-utils');
 const { deploySwapTokens, getChainId, deployContract } = require('./helpers/fixtures');
 const { buildOrder, signOrder, compactSignature, fillWithMakingAmount, buildMakerTraits } = require('@1inch/limit-order-protocol-contract/test/helpers/orderUtils');
-const { buildFusions } = require('./helpers/fusionUtils');
+const { buildFusion } = require('./helpers/fusionUtils');
 
 describe('MeasureGas', function () {
     const resolversNumber = 10;
@@ -51,9 +51,7 @@ describe('MeasureGas', function () {
     it('1 fill for 1 order', async function () {
         const { dai, weth, swap, settlement, resolvers } = await loadFixture(initContractsAndApproves);
 
-        const { fusions: [fusionDetails], resolvers: fusionResolvers } = await buildFusions([
-            { resolvers: [resolvers[0].address] },
-        ]);
+        const fusionDetails = await buildFusion({ resolvers: [resolvers[0].address] });
         const order = buildOrder({
             maker: addrs[1].address,
             makerAsset: dai.address,
@@ -89,7 +87,7 @@ describe('MeasureGas', function () {
             resolvers[0].address,
             order.extension,
             settlement.address + '01' + trim0x(resolverCalldata),
-        ]) + trim0x(fusionResolvers);
+        ]);
 
         await weth.approve(resolvers[0].address, ether('0.1'));
 
@@ -103,13 +101,7 @@ describe('MeasureGas', function () {
         const { dai, weth, swap, settlement, resolvers } = await loadFixture(initContractsAndApproves);
 
         const resolverAddresses = resolvers.map(r => r.address);
-        const { fusions: fusionDetails, resolvers: fusionResolvers } = await buildFusions([
-            { resolvers: resolverAddresses },
-            { resolvers: resolverAddresses },
-            { resolvers: resolverAddresses },
-            { resolvers: resolverAddresses },
-            { resolvers: resolverAddresses },
-        ]);
+        const fusionDetails = [...Array(5)].map(async x => buildFusion({ resolvers: resolverAddresses }));
 
         // Build orders and compact signatures
         const orders = [];
@@ -123,7 +115,7 @@ describe('MeasureGas', function () {
                 takingAmount: ether(((i + 1) / 100).toString()),
                 makerTraits: buildMakerTraits({ allowedSender: settlement.address }),
             }, {
-                customData: fusionDetails[i],
+                customData: await fusionDetails[i],
             });
             const { r, vs } = compactSignature(await signOrder(orders[i], chainId, swap.address, addrs[1]));
             signatures[i] = { r, vs };
@@ -136,7 +128,7 @@ describe('MeasureGas', function () {
             takingAmount: ether('10'), // (max_i - 1) * max_i / 2
             makerTraits: settlement.address,
         }, {
-            customData: fusionDetails[4],
+            customData: await fusionDetails[4],
         });
         const { r, vs } = compactSignature(await signOrder(orders[4], chainId, swap.address, addrs[0]));
         signatures[4] = { r, vs };
@@ -165,7 +157,6 @@ describe('MeasureGas', function () {
                 settlement.address + '00' + trim0x(fillOrdersToData[i + 1]),
             ]);
         }
-        fillOrdersToData[0] += trim0x(fusionResolvers);
 
         const tx = await resolvers[0].settleOrders(fillOrdersToData[0]);
         console.log(`1 fill for 5 orders in a batch gasUsed: ${(await tx.wait()).gasUsed}`);

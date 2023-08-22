@@ -3,7 +3,7 @@ const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
 const { signOrder, buildOrder, compactSignature, fillWithMakingAmount } = require('@1inch/limit-order-protocol-contract/test/helpers/orderUtils');
 const { expect, ether, trim0x } = require('@1inch/solidity-utils');
 const { deploySwapTokens, getChainId, deploySimpleRegistry } = require('./helpers/fixtures');
-const { buildFusions } = require('./helpers/fusionUtils');
+const { buildFusion } = require('./helpers/fusionUtils');
 
 describe('WhitelistChecker', function () {
     let addr, addr1;
@@ -42,7 +42,7 @@ describe('WhitelistChecker', function () {
         it('whitelist check in settleOrders method', async function () {
             const { dai, weth, swap, settlement } = await loadFixture(initContracts);
 
-            const { fusions: [fusionDetails], resolvers } = await buildFusions([{}]);
+            const fusionDetails = await buildFusion();
 
             const order = buildOrder({
                 makerAsset: dai.address,
@@ -64,7 +64,7 @@ describe('WhitelistChecker', function () {
                 addr.address,
                 order.extension,
                 settlement.address + '01',
-            ]) + trim0x(resolvers);
+            ]);
 
             await expect(settlement.settleOrders(fillOrderToData))
                 .to.be.revertedWithCustomError(settlement, 'ResolverIsNotWhitelisted');
@@ -113,10 +113,8 @@ describe('WhitelistChecker', function () {
         it('whitelist check in settleOrders method', async function () {
             const { dai, weth, swap, settlement, resolver } = await loadFixture(initContractsAndSetStatus);
 
-            const { fusions: [fusionDetails0, fusionDetails1], resolvers } = await buildFusions([
-                { resolvers: [resolver.address] },
-                { resolvers: [resolver.address] },
-            ]);
+            const fusionDetails0 = await buildFusion({ resolvers: [resolver.address] });
+            const fusionDetails1 = await buildFusion({ resolvers: [resolver.address] });
 
             const order0 = buildOrder({
                 makerAsset: dai.address,
@@ -160,7 +158,7 @@ describe('WhitelistChecker', function () {
                 resolver.address,
                 order0.extension,
                 settlement.address + '00' + trim0x(fillOrderToData1),
-            ]) + trim0x(resolvers);
+            ]);
 
             const txn = await resolver.settleOrders(fillOrderToData0);
             await expect(txn).to.changeTokenBalances(dai, [addr, addr1], [ether('-100'), ether('100')]);

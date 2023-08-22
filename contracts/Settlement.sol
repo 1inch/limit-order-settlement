@@ -111,14 +111,17 @@ contract Settlement is ISettlement, FeeBankCharger {
 
         bytes calldata fusionDetails = extension.customData();
 
+        uint256 resolverFee = suffix.resolverFee + (_ORDER_FEE_BASE_POINTS * fusionDetails.resolverFee() * makingAmount + order.makingAmount - 1) / order.makingAmount;
+        address resolver = suffix.resolver.get();
+
+        if (!fusionDetails.checkResolver(resolver)) revert ResolverIsNotWhitelisted();
+
         offeredTakingAmount = takingAmount * (_BASE_POINTS + fusionDetails.rateBump()) / _BASE_POINTS;
         Address takingFeeData = fusionDetails.takingFeeData();
         uint256 takingFeeAmount = offeredTakingAmount * takingFeeData.getUint32(_TAKING_FEE_RATIO_OFFSET) / _TAKING_FEE_BASE;
 
         IERC20 token = IERC20(order.takerAsset.get());
 
-        address resolver = suffix.resolver.get();
-        uint256 resolverFee = suffix.resolverFee + (_ORDER_FEE_BASE_POINTS * fusionDetails.resolverFee() * makingAmount + order.makingAmount - 1) / order.makingAmount;
         unchecked {
             if (args[0] == _FINALIZE_INTERACTION) {
                 bytes memory allTokensAndAmounts = new bytes(tokensAndAmounts.length + 0x40);
@@ -131,8 +134,7 @@ contract Settlement is ISettlement, FeeBankCharger {
                 }
 
                 _chargeFee(resolver, resolverFee);
-                uint256 resolversLength = uint8(args[args.length - 1]);
-                bool success = IResolver(resolver).resolveOrders(allTokensAndAmounts, args[1:args.length - 1 - resolversLength * _RESOLVER_ADDRESS_BYTES_SIZE]);
+                bool success = IResolver(resolver).resolveOrders(allTokensAndAmounts, args[1:]);
                 if (!success) revert ResolveFailed();
             } else {
                 _settleOrder(args[1:], resolver, resolverFee, tokensAndAmounts, token, offeredTakingAmount + takingFeeAmount);
@@ -172,9 +174,8 @@ contract Settlement is ISettlement, FeeBankCharger {
      * @dev Based on the selector determines calldata type and fetches the interaction.
      * @param data The data to process.
      * @return interaction Returns the interaction data.
-     * @return fusionDetails Returns the fusionDetails data.
      */
-    function _getInteractionAndFusionDetails(bytes calldata data) internal pure returns(bytes calldata interaction, bytes calldata fusionDetails) {
+    function _getInteraction(bytes calldata data) internal pure returns(bytes calldata interaction) {
         bytes4 selector = bytes4(data);
         if (selector == IOrderMixin.fillOrderToExt.selector) {
             FillOrderToExtArgs calldata args;
@@ -182,7 +183,6 @@ contract Settlement is ISettlement, FeeBankCharger {
                 args := add(data.offset, 4)
             }
             interaction = args.interaction;
-            fusionDetails = args.extension.customData();
         }
         else if (selector == IOrderMixin.fillContractOrderExt.selector) {
             FillContractOrderExtArgs calldata args;
@@ -190,7 +190,6 @@ contract Settlement is ISettlement, FeeBankCharger {
                 args := add(data.offset, 4)
             }
             interaction = args.interaction;
-            fusionDetails = args.extension.customData();
         }
         else {
             revert IncorrectSelector();
@@ -215,10 +214,9 @@ contract Settlement is ISettlement, FeeBankCharger {
         IERC20 token,
         uint256 newAmount
     ) private {
-        (bytes calldata interaction, bytes calldata fusionDetails) = _getInteractionAndFusionDetails(args);
+        (bytes calldata interaction) = _getInteraction(args);
 
         if (address(bytes20(interaction)) != address(this)) revert WrongInteractionTarget();
-        if (!fusionDetails.checkResolver(resolver, args)) revert ResolverIsNotWhitelisted();
 
         uint256 suffixLength;
         unchecked {
@@ -229,18 +227,14 @@ contract Settlement is ISettlement, FeeBankCharger {
         IOrderMixin limitOrderProtocol = _limitOrderProtocol;
 
         assembly ("memory-safe") {
-            let resolversBytesSize := add(1, mul(_RESOLVER_ADDRESS_BYTES_SIZE, byte(0, calldataload(sub(add(args.offset, args.length), 1)))))
             let interactionOffset := sub(interaction.offset, args.offset)
 
             // Copy calldata and patch interaction.length
             let ptr := mload(0x40)
             calldatacopy(ptr, args.offset, args.length)
-            mstore(add(ptr, sub(interactionOffset, 0x20)), add(add(interaction.length, suffixLength), resolversBytesSize))
+            mstore(add(ptr, sub(interactionOffset, 0x20)), add(interaction.length, suffixLength))
 
             let offset := add(add(ptr, interactionOffset), interaction.length)
-            // Append resolvers
-            calldatacopy(offset, sub(add(args.offset, args.length), resolversBytesSize), resolversBytesSize)
-            offset := add(offset, resolversBytesSize)
             // Append suffix fields
             mstore(offset, resolver)
             mstore(add(offset, 0x20), resolverFee)
@@ -258,7 +252,7 @@ contract Settlement is ISettlement, FeeBankCharger {
             }
 
             // Call LimitOrderProtocol
-            if iszero(call(gas(), limitOrderProtocol, 0, ptr, add(add(args.length, suffixLength), resolversBytesSize), 0, 0)) {
+            if iszero(call(gas(), limitOrderProtocol, 0, ptr, add(args.length, suffixLength), 0, 0)) {
                 returndatacopy(ptr, 0, returndatasize())
                 revert(ptr, returndatasize())
             }

@@ -16,7 +16,7 @@ import "@1inch/solidity-utils/contracts/libraries/AddressLib.sol";
 ///     bytes3 initialRateBump;
 ///     bytes4 resolverFee;
 ///     bytes2 publicTimeDelay;
-///     (bytes1,bytes2)[N] resolversIndicesAndTimeDeltas;
+///     (bytes10,bytes2)[N] resolversIndicesAndTimeDeltas;
 ///     (bytes3,bytes2)[M] pointsAndTimeDeltas;
 ///     bytes24? takingFeeData; optional, present only if flags has _HAS_TAKING_FEE_FLAG
 /// }
@@ -63,16 +63,15 @@ library FusionDetails {
     uint256 private constant _AUCTION_POINT_DELTA_BIT_SHIFT = 216; // 256 - (_AUCTION_POINT_DELTA_BYTES_SIZE + _AUCTION_POINT_BUMP_BYTES_SIZE) * 8;
     uint256 private constant _AUCTION_POINT_DELTA_MASK = 0xffff;
 
-    uint256 private constant _RESOLVER_INDEX_BYTES_SIZE = 1;
     uint256 private constant _RESOLVER_DELTA_BYTES_SIZE = 2;
+    uint256 private constant _RESOLVER_DELTA_MASK = 0xffff;
     uint256 private constant _RESOLVER_ADDRESS_BYTES_SIZE = 10;
     uint256 private constant _RESOLVER_ADDRESS_MASK = 0xffffffffffffffffffff;
-    uint256 private constant _RESOLVER_BYTES_SIZE = 3; // _RESOLVER_DELTA_BYTES_SIZE + _RESOLVER_INDEX_BYTES_SIZE;
-    uint256 private constant _RESOLVER_DELTA_BIT_SHIFT = 240; // 256 - _RESOLVER_DELTA_BYTES_SIZE * 8;
+    uint256 private constant _RESOLVER_BYTES_SIZE = 12; // _RESOLVER_DELTA_BYTES_SIZE + _RESOLVER_INDEX_BYTES_SIZE;
+    uint256 private constant _RESOLVER_DELTA_BIT_SHIFT = 160; // 256 - _RESOLVER_BYTES_SIZE * 8;
     uint256 private constant _RESOLVER_ADDRESS_BIT_SHIFT = 176; // 256 - _RESOLVER_ADDRESS_BYTES_SIZE * 8;
 
     error InvalidDetailsLength();
-    error InvalidWhitelistStructure();
 
     /**
      * @notice Calculates fusion details calldata length passed to settlement function.
@@ -118,78 +117,6 @@ library FusionDetails {
     }
 
     /**
-     * @notice Computes a Keccak-256 hash over the fusion details data.
-     * The computation is done by reconstructing the data and hashing it.
-     * The reconstruction involves:
-     * - The first part of the fusion details data up to the resolvers list
-     * - For each resolver, delta is combined with a resolver address from the interaction data
-     * - The rest of the details data including the auction points and optionally the taking fee and recipient
-     * @dev The calldata structure for hash function is:
-     * bytes1 flags;
-     * bytes4 startTime;
-     * bytes2 auctionDelay;
-     * bytes3 auctionDuration;
-     * bytes3 initialRateBump;
-     * bytes4 resolverFee;
-     * bytes2 publicTimeDelay;
-     * (bytes10,bytes2)[N] resolverAddress (first 10 bytes), resolverDelta;
-     * (bytes3,bytes2) [M] pointsAndTimeDeltas;
-     * bytes24? takingFeeData; only present if flags has _HAS_TAKING_FEE_FLAG
-     * @param details The fusion details calldata
-     * @param interaction The interaction calldata containing the resolver address
-     * @return detailsHash The computed Keccak-256 hash over the reconstructed data
-     */
-    function computeHash(bytes calldata details, bytes calldata interaction) internal pure returns (bytes32 detailsHash) {
-        bytes4 invalidWhitelistStructureError = InvalidWhitelistStructure.selector;
-        assembly ("memory-safe") {
-            let flags := byte(0, calldataload(details.offset))
-            let resolversCount := shr(_RESOLVERS_LENGTH_BIT_SHIFT, and(flags, _RESOLVERS_LENGTH_MASK))
-            let pointsCount := and(flags, _POINTS_LENGTH_MASK)
-            // pointer to the first resolver address in the list
-            let addressPtr := sub(add(interaction.offset, interaction.length), 1)
-            let arraySize := byte(0, calldataload(addressPtr))
-            addressPtr := sub(addressPtr, mul(_RESOLVER_ADDRESS_BYTES_SIZE, arraySize))
-            // addressPtr = offset + length - 1 - resolver index * resolver address size
-            if lt(addressPtr, interaction.offset) {
-                mstore(0, invalidWhitelistStructureError)
-                revert(0, 4)
-            }
-
-            let ptr := mload(0x40)
-            let reconstructed := ptr
-            calldatacopy(ptr, details.offset, _RESOLVERS_LIST_BYTES_OFFSET)
-            ptr := add(ptr, _RESOLVERS_LIST_BYTES_OFFSET)
-
-            let cdPtr := add(details.offset, _RESOLVERS_LIST_BYTES_OFFSET)
-            // for each resolver
-            for { let cdEnd := add(cdPtr, mul(_RESOLVER_BYTES_SIZE, resolversCount)) } lt(cdPtr, cdEnd) {} {
-                let resolverIndex := byte(0, calldataload(cdPtr))
-                if iszero(lt(resolverIndex, arraySize)) {
-                    mstore(0, invalidWhitelistStructureError)
-                    revert(0, 4)
-                }
-                cdPtr := add(cdPtr, _RESOLVER_INDEX_BYTES_SIZE)
-                let deltaRaw := calldataload(cdPtr)
-                cdPtr := add(cdPtr, _RESOLVER_DELTA_BYTES_SIZE)
-                let resolverRaw := calldataload(add(addressPtr, mul(resolverIndex, _RESOLVER_ADDRESS_BYTES_SIZE)))
-
-                mstore(ptr, resolverRaw)
-                ptr := add(ptr, _RESOLVER_ADDRESS_BYTES_SIZE)
-                mstore(ptr, deltaRaw)
-                ptr := add(ptr, _RESOLVER_DELTA_BYTES_SIZE)
-            }
-            let takingFeeAndRecipientLength := mul(_TAKING_FEE_DATA_BYTES_SIZE, shr(_TAKING_FEE_FLAG_BIT_SHIFT, flags))
-            let pointsAndtakingFeeInfoLength := add(mul(pointsCount, _AUCTION_POINT_BYTES_SIZE), takingFeeAndRecipientLength)
-            calldatacopy(ptr, cdPtr, pointsAndtakingFeeInfoLength)
-            ptr := add(ptr, pointsAndtakingFeeInfoLength)
-            mstore(0x40, ptr)
-
-            let len := sub(ptr, reconstructed)
-            detailsHash := keccak256(reconstructed, len)
-        }
-    }
-
-    /**
      * @notice Checks whether a given resolver is valid at the current timestamp.
      *
      * A resolver is considered valid if the current timestamp is greater than
@@ -201,11 +128,9 @@ library FusionDetails {
      *
      * @param details The calldata representing the fusion details
      * @param resolver The address of the resolver to be checked
-     * @param interaction The calldata representing the interactions to be used for callback addresses
      * @return valid Returns true if the resolver is valid at the current timestamp, false otherwise
      */
-    function checkResolver(bytes calldata details, address resolver, bytes calldata interaction) internal view returns (bool valid) {
-        bytes4 invalidWhitelistStructureError = InvalidWhitelistStructure.selector;
+    function checkResolver(bytes calldata details, address resolver) internal view returns (bool valid) {
         assembly ("memory-safe") {
             let flags := byte(0, calldataload(details.offset))
             let resolversCount := shr(_RESOLVERS_LENGTH_BIT_SHIFT, and(flags, _RESOLVERS_LENGTH_MASK))
@@ -219,26 +144,17 @@ library FusionDetails {
             if iszero(valid) {
                 let resolverTimeStart := startTime
                 let ptr := add(details.offset, _RESOLVERS_LIST_BYTES_OFFSET)          // moves pointer to the start of the resolvers list
-                let addressPtr := sub(add(interaction.offset, interaction.length), 1) // moves address pointer to the resolvers array length
-                let arraySize := byte(0, calldataload(addressPtr))
-                addressPtr := sub(addressPtr, mul(_RESOLVER_ADDRESS_BYTES_SIZE, arraySize)) // moves address pointer to the first resolver address
-                if lt(addressPtr, interaction.offset) {
-                    mstore(0, invalidWhitelistStructureError)
-                    revert(0, 4)
-                }
 
                 for { let end := add(ptr, mul(_RESOLVER_BYTES_SIZE, resolversCount)) } lt(ptr, end) { } {
-                    let resolverIndex := byte(0, calldataload(ptr))                   // gets resolver's index
-                    if iszero(lt(resolverIndex, arraySize)) {
-                        mstore(0, invalidWhitelistStructureError)
-                        revert(0, 4)
-                    }
-                    ptr := add(ptr, _RESOLVER_INDEX_BYTES_SIZE)                       // moves pointer to the resolver's delta
-                    resolverTimeStart := add(resolverTimeStart, shr(_RESOLVER_DELTA_BIT_SHIFT, calldataload(ptr))) // gets resolver's time limit
-                    ptr := add(ptr, _RESOLVER_DELTA_BYTES_SIZE)                       // moves pointer to the next resolver
+                    let resolverData := calldataload(ptr)
+                    // get next address from whitelist
+                    let account := shr(_RESOLVER_ADDRESS_BIT_SHIFT, resolverData)
+                    // get its allowed time start
+                    resolverTimeStart := add(resolverTimeStart, and(shr(_RESOLVER_DELTA_BIT_SHIFT, resolverData), _RESOLVER_DELTA_MASK))
+                    // move pointer to the next resolver
+                    ptr := add(ptr, _RESOLVER_BYTES_SIZE)
 
-                    // gets resolver's address and checks if it matches the provided address
-                    let account := shr(_RESOLVER_ADDRESS_BIT_SHIFT, calldataload(add(addressPtr, mul(resolverIndex, _RESOLVER_ADDRESS_BYTES_SIZE))))
+                    // checks if resolver matches the address
                     if eq(account, and(resolver, _RESOLVER_ADDRESS_MASK)) {
                         valid := gt(timestamp(), resolverTimeStart)
                         break
