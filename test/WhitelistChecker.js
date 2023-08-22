@@ -42,7 +42,7 @@ describe('WhitelistChecker', function () {
         it('whitelist check in settleOrders method', async function () {
             const { dai, weth, swap, settlement } = await loadFixture(initContracts);
 
-            const { fusions: [fusionDetails], hashes: [fusionHash], resolvers } = await buildFusions([{}]);
+            const { fusions: [fusionDetails], resolvers } = await buildFusions([{}]);
 
             const order = buildOrder({
                 makerAsset: dai.address,
@@ -50,18 +50,20 @@ describe('WhitelistChecker', function () {
                 makingAmount: ether('10'),
                 takingAmount: ether('0.01'),
                 maker: addr1.address,
+            }, {
+                customData: fusionDetails,
             });
-            order.salt = fusionHash;
 
             const { r, vs } = compactSignature(await signOrder(order, chainId, swap.address, addr1));
-            const fillOrderToData = swap.interface.encodeFunctionData('fillOrderTo', [
+            const fillOrderToData = swap.interface.encodeFunctionData('fillOrderToExt', [
                 order,
                 r,
                 vs,
                 ether('10'),
                 fillWithMakingAmount('0'),
                 addr.address,
-                settlement.address + '01' + trim0x(fusionDetails),
+                order.extension,
+                settlement.address + '01',
             ]) + trim0x(resolvers);
 
             await expect(settlement.settleOrders(fillOrderToData))
@@ -96,7 +98,7 @@ describe('WhitelistChecker', function () {
             });
             const orderHash = await swap.hashOrder(order);
 
-            await expect(settlement.takerInteraction(order, orderHash, addr.address, '1', '1', '0', '0x'))
+            await expect(settlement.takerInteraction(order, orderHash, order.extension, addr.address, '1', '1', '0', '0x'))
                 .to.be.revertedWithCustomError(settlement, 'AccessDenied');
         });
     });
@@ -111,7 +113,7 @@ describe('WhitelistChecker', function () {
         it('whitelist check in settleOrders method', async function () {
             const { dai, weth, swap, settlement, resolver } = await loadFixture(initContractsAndSetStatus);
 
-            const { fusions: [fusionDetails0, fusionDetails1], hashes: [fusionHash0, fusionHash1], resolvers } = await buildFusions([
+            const { fusions: [fusionDetails0, fusionDetails1], resolvers } = await buildFusions([
                 { resolvers: [resolver.address] },
                 { resolvers: [resolver.address] },
             ]);
@@ -122,8 +124,9 @@ describe('WhitelistChecker', function () {
                 makingAmount: ether('100'),
                 takingAmount: ether('0.1'),
                 maker: addr.address,
+            }, {
+                customData: fusionDetails0,
             });
-            order0.salt = fusionHash0;
 
             const order1 = buildOrder({
                 makerAsset: weth.address,
@@ -131,29 +134,32 @@ describe('WhitelistChecker', function () {
                 makingAmount: ether('0.1'),
                 takingAmount: ether('100'),
                 maker: addr1.address,
+            }, {
+                customData: fusionDetails1,
             });
-            order1.salt = fusionHash1;
 
             const { r: r1, vs: vs1 } = compactSignature(await signOrder(order1, chainId, swap.address, addr1));
-            const fillOrderToData1 = swap.interface.encodeFunctionData('fillOrderTo', [
+            const fillOrderToData1 = swap.interface.encodeFunctionData('fillOrderToExt', [
                 order1,
                 r1,
                 vs1,
                 ether('0.1'),
                 fillWithMakingAmount('0'),
                 resolver.address,
-                settlement.address + '01' + trim0x(fusionDetails1),
+                order1.extension,
+                settlement.address + '01',
             ]);
 
             const { r: r0, vs: vs0 } = compactSignature(await signOrder(order0, chainId, swap.address, addr));
-            const fillOrderToData0 = swap.interface.encodeFunctionData('fillOrderTo', [
+            const fillOrderToData0 = swap.interface.encodeFunctionData('fillOrderToExt', [
                 order0,
                 r0,
                 vs0,
                 ether('100'),
                 fillWithMakingAmount('0'),
                 resolver.address,
-                settlement.address + '00' + trim0x(fusionDetails0) + trim0x(fillOrderToData1),
+                order0.extension,
+                settlement.address + '00' + trim0x(fillOrderToData1),
             ]) + trim0x(resolvers);
 
             const txn = await resolver.settleOrders(fillOrderToData0);

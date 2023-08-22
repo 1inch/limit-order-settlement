@@ -62,20 +62,19 @@ describe('Settlement', function () {
         } = dataFormFixture;
         const {
             fusions: [fusionDetails],
-            hashes: [fusionHash],
             resolvers,
         } = await buildFusions([singleFusionData]);
-        const order = buildOrder(orderData);
-        order.salt = fusionHash;
+        const order = buildOrder(orderData, { customData: fusionDetails });
         const { r, vs } = compactSignature(await signOrder(order, chainId, swap.address, orderSigner));
-        const fillOrderToData = swap.interface.encodeFunctionData('fillOrderTo', [
+        const fillOrderToData = swap.interface.encodeFunctionData('fillOrderToExt', [
             order,
             r,
             vs,
             fillingAmount,
             fillWithMakingAmount('0'),
             resolver.address,
-            settlement.address + (isInnermostOrder ? '01' : '00') + trim0x(fusionDetails) + trim0x(additionalDataForSettlement),
+            order.extension,
+            settlement.address + (isInnermostOrder ? '01' : '00') + trim0x(additionalDataForSettlement),
         ]);
         return needAddResolvers ? fillOrderToData + trim0x(resolvers) : fillOrderToData;
     }

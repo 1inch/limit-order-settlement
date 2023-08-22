@@ -4,6 +4,7 @@ pragma solidity 0.8.19;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@1inch/limit-order-protocol-contract/contracts/interfaces/IOrderMixin.sol";
+import "@1inch/limit-order-protocol-contract/contracts/libraries/ExtensionLib.sol";
 import "@1inch/solidity-utils/contracts/libraries/SafeERC20.sol";
 import "./interfaces/ISettlement.sol";
 import "./interfaces/IResolver.sol";
@@ -20,6 +21,7 @@ contract Settlement is ISettlement, FeeBankCharger {
     using DynamicSuffix for bytes;
     using AddressLib for Address;
     using FusionDetails for bytes;
+    using ExtensionLib for bytes;
 
     error AccessDenied();
     error ResolverIsNotWhitelisted();
@@ -68,7 +70,7 @@ contract Settlement is ISettlement, FeeBankCharger {
      * @param data The order to settle with settlement parameters.
      * @return Returns a boolean value indicating the success of the function.
      */
-    function settleOrders(bytes calldata data) public virtual returns(bool) {
+    function settleOrders(bytes calldata data) external virtual returns(bool) {
         _settleOrder(data, msg.sender, 0, msg.data[:0], IERC20(address(0)), 0);
         return true;
     }
@@ -98,6 +100,7 @@ contract Settlement is ISettlement, FeeBankCharger {
     function takerInteraction(
         IOrderMixin.Order calldata order,
         bytes32 /* orderHash */,
+        bytes calldata extension,
         address taker,
         uint256 makingAmount,
         uint256 takingAmount,
@@ -106,21 +109,18 @@ contract Settlement is ISettlement, FeeBankCharger {
     ) public virtual onlyThis(taker) onlyLimitOrderProtocol returns(uint256 offeredTakingAmount) {
         (DynamicSuffix.Data calldata suffix, bytes calldata tokensAndAmounts, bytes calldata args) = extraData.decodeSuffix();
 
-        bytes calldata fusionDetails = args[1:];
-        fusionDetails = fusionDetails[:fusionDetails.detailsLength()];
+        bytes calldata fusionDetails = extension.customData();
 
         offeredTakingAmount = takingAmount * (_BASE_POINTS + fusionDetails.rateBump()) / _BASE_POINTS;
         Address takingFeeData = fusionDetails.takingFeeData();
         uint256 takingFeeAmount = offeredTakingAmount * takingFeeData.getUint32(_TAKING_FEE_RATIO_OFFSET) / _TAKING_FEE_BASE;
-
-        args = args[1 + fusionDetails.length:];  // remove fusion details
 
         IERC20 token = IERC20(order.takerAsset.get());
 
         address resolver = suffix.resolver.get();
         uint256 resolverFee = suffix.resolverFee + (_ORDER_FEE_BASE_POINTS * fusionDetails.resolverFee() * makingAmount + order.makingAmount - 1) / order.makingAmount;
         unchecked {
-            if (extraData[0] == _FINALIZE_INTERACTION) {
+            if (args[0] == _FINALIZE_INTERACTION) {
                 bytes memory allTokensAndAmounts = new bytes(tokensAndAmounts.length + 0x40);
                 assembly ("memory-safe") {
                     let ptr := add(allTokensAndAmounts, 0x20)
@@ -132,10 +132,10 @@ contract Settlement is ISettlement, FeeBankCharger {
 
                 _chargeFee(resolver, resolverFee);
                 uint256 resolversLength = uint8(args[args.length - 1]);
-                bool success = IResolver(resolver).resolveOrders(allTokensAndAmounts, args[:args.length - 1 - resolversLength * _RESOLVER_ADDRESS_BYTES_SIZE]);
+                bool success = IResolver(resolver).resolveOrders(allTokensAndAmounts, args[1:args.length - 1 - resolversLength * _RESOLVER_ADDRESS_BYTES_SIZE]);
                 if (!success) revert ResolveFailed();
             } else {
-                _settleOrder(args, resolver, resolverFee, tokensAndAmounts, token, offeredTakingAmount + takingFeeAmount);
+                _settleOrder(args[1:], resolver, resolverFee, tokensAndAmounts, token, offeredTakingAmount + takingFeeAmount);
             }
         }
 
@@ -145,22 +145,25 @@ contract Settlement is ISettlement, FeeBankCharger {
         token.forceApprove(address(_limitOrderProtocol), offeredTakingAmount);
     }
 
-    struct FillOrderToArgs {
+    struct FillOrderToExtArgs {
         IOrderMixin.Order order;
         bytes32 r;
         bytes32 vs;
         uint256 amount;
         TakerTraits takerTraits;
         address target;
+        bytes extension;
         bytes interaction;
     }
 
-    struct FillContractOrderArgs {
+    struct FillContractOrderExtArgs {
         IOrderMixin.Order order;
         bytes signature;
         uint256 amount;
         TakerTraits takerTraits;
         address target;
+        bytes permit;
+        bytes extension;
         bytes interaction;
     }
 
@@ -169,22 +172,25 @@ contract Settlement is ISettlement, FeeBankCharger {
      * @dev Based on the selector determines calldata type and fetches the interaction.
      * @param data The data to process.
      * @return interaction Returns the interaction data.
+     * @return fusionDetails Returns the fusionDetails data.
      */
-    function _getInteraction(bytes calldata data) internal pure returns(bytes calldata interaction) {
+    function _getInteractionAndFusionDetails(bytes calldata data) internal pure returns(bytes calldata interaction, bytes calldata fusionDetails) {
         bytes4 selector = bytes4(data);
-        if (selector == IOrderMixin.fillOrderTo.selector) {
-            FillOrderToArgs calldata args;
+        if (selector == IOrderMixin.fillOrderToExt.selector) {
+            FillOrderToExtArgs calldata args;
             assembly ("memory-safe") {
                 args := add(data.offset, 4)
             }
             interaction = args.interaction;
+            fusionDetails = args.extension.customData();
         }
-        else if (selector == IOrderMixin.fillContractOrder.selector) {
-            FillContractOrderArgs calldata args;
+        else if (selector == IOrderMixin.fillContractOrderExt.selector) {
+            FillContractOrderExtArgs calldata args;
             assembly ("memory-safe") {
                 args := add(data.offset, 4)
             }
             interaction = args.interaction;
+            fusionDetails = args.extension.customData();
         }
         else {
             revert IncorrectSelector();
@@ -209,13 +215,9 @@ contract Settlement is ISettlement, FeeBankCharger {
         IERC20 token,
         uint256 newAmount
     ) private {
-        bytes calldata interaction = _getInteraction(args);
-        bytes calldata fusionDetails = interaction[21:];
-        fusionDetails = fusionDetails[:fusionDetails.detailsLength()];
+        (bytes calldata interaction, bytes calldata fusionDetails) = _getInteractionAndFusionDetails(args);
 
         if (address(bytes20(interaction)) != address(this)) revert WrongInteractionTarget();
-        // salt is the first word in Order struct, and we validate that lower 160 bits of salt are hash of fusionDetails
-        if (uint256(fusionDetails.computeHash(args)) & type(uint160).max != uint256(bytes32(args[4:])) & type(uint160).max) revert FusionDetailsMismatch();
         if (!fusionDetails.checkResolver(resolver, args)) revert ResolverIsNotWhitelisted();
 
         uint256 suffixLength;
@@ -255,7 +257,7 @@ contract Settlement is ISettlement, FeeBankCharger {
                 mstore(add(pointer, 0x40), add(tokensAndAmounts.length, 0x40))
             }
 
-            // Call fillOrderTo
+            // Call LimitOrderProtocol
             if iszero(call(gas(), limitOrderProtocol, 0, ptr, add(add(args.length, suffixLength), resolversBytesSize), 0, 0)) {
                 returndatacopy(ptr, 0, returndatasize())
                 revert(ptr, returndatasize())

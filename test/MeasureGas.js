@@ -51,7 +51,7 @@ describe('MeasureGas', function () {
     it('1 fill for 1 order', async function () {
         const { dai, weth, swap, settlement, resolvers } = await loadFixture(initContractsAndApproves);
 
-        const { fusions: [fusionDetails], hashes: [fusionDetailsHash], resolvers: fusionResolvers } = await buildFusions([
+        const { fusions: [fusionDetails], resolvers: fusionResolvers } = await buildFusions([
             { resolvers: [resolvers[0].address] },
         ]);
         const order = buildOrder({
@@ -61,8 +61,9 @@ describe('MeasureGas', function () {
             makingAmount: ether('100'),
             takingAmount: ether('0.1'),
             makerTraits: buildMakerTraits({ allowedSender: settlement.address }),
+        }, {
+            customData: fusionDetails,
         });
-        order.salt = fusionDetailsHash;
         const { r, vs } = compactSignature(await signOrder(order, chainId, swap.address, addrs[1]));
 
         const resolverCalldata = abiCoder.encode(
@@ -79,14 +80,15 @@ describe('MeasureGas', function () {
             ],
         );
 
-        const fillOrderToData = swap.interface.encodeFunctionData('fillOrderTo', [
+        const fillOrderToData = swap.interface.encodeFunctionData('fillOrderToExt', [
             order,
             r,
             vs,
             ether('100'),
             fillWithMakingAmount('0'),
             resolvers[0].address,
-            settlement.address + '01' + trim0x(fusionDetails) + trim0x(resolverCalldata),
+            order.extension,
+            settlement.address + '01' + trim0x(resolverCalldata),
         ]) + trim0x(fusionResolvers);
 
         await weth.approve(resolvers[0].address, ether('0.1'));
@@ -101,7 +103,7 @@ describe('MeasureGas', function () {
         const { dai, weth, swap, settlement, resolvers } = await loadFixture(initContractsAndApproves);
 
         const resolverAddresses = resolvers.map(r => r.address);
-        const { fusions: fusionDetails, hashes: fusionHashes, resolvers: fusionResolvers } = await buildFusions([
+        const { fusions: fusionDetails, resolvers: fusionResolvers } = await buildFusions([
             { resolvers: resolverAddresses },
             { resolvers: resolverAddresses },
             { resolvers: resolverAddresses },
@@ -120,8 +122,9 @@ describe('MeasureGas', function () {
                 makingAmount: ether((i + 1).toString()),
                 takingAmount: ether(((i + 1) / 100).toString()),
                 makerTraits: buildMakerTraits({ allowedSender: settlement.address }),
+            }, {
+                customData: fusionDetails[i],
             });
-            orders[i].salt = fusionHashes[i];
             const { r, vs } = compactSignature(await signOrder(orders[i], chainId, swap.address, addrs[1]));
             signatures[i] = { r, vs };
         }
@@ -132,31 +135,34 @@ describe('MeasureGas', function () {
             makingAmount: ether('0.1'), // takingAmount/100
             takingAmount: ether('10'), // (max_i - 1) * max_i / 2
             makerTraits: settlement.address,
+        }, {
+            customData: fusionDetails[4],
         });
-        orders[4].salt = fusionHashes[4];
         const { r, vs } = compactSignature(await signOrder(orders[4], chainId, swap.address, addrs[0]));
         signatures[4] = { r, vs };
 
         // Encode data for fillingg orders
         const fillOrdersToData = [];
-        fillOrdersToData[4] = swap.interface.encodeFunctionData('fillOrderTo', [
+        fillOrdersToData[4] = swap.interface.encodeFunctionData('fillOrderToExt', [
             orders[4],
             signatures[4].r,
             signatures[4].vs,
             ether('0.1'),
             fillWithMakingAmount('0'),
             resolvers[0].address,
-            settlement.address + '01' + trim0x(fusionDetails[4]),
+            orders[4].extension,
+            settlement.address + '01',
         ]);
         for (let i = 3; i >= 0; i--) {
-            fillOrdersToData[i] = swap.interface.encodeFunctionData('fillOrderTo', [
+            fillOrdersToData[i] = swap.interface.encodeFunctionData('fillOrderToExt', [
                 orders[i],
                 signatures[i].r,
                 signatures[i].vs,
                 ether((i + 1).toString()),
                 fillWithMakingAmount('0'),
                 resolvers[0].address,
-                settlement.address + '00' + trim0x(fusionDetails[i]) + trim0x(fillOrdersToData[i + 1]),
+                orders[i].extension,
+                settlement.address + '00' + trim0x(fillOrdersToData[i + 1]),
             ]);
         }
         fillOrdersToData[0] += trim0x(fusionResolvers);
