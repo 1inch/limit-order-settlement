@@ -106,7 +106,7 @@ contract Settlement is ISettlement, FeeBankCharger {
         uint256 takingAmount,
         uint256 /* remainingMakingAmount */,
         bytes calldata extraData
-    ) public virtual onlyThis(taker) onlyLimitOrderProtocol returns(uint256 offeredTakingAmount) {
+    ) external virtual onlyThis(taker) onlyLimitOrderProtocol returns(uint256 offeredTakingAmount) {
         (DynamicSuffix.Data calldata suffix, bytes calldata tokensAndAmounts, bytes calldata args) = extraData.decodeSuffix();
 
         bytes calldata fusionDetails = extension.customData();
