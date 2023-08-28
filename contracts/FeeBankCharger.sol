@@ -24,12 +24,19 @@ contract FeeBankCharger is IFeeBankCharger {
      * @dev Modifier to check if the sender is a feeBank contract.
      */
     modifier onlyFeeBank() {
-        if (msg.sender != address(feeBank)) revert OnlyFeeBankAccess();
+        checkFeeBank();
         _;
     }
 
     constructor(IERC20 token) {
         feeBank = new FeeBank(this, token, msg.sender);
+    }
+
+    /**
+    * @dev Internal function to be called by the modifier 
+    */
+    function checkFeeBank() internal view {
+        if (msg.sender != address(feeBank)) revert OnlyFeeBankAccess();
     }
 
     /**
