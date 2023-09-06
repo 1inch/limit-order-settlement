@@ -6,6 +6,8 @@ cache-zk
 **/solcInputs
 contracts/hardhat-dependency-compiler
 
+deployments/**/SettlementStaging.json
+
 node_modules
 
 coverage
