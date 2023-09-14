@@ -1,4 +1,4 @@
-const { expect, time, ether, constants } = require('@1inch/solidity-utils');
+const { expect, time, ether, deployContract, constants } = require('@1inch/solidity-utils');
 const { ethers } = require('hardhat');
 const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
 const { expBase } = require('./helpers/utils');
@@ -22,27 +22,25 @@ describe('PowerPod', function () {
             await delegation.connect(user).delegate(user.address);
         };
 
+        const depositAndDelegateTo = async (st1inch, delegation, from, to, amount, duration = commonLockDuration) => {
+            await st1inch.connect(from).deposit(amount, duration);
+            await st1inch.connect(from).addPod(delegation.address);
+            await delegation.connect(from).delegate(to);
+        };
+
         const accounts = await ethers.getSigners();
         const [owner, alice] = accounts;
 
-        const TokenPermitMock = await ethers.getContractFactory('ERC20PermitMock');
-        const oneInch = await TokenPermitMock.deploy('1inch', '1inch', owner.address, ether('200'));
-        await oneInch.deployed();
+        const oneInch = await deployContract('ERC20PermitMock', ['1inch', '1inch', owner.address, ether('200')]);
         await oneInch.transfer(alice.address, ether('100'));
 
-        const St1inch = await ethers.getContractFactory('St1inch');
-        const st1inch = await St1inch.deploy(oneInch.address, expBase, owner.address);
-        await st1inch.deployed();
+        const st1inch = await deployContract('St1inch', [oneInch.address, expBase, owner.address]);
         await oneInch.approve(st1inch.address, ether('100'));
         await oneInch.connect(alice).approve(st1inch.address, ether('100'));
 
-        const PowerPod = await ethers.getContractFactory('PowerPod');
-        const delegation = await PowerPod.deploy('PowerPod', 'PP', st1inch.address);
-        await delegation.deployed();
+        const delegation = await deployContract('PowerPod', ['PowerPod', 'PP', st1inch.address]);
 
-        const WhitelistRegistry = await ethers.getContractFactory('WhitelistRegistry');
-        const whitelistRegistry = await WhitelistRegistry.deploy(delegation.address, BALANCE_THRESHOLD);
-        await whitelistRegistry.deployed();
+        const whitelistRegistry = await deployContract('WhitelistRegistry', [delegation.address, BALANCE_THRESHOLD]);
         // fill all whitelist into WhitelistRegistry
         for (let i = 0; i < MAX_WHITELISTED; ++i) {
             const userIndex = i + 2;
@@ -51,12 +49,6 @@ describe('PowerPod', function () {
             await whitelistRegistry.connect(user).register();
         }
         await stakeAndRegisterInDelegation(st1inch, delegation, owner, ether('1'), 0);
-
-        const depositAndDelegateTo = async (st1inch, delegation, from, to, amount, duration = commonLockDuration) => {
-            await st1inch.connect(from).deposit(amount, duration);
-            await st1inch.connect(from).addPod(delegation.address);
-            await delegation.connect(from).delegate(to);
-        };
 
         return {
             contracts: { st1inch, delegation, whitelistRegistry },
