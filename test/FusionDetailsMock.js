@@ -1,4 +1,3 @@
-const { ethers } = require('hardhat');
 const { BigNumber } = require('ethers');
 const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
 const { expect, constants, time, deployContract } = require('@1inch/solidity-utils');
