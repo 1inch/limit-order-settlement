@@ -24,7 +24,7 @@ describe('FeeBank', function () {
         await matcher.deployed();
 
         const FeeBank = await ethers.getContractFactory('FeeBank');
-        const feeBank = await FeeBank.attach(await matcher.feeBank());
+        const feeBank = FeeBank.attach(await matcher.feeBank());
 
         await inch.transfer(addr1.address, ether('100'));
         await inch.approve(feeBank.address, ether('1000'));

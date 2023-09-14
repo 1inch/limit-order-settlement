@@ -26,7 +26,7 @@ describe('Settlement', function () {
         await settlement.deployed();
 
         const FeeBank = await ethers.getContractFactory('FeeBank');
-        const feeBank = await FeeBank.attach(await settlement.feeBank());
+        const feeBank = FeeBank.attach(await settlement.feeBank());
 
         const ResolverMock = await ethers.getContractFactory('ResolverMock');
         const resolver = await ResolverMock.deploy(settlement.address, swap.address);
