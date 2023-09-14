@@ -1,4 +1,4 @@
-const { time, expect, ether, trim0x, timeIncreaseTo, getPermit, getPermit2, compressPermit, permit2Contract } = require('@1inch/solidity-utils');
+const { time, expect, ether, trim0x, timeIncreaseTo, getPermit, getPermit2, compressPermit, permit2Contract, deployContract } = require('@1inch/solidity-utils');
 const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
 const { ethers } = require('hardhat');
 const { deploySwapTokens, getChainId } = require('./helpers/fixtures');
@@ -21,9 +21,7 @@ describe('Settlement', function () {
         await weth.deposit({ value: ether('1') });
         await weth.connect(addr1).deposit({ value: ether('1') });
 
-        const SettlementMock = await ethers.getContractFactory('SettlementMock');
-        const settlement = await SettlementMock.deploy(swap.address, inch.address);
-        await settlement.deployed();
+        const settlement = await deployContract('SettlementMock', [swap.address, inch.address]);
 
         const FeeBank = await ethers.getContractFactory('FeeBank');
         const feeBank = FeeBank.attach(await settlement.feeBank());

@@ -1,14 +1,12 @@
 const { ethers } = require('hardhat');
 const { BigNumber } = require('ethers');
 const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
-const { expect, constants, time } = require('@1inch/solidity-utils');
+const { expect, constants, time, deployContract } = require('@1inch/solidity-utils');
 const { buildFusions } = require('./helpers/fusionUtils');
 
 describe('FusionDetailsMock', function () {
     async function initContracts() {
-        const FusionDetailsMock = await ethers.getContractFactory('FusionDetailsMock');
-        const fusionDetailsMock = await FusionDetailsMock.deploy();
-        await fusionDetailsMock.deployed();
+        const fusionDetailsMock = await deployContract('FusionDetailsMock', []);
         return { fusionDetailsMock };
     }
 

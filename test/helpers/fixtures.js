@@ -1,15 +1,8 @@
 const { ethers } = require('hardhat');
-const { ether } = require('@1inch/solidity-utils');
+const { ether, deployContract } = require('@1inch/solidity-utils');
 
 async function getChainId() {
     return (await ethers.provider.getNetwork()).chainId;
-}
-
-async function deployContract(contractFactoryName, params = []) {
-    const Contract = await ethers.getContractFactory(contractFactoryName);
-    const contract = await Contract.deploy(...params);
-    await contract.deployed();
-    return contract;
 }
 
 async function deploySwapTokens() {
@@ -21,16 +14,8 @@ async function deploySwapTokens() {
     return { dai, weth, inch, swap };
 }
 
-async function deploySimpleRegistry() {
-    const WhitelistRegistrySimple = await ethers.getContractFactory('WhitelistRegistrySimple');
-    const whitelistRegistrySimple = await WhitelistRegistrySimple.deploy();
-    await whitelistRegistrySimple.deployed();
-    return whitelistRegistrySimple;
-}
-
 module.exports = {
     deployContract,
-    deploySimpleRegistry,
     deploySwapTokens,
     getChainId,
 };

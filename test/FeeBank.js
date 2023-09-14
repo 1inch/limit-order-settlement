@@ -1,4 +1,4 @@
-const { expect, ether, getPermit } = require('@1inch/solidity-utils');
+const { expect, ether, getPermit, deployContract } = require('@1inch/solidity-utils');
 const { ethers } = require('hardhat');
 const { BigNumber: BN } = require('ethers');
 const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
@@ -15,13 +15,9 @@ describe('FeeBank', function () {
     });
 
     async function initContracts() {
-        const TokenPermitMock = await ethers.getContractFactory('ERC20PermitMock');
-        const inch = await TokenPermitMock.deploy('1INCH', '1INCH', addr.address, ether('1000'));
-        await inch.deployed();
+        const inch = await deployContract('ERC20PermitMock', ['1INCH', '1INCH', addr.address, ether('1000')]);
         const { swap } = await deploySwapTokens();
-        const SettlementMock = await ethers.getContractFactory('SettlementMock');
-        const matcher = await SettlementMock.deploy(swap.address, inch.address);
-        await matcher.deployed();
+        const matcher = await deployContract('SettlementMock', [swap.address, inch.address]);
 
         const FeeBank = await ethers.getContractFactory('FeeBank');
         const feeBank = FeeBank.attach(await matcher.feeBank());
