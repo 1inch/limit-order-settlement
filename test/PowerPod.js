@@ -53,7 +53,6 @@ describe('PowerPod', function () {
         return {
             contracts: { st1inch, delegation, whitelistRegistry },
             accounts: { owner, alice, whitelistedUser1, clearAddress },
-            functions: { depositAndDelegateTo },
         };
     }
 
@@ -74,7 +73,6 @@ describe('PowerPod', function () {
             const {
                 contracts: { st1inch, delegation, whitelistRegistry },
                 accounts: { owner, alice },
-                functions: { depositAndDelegateTo },
             } = await loadFixture(initContracts);
             // owner shouldn't register becouse his st1inch balance less that all of the whitelisted accounts
             await expect(whitelistRegistry.register()).to.be.revertedWithCustomError(
@@ -105,7 +103,6 @@ describe('PowerPod', function () {
             const {
                 contracts: { st1inch, delegation },
                 accounts: { owner, alice },
-                functions: { depositAndDelegateTo },
             } = await loadFixture(initContracts);
             const DelegatedShare = await ethers.getContractFactory('DelegatedShare');
             const delegatedShare = DelegatedShare.attach(await delegation.registration(owner.address));
@@ -125,7 +122,6 @@ describe('PowerPod', function () {
             const {
                 contracts: { st1inch, delegation, whitelistRegistry },
                 accounts: { owner, alice, whitelistedUser1 },
-                functions: { depositAndDelegateTo },
             } = await loadFixture(initContracts);
             await depositAndDelegateTo(st1inch, delegation, alice, owner.address, ether('8'));
             await whitelistRegistry.register();
@@ -139,7 +135,6 @@ describe('PowerPod', function () {
             const {
                 contracts: { st1inch, delegation, whitelistRegistry },
                 accounts: { owner, alice, whitelistedUser1 },
-                functions: { depositAndDelegateTo },
             } = await loadFixture(initContracts);
             await depositAndDelegateTo(st1inch, delegation, alice, owner.address, ether('8'));
             await whitelistRegistry.register();
