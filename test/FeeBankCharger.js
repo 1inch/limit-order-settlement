@@ -46,11 +46,11 @@ describe('FeeBankCharger', function () {
             const { contracts: { feeBank } } = data;
             const creditAmount = ether('100');
             await feeBank.deposit(creditAmount);
-            return { ...data, other: { creditAmount } };
+            return { ...data, others: { creditAmount } };
         }
 
         it('should decrease credit', async function () {
-            const { contracts: { charger, feeBank }, accounts: { owner, alice }, other: { creditAmount } } = await loadFixture(initContractsAndAllowance);
+            const { contracts: { charger, feeBank }, accounts: { owner, alice }, others: { creditAmount } } = await loadFixture(initContractsAndAllowance);
             const amount = ether('10');
             expect(await charger.availableCredit(owner.address)).to.equal(creditAmount);
             await feeBank.withdrawTo(alice.address, amount);

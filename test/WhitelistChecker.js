@@ -30,13 +30,13 @@ describe('WhitelistChecker', function () {
         return {
             contracts: { dai, weth, swap, whitelistRegistrySimple, settlement, resolver },
             accounts: { owner, alice },
-            other: { chainId },
+            others: { chainId },
         };
     }
 
     describe('should not work with non-whitelisted address', function () {
         it('whitelist check in settleOrders method', async function () {
-            const { contracts: { dai, weth, swap, settlement }, accounts: { owner, alice }, other: { chainId } } = await loadFixture(initContracts);
+            const { contracts: { dai, weth, swap, settlement }, accounts: { owner, alice }, others: { chainId } } = await loadFixture(initContracts);
 
             const { fusions: [fusionDetails], hashes: [fusionHash], resolvers } = await buildFusions([{}]);
 
@@ -65,7 +65,7 @@ describe('WhitelistChecker', function () {
         });
 
         it('onlyThis modifier in takerInteraction method', async function () {
-            const { contracts: { dai, weth, swap, settlement }, accounts: { owner, alice }, other: { chainId } } = await loadFixture(initContracts);
+            const { contracts: { dai, weth, swap, settlement }, accounts: { owner, alice }, others: { chainId } } = await loadFixture(initContracts);
 
             const order = buildOrder({
                 makerAsset: dai.address,
@@ -106,7 +106,7 @@ describe('WhitelistChecker', function () {
         }
 
         it('whitelist check in settleOrders method', async function () {
-            const { contracts: { dai, weth, swap, settlement, resolver }, accounts: { owner, alice }, other: { chainId } } = await loadFixture(initContractsAndSetStatus);
+            const { contracts: { dai, weth, swap, settlement, resolver }, accounts: { owner, alice }, others: { chainId } } = await loadFixture(initContractsAndSetStatus);
 
             const { fusions: [fusionDetails0, fusionDetails1], hashes: [fusionHash0, fusionHash1], resolvers } = await buildFusions([
                 { resolvers: [resolver.address] },

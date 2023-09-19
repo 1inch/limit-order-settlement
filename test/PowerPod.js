@@ -79,7 +79,7 @@ describe('PowerPod', function () {
                 whitelistRegistry,
                 'BalanceLessThanThreshold',
             );
-            // create other stake and delegate to owner
+            // create others stake and delegate to owner
             await depositAndDelegateTo(st1inch, delegation, alice, owner.address, ether('2'));
             // register owner into whitelistRegistry and chack that
             await whitelistRegistry.register();
@@ -131,7 +131,7 @@ describe('PowerPod', function () {
             expect(await whitelistRegistry.getWhitelist()).to.not.contain(owner.address);
         });
 
-        it('should decrease delegatee balance, if delegator delegate to other account', async function () {
+        it('should decrease delegatee balance, if delegator delegate to others account', async function () {
             const {
                 contracts: { st1inch, delegation, whitelistRegistry },
                 accounts: { owner, alice, whitelistedUser1 },

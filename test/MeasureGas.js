@@ -37,7 +37,7 @@ describe('MeasureGas', function () {
         return {
             contracts: { dai, weth, swap, settlement, feeBank, resolvers },
             accounts: { owner, alice },
-            other: { chainId, abiCoder },
+            others: { chainId, abiCoder },
         };
     }
 
@@ -52,7 +52,7 @@ describe('MeasureGas', function () {
     }
 
     it('1 fill for 1 order', async function () {
-        const { contracts: { dai, weth, swap, settlement, resolvers }, accounts: { owner, alice }, other: { chainId, abiCoder } } = await loadFixture(initContractsAndApproves);
+        const { contracts: { dai, weth, swap, settlement, resolvers }, accounts: { owner, alice }, others: { chainId, abiCoder } } = await loadFixture(initContractsAndApproves);
 
         const { fusions: [fusionDetails], hashes: [fusionDetailsHash], resolvers: fusionResolvers } = await buildFusions([
             { resolvers: [resolvers[0].address] },
@@ -101,7 +101,7 @@ describe('MeasureGas', function () {
     });
 
     it('1 fill for 5 orders in a batch', async function () {
-        const { contracts: { dai, weth, swap, settlement, resolvers }, accounts: { alice, owner }, other: { chainId } } = await loadFixture(initContractsAndApproves);
+        const { contracts: { dai, weth, swap, settlement, resolvers }, accounts: { alice, owner }, others: { chainId } } = await loadFixture(initContractsAndApproves);
 
         const resolverAddresses = resolvers.map(r => r.address);
         const { fusions: fusionDetails, hashes: fusionHashes, resolvers: fusionResolvers } = await buildFusions([

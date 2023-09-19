@@ -24,7 +24,7 @@ describe('FeeBank', function () {
         return {
             contracts: { inch, feeBank, matcher },
             accounts: { owner, alice },
-            other: { chainId },
+            others: { chainId },
         };
     }
 
@@ -62,7 +62,7 @@ describe('FeeBank', function () {
         });
 
         it('should increase accountDeposits and availableCredit without approve with depositWithPermit()', async function () {
-            const { contracts: { inch, feeBank }, accounts: { owner }, other: { chainId } } = await loadFixture(initContracts);
+            const { contracts: { inch, feeBank }, accounts: { owner }, others: { chainId } } = await loadFixture(initContracts);
             const addrAmount = ether('1');
             await inch.approve(feeBank.address, '0');
             const permit = await getPermit(owner, inch, '1', chainId, feeBank.address, addrAmount);
@@ -75,7 +75,7 @@ describe('FeeBank', function () {
         });
 
         it('should increase accountDeposits and availableCredit without approve with depositForWithPermit()', async function () {
-            const { contracts: { inch, feeBank }, accounts: { owner, alice }, other: { chainId } } = await loadFixture(initContracts);
+            const { contracts: { inch, feeBank }, accounts: { owner, alice }, others: { chainId } } = await loadFixture(initContracts);
             const addrAmount = ether('1');
             await inch.approve(feeBank.address, '0');
             const permit = await getPermit(owner, inch, '1', chainId, feeBank.address, addrAmount);
@@ -94,11 +94,11 @@ describe('FeeBank', function () {
             const { contracts: { feeBank } } = data;
             const totalDepositAmount = ether('100');
             await feeBank.deposit(totalDepositAmount);
-            return { ...data, other: { ...data.other, totalDepositAmount } };
+            return { ...data, others: { ...data.others, totalDepositAmount } };
         }
 
         it('should decrease accountDeposits and availableCredit with withdraw()', async function () {
-            const { contracts: { inch, feeBank }, accounts: { owner }, other: { totalDepositAmount } } = await loadFixture(initContratsAndDeposit);
+            const { contracts: { inch, feeBank }, accounts: { owner }, others: { totalDepositAmount } } = await loadFixture(initContratsAndDeposit);
             const amount = ether('10');
             const addrbalanceBefore = await inch.balanceOf(owner.address);
 
@@ -109,7 +109,7 @@ describe('FeeBank', function () {
         });
 
         it('should decrease accountDeposits and availableCredit with withdrawTo()', async function () {
-            const { contracts: { inch, feeBank }, accounts: { owner, alice }, other: { totalDepositAmount } } = await loadFixture(initContratsAndDeposit);
+            const { contracts: { inch, feeBank }, accounts: { owner, alice }, others: { totalDepositAmount } } = await loadFixture(initContratsAndDeposit);
             const amount = ether('10');
             const alicebalanceBefore = await inch.balanceOf(alice.address);
 
@@ -120,7 +120,7 @@ describe('FeeBank', function () {
         });
 
         it('should not withdrawal more than account have', async function () {
-            const { contracts: { feeBank }, other: { totalDepositAmount } } = await loadFixture(initContratsAndDeposit);
+            const { contracts: { feeBank }, others: { totalDepositAmount } } = await loadFixture(initContratsAndDeposit);
             await expect(feeBank.withdraw(totalDepositAmount + 1n)).to.be.revertedWithPanic(PANIC_CODES.UNDERFLOW);
         });
     });

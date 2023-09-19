@@ -41,7 +41,7 @@ describe('Settlement', function () {
         return {
             contracts: { dai, weth, swap, settlement, feeBank, resolver },
             accounts: { owner, alice, addr2 },
-            other: { chainId, abiCoder },
+            others: { chainId, abiCoder },
         };
     }
 
@@ -57,7 +57,7 @@ describe('Settlement', function () {
     }) {
         const {
             contracts: { swap, settlement, resolver },
-            other: { chainId },
+            others: { chainId },
         } = dataFormFixture;
         const {
             fusions: [fusionDetails],
@@ -127,7 +127,7 @@ describe('Settlement', function () {
         const {
             contracts: { dai, weth, swap, settlement, resolver },
             accounts: { owner, alice },
-            other: { chainId },
+            others: { chainId },
         } = dataFormFixture;
 
         const fillOrderToData1 = await buildCalldataForOrder({
@@ -176,7 +176,7 @@ describe('Settlement', function () {
         const {
             contracts: { dai, weth, swap, settlement, resolver },
             accounts: { owner, alice },
-            other: { chainId },
+            others: { chainId },
         } = dataFormFixture;
 
         const fillOrderToData1 = await buildCalldataForOrder({
@@ -278,7 +278,7 @@ describe('Settlement', function () {
         const {
             contracts: { dai, weth, settlement, resolver },
             accounts: { owner, alice },
-            other: { abiCoder },
+            others: { abiCoder },
         } = dataFormFixture;
 
         const resolverArgs = abiCoder.encode(
@@ -405,14 +405,14 @@ describe('Settlement', function () {
             const {
                 contracts: { dai, weth, settlement, resolver },
                 accounts: { owner, alice },
-                other: { abiCoder },
+                others: { abiCoder },
             } = dataFormFixture;
 
             let actualTakingAmount = targetTakingAmount;
             if (actualTakingAmount === 0n) {
                 actualTakingAmount = ether('0.1');
                 const ts = await time.latest();
-                // TODO: avoid this shit (as well as any other computations in tests)
+                // TODO: avoid this shit (as well as any others computations in tests)
                 if (ts < startTime + auctionDelay + auctionDuration) {
                     // actualTakingAmount = actualTakingAmount * (
                     //    _BASE_POINTS + initialRateBump * (startTime + auctionDelay + auctionDuration - currentTimestamp) / auctionDuration
@@ -619,7 +619,7 @@ describe('Settlement', function () {
         const {
             contracts: { dai, weth, settlement, resolver },
             accounts: { owner, alice },
-            other: { abiCoder },
+            others: { abiCoder },
         } = dataFormFixture;
 
         const partialModifier = 40n;
@@ -673,7 +673,7 @@ describe('Settlement', function () {
         const {
             contracts: { dai, weth, settlement, resolver },
             accounts: { owner, alice },
-            other: { abiCoder },
+            others: { abiCoder },
         } = dataFormFixture;
 
         const minimalPartialModifier = 1n;
@@ -728,7 +728,7 @@ describe('Settlement', function () {
         const {
             contracts: { dai, weth, settlement, resolver },
             accounts: { owner, alice },
-            other: { BACK_ORDER_FEE },
+            others: { BACK_ORDER_FEE },
         } = dataFormFixture;
 
         const fillOrderToData1 = await buildCalldataForOrder({
