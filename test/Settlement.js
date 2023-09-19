@@ -5,21 +5,22 @@ const { deploySwapTokens, getChainId } = require('./helpers/fixtures');
 const { buildOrder, signOrder, compactSignature, fillWithMakingAmount, buildMakerTraits } = require('@1inch/limit-order-protocol-contract/test/helpers/orderUtils');
 const { buildFusions } = require('./helpers/fusionUtils');
 
+const ORDER_FEE = 100n;
+const BACK_ORDER_FEE = 125n;
+const BASE_POINTS = ether('0.001'); // 1e15
+
 describe('Settlement', function () {
     async function initContracts() {
-        const basePoints = ether('0.001'); // 1e15
-        const orderFee = 100n;
-        const backOrderFee = 125n;
         const abiCoder = ethers.utils.defaultAbiCoder;
         const chainId = await getChainId();
-        const [addr, addr1, addr2] = await ethers.getSigners();
+        const [owner, alice, addr2] = await ethers.getSigners();
 
         const { dai, weth, inch, swap } = await deploySwapTokens();
 
-        await dai.transfer(addr1.address, ether('100'));
-        await inch.mint(addr.address, ether('100'));
+        await dai.transfer(alice.address, ether('100'));
+        await inch.mint(owner.address, ether('100'));
         await weth.deposit({ value: ether('1') });
-        await weth.connect(addr1).deposit({ value: ether('1') });
+        await weth.connect(alice).deposit({ value: ether('1') });
 
         const settlement = await deployContract('SettlementMock', [swap.address, inch.address]);
 
@@ -33,14 +34,14 @@ describe('Settlement', function () {
         await feeBank.depositFor(resolver.address, ether('100'));
 
         await dai.approve(swap.address, ether('100'));
-        await dai.connect(addr1).approve(swap.address, ether('100'));
+        await dai.connect(alice).approve(swap.address, ether('100'));
         await weth.approve(swap.address, ether('1'));
-        await weth.connect(addr1).approve(swap.address, ether('1'));
+        await weth.connect(alice).approve(swap.address, ether('1'));
 
         return {
             contracts: { dai, weth, swap, settlement, feeBank, resolver },
-            accounts: { addr, addr1, addr2 },
-            other: { chainId, abiCoder, basePoints, orderFee, backOrderFee },
+            accounts: { owner, alice, addr2 },
+            other: { chainId, abiCoder },
         };
     }
 
@@ -82,12 +83,12 @@ describe('Settlement', function () {
         const dataFormFixture = await loadFixture(initContracts);
         const {
             contracts: { dai, weth, settlement, resolver },
-            accounts: { addr, addr1 },
+            accounts: { owner, alice },
         } = dataFormFixture;
 
         const fillOrderToData1 = await buildCalldataForOrder({
             orderData: {
-                maker: addr1.address,
+                maker: alice.address,
                 makerAsset: weth.address,
                 takerAsset: dai.address,
                 makingAmount: ether('0.11'),
@@ -95,14 +96,14 @@ describe('Settlement', function () {
                 makerTraits: buildMakerTraits({ allowedSender: settlement.address }),
             },
             singleFusionData: { resolvers: [resolver.address] },
-            orderSigner: addr1,
+            orderSigner: alice,
             dataFormFixture,
             isInnermostOrder: true,
         });
 
         const fillOrderToData0 = await buildCalldataForOrder({
             orderData: {
-                maker: addr.address,
+                maker: owner.address,
                 makerAsset: dai.address,
                 takerAsset: weth.address,
                 makingAmount: ether('100'),
@@ -110,28 +111,28 @@ describe('Settlement', function () {
                 makerTraits: buildMakerTraits({ allowedSender: settlement.address }),
             },
             singleFusionData: { resolvers: [resolver.address] },
-            orderSigner: addr,
+            orderSigner: owner,
             dataFormFixture,
             additionalDataForSettlement: fillOrderToData1,
             needAddResolvers: true,
         });
 
         const txn = await resolver.settleOrders(fillOrderToData0);
-        await expect(txn).to.changeTokenBalances(dai, [addr, addr1], [ether('-100'), ether('100')]);
-        await expect(txn).to.changeTokenBalances(weth, [addr, addr1], [ether('0.11'), ether('-0.11')]);
+        await expect(txn).to.changeTokenBalances(dai, [owner, alice], [ether('-100'), ether('100')]);
+        await expect(txn).to.changeTokenBalances(weth, [owner, alice], [ether('0.11'), ether('-0.11')]);
     });
 
     it('settle orders with permits, permit', async function () {
         const dataFormFixture = await loadFixture(initContracts);
         const {
             contracts: { dai, weth, swap, settlement, resolver },
-            accounts: { addr, addr1 },
+            accounts: { owner, alice },
             other: { chainId },
         } = dataFormFixture;
 
         const fillOrderToData1 = await buildCalldataForOrder({
             orderData: {
-                maker: addr1.address,
+                maker: alice.address,
                 makerAsset: weth.address,
                 takerAsset: dai.address,
                 makingAmount: ether('0.11'),
@@ -139,14 +140,14 @@ describe('Settlement', function () {
                 makerTraits: buildMakerTraits({ allowedSender: settlement.address }),
             },
             singleFusionData: { resolvers: [resolver.address] },
-            orderSigner: addr1,
+            orderSigner: alice,
             dataFormFixture,
             isInnermostOrder: true,
         });
 
         const fillOrderToData0 = await buildCalldataForOrder({
             orderData: {
-                maker: addr.address,
+                maker: owner.address,
                 makerAsset: dai.address,
                 takerAsset: weth.address,
                 makingAmount: ether('100'),
@@ -154,33 +155,33 @@ describe('Settlement', function () {
                 makerTraits: buildMakerTraits({ allowedSender: settlement.address }),
             },
             singleFusionData: { resolvers: [resolver.address] },
-            orderSigner: addr,
+            orderSigner: owner,
             dataFormFixture,
             additionalDataForSettlement: fillOrderToData1,
             needAddResolvers: true,
         });
 
-        await weth.connect(addr1).approve(swap.address, ether('0.11'));
-        await dai.connect(addr).approve(swap.address, 0n); // remove direct approve
-        const permit0 = compressPermit(await getPermit(addr, dai, '1', chainId, swap.address, ether('100')));
+        await weth.connect(alice).approve(swap.address, ether('0.11'));
+        await dai.connect(owner).approve(swap.address, 0n); // remove direct approve
+        const permit0 = compressPermit(await getPermit(owner, dai, '1', chainId, swap.address, ether('100')));
         const packing = (1n << 248n) | 1n;
         const txn = await resolver.settleOrdersWithPermits(fillOrderToData0, packing,
-            addr.address + trim0x(dai.address) + trim0x(permit0));
-        await expect(txn).to.changeTokenBalances(dai, [addr, addr1], [ether('-100'), ether('100')]);
-        await expect(txn).to.changeTokenBalances(weth, [addr, addr1], [ether('0.11'), ether('-0.11')]);
+            owner.address + trim0x(dai.address) + trim0x(permit0));
+        await expect(txn).to.changeTokenBalances(dai, [owner, alice], [ether('-100'), ether('100')]);
+        await expect(txn).to.changeTokenBalances(weth, [owner, alice], [ether('0.11'), ether('-0.11')]);
     });
 
     it('settle orders with permits, permit2', async function () {
         const dataFormFixture = await loadFixture(initContracts);
         const {
             contracts: { dai, weth, swap, settlement, resolver },
-            accounts: { addr, addr1 },
+            accounts: { owner, alice },
             other: { chainId },
         } = dataFormFixture;
 
         const fillOrderToData1 = await buildCalldataForOrder({
             orderData: {
-                maker: addr1.address,
+                maker: alice.address,
                 makerAsset: weth.address,
                 takerAsset: dai.address,
                 makingAmount: ether('0.11'),
@@ -188,14 +189,14 @@ describe('Settlement', function () {
                 makerTraits: buildMakerTraits({ allowedSender: settlement.address, usePermit2: true }),
             },
             singleFusionData: { resolvers: [resolver.address] },
-            orderSigner: addr1,
+            orderSigner: alice,
             dataFormFixture,
             isInnermostOrder: true,
         });
 
         const fillOrderToData0 = await buildCalldataForOrder({
             orderData: {
-                maker: addr.address,
+                maker: owner.address,
                 makerAsset: dai.address,
                 takerAsset: weth.address,
                 makingAmount: ether('100'),
@@ -203,7 +204,7 @@ describe('Settlement', function () {
                 makerTraits: buildMakerTraits({ allowedSender: settlement.address, usePermit2: true }),
             },
             singleFusionData: { resolvers: [resolver.address] },
-            orderSigner: addr,
+            orderSigner: owner,
             dataFormFixture,
             additionalDataForSettlement: fillOrderToData1,
             needAddResolvers: true,
@@ -211,28 +212,28 @@ describe('Settlement', function () {
 
         const permit2 = await permit2Contract();
         await dai.approve(permit2.address, ether('100'));
-        await weth.connect(addr1).approve(permit2.address, ether('0.11'));
-        await dai.connect(addr).approve(swap.address, 0n); // remove direct approve
-        await weth.connect(addr1).approve(swap.address, 0n); // remove direct approve
-        const permit0 = compressPermit(await getPermit2(addr, dai.address, chainId, swap.address, ether('100')));
-        const permit1 = compressPermit(await getPermit2(addr1, weth.address, chainId, swap.address, ether('0.11')));
+        await weth.connect(alice).approve(permit2.address, ether('0.11'));
+        await dai.connect(owner).approve(swap.address, 0n); // remove direct approve
+        await weth.connect(alice).approve(swap.address, 0n); // remove direct approve
+        const permit0 = compressPermit(await getPermit2(owner, dai.address, chainId, swap.address, ether('100')));
+        const permit1 = compressPermit(await getPermit2(alice, weth.address, chainId, swap.address, ether('0.11')));
         const packing = (2n << 248n) | 2n | 8n;
         const txn = await resolver.settleOrdersWithPermits(fillOrderToData0, packing,
-            addr.address + trim0x(dai.address) + trim0x(permit0) + trim0x(addr1.address) + trim0x(weth.address) + trim0x(permit1));
-        await expect(txn).to.changeTokenBalances(dai, [addr, addr1], [ether('-100'), ether('100')]);
-        await expect(txn).to.changeTokenBalances(weth, [addr, addr1], [ether('0.11'), ether('-0.11')]);
+            owner.address + trim0x(dai.address) + trim0x(permit0) + trim0x(alice.address) + trim0x(weth.address) + trim0x(permit1));
+        await expect(txn).to.changeTokenBalances(dai, [owner, alice], [ether('-100'), ether('100')]);
+        await expect(txn).to.changeTokenBalances(weth, [owner, alice], [ether('0.11'), ether('-0.11')]);
     });
 
     it('opposite direction recursive swap with taking fee', async function () {
         const dataFormFixture = await loadFixture(initContracts);
         const {
             contracts: { dai, weth, settlement, resolver },
-            accounts: { addr, addr1, addr2 },
+            accounts: { owner, alice, addr2 },
         } = dataFormFixture;
 
         const fillOrderToData1 = await buildCalldataForOrder({
             orderData: {
-                maker: addr1.address,
+                maker: alice.address,
                 makerAsset: weth.address,
                 takerAsset: dai.address,
                 makingAmount: ether('0.1'),
@@ -240,14 +241,14 @@ describe('Settlement', function () {
                 makerTraits: buildMakerTraits({ allowedSender: settlement.address }),
             },
             singleFusionData: { resolvers: [resolver.address], takerFee: 10000000n, takerFeeReceiver: addr2.address },
-            orderSigner: addr1,
+            orderSigner: alice,
             dataFormFixture,
             isInnermostOrder: true,
         });
 
         const fillOrderToData0 = await buildCalldataForOrder({
             orderData: {
-                maker: addr.address,
+                maker: owner.address,
                 makerAsset: dai.address,
                 takerAsset: weth.address,
                 makingAmount: ether('100'),
@@ -255,7 +256,7 @@ describe('Settlement', function () {
                 makerTraits: buildMakerTraits({ allowedSender: settlement.address }),
             },
             singleFusionData: { resolvers: [resolver.address], takerFee: 10000000n, takerFeeReceiver: addr2.address },
-            orderSigner: addr,
+            orderSigner: owner,
             dataFormFixture,
             additionalDataForSettlement: fillOrderToData1,
             needAddResolvers: true,
@@ -265,18 +266,18 @@ describe('Settlement', function () {
         const daiFeeAmount = ether('1');
         // send fee amounts to resolver contract
         await weth.transfer(resolver.address, wethFeeAmount.toString());
-        await dai.connect(addr1).transfer(resolver.address, daiFeeAmount.toString());
+        await dai.connect(alice).transfer(resolver.address, daiFeeAmount.toString());
 
         const txn = await resolver.settleOrders(fillOrderToData0);
-        await expect(txn).to.changeTokenBalances(dai, [addr, addr1, addr2], [ether('-100'), ether('100'), ether('1')]);
-        await expect(txn).to.changeTokenBalances(weth, [addr, addr1, addr2], [ether('0.1'), ether('-0.1'), ether('0.001')]);
+        await expect(txn).to.changeTokenBalances(dai, [owner, alice, addr2], [ether('-100'), ether('100'), ether('1')]);
+        await expect(txn).to.changeTokenBalances(weth, [owner, alice, addr2], [ether('0.1'), ether('-0.1'), ether('0.001')]);
     });
 
     it('unidirectional recursive swap', async function () {
         const dataFormFixture = await loadFixture(initContracts);
         const {
             contracts: { dai, weth, settlement, resolver },
-            accounts: { addr, addr1 },
+            accounts: { owner, alice },
             other: { abiCoder },
         } = dataFormFixture;
 
@@ -286,7 +287,7 @@ describe('Settlement', function () {
                 [weth.address],
                 [
                     weth.interface.encodeFunctionData('transferFrom', [
-                        addr.address,
+                        owner.address,
                         resolver.address,
                         ether('0.025'),
                     ]),
@@ -296,7 +297,7 @@ describe('Settlement', function () {
 
         const fillOrderToData1 = await buildCalldataForOrder({
             orderData: {
-                maker: addr1.address,
+                maker: alice.address,
                 makerAsset: dai.address,
                 takerAsset: weth.address,
                 makingAmount: ether('15'),
@@ -304,7 +305,7 @@ describe('Settlement', function () {
                 makerTraits: buildMakerTraits({ allowedSender: settlement.address }),
             },
             singleFusionData: { resolvers: [resolver.address] },
-            orderSigner: addr1,
+            orderSigner: alice,
             dataFormFixture,
             additionalDataForSettlement: resolverArgs,
             isInnermostOrder: true,
@@ -312,7 +313,7 @@ describe('Settlement', function () {
 
         const fillOrderToData0 = await buildCalldataForOrder({
             orderData: {
-                maker: addr1.address,
+                maker: alice.address,
                 makerAsset: dai.address,
                 takerAsset: weth.address,
                 makingAmount: ether('10'),
@@ -320,7 +321,7 @@ describe('Settlement', function () {
                 makerTraits: buildMakerTraits({ allowedSender: settlement.address }),
             },
             singleFusionData: { resolvers: [resolver.address] },
-            orderSigner: addr1,
+            orderSigner: alice,
             dataFormFixture,
             additionalDataForSettlement: fillOrderToData1,
             needAddResolvers: true,
@@ -329,20 +330,20 @@ describe('Settlement', function () {
         await weth.approve(resolver.address, ether('0.025'));
 
         const txn = await resolver.settleOrders(fillOrderToData0);
-        await expect(txn).to.changeTokenBalances(dai, [resolver, addr1], [ether('25'), ether('-25')]);
-        await expect(txn).to.changeTokenBalances(weth, [addr, addr1], [ether('-0.025'), ether('0.025')]);
+        await expect(txn).to.changeTokenBalances(dai, [resolver, alice], [ether('25'), ether('-25')]);
+        await expect(txn).to.changeTokenBalances(weth, [owner, alice], [ether('-0.025'), ether('0.025')]);
     });
 
     it('triple recursive swap', async function () {
         const dataFormFixture = await loadFixture(initContracts);
         const {
             contracts: { dai, weth, settlement, resolver },
-            accounts: { addr, addr1 },
+            accounts: { owner, alice },
         } = dataFormFixture;
 
         const fillOrderToData2 = await buildCalldataForOrder({
             orderData: {
-                maker: addr.address,
+                maker: owner.address,
                 makerAsset: weth.address,
                 takerAsset: dai.address,
                 makingAmount: ether('0.025'),
@@ -350,14 +351,14 @@ describe('Settlement', function () {
                 allowedSender: settlement.address,
             },
             singleFusionData: { resolvers: [resolver.address] },
-            orderSigner: addr,
+            orderSigner: owner,
             dataFormFixture,
             isInnermostOrder: true,
         });
 
         const fillOrderToData1 = await buildCalldataForOrder({
             orderData: {
-                maker: addr1.address,
+                maker: alice.address,
                 makerAsset: dai.address,
                 takerAsset: weth.address,
                 makingAmount: ether('15'),
@@ -365,14 +366,14 @@ describe('Settlement', function () {
                 makerTraits: buildMakerTraits({ allowedSender: settlement.address }),
             },
             singleFusionData: { resolvers: [resolver.address] },
-            orderSigner: addr1,
+            orderSigner: alice,
             dataFormFixture,
             additionalDataForSettlement: fillOrderToData2,
         });
 
         const fillOrderToData0 = await buildCalldataForOrder({
             orderData: {
-                maker: addr1.address,
+                maker: alice.address,
                 makerAsset: dai.address,
                 takerAsset: weth.address,
                 makingAmount: ether('10'),
@@ -380,15 +381,15 @@ describe('Settlement', function () {
                 makerTraits: buildMakerTraits({ allowedSender: settlement.address }),
             },
             singleFusionData: { resolvers: [resolver.address] },
-            orderSigner: addr1,
+            orderSigner: alice,
             dataFormFixture,
             additionalDataForSettlement: fillOrderToData1,
             needAddResolvers: true,
         });
 
         const txn = await resolver.settleOrders(fillOrderToData0);
-        await expect(txn).to.changeTokenBalances(weth, [addr, addr1], [ether('-0.025'), ether('0.025')]);
-        await expect(txn).to.changeTokenBalances(dai, [addr, addr1], [ether('25'), ether('-25')]);
+        await expect(txn).to.changeTokenBalances(weth, [owner, alice], [ether('-0.025'), ether('0.025')]);
+        await expect(txn).to.changeTokenBalances(dai, [owner, alice], [ether('25'), ether('-25')]);
     });
 
     describe('dutch auction params', function () {
@@ -403,7 +404,7 @@ describe('Settlement', function () {
         }) => {
             const {
                 contracts: { dai, weth, settlement, resolver },
-                accounts: { addr, addr1 },
+                accounts: { owner, alice },
                 other: { abiCoder },
             } = dataFormFixture;
 
@@ -429,7 +430,7 @@ describe('Settlement', function () {
                     [weth.address],
                     [
                         weth.interface.encodeFunctionData('transferFrom', [
-                            addr.address,
+                            owner.address,
                             resolver.address,
                             actualTakingAmount,
                         ]),
@@ -439,7 +440,7 @@ describe('Settlement', function () {
 
             const fillOrderToData = await buildCalldataForOrder({
                 orderData: {
-                    maker: addr1.address,
+                    maker: alice.address,
                     makerAsset: dai.address,
                     takerAsset: weth.address,
                     makingAmount: ether('100'),
@@ -447,7 +448,7 @@ describe('Settlement', function () {
                     makerTraits: buildMakerTraits({ allowedSender: settlement.address }),
                 },
                 singleFusionData: { resolvers: [resolver.address], startTime, auctionDelay, auctionDuration, initialRateBump, points },
-                orderSigner: addr1,
+                orderSigner: alice,
                 dataFormFixture,
                 additionalDataForSettlement: resolverCalldata,
                 isInnermostOrder: true,
@@ -462,7 +463,7 @@ describe('Settlement', function () {
             const dataFormFixture = await loadFixture(initContracts);
             const {
                 contracts: { dai, weth, resolver },
-                accounts: { addr, addr1 },
+                accounts: { owner, alice },
             } = dataFormFixture;
 
             const fillOrderToData = await prepareSingleOrder({
@@ -472,8 +473,8 @@ describe('Settlement', function () {
             });
 
             const txn = await resolver.settleOrders(fillOrderToData);
-            await expect(txn).to.changeTokenBalances(dai, [resolver, addr1], [ether('100'), ether('-100')]);
-            await expect(txn).to.changeTokenBalances(weth, [addr, addr1], [ether('-0.11'), ether('0.11')]);
+            await expect(txn).to.changeTokenBalances(dai, [resolver, alice], [ether('100'), ether('-100')]);
+            await expect(txn).to.changeTokenBalances(weth, [owner, alice], [ether('-0.11'), ether('0.11')]);
         });
 
         describe('order with one bump point', async function () {
@@ -481,7 +482,7 @@ describe('Settlement', function () {
                 const dataFormFixture = await loadFixture(initContracts);
                 const {
                     contracts: { dai, weth, resolver },
-                    accounts: { addr, addr1 },
+                    accounts: { owner, alice },
                 } = dataFormFixture;
 
                 const startTime = await time.latest();
@@ -498,15 +499,15 @@ describe('Settlement', function () {
                 await timeIncreaseTo(startTime + 239);
 
                 const txn = await resolver.settleOrders(fillOrderToData);
-                await expect(txn).to.changeTokenBalances(dai, [resolver, addr1], [ether('100'), ether('-100')]);
-                await expect(txn).to.changeTokenBalances(weth, [addr, addr1], [ether('-0.109'), ether('0.109')]);
+                await expect(txn).to.changeTokenBalances(dai, [resolver, alice], [ether('100'), ether('-100')]);
+                await expect(txn).to.changeTokenBalances(weth, [owner, alice], [ether('-0.109'), ether('0.109')]);
             });
 
             it('matching order after bump point', async function () {
                 const dataFormFixture = await loadFixture(initContracts);
                 const {
                     contracts: { dai, weth, resolver },
-                    accounts: { addr, addr1 },
+                    accounts: { owner, alice },
                 } = dataFormFixture;
 
                 const startTime = await time.latest();
@@ -522,8 +523,8 @@ describe('Settlement', function () {
                 await timeIncreaseTo(startTime + 759);
 
                 const txn = await resolver.settleOrders(fillOrderToData);
-                await expect(txn).to.changeTokenBalances(dai, [resolver, addr1], [ether('100'), ether('-100')]);
-                await expect(txn).to.changeTokenBalances(weth, [addr, addr1], [ether('-0.106'), ether('0.106')]);
+                await expect(txn).to.changeTokenBalances(dai, [resolver, alice], [ether('100'), ether('-100')]);
+                await expect(txn).to.changeTokenBalances(weth, [owner, alice], [ether('-0.106'), ether('0.106')]);
             });
         });
 
@@ -531,7 +532,7 @@ describe('Settlement', function () {
             const dataFormFixture = await loadFixture(initContracts);
             const {
                 contracts: { dai, weth, resolver },
-                accounts: { addr, addr1 },
+                accounts: { owner, alice },
             } = dataFormFixture;
 
             const fillOrderToData = await prepareSingleOrder({
@@ -542,15 +543,15 @@ describe('Settlement', function () {
             });
 
             const txn = await resolver.settleOrders(fillOrderToData);
-            await expect(txn).to.changeTokenBalances(dai, [resolver, addr1], [ether('100'), ether('-100')]);
-            await expect(txn).to.changeTokenBalances(weth, [addr, addr1], [ether('-0.12'), ether('0.12')]);
+            await expect(txn).to.changeTokenBalances(dai, [resolver, alice], [ether('100'), ether('-100')]);
+            await expect(txn).to.changeTokenBalances(weth, [owner, alice], [ether('-0.12'), ether('0.12')]);
         });
 
         it('set auctionDuration', async function () {
             const dataFormFixture = await loadFixture(initContracts);
             const {
                 contracts: { dai, weth, resolver },
-                accounts: { addr, addr1 },
+                accounts: { owner, alice },
             } = dataFormFixture;
 
             const normalizeTime = Math.floor(((await time.latest()) + 59) / 60) * 60;
@@ -563,8 +564,8 @@ describe('Settlement', function () {
             });
 
             const txn = await resolver.settleOrders(fillOrderToData);
-            await expect(txn).to.changeTokenBalances(dai, [resolver, addr1], [ether('100'), ether('-100')]);
-            await expect(txn).to.changeTokenBalances(weth, [addr, addr1], [ether('-0.105'), ether('0.105')]);
+            await expect(txn).to.changeTokenBalances(dai, [resolver, alice], [ether('100'), ether('-100')]);
+            await expect(txn).to.changeTokenBalances(weth, [owner, alice], [ether('-0.105'), ether('0.105')]);
         });
     });
 
@@ -572,36 +573,35 @@ describe('Settlement', function () {
         const dataFormFixture = await loadFixture(initContracts);
         const {
             contracts: { dai, weth, settlement, resolver },
-            accounts: { addr, addr1 },
-            other: { orderFee, backOrderFee, basePoints },
+            accounts: { owner, alice },
         } = dataFormFixture;
 
         const fillOrderToData1 = await buildCalldataForOrder({
             orderData: {
-                maker: addr1.address,
+                maker: alice.address,
                 makerAsset: weth.address,
                 takerAsset: dai.address,
                 makingAmount: ether('0.1'),
                 takingAmount: ether('100'),
                 makerTraits: buildMakerTraits({ allowedSender: settlement.address }),
             },
-            singleFusionData: { resolvers: [resolver.address], resolverFee: backOrderFee },
-            orderSigner: addr1,
+            singleFusionData: { resolvers: [resolver.address], resolverFee: BACK_ORDER_FEE },
+            orderSigner: alice,
             dataFormFixture,
             isInnermostOrder: true,
         });
 
         const fillOrderToData0 = await buildCalldataForOrder({
             orderData: {
-                maker: addr.address,
+                maker: owner.address,
                 makerAsset: dai.address,
                 takerAsset: weth.address,
                 makingAmount: ether('100'),
                 takingAmount: ether('0.1'),
                 makerTraits: buildMakerTraits({ allowedSender: settlement.address }),
             },
-            singleFusionData: { resolvers: [resolver.address], resolverFee: orderFee },
-            orderSigner: addr,
+            singleFusionData: { resolvers: [resolver.address], resolverFee: ORDER_FEE },
+            orderSigner: owner,
             dataFormFixture,
             additionalDataForSettlement: fillOrderToData1,
             needAddResolvers: true,
@@ -610,7 +610,7 @@ describe('Settlement', function () {
 
         await resolver.settleOrders(fillOrderToData0);
         expect(await settlement.availableCredit(resolver.address)).to.equal(
-            availableCreditBefore.toBigInt() - basePoints * (orderFee + backOrderFee),
+            availableCreditBefore.toBigInt() - BASE_POINTS * (ORDER_FEE + BACK_ORDER_FEE),
         );
     });
 
@@ -618,8 +618,8 @@ describe('Settlement', function () {
         const dataFormFixture = await loadFixture(initContracts);
         const {
             contracts: { dai, weth, settlement, resolver },
-            accounts: { addr, addr1 },
-            other: { abiCoder, orderFee, basePoints },
+            accounts: { owner, alice },
+            other: { abiCoder },
         } = dataFormFixture;
 
         const partialModifier = 40n;
@@ -631,7 +631,7 @@ describe('Settlement', function () {
                 [weth.address],
                 [
                     weth.interface.encodeFunctionData('transferFrom', [
-                        addr.address,
+                        owner.address,
                         resolver.address,
                         ether('0.01') * partialModifier / points,
                     ]),
@@ -641,15 +641,15 @@ describe('Settlement', function () {
 
         const fillOrderToData0 = await buildCalldataForOrder({
             orderData: {
-                maker: addr1.address,
+                maker: alice.address,
                 makerAsset: dai.address,
                 takerAsset: weth.address,
                 makingAmount: ether('10'),
                 takingAmount: ether('0.01'),
                 makerTraits: buildMakerTraits({ allowedSender: settlement.address }),
             },
-            singleFusionData: { resolvers: [resolver.address], resolverFee: orderFee },
-            orderSigner: addr1,
+            singleFusionData: { resolvers: [resolver.address], resolverFee: ORDER_FEE },
+            orderSigner: alice,
             dataFormFixture,
             additionalDataForSettlement: resolverArgs,
             isInnermostOrder: true,
@@ -661,10 +661,10 @@ describe('Settlement', function () {
         const availableCreditBefore = await settlement.availableCredit(resolver.address);
 
         const txn = await resolver.settleOrders(fillOrderToData0);
-        await expect(txn).to.changeTokenBalances(dai, [resolver, addr1], [ether('10') * partialModifier / points, ether('-10') * partialModifier / points]);
-        await expect(txn).to.changeTokenBalances(weth, [addr, addr1], [ether('-0.01') * partialModifier / points, ether('0.01') * partialModifier / points]);
+        await expect(txn).to.changeTokenBalances(dai, [resolver, alice], [ether('10') * partialModifier / points, ether('-10') * partialModifier / points]);
+        await expect(txn).to.changeTokenBalances(weth, [owner, alice], [ether('-0.01') * partialModifier / points, ether('0.01') * partialModifier / points]);
         expect(await settlement.availableCredit(resolver.address)).to.equal(
-            availableCreditBefore.toBigInt() - (orderFee * partialModifier / points) * basePoints,
+            availableCreditBefore.toBigInt() - (ORDER_FEE * partialModifier / points) * BASE_POINTS,
         );
     });
 
@@ -672,7 +672,7 @@ describe('Settlement', function () {
         const dataFormFixture = await loadFixture(initContracts);
         const {
             contracts: { dai, weth, settlement, resolver },
-            accounts: { addr, addr1 },
+            accounts: { owner, alice },
             other: { abiCoder },
         } = dataFormFixture;
 
@@ -686,7 +686,7 @@ describe('Settlement', function () {
                 [weth.address],
                 [
                     weth.interface.encodeFunctionData('transferFrom', [
-                        addr.address,
+                        owner.address,
                         resolver.address,
                         ether('0.01') * minimalPartialModifier / points,
                     ]),
@@ -696,7 +696,7 @@ describe('Settlement', function () {
 
         const fillOrderToData0 = await buildCalldataForOrder({
             orderData: {
-                maker: addr1.address,
+                maker: alice.address,
                 makerAsset: dai.address,
                 takerAsset: weth.address,
                 makingAmount: ether('10'),
@@ -704,7 +704,7 @@ describe('Settlement', function () {
                 makerTraits: buildMakerTraits({ allowedSender: settlement.address }),
             },
             singleFusionData: { resolvers: [resolver.address], resolverFee: minimalOrderFee },
-            orderSigner: addr1,
+            orderSigner: alice,
             dataFormFixture,
             additionalDataForSettlement: resolverArgs,
             isInnermostOrder: true,
@@ -716,8 +716,8 @@ describe('Settlement', function () {
         const availableCreditBefore = await settlement.availableCredit(resolver.address);
 
         const txn = await resolver.settleOrders(fillOrderToData0);
-        await expect(txn).to.changeTokenBalances(dai, [resolver, addr1], [ether('10') * minimalPartialModifier / points, ether('-10') * minimalPartialModifier / points]);
-        await expect(txn).to.changeTokenBalances(weth, [addr, addr1], [ether('-0.01') * minimalPartialModifier / points, ether('0.01') * minimalPartialModifier / points]);
+        await expect(txn).to.changeTokenBalances(dai, [resolver, alice], [ether('10') * minimalPartialModifier / points, ether('-10') * minimalPartialModifier / points]);
+        await expect(txn).to.changeTokenBalances(weth, [owner, alice], [ether('-0.01') * minimalPartialModifier / points, ether('0.01') * minimalPartialModifier / points]);
         expect(await settlement.availableCredit(resolver.address)).to.equal(
             availableCreditBefore.toBigInt() - 1n,
         );
@@ -727,28 +727,28 @@ describe('Settlement', function () {
         const dataFormFixture = await loadFixture(initContracts);
         const {
             contracts: { dai, weth, settlement, resolver },
-            accounts: { addr, addr1 },
-            other: { backOrderFee },
+            accounts: { owner, alice },
+            other: { BACK_ORDER_FEE },
         } = dataFormFixture;
 
         const fillOrderToData1 = await buildCalldataForOrder({
             orderData: {
-                maker: addr1.address,
+                maker: alice.address,
                 makerAsset: weth.address,
                 takerAsset: dai.address,
                 makingAmount: ether('0.1'),
                 takingAmount: ether('100'),
                 makerTraits: buildMakerTraits({ allowedSender: settlement.address }),
             },
-            singleFusionData: { resolvers: [resolver.address], resolverFee: backOrderFee },
-            orderSigner: addr1,
+            singleFusionData: { resolvers: [resolver.address], resolverFee: BACK_ORDER_FEE },
+            orderSigner: alice,
             dataFormFixture,
             isInnermostOrder: true,
         });
 
         const fillOrderToData0 = await buildCalldataForOrder({
             orderData: {
-                maker: addr.address,
+                maker: owner.address,
                 makerAsset: dai.address,
                 takerAsset: weth.address,
                 makingAmount: ether('100'),
@@ -756,7 +756,7 @@ describe('Settlement', function () {
                 makerTraits: buildMakerTraits({ allowedSender: settlement.address }),
             },
             singleFusionData: { resolvers: [resolver.address], resolverFee: '1000000' },
-            orderSigner: addr,
+            orderSigner: owner,
             dataFormFixture,
             additionalDataForSettlement: fillOrderToData1,
             needAddResolvers: true,
@@ -770,38 +770,37 @@ describe('Settlement', function () {
             const dataFormFixture = await loadFixture(initContracts);
             const {
                 contracts: { dai, weth, settlement, resolver },
-                accounts: { addr, addr1 },
-                other: { orderFee },
+                accounts: { owner, alice },
             } = dataFormFixture;
 
             const currentTime = await time.latest();
             const threeHours = time.duration.hours('3');
             const fillOrderToData1 = await buildCalldataForOrder({
                 orderData: {
-                    maker: addr1.address,
+                    maker: alice.address,
                     makerAsset: weth.address,
                     takerAsset: dai.address,
                     makingAmount: ether('0.1'),
                     takingAmount: ether('100'),
                     makerTraits: buildMakerTraits({ allowedSender: settlement.address }),
                 },
-                singleFusionData: { resolvers: [addr1.address, resolver.address], auctionDuration: threeHours * 2, resolverFee: orderFee },
-                orderSigner: addr1,
+                singleFusionData: { resolvers: [alice.address, resolver.address], auctionDuration: threeHours * 2, resolverFee: ORDER_FEE },
+                orderSigner: alice,
                 dataFormFixture,
                 isInnermostOrder: true,
             });
 
             const fillOrderToData0 = await buildCalldataForOrder({
                 orderData: {
-                    maker: addr.address,
+                    maker: owner.address,
                     makerAsset: dai.address,
                     takerAsset: weth.address,
                     makingAmount: ether('100'),
                     takingAmount: ether('0.1'),
                     makerTraits: buildMakerTraits({ allowedSender: settlement.address }),
                 },
-                singleFusionData: { resolvers: [addr1.address, resolver.address], auctionDuration: threeHours * 2, resolverFee: orderFee },
-                orderSigner: addr,
+                singleFusionData: { resolvers: [alice.address, resolver.address], auctionDuration: threeHours * 2, resolverFee: ORDER_FEE },
+                orderSigner: owner,
                 dataFormFixture,
                 additionalDataForSettlement: fillOrderToData1,
                 needAddResolvers: true,
@@ -818,36 +817,35 @@ describe('Settlement', function () {
             const dataFormFixture = await loadFixture(initContracts);
             const {
                 contracts: { dai, weth, settlement, resolver },
-                accounts: { addr, addr1 },
-                other: { orderFee, backOrderFee },
+                accounts: { owner, alice },
             } = dataFormFixture;
 
             const fillOrderToData1 = await buildCalldataForOrder({
                 orderData: {
-                    maker: addr1.address,
+                    maker: alice.address,
                     makerAsset: weth.address,
                     takerAsset: dai.address,
                     makingAmount: ether('0.1'),
                     takingAmount: ether('100'),
                     makerTraits: buildMakerTraits({ allowedSender: settlement.address }),
                 },
-                singleFusionData: { publicTimeDelay: 60n, resolverFee: backOrderFee },
-                orderSigner: addr1,
+                singleFusionData: { publicTimeDelay: 60n, resolverFee: BACK_ORDER_FEE },
+                orderSigner: alice,
                 dataFormFixture,
                 isInnermostOrder: true,
             });
 
             const fillOrderToData0 = await buildCalldataForOrder({
                 orderData: {
-                    maker: addr.address,
+                    maker: owner.address,
                     makerAsset: dai.address,
                     takerAsset: weth.address,
                     makingAmount: ether('100'),
                     takingAmount: ether('0.1'),
                     makerTraits: buildMakerTraits({ allowedSender: settlement.address }),
                 },
-                singleFusionData: { publicTimeDelay: 60n, resolverFee: orderFee },
-                orderSigner: addr,
+                singleFusionData: { publicTimeDelay: 60n, resolverFee: ORDER_FEE },
+                orderSigner: owner,
                 dataFormFixture,
                 additionalDataForSettlement: fillOrderToData1,
                 needAddResolvers: true,

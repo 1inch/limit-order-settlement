@@ -6,166 +6,166 @@ const { PANIC_CODES } = require('@nomicfoundation/hardhat-chai-matchers/panic');
 const { deploySwapTokens, getChainId } = require('./helpers/fixtures');
 
 describe('FeeBank', function () {
-    let addr, addr1;
-    let chainId;
-
-    before(async function () {
-        [addr, addr1] = await ethers.getSigners();
-        chainId = await getChainId();
-    });
-
     async function initContracts() {
-        const inch = await deployContract('ERC20PermitMock', ['1INCH', '1INCH', addr.address, ether('1000')]);
+        const chainId = await getChainId();
+        const [owner, alice] = await ethers.getSigners();
+
+        const inch = await deployContract('ERC20PermitMock', ['1INCH', '1INCH', owner.address, ether('1000')]);
         const { swap } = await deploySwapTokens();
         const matcher = await deployContract('SettlementMock', [swap.address, inch.address]);
 
         const FeeBank = await ethers.getContractFactory('FeeBank');
         const feeBank = FeeBank.attach(await matcher.feeBank());
 
-        await inch.transfer(addr1.address, ether('100'));
+        await inch.transfer(alice.address, ether('100'));
         await inch.approve(feeBank.address, ether('1000'));
-        await inch.connect(addr1).approve(feeBank.address, ether('1000'));
+        await inch.connect(alice).approve(feeBank.address, ether('1000'));
 
-        return { inch, feeBank, matcher };
+        return {
+            contracts: { inch, feeBank, matcher },
+            accounts: { owner, alice },
+            other: { chainId },
+        };
     }
 
     describe('deposits', function () {
         it('should increase accountDeposits and availableCredit with deposit()', async function () {
-            const { inch, feeBank } = await loadFixture(initContracts);
+            const { contracts: { inch, feeBank }, accounts: { owner, alice } } = await loadFixture(initContracts);
             const addrAmount = ether('1');
-            const addr1Amount = ether('10');
-            const addrbalanceBefore = await inch.balanceOf(addr.address);
-            const addr1balanceBefore = await inch.balanceOf(addr1.address);
+            const aliceAmount = ether('10');
+            const addrbalanceBefore = await inch.balanceOf(owner.address);
+            const alicebalanceBefore = await inch.balanceOf(alice.address);
 
             await feeBank.deposit(addrAmount);
-            await feeBank.connect(addr1).deposit(addr1Amount);
+            await feeBank.connect(alice).deposit(aliceAmount);
 
-            expect(await feeBank.availableCredit(addr.address)).to.equal(addrAmount);
-            expect(await feeBank.availableCredit(addr1.address)).to.equal(addr1Amount);
-            expect(await inch.balanceOf(addr.address)).to.equal(addrbalanceBefore.sub(addrAmount));
-            expect(await inch.balanceOf(addr1.address)).to.equal(addr1balanceBefore.sub(addr1Amount));
+            expect(await feeBank.availableCredit(owner.address)).to.equal(addrAmount);
+            expect(await feeBank.availableCredit(alice.address)).to.equal(aliceAmount);
+            expect(await inch.balanceOf(owner.address)).to.equal(addrbalanceBefore.sub(addrAmount));
+            expect(await inch.balanceOf(alice.address)).to.equal(alicebalanceBefore.sub(aliceAmount));
         });
 
         it('should increase accountDeposits and availableCredit with depositFor()', async function () {
-            const { inch, feeBank } = await loadFixture(initContracts);
+            const { contracts: { inch, feeBank }, accounts: { owner, alice } } = await loadFixture(initContracts);
             const addrAmount = ether('1');
-            const addr1Amount = ether('10');
-            const addrbalanceBefore = await inch.balanceOf(addr.address);
-            const addr1balanceBefore = await inch.balanceOf(addr1.address);
+            const aliceAmount = ether('10');
+            const addrbalanceBefore = await inch.balanceOf(owner.address);
+            const alicebalanceBefore = await inch.balanceOf(alice.address);
 
-            await feeBank.connect(addr1).depositFor(addr.address, addrAmount);
-            await feeBank.depositFor(addr1.address, addr1Amount);
+            await feeBank.connect(alice).depositFor(owner.address, addrAmount);
+            await feeBank.depositFor(alice.address, aliceAmount);
 
-            expect(await feeBank.availableCredit(addr.address)).to.equal(addrAmount);
-            expect(await feeBank.availableCredit(addr1.address)).to.equal(addr1Amount);
-            expect(await inch.balanceOf(addr.address)).to.equal(addrbalanceBefore.sub(addr1Amount));
-            expect(await inch.balanceOf(addr1.address)).to.equal(addr1balanceBefore.sub(addrAmount));
+            expect(await feeBank.availableCredit(owner.address)).to.equal(addrAmount);
+            expect(await feeBank.availableCredit(alice.address)).to.equal(aliceAmount);
+            expect(await inch.balanceOf(owner.address)).to.equal(addrbalanceBefore.sub(aliceAmount));
+            expect(await inch.balanceOf(alice.address)).to.equal(alicebalanceBefore.sub(addrAmount));
         });
 
         it('should increase accountDeposits and availableCredit without approve with depositWithPermit()', async function () {
-            const { inch, feeBank } = await loadFixture(initContracts);
+            const { contracts: { inch, feeBank }, accounts: { owner }, other: { chainId } } = await loadFixture(initContracts);
             const addrAmount = ether('1');
             await inch.approve(feeBank.address, '0');
-            const permit = await getPermit(addr, inch, '1', chainId, feeBank.address, addrAmount);
-            const addrbalanceBefore = await inch.balanceOf(addr.address);
+            const permit = await getPermit(owner, inch, '1', chainId, feeBank.address, addrAmount);
+            const addrbalanceBefore = await inch.balanceOf(owner.address);
 
             await feeBank.depositWithPermit(addrAmount, permit);
 
-            expect(await feeBank.availableCredit(addr.address)).to.equal(addrAmount);
-            expect(await inch.balanceOf(addr.address)).to.equal(addrbalanceBefore.sub(addrAmount));
+            expect(await feeBank.availableCredit(owner.address)).to.equal(addrAmount);
+            expect(await inch.balanceOf(owner.address)).to.equal(addrbalanceBefore.sub(addrAmount));
         });
 
         it('should increase accountDeposits and availableCredit without approve with depositForWithPermit()', async function () {
-            const { inch, feeBank } = await loadFixture(initContracts);
+            const { contracts: { inch, feeBank }, accounts: { owner, alice }, other: { chainId } } = await loadFixture(initContracts);
             const addrAmount = ether('1');
             await inch.approve(feeBank.address, '0');
-            const permit = await getPermit(addr, inch, '1', chainId, feeBank.address, addrAmount);
-            const addrbalanceBefore = await inch.balanceOf(addr.address);
+            const permit = await getPermit(owner, inch, '1', chainId, feeBank.address, addrAmount);
+            const addrbalanceBefore = await inch.balanceOf(owner.address);
 
-            await feeBank.depositForWithPermit(addr1.address, addrAmount, permit);
+            await feeBank.depositForWithPermit(alice.address, addrAmount, permit);
 
-            expect(await feeBank.availableCredit(addr1.address)).to.equal(addrAmount);
-            expect(await inch.balanceOf(addr.address)).to.equal(addrbalanceBefore.sub(addrAmount));
+            expect(await feeBank.availableCredit(alice.address)).to.equal(addrAmount);
+            expect(await inch.balanceOf(owner.address)).to.equal(addrbalanceBefore.sub(addrAmount));
         });
     });
 
     describe('withdrawals', function () {
         async function initContratsAndDeposit() {
-            const { inch, feeBank, matcher } = await initContracts();
+            const data = await initContracts();
+            const { contracts: { feeBank } } = data;
             const totalDepositAmount = ether('100');
             await feeBank.deposit(totalDepositAmount);
-            return { inch, feeBank, matcher, totalDepositAmount };
+            return { ...data, other: { ...data.other, totalDepositAmount } };
         }
 
         it('should decrease accountDeposits and availableCredit with withdraw()', async function () {
-            const { inch, feeBank, totalDepositAmount } = await loadFixture(initContratsAndDeposit);
+            const { contracts: { inch, feeBank }, accounts: { owner }, other: { totalDepositAmount } } = await loadFixture(initContratsAndDeposit);
             const amount = ether('10');
-            const addrbalanceBefore = await inch.balanceOf(addr.address);
+            const addrbalanceBefore = await inch.balanceOf(owner.address);
 
             await feeBank.withdraw(amount);
 
-            expect(await feeBank.availableCredit(addr.address)).to.equal(totalDepositAmount - amount);
-            expect(await inch.balanceOf(addr.address)).to.equal(addrbalanceBefore.add(amount));
+            expect(await feeBank.availableCredit(owner.address)).to.equal(totalDepositAmount - amount);
+            expect(await inch.balanceOf(owner.address)).to.equal(addrbalanceBefore.add(amount));
         });
 
         it('should decrease accountDeposits and availableCredit with withdrawTo()', async function () {
-            const { inch, feeBank, totalDepositAmount } = await loadFixture(initContratsAndDeposit);
+            const { contracts: { inch, feeBank }, accounts: { owner, alice }, other: { totalDepositAmount } } = await loadFixture(initContratsAndDeposit);
             const amount = ether('10');
-            const addr1balanceBefore = await inch.balanceOf(addr1.address);
+            const alicebalanceBefore = await inch.balanceOf(alice.address);
 
-            await feeBank.withdrawTo(addr1.address, amount);
+            await feeBank.withdrawTo(alice.address, amount);
 
-            expect(await feeBank.availableCredit(addr.address)).to.equal(totalDepositAmount - amount);
-            expect(await inch.balanceOf(addr1.address)).to.equal(addr1balanceBefore.add(amount));
+            expect(await feeBank.availableCredit(owner.address)).to.equal(totalDepositAmount - amount);
+            expect(await inch.balanceOf(alice.address)).to.equal(alicebalanceBefore.add(amount));
         });
 
         it('should not withdrawal more than account have', async function () {
-            const { feeBank, totalDepositAmount } = await loadFixture(initContratsAndDeposit);
+            const { contracts: { feeBank }, other: { totalDepositAmount } } = await loadFixture(initContratsAndDeposit);
             await expect(feeBank.withdraw(totalDepositAmount + 1n)).to.be.revertedWithPanic(PANIC_CODES.UNDERFLOW);
         });
     });
 
     describe('gatherFees', function () {
         it('should correct withdrawal fee for 1 account', async function () {
-            const { inch, feeBank, matcher } = await loadFixture(initContracts);
+            const { contracts: { inch, feeBank, matcher }, accounts: { owner, alice } } = await loadFixture(initContracts);
             const amount = ether('10');
             const subCreditAmount = ether('2');
-            await feeBank.connect(addr1).deposit(amount);
-            await matcher.decreaseAvailableCreditMock(addr1.address, subCreditAmount);
+            await feeBank.connect(alice).deposit(amount);
+            await matcher.decreaseAvailableCreditMock(alice.address, subCreditAmount);
 
-            const balanceBefore = await inch.balanceOf(addr.address);
-            expect(await feeBank.availableCredit(addr1.address)).to.equal(amount - subCreditAmount);
-            await feeBank.gatherFees([addr1.address]);
+            const balanceBefore = await inch.balanceOf(owner.address);
+            expect(await feeBank.availableCredit(alice.address)).to.equal(amount - subCreditAmount);
+            await feeBank.gatherFees([alice.address]);
 
-            expect(await feeBank.availableCredit(addr1.address)).to.equal(amount - subCreditAmount);
-            expect(await inch.balanceOf(addr.address)).to.equal(balanceBefore.toBigInt() + subCreditAmount);
+            expect(await feeBank.availableCredit(alice.address)).to.equal(amount - subCreditAmount);
+            expect(await inch.balanceOf(owner.address)).to.equal(balanceBefore.toBigInt() + subCreditAmount);
         });
 
         it('should correct withdrawal fee for 2 account', async function () {
-            const { inch, feeBank, matcher } = await loadFixture(initContracts);
+            const { contracts: { inch, feeBank, matcher }, accounts: { owner, alice } } = await loadFixture(initContracts);
             const addrAmount = ether('10');
-            const addr1Amount = ether('25');
+            const aliceAmount = ether('25');
             const subCreditaddrAmount = ether('2');
-            const subCreditAddr1Amount = ether('11');
+            const subCreditaliceAmount = ether('11');
             await feeBank.deposit(addrAmount);
-            await feeBank.connect(addr1).deposit(addr1Amount);
-            await matcher.decreaseAvailableCreditMock(addr.address, subCreditaddrAmount);
-            await matcher.decreaseAvailableCreditMock(addr1.address, subCreditAddr1Amount);
+            await feeBank.connect(alice).deposit(aliceAmount);
+            await matcher.decreaseAvailableCreditMock(owner.address, subCreditaddrAmount);
+            await matcher.decreaseAvailableCreditMock(alice.address, subCreditaliceAmount);
 
-            const balanceBefore = await inch.balanceOf(addr.address);
-            expect(await feeBank.availableCredit(addr.address)).to.equal(addrAmount - subCreditaddrAmount);
-            expect(await feeBank.availableCredit(addr1.address)).to.equal(addr1Amount - subCreditAddr1Amount);
-            await feeBank.gatherFees([addr.address, addr1.address]);
+            const balanceBefore = await inch.balanceOf(owner.address);
+            expect(await feeBank.availableCredit(owner.address)).to.equal(addrAmount - subCreditaddrAmount);
+            expect(await feeBank.availableCredit(alice.address)).to.equal(aliceAmount - subCreditaliceAmount);
+            await feeBank.gatherFees([owner.address, alice.address]);
 
-            expect(await feeBank.availableCredit(addr.address)).to.equal(addrAmount - subCreditaddrAmount);
-            expect(await feeBank.availableCredit(addr1.address)).to.equal(addr1Amount - subCreditAddr1Amount);
-            expect(await inch.balanceOf(addr.address)).to.equal(
-                balanceBefore.add(subCreditaddrAmount).add(subCreditAddr1Amount),
+            expect(await feeBank.availableCredit(owner.address)).to.equal(addrAmount - subCreditaddrAmount);
+            expect(await feeBank.availableCredit(alice.address)).to.equal(aliceAmount - subCreditaliceAmount);
+            expect(await inch.balanceOf(owner.address)).to.equal(
+                balanceBefore.add(subCreditaddrAmount).add(subCreditaliceAmount),
             );
         });
 
         it('should correct withdrawal fee for several account', async function () {
-            const { inch, feeBank, matcher } = await loadFixture(initContracts);
+            const { contracts: { inch, feeBank, matcher }, accounts: { owner } } = await loadFixture(initContracts);
             const accounts = [];
             const wallets = await ethers.getSigners();
             for (const wallet of wallets) {
@@ -184,7 +184,7 @@ describe('FeeBank', function () {
                 await matcher.decreaseAvailableCreditMock(accounts[i], subCreditAmounts[i]);
             }
 
-            const balanceBefore = await inch.balanceOf(addr.address);
+            const balanceBefore = await inch.balanceOf(owner.address);
             for (let i = 1; i < accounts.length; i++) {
                 expect(await feeBank.availableCredit(accounts[i])).to.equal(amounts[i].sub(subCreditAmounts[i]));
             }
@@ -193,12 +193,12 @@ describe('FeeBank', function () {
             for (let i = 1; i < accounts.length; i++) {
                 expect(await feeBank.availableCredit(accounts[i])).to.equal(amounts[i].sub(subCreditAmounts[i]));
             }
-            expect(await inch.balanceOf(addr.address)).to.equal(balanceBefore.add(totalSubCreditAmounts));
+            expect(await inch.balanceOf(owner.address)).to.equal(balanceBefore.add(totalSubCreditAmounts));
         });
 
         it('should not work by non-owner', async function () {
-            const { feeBank } = await loadFixture(initContracts);
-            await expect(feeBank.connect(addr1).gatherFees([addr.address, addr1.address])).to.be.revertedWith(
+            const { contracts: { feeBank }, accounts: { owner, alice } } = await loadFixture(initContracts);
+            await expect(feeBank.connect(alice).gatherFees([owner.address, alice.address])).to.be.revertedWith(
                 'Ownable: caller is not the owner',
             );
         });

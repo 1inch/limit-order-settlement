@@ -3,11 +3,11 @@ const { ethers } = require('hardhat');
 const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
 const { expBase } = require('./helpers/utils');
 
-describe('PowerPod', function () {
-    const COMMON_LOCK_DURATION = time.duration.days('40');
-    const MAX_WHITELISTED = 3;
-    const BALANCE_THRESHOLD = 1000; // 10%
+const COMMON_LOCK_DURATION = time.duration.days('40');
+const MAX_WHITELISTED = 3;
+const BALANCE_THRESHOLD = 1000; // 10%
 
+describe('PowerPod', function () {
     const stakeAndRegisterInDelegation = async (st1inch, delegation, user, amount, userIndex) => {
         await st1inch.connect(user).deposit(0, COMMON_LOCK_DURATION);
         await st1inch.depositFor(user.address, amount);
