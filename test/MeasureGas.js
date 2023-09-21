@@ -1,7 +1,7 @@
 const hre = require('hardhat');
 const { ethers } = hre;
 const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
-const { expect, ether, trim0x } = require('@1inch/solidity-utils');
+const { time, expect, ether, trim0x } = require('@1inch/solidity-utils');
 const { deploySwapTokens, getChainId, deployContract } = require('./helpers/fixtures');
 const { buildOrder, signOrder, compactSignature, fillWithMakingAmount, buildMakerTraits } = require('@1inch/limit-order-protocol-contract/test/helpers/orderUtils');
 const { buildFusions } = require('./helpers/fusionUtils');
@@ -26,6 +26,7 @@ describe('MeasureGas', function () {
         await weth.deposit({ value: ether('1') });
         await weth.connect(addrs[1]).deposit({ value: ether('1') });
 
+        const settlementExtension = await deployContract('SettlementExtension', [swap.address, inch.address]);
         const settlement = await deployContract('Settlement', [swap.address, inch.address]);
         const resolvers = [];
         for (let i = 0; i < resolversNumber; i++) {
@@ -36,19 +37,19 @@ describe('MeasureGas', function () {
         await inch.approve(feeBank.address, ether('100'));
         await feeBank.depositFor(resolvers[0].address, ether('100'));
 
-        return { dai, weth, swap, settlement, feeBank, resolvers };
+        return { dai, weth, swap, settlement, settlementExtension, feeBank, resolvers };
     }
 
     async function initContractsAndApproves() {
-        const { dai, weth, swap, settlement, feeBank, resolvers } = await initContracts();
+        const { dai, weth, swap, settlement, settlementExtension, feeBank, resolvers } = await initContracts();
         await dai.approve(swap.address, ether('100'));
         await dai.connect(addrs[1]).approve(swap.address, ether('100'));
         await weth.approve(swap.address, ether('1'));
         await weth.connect(addrs[1]).approve(swap.address, ether('1'));
-        return { dai, weth, swap, settlement, feeBank, resolvers };
+        return { dai, weth, swap, settlement, settlementExtension, feeBank, resolvers };
     }
 
-    it('1 fill for 1 order', async function () {
+    it.only('1 fill for 1 order', async function () {
         const { dai, weth, swap, settlement, resolvers } = await loadFixture(initContractsAndApproves);
 
         const { fusions: [fusionDetails], hashes: [fusionDetailsHash], resolvers: fusionResolvers } = await buildFusions([
@@ -94,6 +95,52 @@ describe('MeasureGas', function () {
         const tx = await resolvers[0].settleOrders(fillOrderToData);
         console.log(`1 fill for 1 order gasUsed: ${(await tx.wait()).gasUsed}`);
         await expect(tx).to.changeTokenBalances(dai, [resolvers[0], addrs[1]], [ether('100'), ether('-100')]);
+        await expect(tx).to.changeTokenBalances(weth, [addrs[0], addrs[1]], [ether('-0.1'), ether('0.1')]);
+    });
+
+    it.only('extension 1 fill for 1 order', async function () {
+        const { dai, weth, swap, settlementExtension } = await loadFixture(initContractsAndApproves);
+
+        const auctionStartTime = await time.latest();
+        const auctionDetails = ethers.utils.solidityPack(
+            ['uint32', 'uint24', 'uint24'], [auctionStartTime, time.duration.hours(1), 0]
+        );
+
+        const order = buildOrder({
+            maker: addrs[1].address,
+            makerAsset: dai.address,
+            takerAsset: weth.address,
+            makingAmount: ether('100'),
+            takingAmount: ether('0.1'),
+            makerTraits: buildMakerTraits(),
+        }, {
+            makingAmountGetter: settlementExtension.address + trim0x(settlementExtension.interface.encodeFunctionData(
+                'getMakingAmount', [ether('100'), ether('0.1'), auctionDetails]
+            )),
+            takingAmountGetter: settlementExtension.address + trim0x(settlementExtension.interface.encodeFunctionData(
+                'getTakingAmount', [ether('100'), ether('0.1'), auctionDetails]
+            )),
+            preInteraction: settlementExtension.address + trim0x(ethers.utils.solidityPack(
+                ['uint8', 'uint32', 'bytes10', 'uint16'], [0, auctionStartTime, '0x' + addrs[0].address.substring(22), 0]
+            )),
+        });
+
+        console.log(settlementExtension.address);
+
+        const { r, vs } = compactSignature(await signOrder(order, chainId, swap.address, addrs[1]));
+
+        await weth.approve(swap.address, ether('0.1'));
+
+        const tx = await swap.fillOrderExt(
+            order,
+            r,
+            vs,
+            ether('100'),
+            fillWithMakingAmount('0'),
+            order.extension,
+        );
+        console.log(`1 fill for 1 order gasUsed: ${(await tx.wait()).gasUsed}`);
+        await expect(tx).to.changeTokenBalances(dai, [addrs[0], addrs[1]], [ether('100'), ether('-100')]);
         await expect(tx).to.changeTokenBalances(weth, [addrs[0], addrs[1]], [ether('-0.1'), ether('0.1')]);
     });
 

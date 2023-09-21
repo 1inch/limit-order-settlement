@@ -130,6 +130,14 @@ contract SettlementExtension is IPreInteraction, FeeBankCharger {
         }
     }
 
+    /// struct FeeData {
+    ///     bytes1 feeTypes; 1 = resolverFee, 2 = intergrationFee
+    ///     bytes4 resolverFee; optional
+    ///     bytes20 integrator; optional
+    ///     bytes4 integrationFee; optional
+    ///     bytes whitelist;
+    /// }
+
     function _parseFeeData(
         bytes calldata extraData,
         uint256 orderMakingAmount,
