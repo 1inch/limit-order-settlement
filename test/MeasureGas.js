@@ -125,8 +125,6 @@ describe('MeasureGas', function () {
             )),
         });
 
-        console.log(settlementExtension.address);
-
         const { r, vs } = compactSignature(await signOrder(order, chainId, swap.address, addrs[1]));
 
         await weth.approve(swap.address, ether('0.1'));
