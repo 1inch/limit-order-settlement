@@ -66,20 +66,6 @@ describe('MeasureGas', function () {
         order.salt = fusionDetailsHash;
         const { r, vs } = compactSignature(await signOrder(order, chainId, swap.address, addrs[1]));
 
-        const resolverCalldata = abiCoder.encode(
-            ['address[]', 'bytes[]'],
-            [
-                [weth.address],
-                [
-                    weth.interface.encodeFunctionData('transferFrom', [
-                        addrs[0].address,
-                        resolvers[0].address,
-                        ether('0.1'),
-                    ]),
-                ],
-            ],
-        );
-
         const fillOrderToData = swap.interface.encodeFunctionData('fillOrderTo', [
             order,
             r,
@@ -87,15 +73,15 @@ describe('MeasureGas', function () {
             ether('100'),
             fillWithMakingAmount('0'),
             resolvers[0].address,
-            settlement.address + '01' + trim0x(fusionDetails) + trim0x(resolverCalldata),
+            settlement.address + '01' + trim0x(fusionDetails),
         ]) + trim0x(fusionResolvers);
 
-        await weth.approve(resolvers[0].address, ether('0.1'));
+        await weth.transfer(resolvers[0].address, ether('0.1'));
 
         const tx = await resolvers[0].settleOrders(fillOrderToData);
         console.log(`1 fill for 1 order gasUsed: ${(await tx.wait()).gasUsed}`);
         await expect(tx).to.changeTokenBalances(dai, [resolvers[0], addrs[1]], [ether('100'), ether('-100')]);
-        await expect(tx).to.changeTokenBalances(weth, [addrs[0], addrs[1]], [ether('-0.1'), ether('0.1')]);
+        await expect(tx).to.changeTokenBalances(weth, [resolvers[0], addrs[1]], [ether('-0.1'), ether('0.1')]);
     });
 
     it.only('extension 1 fill for 1 order', async function () {
