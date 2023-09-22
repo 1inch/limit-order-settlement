@@ -1,8 +1,8 @@
 const { ethers } = require('hardhat');
 const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
 const { signOrder, buildOrder, compactSignature, fillWithMakingAmount } = require('@1inch/limit-order-protocol-contract/test/helpers/orderUtils');
-const { expect, ether, trim0x } = require('@1inch/solidity-utils');
-const { deploySwapTokens, getChainId, deploySimpleRegistry } = require('./helpers/fixtures');
+const { expect, ether, trim0x, deployContract } = require('@1inch/solidity-utils');
+const { deploySwapTokens, getChainId } = require('./helpers/fixtures');
 const { buildFusions } = require('./helpers/fusionUtils');
 
 describe('WhitelistChecker', function () {
@@ -27,10 +27,8 @@ describe('WhitelistChecker', function () {
         await weth.approve(swap.address, ether('1'));
         await weth.connect(addr1).approve(swap.address, ether('1'));
 
-        const whitelistRegistrySimple = await deploySimpleRegistry();
-        const Settlement = await ethers.getContractFactory('Settlement');
-        const settlement = await Settlement.deploy(swap.address, weth.address);
-        await settlement.deployed();
+        const whitelistRegistrySimple = await deployContract('WhitelistRegistrySimple', []);
+        const settlement = await deployContract('Settlement', [swap.address, weth.address]);
 
         const ResolverMock = await ethers.getContractFactory('ResolverMock');
         const resolver = await ResolverMock.deploy(settlement.address, swap.address);

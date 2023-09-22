@@ -1,4 +1,4 @@
-const { expect, constants, ether, trackReceivedTokenAndTx } = require('@1inch/solidity-utils');
+const { expect, constants, ether, trackReceivedTokenAndTx, deployContract } = require('@1inch/solidity-utils');
 const { ethers } = require('hardhat');
 const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
 const { expBase } = require('./helpers/utils');
@@ -26,21 +26,12 @@ describe('WhitelistRegistry', function () {
 
     before(async function () {
         addrs = await ethers.getSigners();
-        const St1inch = await ethers.getContractFactory('St1inch');
-        st1inch = await St1inch.deploy(constants.ZERO_ADDRESS, expBase, addrs[0].address);
-        await st1inch.deployed();
+        st1inch = await deployContract('St1inch', [constants.ZERO_ADDRESS, expBase, addrs[0].address]);
     });
 
     async function initContracts() {
-        const PowerPodMock = await ethers.getContractFactory('PowerPodMock');
-        const rewardableDelegationPod = await PowerPodMock.deploy('reward1INCH', 'reward1INCH', st1inch.address);
-        await rewardableDelegationPod.deployed();
-        const WhitelistRegistry = await ethers.getContractFactory('WhitelistRegistry');
-        const whitelistRegistry = await WhitelistRegistry.deploy(
-            rewardableDelegationPod.address,
-            PERCENTAGE_THRESHOLD,
-        );
-        await whitelistRegistry.deployed();
+        const rewardableDelegationPod = await deployContract('PowerPodMock', ['reward1INCH', 'reward1INCH', st1inch.address]);
+        const whitelistRegistry = await deployContract('WhitelistRegistry', [rewardableDelegationPod.address, PERCENTAGE_THRESHOLD]);
         return { rewardableDelegationPod, whitelistRegistry };
     }
 
@@ -127,16 +118,16 @@ describe('WhitelistRegistry', function () {
                     whitelistRegistry.connect(addrs[WHITELIST_LIMIT + 1]).register(),
                 ).to.be.revertedWithCustomError(whitelistRegistry, 'BalanceLessThanThreshold');
                 expect(await whitelistRegistry.getWhitelist()).to.not.contain(addrs[WHITELIST_LIMIT + 1].address);
-    
+
                 await rewardableDelegationPod.burn(addrs[1].address, RESOLVER_BALANCE);
                 await rewardableDelegationPod.mint(addrs[WHITELIST_LIMIT + 1].address, RESOLVER_BALANCE);
-    
+
                 await whitelistRegistry.connect(addrs[WHITELIST_LIMIT + 1]).register();
                 const whitelist = await whitelistRegistry.getWhitelist();
                 expect(whitelist).to.contain(addrs[WHITELIST_LIMIT + 1].address);
                 await expectAddrsInWhitelist(whitelistRegistry, 1, WHITELIST_LIMIT + 1, [1]);
             });
-    
+
             it('5/10 addresses, then lower balance, then whitelist +1 successfully', async function () {
                 const { rewardableDelegationPod, whitelistRegistry } = await loadFixture(initContracts);
                 const resolversNumber = WHITELIST_LIMIT / 2;
@@ -157,7 +148,7 @@ describe('WhitelistRegistry', function () {
                 expect(whitelist).to.contain(addrs[3].address);
                 expect(whitelist).to.contain(addrs[resolversNumber + 1].address);
             });
-    
+
             it('5/10 addresses, then lower balance, then whitelist instead successfully', async function () {
                 const { rewardableDelegationPod, whitelistRegistry } = await loadFixture(initContracts);
                 const resolversNumber = WHITELIST_LIMIT / 2;
@@ -203,7 +194,7 @@ describe('WhitelistRegistry', function () {
                     'BalanceLessThanThreshold',
                 );
             });
-    
+
             it('the same address twice', async function () {
                 const { rewardableDelegationPod, whitelistRegistry } = await loadFixture(initContracts);
                 await rewardableDelegationPod.mint(addrs[1].address, RESOLVER_BALANCE);
