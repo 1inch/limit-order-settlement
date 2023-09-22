@@ -31,60 +31,60 @@ describe('FeeBank', function () {
     describe('deposits', function () {
         it('should increase accountDeposits and availableCredit with deposit()', async function () {
             const { contracts: { inch, feeBank }, accounts: { owner, alice } } = await loadFixture(initContracts);
-            const addrAmount = ether('1');
+            const ownerAmount = ether('1');
             const aliceAmount = ether('10');
-            const addrbalanceBefore = await inch.balanceOf(owner.address);
-            const alicebalanceBefore = await inch.balanceOf(alice.address);
+            const ownerBalanceBefore = await inch.balanceOf(owner.address);
+            const aliceBalanceBefore = await inch.balanceOf(alice.address);
 
-            await feeBank.deposit(addrAmount);
+            await feeBank.deposit(ownerAmount);
             await feeBank.connect(alice).deposit(aliceAmount);
 
-            expect(await feeBank.availableCredit(owner.address)).to.equal(addrAmount);
+            expect(await feeBank.availableCredit(owner.address)).to.equal(ownerAmount);
             expect(await feeBank.availableCredit(alice.address)).to.equal(aliceAmount);
-            expect(await inch.balanceOf(owner.address)).to.equal(addrbalanceBefore.sub(addrAmount));
-            expect(await inch.balanceOf(alice.address)).to.equal(alicebalanceBefore.sub(aliceAmount));
+            expect(await inch.balanceOf(owner.address)).to.equal(ownerBalanceBefore.sub(ownerAmount));
+            expect(await inch.balanceOf(alice.address)).to.equal(aliceBalanceBefore.sub(aliceAmount));
         });
 
         it('should increase accountDeposits and availableCredit with depositFor()', async function () {
             const { contracts: { inch, feeBank }, accounts: { owner, alice } } = await loadFixture(initContracts);
-            const addrAmount = ether('1');
+            const ownerAmount = ether('1');
             const aliceAmount = ether('10');
-            const addrbalanceBefore = await inch.balanceOf(owner.address);
-            const alicebalanceBefore = await inch.balanceOf(alice.address);
+            const ownerBalanceBefore = await inch.balanceOf(owner.address);
+            const aliceBalanceBefore = await inch.balanceOf(alice.address);
 
-            await feeBank.connect(alice).depositFor(owner.address, addrAmount);
+            await feeBank.connect(alice).depositFor(owner.address, ownerAmount);
             await feeBank.depositFor(alice.address, aliceAmount);
 
-            expect(await feeBank.availableCredit(owner.address)).to.equal(addrAmount);
+            expect(await feeBank.availableCredit(owner.address)).to.equal(ownerAmount);
             expect(await feeBank.availableCredit(alice.address)).to.equal(aliceAmount);
-            expect(await inch.balanceOf(owner.address)).to.equal(addrbalanceBefore.sub(aliceAmount));
-            expect(await inch.balanceOf(alice.address)).to.equal(alicebalanceBefore.sub(addrAmount));
+            expect(await inch.balanceOf(owner.address)).to.equal(ownerBalanceBefore.sub(aliceAmount));
+            expect(await inch.balanceOf(alice.address)).to.equal(aliceBalanceBefore.sub(ownerAmount));
         });
 
         it('should increase accountDeposits and availableCredit without approve with depositWithPermit()', async function () {
             const { contracts: { inch, feeBank }, accounts: { owner }, others: { chainId } } = await loadFixture(initContracts);
-            const addrAmount = ether('1');
+            const ownerAmount = ether('1');
             await inch.approve(feeBank.address, '0');
-            const permit = await getPermit(owner, inch, '1', chainId, feeBank.address, addrAmount);
-            const addrbalanceBefore = await inch.balanceOf(owner.address);
+            const permit = await getPermit(owner, inch, '1', chainId, feeBank.address, ownerAmount);
+            const ownerBalanceBefore = await inch.balanceOf(owner.address);
 
-            await feeBank.depositWithPermit(addrAmount, permit);
+            await feeBank.depositWithPermit(ownerAmount, permit);
 
-            expect(await feeBank.availableCredit(owner.address)).to.equal(addrAmount);
-            expect(await inch.balanceOf(owner.address)).to.equal(addrbalanceBefore.sub(addrAmount));
+            expect(await feeBank.availableCredit(owner.address)).to.equal(ownerAmount);
+            expect(await inch.balanceOf(owner.address)).to.equal(ownerBalanceBefore.sub(ownerAmount));
         });
 
         it('should increase accountDeposits and availableCredit without approve with depositForWithPermit()', async function () {
             const { contracts: { inch, feeBank }, accounts: { owner, alice }, others: { chainId } } = await loadFixture(initContracts);
-            const addrAmount = ether('1');
+            const ownerAmount = ether('1');
             await inch.approve(feeBank.address, '0');
-            const permit = await getPermit(owner, inch, '1', chainId, feeBank.address, addrAmount);
-            const addrbalanceBefore = await inch.balanceOf(owner.address);
+            const permit = await getPermit(owner, inch, '1', chainId, feeBank.address, ownerAmount);
+            const ownerBalanceBefore = await inch.balanceOf(owner.address);
 
-            await feeBank.depositForWithPermit(alice.address, addrAmount, permit);
+            await feeBank.depositForWithPermit(alice.address, ownerAmount, permit);
 
-            expect(await feeBank.availableCredit(alice.address)).to.equal(addrAmount);
-            expect(await inch.balanceOf(owner.address)).to.equal(addrbalanceBefore.sub(addrAmount));
+            expect(await feeBank.availableCredit(alice.address)).to.equal(ownerAmount);
+            expect(await inch.balanceOf(owner.address)).to.equal(ownerBalanceBefore.sub(ownerAmount));
         });
     });
 
@@ -100,23 +100,23 @@ describe('FeeBank', function () {
         it('should decrease accountDeposits and availableCredit with withdraw()', async function () {
             const { contracts: { inch, feeBank }, accounts: { owner }, others: { totalDepositAmount } } = await loadFixture(initContratsAndDeposit);
             const amount = ether('10');
-            const addrbalanceBefore = await inch.balanceOf(owner.address);
+            const ownerBalanceBefore = await inch.balanceOf(owner.address);
 
             await feeBank.withdraw(amount);
 
             expect(await feeBank.availableCredit(owner.address)).to.equal(totalDepositAmount - amount);
-            expect(await inch.balanceOf(owner.address)).to.equal(addrbalanceBefore.add(amount));
+            expect(await inch.balanceOf(owner.address)).to.equal(ownerBalanceBefore.add(amount));
         });
 
         it('should decrease accountDeposits and availableCredit with withdrawTo()', async function () {
             const { contracts: { inch, feeBank }, accounts: { owner, alice }, others: { totalDepositAmount } } = await loadFixture(initContratsAndDeposit);
             const amount = ether('10');
-            const alicebalanceBefore = await inch.balanceOf(alice.address);
+            const aliceBalanceBefore = await inch.balanceOf(alice.address);
 
             await feeBank.withdrawTo(alice.address, amount);
 
             expect(await feeBank.availableCredit(owner.address)).to.equal(totalDepositAmount - amount);
-            expect(await inch.balanceOf(alice.address)).to.equal(alicebalanceBefore.add(amount));
+            expect(await inch.balanceOf(alice.address)).to.equal(aliceBalanceBefore.add(amount));
         });
 
         it('should not withdrawal more than account have', async function () {
@@ -143,24 +143,24 @@ describe('FeeBank', function () {
 
         it('should correct withdrawal fee for 2 account', async function () {
             const { contracts: { inch, feeBank, matcher }, accounts: { owner, alice } } = await loadFixture(initContracts);
-            const addrAmount = ether('10');
+            const ownerAmount = ether('10');
             const aliceAmount = ether('25');
-            const subCreditaddrAmount = ether('2');
+            const subCreditownerAmount = ether('2');
             const subCreditaliceAmount = ether('11');
-            await feeBank.deposit(addrAmount);
+            await feeBank.deposit(ownerAmount);
             await feeBank.connect(alice).deposit(aliceAmount);
-            await matcher.decreaseAvailableCreditMock(owner.address, subCreditaddrAmount);
+            await matcher.decreaseAvailableCreditMock(owner.address, subCreditownerAmount);
             await matcher.decreaseAvailableCreditMock(alice.address, subCreditaliceAmount);
 
             const balanceBefore = await inch.balanceOf(owner.address);
-            expect(await feeBank.availableCredit(owner.address)).to.equal(addrAmount - subCreditaddrAmount);
+            expect(await feeBank.availableCredit(owner.address)).to.equal(ownerAmount - subCreditownerAmount);
             expect(await feeBank.availableCredit(alice.address)).to.equal(aliceAmount - subCreditaliceAmount);
             await feeBank.gatherFees([owner.address, alice.address]);
 
-            expect(await feeBank.availableCredit(owner.address)).to.equal(addrAmount - subCreditaddrAmount);
+            expect(await feeBank.availableCredit(owner.address)).to.equal(ownerAmount - subCreditownerAmount);
             expect(await feeBank.availableCredit(alice.address)).to.equal(aliceAmount - subCreditaliceAmount);
             expect(await inch.balanceOf(owner.address)).to.equal(
-                balanceBefore.add(subCreditaddrAmount).add(subCreditaliceAmount),
+                balanceBefore.add(subCreditownerAmount).add(subCreditaliceAmount),
             );
         });
 

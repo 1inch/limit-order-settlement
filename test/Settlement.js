@@ -13,7 +13,7 @@ describe('Settlement', function () {
     async function initContracts() {
         const abiCoder = ethers.utils.defaultAbiCoder;
         const chainId = await getChainId();
-        const [owner, alice, addr2] = await ethers.getSigners();
+        const [owner, alice, bob] = await ethers.getSigners();
 
         const { dai, weth, inch, swap } = await deploySwapTokens();
 
@@ -40,7 +40,7 @@ describe('Settlement', function () {
 
         return {
             contracts: { dai, weth, swap, settlement, feeBank, resolver },
-            accounts: { owner, alice, addr2 },
+            accounts: { owner, alice, bob },
             others: { chainId, abiCoder },
         };
     }
@@ -228,7 +228,7 @@ describe('Settlement', function () {
         const dataFormFixture = await loadFixture(initContracts);
         const {
             contracts: { dai, weth, settlement, resolver },
-            accounts: { owner, alice, addr2 },
+            accounts: { owner, alice, bob },
         } = dataFormFixture;
 
         const fillOrderToData1 = await buildCalldataForOrder({
@@ -240,7 +240,7 @@ describe('Settlement', function () {
                 takingAmount: ether('100'),
                 makerTraits: buildMakerTraits({ allowedSender: settlement.address }),
             },
-            singleFusionData: { resolvers: [resolver.address], takerFee: 10000000n, takerFeeReceiver: addr2.address },
+            singleFusionData: { resolvers: [resolver.address], takerFee: 10000000n, takerFeeReceiver: bob.address },
             orderSigner: alice,
             dataFormFixture,
             isInnermostOrder: true,
@@ -255,7 +255,7 @@ describe('Settlement', function () {
                 takingAmount: ether('0.1'),
                 makerTraits: buildMakerTraits({ allowedSender: settlement.address }),
             },
-            singleFusionData: { resolvers: [resolver.address], takerFee: 10000000n, takerFeeReceiver: addr2.address },
+            singleFusionData: { resolvers: [resolver.address], takerFee: 10000000n, takerFeeReceiver: bob.address },
             orderSigner: owner,
             dataFormFixture,
             additionalDataForSettlement: fillOrderToData1,
@@ -269,8 +269,8 @@ describe('Settlement', function () {
         await dai.connect(alice).transfer(resolver.address, daiFeeAmount.toString());
 
         const txn = await resolver.settleOrders(fillOrderToData0);
-        await expect(txn).to.changeTokenBalances(dai, [owner, alice, addr2], [ether('-100'), ether('100'), ether('1')]);
-        await expect(txn).to.changeTokenBalances(weth, [owner, alice, addr2], [ether('0.1'), ether('-0.1'), ether('0.001')]);
+        await expect(txn).to.changeTokenBalances(dai, [owner, alice, bob], [ether('-100'), ether('100'), ether('1')]);
+        await expect(txn).to.changeTokenBalances(weth, [owner, alice, bob], [ether('0.1'), ether('-0.1'), ether('0.001')]);
     });
 
     it('unidirectional recursive swap', async function () {
