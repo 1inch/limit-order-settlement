@@ -412,7 +412,7 @@ describe('Settlement', function () {
             if (actualTakingAmount === 0n) {
                 actualTakingAmount = ether('0.1');
                 const ts = await time.latest();
-                // TODO: avoid this shit (as well as any others computations in tests)
+                // TODO: avoid this shit (as well as any other computations in tests)
                 if (ts < startTime + auctionDelay + auctionDuration) {
                     // actualTakingAmount = actualTakingAmount * (
                     //    _BASE_POINTS + initialRateBump * (startTime + auctionDelay + auctionDuration - currentTimestamp) / auctionDuration

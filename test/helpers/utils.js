@@ -33,7 +33,7 @@ const _tryRun = async (f, n = 10) => {
     }
 };
 
-// not idemponent. Needs to be rewritten a bit if anothers run is required
+// not idemponent. Needs to be rewritten a bit if another run is required
 const _addCompoundTokens = async (compoundLikeWrapper, cTokens) => {
     await (await compoundLikeWrapper.addMarkets(cTokens)).wait();
 };
