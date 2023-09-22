@@ -6,26 +6,20 @@ const { deploySwapTokens, getChainId } = require('./helpers/fixtures');
 const { buildFusions } = require('./helpers/fusionUtils');
 
 describe('WhitelistChecker', function () {
-    let addr, addr1;
-    let chainId;
-
-    before(async function () {
-        [addr, addr1] = await ethers.getSigners();
-        chainId = await getChainId();
-    });
-
     async function initContracts() {
+        const [owner, alice] = await ethers.getSigners();
+        const chainId = await getChainId();
         const { dai, weth, swap } = await deploySwapTokens();
 
-        await dai.mint(addr.address, ether('100'));
-        await dai.mint(addr1.address, ether('100'));
+        await dai.mint(owner.address, ether('100'));
+        await dai.mint(alice.address, ether('100'));
         await weth.deposit({ value: ether('1') });
-        await weth.connect(addr1).deposit({ value: ether('1') });
+        await weth.connect(alice).deposit({ value: ether('1') });
 
         await dai.approve(swap.address, ether('100'));
-        await dai.connect(addr1).approve(swap.address, ether('100'));
+        await dai.connect(alice).approve(swap.address, ether('100'));
         await weth.approve(swap.address, ether('1'));
-        await weth.connect(addr1).approve(swap.address, ether('1'));
+        await weth.connect(alice).approve(swap.address, ether('1'));
 
         const whitelistRegistrySimple = await deployContract('WhitelistRegistrySimple', []);
         const settlement = await deployContract('Settlement', [swap.address, weth.address]);
@@ -33,12 +27,16 @@ describe('WhitelistChecker', function () {
         const ResolverMock = await ethers.getContractFactory('ResolverMock');
         const resolver = await ResolverMock.deploy(settlement.address, swap.address);
 
-        return { dai, weth, swap, whitelistRegistrySimple, settlement, resolver };
+        return {
+            contracts: { dai, weth, swap, whitelistRegistrySimple, settlement, resolver },
+            accounts: { owner, alice },
+            others: { chainId },
+        };
     }
 
     describe('should not work with non-whitelisted address', function () {
         it('whitelist check in settleOrders method', async function () {
-            const { dai, weth, swap, settlement } = await loadFixture(initContracts);
+            const { contracts: { dai, weth, swap, settlement }, accounts: { owner, alice }, others: { chainId } } = await loadFixture(initContracts);
 
             const { fusions: [fusionDetails], hashes: [fusionHash], resolvers } = await buildFusions([{}]);
 
@@ -47,18 +45,18 @@ describe('WhitelistChecker', function () {
                 takerAsset: weth.address,
                 makingAmount: ether('10'),
                 takingAmount: ether('0.01'),
-                maker: addr1.address,
+                maker: alice.address,
             });
             order.salt = fusionHash;
 
-            const { r, vs } = compactSignature(await signOrder(order, chainId, swap.address, addr1));
+            const { r, vs } = compactSignature(await signOrder(order, chainId, swap.address, alice));
             const fillOrderToData = swap.interface.encodeFunctionData('fillOrderTo', [
                 order,
                 r,
                 vs,
                 ether('10'),
                 fillWithMakingAmount('0'),
-                addr.address,
+                owner.address,
                 settlement.address + '01' + trim0x(fusionDetails),
             ]) + trim0x(resolvers);
 
@@ -67,47 +65,48 @@ describe('WhitelistChecker', function () {
         });
 
         it('onlyThis modifier in takerInteraction method', async function () {
-            const { dai, weth, swap, settlement } = await loadFixture(initContracts);
+            const { contracts: { dai, weth, swap, settlement }, accounts: { owner, alice }, others: { chainId } } = await loadFixture(initContracts);
 
             const order = buildOrder({
                 makerAsset: dai.address,
                 takerAsset: weth.address,
                 makingAmount: ether('100'),
                 takingAmount: ether('0.1'),
-                maker: addr1.address,
+                maker: alice.address,
             });
 
-            const { r, vs } = compactSignature(await signOrder(order, chainId, swap.address, addr1));
-            await expect(swap.fillOrderTo(order, r, vs, ether('10'), fillWithMakingAmount('0'), addr.address, settlement.address + '01'))
+            const { r, vs } = compactSignature(await signOrder(order, chainId, swap.address, alice));
+            await expect(swap.fillOrderTo(order, r, vs, ether('10'), fillWithMakingAmount('0'), owner.address, settlement.address + '01'))
                 .to.be.revertedWithCustomError(settlement, 'AccessDenied');
         });
 
         it('onlyLimitOrderProtocol modifier', async function () {
-            const { dai, weth, swap, settlement } = await loadFixture(initContracts);
+            const { contracts: { dai, weth, swap, settlement }, accounts: { owner, alice } } = await loadFixture(initContracts);
 
             const order = buildOrder({
                 makerAsset: dai.address,
                 takerAsset: weth.address,
                 makingAmount: ether('100'),
                 takingAmount: ether('0.1'),
-                maker: addr1.address,
+                maker: alice.address,
             });
             const orderHash = await swap.hashOrder(order);
 
-            await expect(settlement.takerInteraction(order, orderHash, addr.address, '1', '1', '0', '0x'))
+            await expect(settlement.takerInteraction(order, orderHash, owner.address, '1', '1', '0', '0x'))
                 .to.be.revertedWithCustomError(settlement, 'AccessDenied');
         });
     });
 
     describe('should work with whitelisted address', function () {
         async function initContractsAndSetStatus() {
-            const { dai, weth, swap, whitelistRegistrySimple, settlement, resolver } = await initContracts();
-            await whitelistRegistrySimple.setStatus(addr.address, true);
-            return { dai, weth, swap, settlement, resolver };
+            const data = await initContracts();
+            const { contracts: { whitelistRegistrySimple }, accounts: { owner } } = data;
+            await whitelistRegistrySimple.setStatus(owner.address, true);
+            return data;
         }
 
         it('whitelist check in settleOrders method', async function () {
-            const { dai, weth, swap, settlement, resolver } = await loadFixture(initContractsAndSetStatus);
+            const { contracts: { dai, weth, swap, settlement, resolver }, accounts: { owner, alice }, others: { chainId } } = await loadFixture(initContractsAndSetStatus);
 
             const { fusions: [fusionDetails0, fusionDetails1], hashes: [fusionHash0, fusionHash1], resolvers } = await buildFusions([
                 { resolvers: [resolver.address] },
@@ -119,7 +118,7 @@ describe('WhitelistChecker', function () {
                 takerAsset: weth.address,
                 makingAmount: ether('100'),
                 takingAmount: ether('0.1'),
-                maker: addr.address,
+                maker: owner.address,
             });
             order0.salt = fusionHash0;
 
@@ -128,11 +127,11 @@ describe('WhitelistChecker', function () {
                 takerAsset: dai.address,
                 makingAmount: ether('0.1'),
                 takingAmount: ether('100'),
-                maker: addr1.address,
+                maker: alice.address,
             });
             order1.salt = fusionHash1;
 
-            const { r: r1, vs: vs1 } = compactSignature(await signOrder(order1, chainId, swap.address, addr1));
+            const { r: r1, vs: vs1 } = compactSignature(await signOrder(order1, chainId, swap.address, alice));
             const fillOrderToData1 = swap.interface.encodeFunctionData('fillOrderTo', [
                 order1,
                 r1,
@@ -143,7 +142,7 @@ describe('WhitelistChecker', function () {
                 settlement.address + '01' + trim0x(fusionDetails1),
             ]);
 
-            const { r: r0, vs: vs0 } = compactSignature(await signOrder(order0, chainId, swap.address, addr));
+            const { r: r0, vs: vs0 } = compactSignature(await signOrder(order0, chainId, swap.address, owner));
             const fillOrderToData0 = swap.interface.encodeFunctionData('fillOrderTo', [
                 order0,
                 r0,
@@ -155,8 +154,8 @@ describe('WhitelistChecker', function () {
             ]) + trim0x(resolvers);
 
             const txn = await resolver.settleOrders(fillOrderToData0);
-            await expect(txn).to.changeTokenBalances(dai, [addr, addr1], [ether('-100'), ether('100')]);
-            await expect(txn).to.changeTokenBalances(weth, [addr, addr1], [ether('0.1'), ether('-0.1')]);
+            await expect(txn).to.changeTokenBalances(dai, [owner, alice], [ether('-100'), ether('100')]);
+            await expect(txn).to.changeTokenBalances(weth, [owner, alice], [ether('0.1'), ether('-0.1')]);
         });
     });
 });

@@ -3,39 +3,37 @@ const { ethers } = require('hardhat');
 const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
 
 describe('FeeBankCharger', function () {
-    let addr, addr1;
-
-    before(async function () {
-        [addr, addr1] = await ethers.getSigners();
-    });
-
     async function initContracts() {
-        const inch = await deployContract('ERC20PermitMock', ['1INCH', '1INCH', addr.address, ether('1000')]);
+        const [owner, alice] = await ethers.getSigners();
+        const inch = await deployContract('ERC20PermitMock', ['1INCH', '1INCH', owner.address, ether('1000')]);
 
         const charger = await deployContract('FeeBankCharger', [inch.address]);
 
         const FeeBank = await ethers.getContractFactory('FeeBank');
         const feeBank = FeeBank.attach(await charger.feeBank());
 
-        await inch.transfer(addr1.address, ether('100'));
+        await inch.transfer(alice.address, ether('100'));
         await inch.approve(feeBank.address, ether('1000'));
-        await inch.connect(addr1).approve(feeBank.address, ether('1000'));
+        await inch.connect(alice).approve(feeBank.address, ether('1000'));
 
-        return { inch, charger, feeBank };
+        return {
+            contracts: { inch, charger, feeBank },
+            accounts: { owner, alice },
+        };
     }
 
     describe('increaseAvailableCredit', function () {
         it('should increase credit', async function () {
-            const { charger, feeBank } = await loadFixture(initContracts);
+            const { contracts: { charger, feeBank }, accounts: { alice } } = await loadFixture(initContracts);
             const amount = ether('100');
-            expect(await charger.availableCredit(addr1.address)).to.equal('0');
-            await feeBank.depositFor(addr1.address, amount);
-            expect(await charger.availableCredit(addr1.address)).to.equal(amount);
+            expect(await charger.availableCredit(alice.address)).to.equal('0');
+            await feeBank.depositFor(alice.address, amount);
+            expect(await charger.availableCredit(alice.address)).to.equal(amount);
         });
 
         it('should not increase credit by non-feeBank address', async function () {
-            const { charger } = await loadFixture(initContracts);
-            await expect(charger.increaseAvailableCredit(addr1.address, ether('100'))).to.be.revertedWithCustomError(
+            const { contracts: { charger }, accounts: { alice } } = await loadFixture(initContracts);
+            await expect(charger.increaseAvailableCredit(alice.address, ether('100'))).to.be.revertedWithCustomError(
                 charger,
                 'OnlyFeeBankAccess',
             );
@@ -44,23 +42,24 @@ describe('FeeBankCharger', function () {
 
     describe('decreaseAvailableCredit', function () {
         async function initContractsAndAllowance() {
-            const { charger, feeBank } = await initContracts();
+            const data = await initContracts();
+            const { contracts: { feeBank } } = data;
             const creditAmount = ether('100');
             await feeBank.deposit(creditAmount);
-            return { charger, feeBank, creditAmount };
+            return { ...data, others: { creditAmount } };
         }
 
         it('should decrease credit', async function () {
-            const { charger, feeBank, creditAmount } = await loadFixture(initContractsAndAllowance);
+            const { contracts: { charger, feeBank }, accounts: { owner, alice }, others: { creditAmount } } = await loadFixture(initContractsAndAllowance);
             const amount = ether('10');
-            expect(await charger.availableCredit(addr.address)).to.equal(creditAmount);
-            await feeBank.withdrawTo(addr1.address, amount);
-            expect(await charger.availableCredit(addr.address)).to.equal(creditAmount - amount);
+            expect(await charger.availableCredit(owner.address)).to.equal(creditAmount);
+            await feeBank.withdrawTo(alice.address, amount);
+            expect(await charger.availableCredit(owner.address)).to.equal(creditAmount - amount);
         });
 
         it('should not deccrease credit by non-feeBank address', async function () {
-            const { charger } = await loadFixture(initContractsAndAllowance);
-            await expect(charger.decreaseAvailableCredit(addr1.address, ether('10'))).to.be.revertedWithCustomError(
+            const { contracts: { charger }, accounts: { alice } } = await loadFixture(initContractsAndAllowance);
+            await expect(charger.decreaseAvailableCredit(alice.address, ether('10'))).to.be.revertedWithCustomError(
                 charger,
                 'OnlyFeeBankAccess',
             );

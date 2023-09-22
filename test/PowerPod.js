@@ -3,11 +3,11 @@ const { ethers } = require('hardhat');
 const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
 const { expBase } = require('./helpers/utils');
 
-describe('PowerPod', function () {
-    const COMMON_LOCK_DURATION = time.duration.days('40');
-    const MAX_WHITELISTED = 3;
-    const BALANCE_THRESHOLD = 1000; // 10%
+const COMMON_LOCK_DURATION = time.duration.days('40');
+const MAX_WHITELISTED = 3;
+const BALANCE_THRESHOLD = 1000; // 10%
 
+describe('PowerPod', function () {
     const stakeAndRegisterInDelegation = async (st1inch, delegation, user, amount, userIndex) => {
         await st1inch.connect(user).deposit(0, COMMON_LOCK_DURATION);
         await st1inch.depositFor(user.address, amount);
@@ -79,7 +79,7 @@ describe('PowerPod', function () {
                 whitelistRegistry,
                 'BalanceLessThanThreshold',
             );
-            // create other stake and delegate to owner
+            // create another stake and delegate to owner
             await depositAndDelegateTo(st1inch, delegation, alice, owner.address, ether('2'));
             // register owner into whitelistRegistry and chack that
             await whitelistRegistry.register();
@@ -131,7 +131,7 @@ describe('PowerPod', function () {
             expect(await whitelistRegistry.getWhitelist()).to.not.contain(owner.address);
         });
 
-        it('should decrease delegatee balance, if delegator delegate to other account', async function () {
+        it('should decrease delegatee balance, if delegator delegate to another account', async function () {
             const {
                 contracts: { st1inch, delegation, whitelistRegistry },
                 accounts: { owner, alice, whitelistedUser1 },
