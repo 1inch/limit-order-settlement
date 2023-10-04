@@ -38,14 +38,14 @@
     "@1inch/solidity-utils" "2.2.5"
     "@openzeppelin/contracts" "4.8.0"
 
-"@1inch/limit-order-protocol-contract@4.0.0-prerelease-7":
-  version "4.0.0-prerelease-7"
-  resolved "https://registry.yarnpkg.com/@1inch/limit-order-protocol-contract/-/limit-order-protocol-contract-4.0.0-prerelease-7.tgz#8410a4171641233698f6e5654fa70ca7286a9155"
-  integrity sha512-ZqT4CoY3INKESq4Hi2f2RJyV3FsqEvHd4mcZql+uotTyy6ZW2e2JN9ocPLruHwOtlaLnhi6zVbtWxK0wwRuF4w==
+"@1inch/limit-order-protocol-contract@4.0.0-prerelease-14":
+  version "4.0.0-prerelease-14"
+  resolved "https://registry.yarnpkg.com/@1inch/limit-order-protocol-contract/-/limit-order-protocol-contract-4.0.0-prerelease-14.tgz#6f2eb42b13fbfc4fda6cf95271ae2703f58127f2"
+  integrity sha512-iHY9rDBjCaUyDOPpUcmv66OeM69AObPZgh3w2+mGFQZ3sKudtnG/Tqdzsy7LEbJ1xDCUL0x/OmvllvWi1yqAbA==
   dependencies:
     "@1inch/solidity-utils" "2.2.27"
     "@chainlink/contracts" "0.6.1"
-    "@openzeppelin/contracts" "4.8.3"
+    "@openzeppelin/contracts" "4.9.0"
 
 "@1inch/solidity-utils@2.2.21":
   version "2.2.21"
@@ -1208,10 +1208,10 @@
   resolved "https://registry.yarnpkg.com/@openzeppelin/contracts/-/contracts-4.8.2.tgz#d815ade0027b50beb9bcca67143c6bcc3e3923d6"
   integrity sha512-kEUOgPQszC0fSYWpbh2kT94ltOJwj1qfT2DWo+zVttmGmf97JZ99LspePNaeeaLhCImaHVeBbjaQFZQn7+Zc5g==
 
-"@openzeppelin/contracts@4.8.3":
-  version "4.8.3"
-  resolved "https://registry.yarnpkg.com/@openzeppelin/contracts/-/contracts-4.8.3.tgz#cbef3146bfc570849405f59cba18235da95a252a"
-  integrity sha512-bQHV8R9Me8IaJoJ2vPG4rXcL7seB7YVuskr4f+f5RyOStSZetwzkWtoqDMl5erkBJy0lDRUnIR2WIkPiC0GJlg==
+"@openzeppelin/contracts@4.9.0":
+  version "4.9.0"
+  resolved "https://registry.yarnpkg.com/@openzeppelin/contracts/-/contracts-4.9.0.tgz#683f33b6598970051bc5f0806fd8660da9e018dd"
+  integrity sha512-DUP74AFGKlic2sQb/CmgrN2aUPMFGxRrmCTUxLHsiU2RzwWqVuMPZBxiAyvlff6Pea77uylAX6B5x9W6evEbhA==
 
 "@openzeppelin/contracts@~4.3.3":
   version "4.3.3"

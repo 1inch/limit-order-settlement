@@ -3,7 +3,8 @@
 pragma solidity 0.8.19;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@1inch/limit-order-protocol-contract/contracts/interfaces/IPreInteraction.sol";
+import "@1inch/limit-order-protocol-contract/contracts/interfaces/IPostInteraction.sol";
+import "@1inch/limit-order-protocol-contract/contracts/interfaces/IAmountGetter.sol";
 import "@1inch/solidity-utils/contracts/libraries/SafeERC20.sol";
 import "./FeeBankCharger.sol";
 
@@ -11,7 +12,7 @@ import "./FeeBankCharger.sol";
  * @title Settlement contract
  * @notice Contract to execute limit orders settlement, created by Fusion mode.
  */
-contract SettlementExtension is IPreInteraction, FeeBankCharger {
+contract SettlementExtension is IPostInteraction, IAmountGetter, FeeBankCharger {
     using SafeERC20 for IERC20;
     using AddressLib for Address;
 
@@ -49,16 +50,30 @@ contract SettlementExtension is IPreInteraction, FeeBankCharger {
     ///     (bytes3,bytes2)[N] pointsAndTimeDeltas;
     /// }
 
-    function getMakingAmount(uint256 orderMakingAmount, uint256 orderTakingAmount, bytes calldata auctionDetails) external view returns (uint256) {
-        uint256 requestedTakingAmount = uint256(bytes32(msg.data[msg.data.length - 0x60:]));
-        uint256 rateBump = _getRateBump(auctionDetails);
-        return orderMakingAmount * requestedTakingAmount * (_BASE_POINTS + rateBump) / _BASE_POINTS / orderTakingAmount;
+    function getMakingAmount(
+        IOrderMixin.Order calldata order,
+        bytes calldata /* extension */,
+        bytes32 /* orderHash */,
+        address /* taker */,
+        uint256 takingAmount,
+        uint256 /* remainingMakingAmount */,
+        bytes calldata extraData
+    ) external view returns (uint256) {
+        uint256 rateBump = _getRateBump(extraData);
+        return order.makingAmount * takingAmount * (_BASE_POINTS + rateBump) / _BASE_POINTS / order.takingAmount;
     }
 
-    function getTakingAmount(uint256 orderMakingAmount, uint256 orderTakingAmount, bytes calldata auctionDetails) external view returns (uint256) {
-        uint256 requestedMakingAmount = uint256(bytes32(msg.data[msg.data.length - 0x60:]));
-        uint256 rateBump = _getRateBump(auctionDetails);
-        return (orderTakingAmount * requestedMakingAmount * (_BASE_POINTS + rateBump) + orderMakingAmount * _BASE_POINTS - 1) / _BASE_POINTS / orderMakingAmount;
+    function getTakingAmount(
+        IOrderMixin.Order calldata order,
+        bytes calldata /* extension */,
+        bytes32 /* orderHash */,
+        address /* taker */,
+        uint256 makingAmount,
+        uint256 /* remainingMakingAmount */,
+        bytes calldata extraData
+    ) external view returns (uint256) {
+        uint256 rateBump = _getRateBump(extraData);
+        return (order.takingAmount * makingAmount * (_BASE_POINTS + rateBump) + order.makingAmount * _BASE_POINTS - 1) / _BASE_POINTS / order.makingAmount;
     }
 
     function _getRateBump(bytes calldata auctionDetails) private view returns (uint256) {
@@ -113,13 +128,14 @@ contract SettlementExtension is IPreInteraction, FeeBankCharger {
         return false;
     }
 
-    function preInteraction(
+    function postInteraction(
         IOrderMixin.Order calldata order,
-        bytes32,
+        bytes calldata /* extension */,
+        bytes32 /* orderHash */,
         address taker,
         uint256 makingAmount,
         uint256 takingAmount,
-        uint256,
+        uint256 /* remainingMakingAmount */,
         bytes calldata extraData
     ) external onlyLimitOrderProtocol {
         (uint256 resolverFee, address integrator, uint256 integrationFee, bytes calldata whitelist) = _parseFeeData(extraData, order.makingAmount, makingAmount, takingAmount);
