@@ -106,29 +106,6 @@ contract SettlementExtension is IPostInteraction, IAmountGetter, FeeBankCharger 
         return (auctionFinishTime - block.timestamp) * currentRateBump / (auctionFinishTime - currentPointTime);
     }
 
-    /// struct WhitelistDetails {
-    ///     bytes4 auctionStartTime;
-    ///     (bytes10,bytes2)[N] resolversAddressesAndTimeDeltas;
-    /// }
-
-    function _isWhitelisted(bytes calldata whitelist, address resolver) private view returns (bool) {
-        uint256 allowedTime = uint32(bytes4(whitelist[0:4])); // initially set to auction start time
-        whitelist = whitelist[4:];
-        uint256 whitelistSize = whitelist.length / 12;
-        uint80 maskedResolverAddress = uint80(uint160(resolver) & _RESOLVER_ADDRESS_MASK);
-        for (uint256 i = 0; i < whitelistSize; i++) {
-            uint80 whitelistedAddress = uint80(bytes10(whitelist[:10]));
-            allowedTime += uint16(bytes2(whitelist[10:12])); // add next time delta
-            if (maskedResolverAddress == whitelistedAddress) {
-                return allowedTime <= block.timestamp;
-            } else if (allowedTime > block.timestamp) {
-                return false;
-            }
-            whitelist = whitelist[12:];
-        }
-        return false;
-    }
-
     function postInteraction(
         IOrderMixin.Order calldata order,
         bytes calldata /* extension */,
@@ -175,5 +152,28 @@ contract SettlementExtension is IPostInteraction, IAmountGetter, FeeBankCharger 
             extraData = extraData[24:];
         }
         whitelist = extraData;
+    }
+
+    /// struct WhitelistDetails {
+    ///     bytes4 auctionStartTime;
+    ///     (bytes10,bytes2)[N] resolversAddressesAndTimeDeltas;
+    /// }
+
+    function _isWhitelisted(bytes calldata whitelist, address resolver) private view returns (bool) {
+        uint256 allowedTime = uint32(bytes4(whitelist[0:4])); // initially set to auction start time
+        whitelist = whitelist[4:];
+        uint256 whitelistSize = whitelist.length / 12;
+        uint80 maskedResolverAddress = uint80(uint160(resolver) & _RESOLVER_ADDRESS_MASK);
+        for (uint256 i = 0; i < whitelistSize; i++) {
+            uint80 whitelistedAddress = uint80(bytes10(whitelist[:10]));
+            allowedTime += uint16(bytes2(whitelist[10:12])); // add next time delta
+            if (maskedResolverAddress == whitelistedAddress) {
+                return allowedTime <= block.timestamp;
+            } else if (allowedTime > block.timestamp) {
+                return false;
+            }
+            whitelist = whitelist[12:];
+        }
+        return false;
     }
 }
