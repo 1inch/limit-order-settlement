@@ -159,21 +159,21 @@ contract SettlementExtension is IPostInteraction, IAmountGetter, FeeBankCharger 
     ///     (bytes10,bytes2)[N] resolversAddressesAndTimeDeltas;
     /// }
 
-    function _isWhitelisted(bytes calldata whitelist, address resolver) private view returns (bool) {
-        uint256 allowedTime = uint32(bytes4(whitelist[0:4])); // initially set to auction start time
-        whitelist = whitelist[4:];
-        uint256 whitelistSize = whitelist.length / 12;
-        uint80 maskedResolverAddress = uint80(uint160(resolver) & _RESOLVER_ADDRESS_MASK);
-        for (uint256 i = 0; i < whitelistSize; i++) {
-            uint80 whitelistedAddress = uint80(bytes10(whitelist[:10]));
-            allowedTime += uint16(bytes2(whitelist[10:12])); // add next time delta
-            if (maskedResolverAddress == whitelistedAddress) {
-                return allowedTime <= block.timestamp;
-            } else if (allowedTime > block.timestamp) {
-                return false;
+    function _isWhitelisted(bytes calldata whitelist, address resolver) private view returns (bool result) {
+        // solhint-disable-next-line no-inline-assembly
+        assembly ("memory-safe") {
+            let allowedTime := shr(224, calldataload(whitelist.offset))
+            let maskedResolverAddress := and(resolver, _RESOLVER_ADDRESS_MASK)
+            let cdEnd := add(whitelist.offset, whitelist.length)
+            for { let cdPtr := add(whitelist.offset, 4) } lt(cdPtr, cdEnd) { cdPtr := add(cdPtr, 12) } {
+                let data := calldataload(cdPtr)
+                let whitelistedAddress := shr(176, data)
+                allowedTime := add(allowedTime, and(shr(160, data), 0xffff))
+                if eq(maskedResolverAddress, whitelistedAddress) {
+                    result := sub(1, gt(allowedTime, timestamp()))
+                    break
+                }
             }
-            whitelist = whitelist[12:];
         }
-        return false;
     }
 }
