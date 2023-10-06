@@ -86,6 +86,7 @@ contract Settlement is ISettlement, FeeBankCharger {
      * (byte32,byte32) [L] tokensAndAmounts bytes
      * byte32   tokensAndAmounts array length in bytes (the last 32 bytes of calldata)
      * @param order The limit order being filled, which caused the interaction.
+     * @param /extension/ The order extension data.
      * @param /orderHash/ The order hash.
      * @param taker The taker address.
      * @param /makingAmount/ The making amount.
@@ -93,23 +94,23 @@ contract Settlement is ISettlement, FeeBankCharger {
      * @param /remainingMakingAmount/ The remaining making amount.
      * @param extraData Filling order supplemental data. In the order of layout:
      * FINALIZE_INTERACTION flag, {FusionDetails} data, resolver, resolver fee, tokensAndAmounts array. See {DynamicSuffix} for details.
-     * @return offeredTakingAmount Returns the offered taking amount.
      */
     function takerInteraction(
         IOrderMixin.Order calldata order,
+        bytes calldata /* extension */,
         bytes32 /* orderHash */,
         address taker,
         uint256 makingAmount,
         uint256 takingAmount,
         uint256 /* remainingMakingAmount */,
         bytes calldata extraData
-    ) public virtual onlyThis(taker) onlyLimitOrderProtocol returns(uint256 offeredTakingAmount) {
+    ) public override onlyThis(taker) onlyLimitOrderProtocol {
         (DynamicSuffix.Data calldata suffix, bytes calldata tokensAndAmounts, bytes calldata args) = extraData.decodeSuffix();
 
         bytes calldata fusionDetails = args[1:];
         fusionDetails = fusionDetails[:fusionDetails.detailsLength()];
 
-        offeredTakingAmount = takingAmount * (_BASE_POINTS + fusionDetails.rateBump()) / _BASE_POINTS;
+        uint256 offeredTakingAmount = takingAmount * (_BASE_POINTS + fusionDetails.rateBump()) / _BASE_POINTS;
         Address takingFeeData = fusionDetails.takingFeeData();
         uint256 takingFeeAmount = offeredTakingAmount * takingFeeData.getUint32(_TAKING_FEE_RATIO_OFFSET) / _TAKING_FEE_BASE;
 
@@ -172,14 +173,14 @@ contract Settlement is ISettlement, FeeBankCharger {
      */
     function _getInteraction(bytes calldata data) internal pure returns(bytes calldata interaction) {
         bytes4 selector = bytes4(data);
-        if (selector == IOrderMixin.fillOrderTo.selector) {
+        if (selector == IOrderMixin.fillOrderArgs.selector) {
             FillOrderToArgs calldata args;
             assembly ("memory-safe") {
                 args := add(data.offset, 4)
             }
             interaction = args.interaction;
         }
-        else if (selector == IOrderMixin.fillContractOrder.selector) {
+        else if (selector == IOrderMixin.fillContractOrderArgs.selector) {
             FillContractOrderArgs calldata args;
             assembly ("memory-safe") {
                 args := add(data.offset, 4)
