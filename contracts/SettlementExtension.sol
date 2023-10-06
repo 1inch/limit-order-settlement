@@ -138,20 +138,29 @@ contract SettlementExtension is IPostInteraction, IAmountGetter, FeeBankCharger 
         uint256 actualMakingAmount,
         uint256 actualTakingAmount
     ) private pure returns (uint256 resolverFee, address integrator, uint256 integrationFee, bytes calldata whitelist) {
-        bytes1 feeType = extraData[0];
-        extraData = extraData[1:];
-        if (feeType & 0x01 == 0x01) {
-            // resolverFee enabled
-            resolverFee = uint256(uint32(bytes4(extraData[:4]))) * _ORDER_FEE_BASE_POINTS * actualMakingAmount / orderMakingAmount;
-            extraData = extraData[4:];
+        // solhint-disable-next-line no-inline-assembly
+        assembly ("memory-safe") {
+            let firstWord := calldataload(extraData.offset)
+            let feeType := shr(248, firstWord)
+            firstWord := shl(8, firstWord)
+            // let extraDataEnd := add(extraData.offset, extraData.length)
+            // extraData.offset := add(extraData.offset, 1)
+            whitelist.offset := add(extraData.offset, 1)
+            if and(feeType, 0x01) {
+                // resolverFee enabled
+                resolverFee := div(mul(mul(shr(224, firstWord), _ORDER_FEE_BASE_POINTS), actualMakingAmount), orderMakingAmount)
+                firstWord := shl(32, firstWord)
+                whitelist.offset := add(whitelist.offset, 4)
+            }
+            if and(feeType, 0x02) {
+                // integratorFee enabled
+                integrator := shr(96, firstWord)
+                firstWord := shl(160, firstWord)
+                integrationFee := div(mul(actualTakingAmount, shr(224, firstWord)), _TAKING_FEE_BASE)
+                whitelist.offset := add(whitelist.offset, 24)
+            }
+            whitelist.length := sub(extraData.length, sub(whitelist.offset, extraData.offset))
         }
-        if (feeType & 0x02 == 0x02) {
-            // integratorFee enabled
-            integrator = address(bytes20(extraData[:20]));
-            integrationFee = actualTakingAmount * uint256(uint32(bytes4(extraData[20:24]))) / _TAKING_FEE_BASE;
-            extraData = extraData[24:];
-        }
-        whitelist = extraData;
     }
 
     /// struct WhitelistDetails {
