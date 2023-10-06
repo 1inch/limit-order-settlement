@@ -142,7 +142,7 @@ contract SettlementExtension is IPostInteraction, IAmountGetter, FeeBankCharger 
         extraData = extraData[1:];
         if (feeType & 0x01 == 0x01) {
             // resolverFee enabled
-            resolverFee = (_ORDER_FEE_BASE_POINTS * uint256(uint32(bytes4(extraData[:4]))) * actualMakingAmount + orderMakingAmount - 1) / orderMakingAmount;
+            resolverFee = uint256(uint32(bytes4(extraData[:4]))) * _ORDER_FEE_BASE_POINTS * actualMakingAmount / orderMakingAmount;
             extraData = extraData[4:];
         }
         if (feeType & 0x02 == 0x02) {
