@@ -92,7 +92,7 @@ describe('MeasureGas', function () {
 
         const auctionStartTime = await time.latest();
         const auctionDetails = ethers.utils.solidityPack(
-            ['uint32', 'uint24', 'uint24'], [auctionStartTime, time.duration.hours(1), 0]
+            ['uint32', 'uint24', 'uint24'], [auctionStartTime, time.duration.hours(1), 0],
         );
 
         const order = buildOrder({
@@ -106,7 +106,7 @@ describe('MeasureGas', function () {
             makingAmountData: settlementExtension.address + trim0x(auctionDetails),
             takingAmountData: settlementExtension.address + trim0x(auctionDetails),
             postInteraction: settlementExtension.address + trim0x(ethers.utils.solidityPack(
-                ['uint8', 'uint32', 'bytes10', 'uint16'], [0, auctionStartTime, '0x' + owner.address.substring(22), 0]
+                ['uint8', 'uint32', 'bytes10', 'uint16'], [0, auctionStartTime, '0x' + owner.address.substring(22), 0],
             )),
         });
 
@@ -158,7 +158,7 @@ describe('MeasureGas', function () {
                 makerTraits: buildMakerTraits({ allowedSender: settlement.address }),
             });
             orders[i].salt = fusionHashes[i];
-            const { r, vs } = compactSignature(await signOrder(orders[i], chainId, swap.address, alice));
+            const { r, _vs: vs } = ethers.utils.splitSignature(await signOrder(orders[i], chainId, swap.address, alice));
             signatures[i] = { r, vs };
         }
         orders[4] = buildOrder({
@@ -170,7 +170,8 @@ describe('MeasureGas', function () {
             makerTraits: settlement.address,
         });
         orders[4].salt = fusionHashes[4];
-        const { r, vs } = compactSignature(await signOrder(orders[4], chainId, swap.address, owner));
+        const { r, _vs: vs } = ethers.utils.splitSignature(await signOrder(orders[4], chainId, swap.address, owner));
+
         signatures[4] = { r, vs };
 
         // Encode data for fillingg orders
