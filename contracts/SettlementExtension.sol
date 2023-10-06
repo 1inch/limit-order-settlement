@@ -3,6 +3,7 @@
 pragma solidity 0.8.19;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@1inch/limit-order-protocol-contract/contracts/interfaces/IPostInteraction.sol";
 import "@1inch/limit-order-protocol-contract/contracts/interfaces/IAmountGetter.sol";
 import "@1inch/solidity-utils/contracts/libraries/SafeERC20.sol";
@@ -73,7 +74,7 @@ contract SettlementExtension is IPostInteraction, IAmountGetter, FeeBankCharger 
         bytes calldata extraData
     ) external view returns (uint256) {
         uint256 rateBump = _getRateBump(extraData);
-        return (order.takingAmount * makingAmount * (_BASE_POINTS + rateBump) + order.makingAmount * _BASE_POINTS - 1) / _BASE_POINTS / order.makingAmount;
+        return Math.ceilDiv(order.takingAmount * makingAmount * (_BASE_POINTS + rateBump), _BASE_POINTS * order.makingAmount);
     }
 
     function _getRateBump(bytes calldata auctionDetails) private view returns (uint256) {
