@@ -77,33 +77,64 @@ contract SettlementExtension is IPostInteraction, IAmountGetter, FeeBankCharger 
         return Math.ceilDiv(order.takingAmount * makingAmount * (_BASE_POINTS + rateBump), _BASE_POINTS * order.makingAmount);
     }
 
-    function _getRateBump(bytes calldata auctionDetails) private view returns (uint256) {
-        uint256 auctionStartTime = uint32(bytes4(auctionDetails[0:4]));
-        uint256 auctionFinishTime = auctionStartTime + uint24(bytes3(auctionDetails[4:7]));
-        uint256 initialRateBump = uint24(bytes3(auctionDetails[7:10]));
-
-        if (block.timestamp <= auctionStartTime) {
-            return initialRateBump;
-        } else if (block.timestamp >= auctionFinishTime) {
-            return 0; // Means 0% bump
-        }
-
-        auctionDetails = auctionDetails[10:];
-        uint256 pointsSize = auctionDetails.length / 5;
-        uint256 currentPointTime = auctionStartTime;
-        uint256 currentRateBump = initialRateBump;
-
-        for (uint256 i = 0; i < pointsSize; i++) {
-            uint256 nextRateBump = uint24(bytes3(auctionDetails[:3]));
-            uint256 nextPointTime = currentPointTime + uint16(bytes2(auctionDetails[3:5]));
-            if (block.timestamp <= nextPointTime) {
-                return ((block.timestamp - currentPointTime) * nextRateBump + (nextPointTime - block.timestamp) * currentRateBump) / (nextPointTime - currentPointTime);
+    function _getRateBump(bytes calldata auctionDetails) private view returns (uint256 result) {
+        // solhint-disable-next-line no-inline-assembly
+        assembly ("memory-safe") {
+            function timeWeightedAvg(t1, v1, t2, v2) -> avg {
+                avg := div(add(mul(sub(timestamp(), t1), v2), mul(sub(t2, timestamp()), v1)), sub(t2, t1))
             }
-            currentRateBump = nextRateBump;
-            currentPointTime = nextPointTime;
-        }
 
-        return (auctionFinishTime - block.timestamp) * currentRateBump / (auctionFinishTime - currentPointTime);
+            let firstWord := calldataload(auctionDetails.offset)
+            let auctionStartTime := shr(224, firstWord)
+            firstWord := shl(32, firstWord)
+            let auctionFinishTime := add(auctionStartTime, shr(232, firstWord))
+            firstWord := shl(24, firstWord)
+            let initialRateBump := shr(232, firstWord)
+
+            switch gt(timestamp(), auctionStartTime)
+            case 0 {
+                result := initialRateBump
+            }
+            default {
+                switch lt(timestamp(), auctionFinishTime)
+                case 0 {
+                    result := 0
+                }
+                default {
+                    let cdPtr := add(auctionDetails.offset, 10)
+                    let cdEnd := add(auctionDetails.offset, auctionDetails.length)
+                    let currentPointTime := auctionStartTime
+                    let currentRateBump := initialRateBump
+                    for { } lt(cdPtr, cdEnd) { cdPtr := add(cdPtr, 5) } {
+                        let data := calldataload(cdPtr)
+                        let nextRateBump := shr(232, data)
+                        data := shl(32, data)
+                        let nextPointTime := add(currentPointTime, shr(240, data))
+                        switch gt(timestamp(), nextPointTime)
+                        case 0 {
+                            result := div(
+                                add(
+                                    mul(sub(timestamp(), currentPointTime), nextRateBump),
+                                    mul(sub(nextPointTime, timestamp()), currentRateBump)
+                                ),
+                                sub(nextPointTime, currentPointTime)
+                            )
+                            break
+                        }
+                        default {
+                            currentPointTime := nextPointTime
+                            currentRateBump := nextRateBump
+                        }
+                    }
+                    if eq(cdPtr, cdEnd) {
+                        result := div(
+                            mul(sub(auctionFinishTime, timestamp()), currentRateBump),
+                            sub(auctionFinishTime, currentPointTime)
+                        )
+                    }
+                }
+            }
+        }
     }
 
     function postInteraction(
