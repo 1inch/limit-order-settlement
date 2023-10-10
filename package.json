@@ -41,6 +41,7 @@
     "@openzeppelin/contracts": "4.8.2"
   },
   "devDependencies": {
+    "@1inch/limit-order-settlement-v1": "git+https://github.com/1inch/limit-order-settlement.git#feature/settlement-v1",
     "@matterlabs/hardhat-zksync-deploy": "0.6.3",
     "@matterlabs/hardhat-zksync-solc": "0.3.16",
     "@matterlabs/hardhat-zksync-verify": "0.1.4",

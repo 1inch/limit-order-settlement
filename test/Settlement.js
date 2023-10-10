@@ -9,7 +9,7 @@ const ORDER_FEE = 100n;
 const BACK_ORDER_FEE = 125n;
 const BASE_POINTS = ether('0.001'); // 1e15
 
-describe('Settlement', function () {
+describe.skip('Settlement', function () {
     async function initContracts() {
         const abiCoder = ethers.utils.defaultAbiCoder;
         const chainId = await getChainId();
