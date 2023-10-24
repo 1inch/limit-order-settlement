@@ -2,44 +2,43 @@ const { time, expect, ether, trim0x, timeIncreaseTo, getPermit, getPermit2, comp
 const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
 const { ethers } = require('hardhat');
 const { deploySwapTokens, getChainId } = require('./helpers/fixtures');
-const { buildOrder, signOrder, compactSignature, fillWithMakingAmount, buildMakerTraits } = require('@1inch/limit-order-protocol-contract/test/helpers/orderUtils');
-const { buildFusions } = require('./helpers/fusionUtils');
+const { buildOrder, signOrder, buildTakerTraits, buildMakerTraits } = require('@1inch/limit-order-protocol-contract/test/helpers/orderUtils');
 
 const ORDER_FEE = 100n;
 const BACK_ORDER_FEE = 125n;
 const BASE_POINTS = ether('0.001'); // 1e15
 
-describe.skip('Settlement', function () {
+describe('Settlement', function () {
     async function initContracts() {
         const abiCoder = ethers.utils.defaultAbiCoder;
         const chainId = await getChainId();
         const [owner, alice, bob] = await ethers.getSigners();
 
-        const { dai, weth, inch, swap } = await deploySwapTokens();
+        const { dai, weth, inch, lopv4 } = await deploySwapTokens();
 
         await dai.transfer(alice.address, ether('100'));
         await inch.mint(owner.address, ether('100'));
         await weth.deposit({ value: ether('1') });
         await weth.connect(alice).deposit({ value: ether('1') });
 
-        const settlement = await deployContract('SettlementMock', [swap.address, inch.address]);
+        const settlement = await deployContract('SettlementExtensionMock', [lopv4.address, inch.address]);
 
         const FeeBank = await ethers.getContractFactory('FeeBank');
         const feeBank = FeeBank.attach(await settlement.feeBank());
 
         const ResolverMock = await ethers.getContractFactory('ResolverMock');
-        const resolver = await ResolverMock.deploy(settlement.address, swap.address);
+        const resolver = await ResolverMock.deploy(settlement.address, lopv4.address);
 
         await inch.approve(feeBank.address, ether('100'));
         await feeBank.depositFor(resolver.address, ether('100'));
 
-        await dai.approve(swap.address, ether('100'));
-        await dai.connect(alice).approve(swap.address, ether('100'));
-        await weth.approve(swap.address, ether('1'));
-        await weth.connect(alice).approve(swap.address, ether('1'));
+        await dai.approve(lopv4.address, ether('100'));
+        await dai.connect(alice).approve(lopv4.address, ether('100'));
+        await weth.approve(lopv4.address, ether('1'));
+        await weth.connect(alice).approve(lopv4.address, ether('1'));
 
         return {
-            contracts: { dai, weth, swap, settlement, feeBank, resolver },
+            contracts: { dai, weth, lopv4, settlement, feeBank, resolver },
             accounts: { owner, alice, bob },
             others: { chainId, abiCoder },
         };
@@ -56,70 +55,146 @@ describe.skip('Settlement', function () {
         fillingAmount = orderData.makingAmount,
     }) {
         const {
-            contracts: { swap, settlement, resolver },
+            contracts: { lopv4, settlement, resolver },
             others: { chainId },
         } = dataFormFixture;
-        const {
-            fusions: [fusionDetails],
-            hashes: [fusionHash],
-            resolvers,
-        } = await buildFusions([singleFusionData]);
-        const order = buildOrder(orderData);
-        order.salt = fusionHash;
-        const { r, vs } = compactSignature(await signOrder(order, chainId, swap.address, orderSigner));
-        const fillOrderToData = swap.interface.encodeFunctionData('fillOrderTo', [
-            order,
-            r,
-            vs,
-            fillingAmount,
-            fillWithMakingAmount('0'),
-            resolver.address,
-            settlement.address + (isInnermostOrder ? '01' : '00') + trim0x(fusionDetails) + trim0x(additionalDataForSettlement),
-        ]);
+
+        const auctionStartTime = await time.latest();
+        const auctionDetails = ethers.utils.solidityPack(
+            ['uint32', 'uint24', 'uint24'], [auctionStartTime, time.duration.hours(1), 0],
+        );
+
+        const order = buildOrder({
+            maker: alice.address,
+            makerAsset: dai.address,
+            takerAsset: weth.address,
+            makingAmount: ether('100'),
+            takingAmount: ether('0.1'),
+            makerTraits: buildMakerTraits(),
+        }, {
+            makingAmountData: settlementExtension.address + trim0x(auctionDetails),
+            takingAmountData: settlementExtension.address + trim0x(auctionDetails),
+            postInteraction: settlementExtension.address + trim0x(ethers.utils.solidityPack(
+                ['uint8', 'uint32', 'bytes10', 'uint16'], [0, auctionStartTime, '0x' + owner.address.substring(22), 0],
+            )),
+        });
+
+        const { r, _vs: vs } = ethers.utils.splitSignature(await signOrder(order, chainId, lopv4.address, alice));
+
+        await weth.approve(lopv4.address, ether('0.1'));
+
+        const takerTraits = buildTakerTraits({
+            makingAmount: true,
+            minReturn: ether('0.1'),
+            extension: order.extension,
+        });
+
+
+        // const {
+        //     fusions: [fusionDetails],
+        //     hashes: [fusionHash],
+        //     resolvers,
+        // } = await buildFusions([singleFusionData]);
+        // const order = buildOrder(orderData);
+        // order.salt = fusionHash;
+        // const { r, vs } = compactSignature(await signOrder(order, chainId, lopv4.address, orderSigner));
+        // const fillOrderToData = lopv4.interface.encodeFunctionData('fillOrderTo', [
+        //     order,
+        //     r,
+        //     vs,
+        //     fillingAmount,
+        //     fillWithMakingAmount('0'),
+        //     resolver.address,
+        //     settlement.address + (isInnermostOrder ? '01' : '00') + trim0x(fusionDetails) + trim0x(additionalDataForSettlement),
+        // ]);
         return needAddResolvers ? fillOrderToData + trim0x(resolvers) : fillOrderToData;
     }
 
     it('opposite direction recursive swap', async function () {
         const dataFormFixture = await loadFixture(initContracts);
         const {
-            contracts: { dai, weth, settlement, resolver },
+            contracts: { dai, weth, lopv4, settlement, resolver },
             accounts: { owner, alice },
+            others: { chainId },
         } = dataFormFixture;
 
-        const fillOrderToData1 = await buildCalldataForOrder({
-            orderData: {
-                maker: alice.address,
-                makerAsset: weth.address,
-                takerAsset: dai.address,
-                makingAmount: ether('0.11'),
-                takingAmount: ether('100'),
-                makerTraits: buildMakerTraits({ allowedSender: settlement.address }),
-            },
-            singleFusionData: { resolvers: [resolver.address] },
-            orderSigner: alice,
-            dataFormFixture,
-            isInnermostOrder: true,
+        const auctionStartTime = await time.latest();
+        const auctionDetails = ethers.utils.solidityPack(
+            ['uint32', 'uint24', 'uint24'], [auctionStartTime, time.duration.hours(1), 0],
+        );
+
+        const order = buildOrder({
+            maker: alice.address,
+            makerAsset: dai.address,
+            takerAsset: weth.address,
+            makingAmount: ether('100'),
+            takingAmount: ether('0.1'),
+            makerTraits: buildMakerTraits(),
+        }, {
+            makingAmountData: settlement.address + trim0x(auctionDetails),
+            takingAmountData: settlement.address + trim0x(auctionDetails),
+            postInteraction: settlement.address + trim0x(ethers.utils.solidityPack(
+                ['uint8', 'uint32', 'bytes10', 'uint16'], [0, auctionStartTime, '0x' + resolver.address.substring(22), 0],
+            )),
+        });
+        const backOrder = buildOrder({
+            maker: owner.address,
+            makerAsset: weth.address,
+            takerAsset: dai.address,
+            makingAmount: ether('0.11'),
+            takingAmount: ether('100'),
+            makerTraits: buildMakerTraits(),
+        }, {
+            makingAmountData: settlement.address + trim0x(auctionDetails),
+            takingAmountData: settlement.address + trim0x(auctionDetails),
+            postInteraction: settlement.address + trim0x(ethers.utils.solidityPack(
+                ['uint8', 'uint32', 'bytes10', 'uint16'], [0, auctionStartTime, '0x' + resolver.address.substring(22), 0],
+            )),
         });
 
-        const fillOrderToData0 = await buildCalldataForOrder({
-            orderData: {
-                maker: owner.address,
-                makerAsset: dai.address,
-                takerAsset: weth.address,
-                makingAmount: ether('100'),
-                takingAmount: ether('0.11'),
-                makerTraits: buildMakerTraits({ allowedSender: settlement.address }),
-            },
-            singleFusionData: { resolvers: [resolver.address] },
-            orderSigner: owner,
-            dataFormFixture,
-            additionalDataForSettlement: fillOrderToData1,
-            needAddResolvers: true,
+        const signature = ethers.utils.splitSignature(await signOrder(order, chainId, lopv4.address, alice));
+        const signatureBackOrder = ethers.utils.splitSignature(await signOrder(backOrder, chainId, lopv4.address, owner));
+
+        const orderTakerTraits = buildTakerTraits({
+            makingAmount: false,
+            minReturn: ether('90'),
+            extension: order.extension,
+            interaction: resolver.address + '01',
+            target: resolver.address,
         });
 
-        const txn = await resolver.settleOrders(fillOrderToData0);
-        await expect(txn).to.changeTokenBalances(dai, [owner, alice], [ether('-100'), ether('100')]);
-        await expect(txn).to.changeTokenBalances(weth, [owner, alice], [ether('0.11'), ether('-0.11')]);
+        const orderBackTakerTraits = buildTakerTraits({
+            makingAmount: false,
+            minReturn: ether('0.1'),
+            extension: backOrder.extension,
+            interaction: resolver.address + '00' + lopv4.interface.encodeFunctionData('fillOrderArgs', [
+                order,
+                signature.r,
+                signature._vs,
+                ether('0.1'),
+                orderTakerTraits.traits,
+                orderTakerTraits.args,
+            ]).substring(2), //.substring(10),
+            target: resolver.address,
+        });
+
+        await resolver.approve(dai.address, lopv4.address);
+        await resolver.approve(weth.address, lopv4.address);
+
+        const tx = await resolver.settleOrders(
+            // '0x' +
+            lopv4.interface.encodeFunctionData('fillOrderArgs', [
+                backOrder,
+                signatureBackOrder.r,
+                signatureBackOrder._vs,
+                ether('100'),
+                orderBackTakerTraits.traits,
+                orderBackTakerTraits.args,
+            ]), //.substring(10),
+        );
+
+        await expect(tx).to.changeTokenBalances(dai, [owner, alice, resolver], [ether('100'), ether('-100'), ether('0')]);
+        await expect(tx).to.changeTokenBalances(weth, [owner, alice, resolver], [ether('-0.11'), ether('0.1'), ether('0.01')]);
     });
 
     it('settle orders with permits, permit', async function () {
