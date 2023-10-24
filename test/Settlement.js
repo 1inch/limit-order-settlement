@@ -1,4 +1,4 @@
-const { time, expect, ether, trim0x, timeIncreaseTo, getPermit, getPermit2, compressPermit, permit2Contract, deployContract } = require('@1inch/solidity-utils');
+const { time, expect, ether, trim0x, timeIncreaseTo, getPermit, getPermit2, compressPermit, permit2Contract, deployContract, constants } = require('@1inch/solidity-utils');
 const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
 const { ethers } = require('hardhat');
 const { deploySwapTokens, getChainId } = require('./helpers/fixtures');
@@ -16,7 +16,7 @@ describe('Settlement', function () {
 
         const { dai, weth, inch, lopv4 } = await deploySwapTokens();
 
-        await dai.transfer(alice.address, ether('100'));
+        await dai.transfer(alice.address, ether('101'));
         await inch.mint(owner.address, ether('100'));
         await weth.deposit({ value: ether('1') });
         await weth.connect(alice).deposit({ value: ether('1') });
@@ -61,6 +61,9 @@ describe('Settlement', function () {
         isInnermostOrder = false,
         isMakingAmount = true,
         fillingAmount = orderData.makingAmount,
+        feeType = 0,
+        integrator = orderSigner.address,
+        resolverFee = 0,
     }) {
         const {
             contracts: { lopv4, settlement, resolver },
@@ -70,9 +73,13 @@ describe('Settlement', function () {
         const order = buildOrder(orderData, {
             makingAmountData: settlement.address + trim0x(auctionDetails),
             takingAmountData: settlement.address + trim0x(auctionDetails),
-            postInteraction: settlement.address + trim0x(ethers.utils.solidityPack(
-                ['uint8', 'uint32', 'bytes10', 'uint16'], [0, auctionStartTime, '0x' + resolver.address.substring(22), 0],
-            )),
+            postInteraction: settlement.address +
+                (
+                    feeType == 2
+                        ? trim0x(ethers.utils.solidityPack(['uint8', 'bytes20', 'bytes4'], [feeType, integrator, '0x' + resolverFee.toString(16).padStart(8, '0')]))
+                        : trim0x(ethers.utils.solidityPack(['uint8', 'bytes4'], [feeType, '0x' + resolverFee.toString(16).padStart(8, '0')]))
+                ) +
+                trim0x(ethers.utils.solidityPack(['uint32', 'bytes10', 'uint16'], [auctionStartTime, '0x' + resolver.address.substring(22), 0])),
         });
 
         const { r, _vs: vs } = ethers.utils.splitSignature(await signOrder(order, chainId, lopv4.address, orderSigner));
@@ -138,16 +145,15 @@ describe('Settlement', function () {
             fillingAmount: ether('100'),
         });
 
-        const tx = await resolver.settleOrders(fillOrderToData0);
-
-        await expect(tx).to.changeTokenBalances(dai, [owner, alice, resolver], [ether('100'), ether('-100'), ether('0')]);
-        await expect(tx).to.changeTokenBalances(weth, [owner, alice, resolver], [ether('-0.11'), ether('0.1'), ether('0.01')]);
+        const txn = await resolver.settleOrders(fillOrderToData0);
+        await expect(txn).to.changeTokenBalances(dai, [owner, alice, resolver], [ether('100'), ether('-100'), ether('0')]);
+        await expect(txn).to.changeTokenBalances(weth, [owner, alice, resolver], [ether('-0.11'), ether('0.1'), ether('0.01')]);
     });
 
     it('settle orders with permits, permit', async function () {
         const dataFormFixture = await loadFixture(initContracts);
         const {
-            contracts: { dai, weth, swap, settlement, resolver },
+            contracts: { dai, weth, lopv4, resolver },
             accounts: { owner, alice },
             others: { chainId },
         } = dataFormFixture;
@@ -155,48 +161,51 @@ describe('Settlement', function () {
         const fillOrderToData1 = await buildCalldataForOrder({
             orderData: {
                 maker: alice.address,
-                makerAsset: weth.address,
-                takerAsset: dai.address,
-                makingAmount: ether('0.11'),
-                takingAmount: ether('100'),
-                makerTraits: buildMakerTraits({ allowedSender: settlement.address }),
+                makerAsset: dai.address,
+                takerAsset: weth.address,
+                makingAmount: ether('100'),
+                takingAmount: ether('0.1'),
+                makerTraits: buildMakerTraits(),
             },
-            singleFusionData: { resolvers: [resolver.address] },
             orderSigner: alice,
             dataFormFixture,
+            minReturn: ether('90'),
             isInnermostOrder: true,
+            isMakingAmount: false,
+            fillingAmount: ether('0.1'),
         });
 
         const fillOrderToData0 = await buildCalldataForOrder({
             orderData: {
                 maker: owner.address,
-                makerAsset: dai.address,
-                takerAsset: weth.address,
-                makingAmount: ether('100'),
-                takingAmount: ether('0.11'),
-                makerTraits: buildMakerTraits({ allowedSender: settlement.address }),
+                makerAsset: weth.address,
+                takerAsset: dai.address,
+                makingAmount: ether('0.11'),
+                takingAmount: ether('100'),
+                makerTraits: buildMakerTraits(),
             },
-            singleFusionData: { resolvers: [resolver.address] },
             orderSigner: owner,
             dataFormFixture,
+            minReturn: ether('0.1'),
             additionalDataForSettlement: fillOrderToData1,
-            needAddResolvers: true,
+            isMakingAmount: false,
+            fillingAmount: ether('100'),
         });
 
-        await weth.connect(alice).approve(swap.address, ether('0.11'));
-        await dai.connect(owner).approve(swap.address, 0n); // remove direct approve
-        const permit0 = compressPermit(await getPermit(owner, dai, '1', chainId, swap.address, ether('100')));
+        await weth.connect(alice).approve(lopv4.address, ether('0.11'));
+        await dai.connect(owner).approve(lopv4.address, 0n); // remove direct approve
+        const permit0 = compressPermit(await getPermit(owner, dai, '1', chainId, lopv4.address, ether('100')));
         const packing = (1n << 248n) | 1n;
         const txn = await resolver.settleOrdersWithPermits(fillOrderToData0, packing,
             owner.address + trim0x(dai.address) + trim0x(permit0));
-        await expect(txn).to.changeTokenBalances(dai, [owner, alice], [ether('-100'), ether('100')]);
-        await expect(txn).to.changeTokenBalances(weth, [owner, alice], [ether('0.11'), ether('-0.11')]);
+        await expect(txn).to.changeTokenBalances(dai, [owner, alice, resolver], [ether('100'), ether('-100'), ether('0')]);
+        await expect(txn).to.changeTokenBalances(weth, [owner, alice, resolver], [ether('-0.11'), ether('0.1'), ether('0.01')]);
     });
 
     it('settle orders with permits, permit2', async function () {
         const dataFormFixture = await loadFixture(initContracts);
         const {
-            contracts: { dai, weth, swap, settlement, resolver },
+            contracts: { dai, weth, lopv4, resolver },
             accounts: { owner, alice },
             others: { chainId },
         } = dataFormFixture;
@@ -204,95 +213,110 @@ describe('Settlement', function () {
         const fillOrderToData1 = await buildCalldataForOrder({
             orderData: {
                 maker: alice.address,
-                makerAsset: weth.address,
-                takerAsset: dai.address,
-                makingAmount: ether('0.11'),
-                takingAmount: ether('100'),
-                makerTraits: buildMakerTraits({ allowedSender: settlement.address, usePermit2: true }),
+                makerAsset: dai.address,
+                takerAsset: weth.address,
+                makingAmount: ether('100'),
+                takingAmount: ether('0.1'),
+                makerTraits: buildMakerTraits(),
             },
-            singleFusionData: { resolvers: [resolver.address] },
             orderSigner: alice,
             dataFormFixture,
+            minReturn: ether('90'),
             isInnermostOrder: true,
+            isMakingAmount: false,
+            fillingAmount: ether('0.1'),
         });
 
         const fillOrderToData0 = await buildCalldataForOrder({
             orderData: {
                 maker: owner.address,
-                makerAsset: dai.address,
-                takerAsset: weth.address,
-                makingAmount: ether('100'),
-                takingAmount: ether('0.11'),
-                makerTraits: buildMakerTraits({ allowedSender: settlement.address, usePermit2: true }),
+                makerAsset: weth.address,
+                takerAsset: dai.address,
+                makingAmount: ether('0.11'),
+                takingAmount: ether('100'),
+                makerTraits: buildMakerTraits(),
             },
-            singleFusionData: { resolvers: [resolver.address] },
             orderSigner: owner,
             dataFormFixture,
+            minReturn: ether('0.1'),
             additionalDataForSettlement: fillOrderToData1,
-            needAddResolvers: true,
+            isMakingAmount: false,
+            fillingAmount: ether('100'),
         });
 
         const permit2 = await permit2Contract();
         await dai.approve(permit2.address, ether('100'));
         await weth.connect(alice).approve(permit2.address, ether('0.11'));
-        await dai.connect(owner).approve(swap.address, 0n); // remove direct approve
-        await weth.connect(alice).approve(swap.address, 0n); // remove direct approve
-        const permit0 = compressPermit(await getPermit2(owner, dai.address, chainId, swap.address, ether('100')));
-        const permit1 = compressPermit(await getPermit2(alice, weth.address, chainId, swap.address, ether('0.11')));
+        await dai.connect(owner).approve(lopv4.address, 0n); // remove direct approve
+        await weth.connect(alice).approve(lopv4.address, 0n); // remove direct approve
+        const permit0 = compressPermit(await getPermit2(owner, dai.address, chainId, lopv4.address, ether('100')));
+        const permit1 = compressPermit(await getPermit2(alice, weth.address, chainId, lopv4.address, ether('0.11')));
         const packing = (2n << 248n) | 2n | 8n;
         const txn = await resolver.settleOrdersWithPermits(fillOrderToData0, packing,
             owner.address + trim0x(dai.address) + trim0x(permit0) + trim0x(alice.address) + trim0x(weth.address) + trim0x(permit1));
-        await expect(txn).to.changeTokenBalances(dai, [owner, alice], [ether('-100'), ether('100')]);
-        await expect(txn).to.changeTokenBalances(weth, [owner, alice], [ether('0.11'), ether('-0.11')]);
+        await expect(txn).to.changeTokenBalances(dai, [owner, alice, resolver], [ether('100'), ether('-100'), ether('0')]);
+        await expect(txn).to.changeTokenBalances(weth, [owner, alice, resolver], [ether('-0.11'), ether('0.1'), ether('0.01')]);
     });
 
     it('opposite direction recursive swap with taking fee', async function () {
         const dataFormFixture = await loadFixture(initContracts);
         const {
-            contracts: { dai, weth, settlement, resolver },
+            contracts: { dai, weth, resolver, settlement },
             accounts: { owner, alice, bob },
         } = dataFormFixture;
 
         const fillOrderToData1 = await buildCalldataForOrder({
             orderData: {
                 maker: alice.address,
-                makerAsset: weth.address,
-                takerAsset: dai.address,
-                makingAmount: ether('0.1'),
-                takingAmount: ether('100'),
-                makerTraits: buildMakerTraits({ allowedSender: settlement.address }),
+                makerAsset: dai.address,
+                takerAsset: weth.address,
+                makingAmount: ether('100'),
+                takingAmount: ether('0.1'),
+                makerTraits: buildMakerTraits(),
             },
-            singleFusionData: { resolvers: [resolver.address], takerFee: 10000000n, takerFeeReceiver: bob.address },
             orderSigner: alice,
             dataFormFixture,
+            minReturn: ether('90'),
             isInnermostOrder: true,
+            isMakingAmount: false,
+            fillingAmount: ether('0.1'),
+            feeType: 2,
+            integrator: bob.address,
+            resolverFee: 1000000,
         });
 
         const fillOrderToData0 = await buildCalldataForOrder({
             orderData: {
                 maker: owner.address,
-                makerAsset: dai.address,
-                takerAsset: weth.address,
-                makingAmount: ether('100'),
-                takingAmount: ether('0.1'),
-                makerTraits: buildMakerTraits({ allowedSender: settlement.address }),
+                makerAsset: weth.address,
+                takerAsset: dai.address,
+                makingAmount: ether('0.11'),
+                takingAmount: ether('100'),
+                makerTraits: buildMakerTraits(),
             },
-            singleFusionData: { resolvers: [resolver.address], takerFee: 10000000n, takerFeeReceiver: bob.address },
             orderSigner: owner,
             dataFormFixture,
+            minReturn: ether('0.1'),
             additionalDataForSettlement: fillOrderToData1,
-            needAddResolvers: true,
+            isMakingAmount: false,
+            fillingAmount: ether('100'),
+            feeType: 2,
+            integrator: bob.address,
+            resolverFee: 1000000,
         });
 
-        const wethFeeAmount = ether('0.001');
-        const daiFeeAmount = ether('1');
+        const wethFeeAmount = ether('0.0001');
+        const daiFeeAmount = ether('0.1');
         // send fee amounts to resolver contract
         await weth.transfer(resolver.address, wethFeeAmount.toString());
         await dai.connect(alice).transfer(resolver.address, daiFeeAmount.toString());
+        // approve fee amounts to be spent by SettlementExtension
+        await resolver.approve(weth.address, settlement.address);
+        await resolver.approve(dai.address, settlement.address);
 
         const txn = await resolver.settleOrders(fillOrderToData0);
-        await expect(txn).to.changeTokenBalances(dai, [owner, alice, bob], [ether('-100'), ether('100'), ether('1')]);
-        await expect(txn).to.changeTokenBalances(weth, [owner, alice, bob], [ether('0.1'), ether('-0.1'), ether('0.001')]);
+        await expect(txn).to.changeTokenBalances(dai, [owner, alice, bob], [ether('100'), ether('-100'), ether('0.1')]);
+        await expect(txn).to.changeTokenBalances(weth, [owner, alice, bob], [ether('-0.11'), ether('0.1'), ether('0.0001')]);
     });
 
     it('unidirectional recursive swap', async function () {

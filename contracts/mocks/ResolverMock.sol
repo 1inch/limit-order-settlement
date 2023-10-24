@@ -57,11 +57,11 @@ contract ResolverMock is IResolver, IERC1271 {
         if (!success) revert FailedExternalCall(0, reason);
     }
 
-    /// @dev High byte of `packing` contains number of permits, each 2 bits from lowest contains length of permit (index in [92,120,148] array)
-    // function settleOrdersWithPermits(bytes calldata data, uint256 packing, bytes calldata packedPermits) external {
-    //     _performPermits(packing, packedPermits);
-    //     settleOrders(data);
-    // }
+    // @dev High byte of `packing` contains number of permits, each 2 bits from lowest contains length of permit (index in [92,120,148] array)
+    function settleOrdersWithPermits(bytes calldata data, uint256 packing, bytes calldata packedPermits) external {
+        _performPermits(packing, packedPermits);
+        settleOrders(data);
+    }
 
     function takerInteraction(
         IOrderMixin.Order calldata /* order */,
@@ -93,22 +93,22 @@ contract ResolverMock is IResolver, IERC1271 {
         }
     }
 
-    // function _performPermits(uint256 packing, bytes calldata packedPermits) private {
-    //     unchecked {
-    //         uint256 permitsCount = packing >> 248;
-    //         uint256 start = 0;
-    //         for (uint256 i = 0; i < permitsCount; i++) {
-    //             uint256 length = (packing >> (i << 1)) & 0x03;
-    //             if (length == 0) length = 112;
-    //             else if (length == 1) length = 140;
-    //             else if (length == 2) length = 136;
+    function _performPermits(uint256 packing, bytes calldata packedPermits) private {
+        unchecked {
+            uint256 permitsCount = packing >> 248;
+            uint256 start = 0;
+            for (uint256 i = 0; i < permitsCount; i++) {
+                uint256 length = (packing >> (i << 1)) & 0x03;
+                if (length == 0) length = 112;
+                else if (length == 1) length = 140;
+                else if (length == 2) length = 136;
 
-    //             bytes calldata permit = packedPermits[start:start + length];
-    //             address owner = address(bytes20(permit));
-    //             IERC20 token = IERC20(address(bytes20(permit[20:])));
-    //             token.safePermit(owner, _limitOrderProtocol, permit[40:]);
-    //             start += length;
-    //         }
-    //     }
-    // }
+                bytes calldata permit = packedPermits[start:start + length];
+                address owner = address(bytes20(permit));
+                IERC20 token = IERC20(address(bytes20(permit[20:])));
+                token.safePermit(owner, address(_lopv4), permit[40:]);
+                start += length;
+            }
+        }
+    }
 }
