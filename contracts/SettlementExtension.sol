@@ -101,6 +101,7 @@ contract SettlementExtension is IPostInteraction, IAmountGetter, FeeBankCharger 
             }
             currentRateBump = nextRateBump;
             currentPointTime = nextPointTime;
+            // auctionDetails = auctionDetails[5:];
         }
 
         return (auctionFinishTime - block.timestamp) * currentRateBump / (auctionFinishTime - currentPointTime);
