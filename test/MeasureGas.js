@@ -3,8 +3,8 @@ const hre = require('hardhat');
 const path = require('path');
 const { ethers } = hre;
 const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
-const { time, expect, ether, trim0x } = require('@1inch/solidity-utils');
-const { deploySwapTokens, getChainId, deployContract } = require('./helpers/fixtures');
+const { time, expect, ether, trim0x, deployContract } = require('@1inch/solidity-utils');
+const { deploySwapTokens, getChainId } = require('./helpers/fixtures');
 const { buildOrder, signOrder, buildTakerTraits, buildMakerTraits } = require('@1inch/limit-order-protocol-contract/test/helpers/orderUtils');
 const settlementV1Utils = require('@1inch/limit-order-settlement-v1/test/helpers/orderUtils');
 
@@ -32,20 +32,24 @@ describe('MeasureGas', function () {
         const ContractFactory = await ethers.getContractFactory(SettlementV1.abi, SettlementV1.bytecode);
         const settlement = await ContractFactory.deploy(lopv3.address, inch.address);
 
-        const resolvers = [];
+        const resolversV1 = [];
         const ResolverV1Mock = JSON.parse(fs.readFileSync(path.join(__dirname, '../artifacts-v1/ResolverV1Mock.json'), 'utf8'));
         for (let i = 0; i < RESOLVERS_NUMBER; i++) {
-            // resolvers[i] = await deployContract(ResolverV1Mock.abi, [settlement.address, lopv3.address]);
             const ResolverMockFactory = await ethers.getContractFactory(ResolverV1Mock.abi, ResolverV1Mock.bytecode);
-            resolvers[i] = await ResolverMockFactory.deploy(settlement.address);
+            resolversV1[i] = await ResolverMockFactory.deploy(settlement.address);
         }
         const FeeBank = await ethers.getContractFactory('FeeBank');
         const feeBank = FeeBank.attach(await settlement.feeBank());
         await inch.approve(feeBank.address, ether('100'));
-        await feeBank.depositFor(resolvers[0].address, ether('100'));
+        await feeBank.depositFor(resolversV1[0].address, ether('100'));
+
+        const ResolverMock = await ethers.getContractFactory('ResolverMock');
+        const resolver = await ResolverMock.deploy(settlement.address, lopv4.address);
+        await resolver.approve(dai.address, lopv4.address);
+        await resolver.approve(weth.address, lopv4.address);
 
         return {
-            contracts: { dai, weth, lopv3, lopv4, settlement, settlementExtension, feeBank, resolvers },
+            contracts: { dai, weth, lopv3, lopv4, settlement, settlementExtension, feeBank, resolversV1, resolver },
             accounts: { owner, alice },
             others: { chainId, abiCoder },
         };
@@ -65,7 +69,7 @@ describe('MeasureGas', function () {
 
     describe('SettlementV1', function () {
         it('1 fill for 1 order', async function () {
-            const { contracts: { dai, weth, lopv3, settlement, resolvers }, accounts: { owner, alice }, others: { chainId } } = await loadFixture(initContractsAndApproves);
+            const { contracts: { dai, weth, lopv3, settlement, resolversV1 }, accounts: { owner, alice }, others: { chainId } } = await loadFixture(initContractsAndApproves);
 
             const makerAsset = dai.address;
             const takerAsset = weth.address;
@@ -85,8 +89,8 @@ describe('MeasureGas', function () {
                     from: alice.address,
                 },
                 {
-                    whitelistedAddrs: [owner.address, ...(resolvers.map(r => r.address))],
-                    whitelistedCutOffs: [0, ...(resolvers.map(r => 0))],
+                    whitelistedAddrs: [owner.address, ...(resolversV1.map(r => r.address))],
+                    whitelistedCutOffs: [0, ...(resolversV1.map(r => 0))],
                     publicCutOff: time.duration.minutes(30),
                 },
             );
@@ -95,10 +99,10 @@ describe('MeasureGas', function () {
             const interaction =
                 settlement.address +
                 '01' +
-                trim0x(resolvers[0].address) +
+                trim0x(resolversV1[0].address) +
                 '0000000000000000000000000000000000000000000000000000000000000000' +
                 '';
-            await weth.transfer(resolvers[0].address, takingAmount);
+            await weth.transfer(resolversV1[0].address, takingAmount);
 
             const tx = await settlement.settleOrders(
                 '0x' + lopv3.interface.encodeFunctionData('fillOrderTo', [
@@ -108,19 +112,19 @@ describe('MeasureGas', function () {
                     makingAmount,
                     0,
                     takingAmount,
-                    resolvers[0].address,
+                    resolversV1[0].address,
                 ]).substring(10),
             );
             console.log(`1 fill for 1 order gasUsed: ${(await tx.wait()).gasUsed}`);
-            await expect(tx).to.changeTokenBalances(dai, [resolvers[0], alice], [ether('100'), ether('-100')]);
-            await expect(tx).to.changeTokenBalances(weth, [resolvers[0], alice], [ether('-0.1'), ether('0.1')]);
+            await expect(tx).to.changeTokenBalances(dai, [resolversV1[0], alice], [ether('100'), ether('-100')]);
+            await expect(tx).to.changeTokenBalances(weth, [resolversV1[0], alice], [ether('-0.1'), ether('0.1')]);
         });
 
         it('1 fill for 5 orders in a batch', async function () {
-            const { contracts: { dai, weth, lopv3, settlement, resolvers }, accounts: { alice, owner }, others: { chainId } } = await loadFixture(initContractsAndApproves);
+            const { contracts: { dai, weth, lopv3, settlement, resolversV1 }, accounts: { alice, owner }, others: { chainId } } = await loadFixture(initContractsAndApproves);
 
-            const resolverAddresses = resolvers.map(r => r.address);
-            const whitelistedCutOffsTmp = resolvers.map(r => 0);
+            const resolverAddresses = resolversV1.map(r => r.address);
+            const whitelistedCutOffsTmp = resolversV1.map(r => 0);
 
             // Build orders and compact signatures
             const orders = [];
@@ -171,7 +175,7 @@ describe('MeasureGas', function () {
             // Encode data for fillingg orders
             const fillOrdersToData = [];
 
-            fillOrdersToData[5] = settlement.address + '01' + trim0x(resolvers[0].address) + '0000000000000000000000000000000000000000000000000000000000000000';
+            fillOrdersToData[5] = settlement.address + '01' + trim0x(resolversV1[0].address) + '0000000000000000000000000000000000000000000000000000000000000000';
             fillOrdersToData[4] =
                 settlement.address +
                 '00' +
@@ -183,7 +187,7 @@ describe('MeasureGas', function () {
                         ether('0.11'),
                         0,
                         ether('10'),
-                        resolvers[0].address,
+                        resolversV1[0].address,
                     ])
                     .substring(10);
             for (let i = 3; i >= 1; i--) {
@@ -198,7 +202,7 @@ describe('MeasureGas', function () {
                             ether((i + 1).toString()),
                             0,
                             ether(((i + 1) / 100).toString()),
-                            resolvers[0].address,
+                            resolversV1[0].address,
                         ])
                         .substring(10);
             }
@@ -211,12 +215,12 @@ describe('MeasureGas', function () {
                     ether('1'),
                     0,
                     ether('0.01'),
-                    resolvers[0].address, // settlement.address,
+                    resolversV1[0].address, // settlement.address,
                 ]).substring(10),
             );
             console.log(`1 fill for 5 orders in a batch gasUsed: ${(await tx.wait()).gasUsed}`);
             await expect(tx).to.changeTokenBalances(weth, [owner, alice], [ether('-0.11'), ether('0.1')]);
-            await expect(tx).to.changeTokenBalances(dai, [owner, alice, resolvers[0]], [ether('1'), ether('-10'), ether('9')]);
+            await expect(tx).to.changeTokenBalances(dai, [owner, alice, resolversV1[0]], [ether('1'), ether('-10'), ether('9')]);
         });
     });
 
@@ -264,6 +268,119 @@ describe('MeasureGas', function () {
             );
             console.log(`1 fill for 1 order gasUsed: ${(await tx.wait()).gasUsed}`);
             await expect(tx).to.changeTokenBalances(dai, [owner, alice], [ether('100'), ether('-100')]);
+            await expect(tx).to.changeTokenBalances(weth, [owner, alice], [ether('-0.1'), ether('0.1')]);
+        });
+
+        it('extension 1 fill for 1 order via resolver with funds', async function () {
+            const { contracts: { dai, weth, lopv4, settlementExtension, resolver }, accounts: { alice }, others: { chainId } } = await loadFixture(initContractsAndApproves);
+
+            const auctionStartTime = await time.latest();
+            const auctionDetails = ethers.utils.solidityPack(
+                ['uint32', 'uint24', 'uint24'], [auctionStartTime, time.duration.hours(1), 0],
+            );
+
+            const order = buildOrder({
+                maker: alice.address,
+                makerAsset: dai.address,
+                takerAsset: weth.address,
+                makingAmount: ether('100'),
+                takingAmount: ether('0.1'),
+                makerTraits: buildMakerTraits(),
+            }, {
+                makingAmountData: settlementExtension.address + trim0x(auctionDetails),
+                takingAmountData: settlementExtension.address + trim0x(auctionDetails),
+                postInteraction: settlementExtension.address + trim0x(ethers.utils.solidityPack(
+                    ['uint8', 'uint32', 'bytes10', 'uint16'], [0, auctionStartTime, '0x' + resolver.address.substring(22), 0],
+                )),
+            });
+
+            const { r, _vs: vs } = ethers.utils.splitSignature(await signOrder(order, chainId, lopv4.address, alice));
+
+            const takerTraits = buildTakerTraits({
+                makingAmount: true,
+                minReturn: ether('100'),
+                extension: order.extension,
+            });
+
+            await weth.transfer(resolver.address, ether('0.1'));
+            await resolver.approve(weth.address, lopv4.address);
+
+            const tx = await resolver.settleOrders(
+                lopv4.interface.encodeFunctionData('fillOrderArgs', [
+                    order,
+                    r,
+                    vs,
+                    ether('100'),
+                    takerTraits.traits,
+                    takerTraits.args,
+                ]),
+            );
+            console.log(`1 fill for 1 order via resolver with funds gasUsed: ${(await tx.wait()).gasUsed}`);
+            await expect(tx).to.changeTokenBalances(dai, [resolver, alice], [ether('100'), ether('-100')]);
+            await expect(tx).to.changeTokenBalances(weth, [resolver, alice], [ether('-0.1'), ether('0.1')]);
+        });
+
+        it('extension 1 fill for 1 order via resolver without funds', async function () {
+            const { contracts: { dai, weth, lopv4, settlementExtension, resolver }, accounts: { owner, alice }, others: { chainId, abiCoder } } = await loadFixture(initContractsAndApproves);
+
+            const auctionStartTime = await time.latest();
+            const auctionDetails = ethers.utils.solidityPack(
+                ['uint32', 'uint24', 'uint24'], [auctionStartTime, time.duration.hours(1), 0],
+            );
+
+            const resolverArgs = abiCoder.encode(
+                ['address[]', 'bytes[]'],
+                [
+                    [weth.address],
+                    [
+                        weth.interface.encodeFunctionData('transferFrom', [
+                            owner.address,
+                            resolver.address,
+                            ether('0.1'),
+                        ]),
+                    ],
+                ],
+            );
+
+            const order = buildOrder({
+                maker: alice.address,
+                makerAsset: dai.address,
+                takerAsset: weth.address,
+                makingAmount: ether('100'),
+                takingAmount: ether('0.1'),
+                makerTraits: buildMakerTraits(),
+            }, {
+                makingAmountData: settlementExtension.address + trim0x(auctionDetails),
+                takingAmountData: settlementExtension.address + trim0x(auctionDetails),
+                postInteraction: settlementExtension.address + trim0x(ethers.utils.solidityPack(
+                    ['uint8', 'uint32', 'bytes10', 'uint16'], [0, auctionStartTime, '0x' + resolver.address.substring(22), 0],
+                )),
+            });
+
+            const { r, _vs: vs } = ethers.utils.splitSignature(await signOrder(order, chainId, lopv4.address, alice));
+
+            const takerTraits = buildTakerTraits({
+                makingAmount: true,
+                minReturn: ether('100'),
+                extension: order.extension,
+                interaction: resolver.address + '01' + trim0x(resolverArgs),
+            });
+
+            await weth.approve(resolver.address, ether('0.1'));
+            await resolver.approve(weth.address, lopv4.address);
+
+            const tx = await resolver.settleOrders(
+                lopv4.interface.encodeFunctionData('fillOrderArgs', [
+                    order,
+                    r,
+                    vs,
+                    ether('100'),
+                    takerTraits.traits,
+                    takerTraits.args,
+                ]),
+            );
+            console.log(`1 fill for 1 order via resolver without money gasUsed: ${(await tx.wait()).gasUsed}`);
+            await expect(tx).to.changeTokenBalances(dai, [resolver, alice], [ether('100'), ether('-100')]);
             await expect(tx).to.changeTokenBalances(weth, [owner, alice], [ether('-0.1'), ether('0.1')]);
         });
     });
