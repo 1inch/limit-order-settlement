@@ -1,4 +1,4 @@
-const { time, expect, ether, trim0x, timeIncreaseTo, getPermit, getPermit2, compressPermit, permit2Contract, deployContract, constants } = require('@1inch/solidity-utils');
+const { time, expect, ether, trim0x, timeIncreaseTo, getPermit, getPermit2, compressPermit, permit2Contract, deployContract } = require('@1inch/solidity-utils');
 const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
 const { ethers } = require('hardhat');
 const { deploySwapTokens, getChainId } = require('./helpers/fixtures');
@@ -322,7 +322,7 @@ describe('Settlement', function () {
     it('unidirectional recursive swap', async function () {
         const dataFormFixture = await loadFixture(initContracts);
         const {
-            contracts: { dai, weth, settlement, resolver },
+            contracts: { dai, weth, resolver },
             accounts: { owner, alice },
             others: { abiCoder },
         } = dataFormFixture;
@@ -384,7 +384,7 @@ describe('Settlement', function () {
     it('triple recursive swap', async function () {
         const dataFormFixture = await loadFixture(initContracts);
         const {
-            contracts: { dai, weth, settlement, resolver },
+            contracts: { dai, weth, resolver },
             accounts: { owner, alice },
         } = dataFormFixture;
 
@@ -791,7 +791,7 @@ describe('Settlement', function () {
     it('should not change when availableCredit is not enough', async function () {
         const dataFormFixture = await loadFixture(initContracts);
         const {
-            contracts: { dai, weth, settlement, resolver },
+            contracts: { dai, weth, resolver },
             accounts: { owner, alice },
             others: { BACK_ORDER_FEE },
         } = dataFormFixture;
@@ -843,7 +843,7 @@ describe('Settlement', function () {
         it('should change only after whitelistedCutOff', async function () {
             const dataFormFixture = await loadFixture(initContracts);
             const {
-                contracts: { dai, weth, settlement, resolver },
+                contracts: { dai, weth, resolver },
                 accounts: { owner, alice },
             } = dataFormFixture;
 
