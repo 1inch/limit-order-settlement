@@ -303,7 +303,6 @@ describe('MeasureGas', function () {
             });
 
             await weth.transfer(resolver.address, ether('0.1'));
-            await resolver.approve(weth.address, lopv4.address);
 
             const tx = await resolver.settleOrders(
                 lopv4.interface.encodeFunctionData('fillOrderArgs', [
@@ -367,7 +366,6 @@ describe('MeasureGas', function () {
             });
 
             await weth.approve(resolver.address, ether('0.1'));
-            await resolver.approve(weth.address, lopv4.address);
 
             const tx = await resolver.settleOrders(
                 lopv4.interface.encodeFunctionData('fillOrderArgs', [

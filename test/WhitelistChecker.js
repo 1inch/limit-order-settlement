@@ -5,7 +5,7 @@ const { buildOrder, buildMakerTraits } = require('@1inch/limit-order-protocol-co
 const { initContractsForSettlement } = require('./helpers/fixtures');
 const { buildCalldataForOrder } = require('./helpers/fusionUtils');
 
-describe('WhitelistChecker // TODO: Update this tests', function () {
+describe('WhitelistChecker', function () {
     describe('should not work with non-whitelisted address', function () {
         it('whitelist check in postInteraction method', async function () {
             const dataFormFixture = await loadFixture(initContractsForSettlement);
