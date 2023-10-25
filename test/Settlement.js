@@ -1,119 +1,17 @@
-const { time, expect, ether, trim0x, timeIncreaseTo, getPermit, getPermit2, compressPermit, permit2Contract, deployContract } = require('@1inch/solidity-utils');
-const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
 const { ethers } = require('hardhat');
-const { deploySwapTokens, getChainId } = require('./helpers/fixtures');
-const { buildOrder, signOrder, buildTakerTraits, buildMakerTraits } = require('@1inch/limit-order-protocol-contract/test/helpers/orderUtils');
+const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
+const { time, expect, ether, trim0x, timeIncreaseTo, getPermit, getPermit2, compressPermit, permit2Contract } = require('@1inch/solidity-utils');
+const { buildMakerTraits } = require('@1inch/limit-order-protocol-contract/test/helpers/orderUtils');
+const { initContractsForSettlement } = require('./helpers/fixtures');
+const { buildCalldataForOrder } = require('./helpers/fusionUtils');
 
 const ORDER_FEE = 100n;
 const BACK_ORDER_FEE = 125n;
 const BASE_POINTS = ether('0.001'); // 1e15
 
 describe('Settlement', function () {
-    async function initContracts() {
-        const abiCoder = ethers.utils.defaultAbiCoder;
-        const chainId = await getChainId();
-        const [owner, alice, bob] = await ethers.getSigners();
-
-        const { dai, weth, inch, lopv4 } = await deploySwapTokens();
-
-        await dai.transfer(alice.address, ether('101'));
-        await inch.mint(owner.address, ether('100'));
-        await weth.deposit({ value: ether('1') });
-        await weth.connect(alice).deposit({ value: ether('1') });
-
-        const settlement = await deployContract('SettlementExtensionMock', [lopv4.address, inch.address]);
-
-        const FeeBank = await ethers.getContractFactory('FeeBank');
-        const feeBank = FeeBank.attach(await settlement.feeBank());
-
-        const ResolverMock = await ethers.getContractFactory('ResolverMock');
-        const resolver = await ResolverMock.deploy(settlement.address, lopv4.address);
-
-        await inch.approve(feeBank.address, ether('100'));
-        await feeBank.depositFor(resolver.address, ether('100'));
-
-        await dai.approve(lopv4.address, ether('100'));
-        await dai.connect(alice).approve(lopv4.address, ether('100'));
-        await weth.approve(lopv4.address, ether('1'));
-        await weth.connect(alice).approve(lopv4.address, ether('1'));
-
-        await resolver.approve(dai.address, lopv4.address);
-        await resolver.approve(weth.address, lopv4.address);
-
-        const auctionStartTime = await time.latest();
-        const auctionDetails = ethers.utils.solidityPack(
-            ['uint32', 'uint24', 'uint24'], [auctionStartTime, time.duration.hours(1), 0],
-        );
-
-        return {
-            contracts: { dai, weth, lopv4, settlement, feeBank, resolver },
-            accounts: { owner, alice, bob },
-            others: { chainId, abiCoder, auctionStartTime, auctionDetails },
-        };
-    }
-
-    async function buildCalldataForOrder({
-        orderData,
-        orderSigner,
-        minReturn,
-        dataFormFixture,
-        additionalDataForSettlement = '',
-        isInnermostOrder = false,
-        isMakingAmount = true,
-        fillingAmount = isMakingAmount ? orderData.makingAmount : orderData.takingAmount,
-        feeType = 0,
-        integrator = orderSigner.address,
-        resolverFee = 0,
-        auctionDetails = dataFormFixture.others.auctionDetails,
-    }) {
-        const {
-            contracts: { lopv4, settlement, resolver },
-            others: { chainId, auctionStartTime },
-        } = dataFormFixture;
-
-        let postInteractionFeeDataTypes = ['uint8'];
-        let postInteractionFeeData = [0];
-        if (feeType === 1) {
-            postInteractionFeeDataTypes = [...postInteractionFeeDataTypes, 'bytes4'];
-            postInteractionFeeData = [feeType, '0x' + resolverFee.toString(16).padStart(8, '0')];
-        }
-        if (feeType === 2) {
-            postInteractionFeeDataTypes = [...postInteractionFeeDataTypes, 'bytes20', 'bytes4'];
-            postInteractionFeeData = [feeType, integrator, '0x' + resolverFee.toString(16).padStart(8, '0')];
-        }
-
-        const order = buildOrder(orderData, {
-            makingAmountData: settlement.address + trim0x(auctionDetails),
-            takingAmountData: settlement.address + trim0x(auctionDetails),
-            postInteraction: settlement.address +
-                trim0x(ethers.utils.solidityPack(postInteractionFeeDataTypes, postInteractionFeeData)) +
-                trim0x(ethers.utils.solidityPack(['uint32', 'bytes10', 'uint16'], [auctionStartTime, '0x' + resolver.address.substring(22), 0])),
-        });
-
-        const { r, _vs: vs } = ethers.utils.splitSignature(await signOrder(order, chainId, lopv4.address, orderSigner));
-
-        await resolver.approve(order.takerAsset, lopv4.address);
-
-        const takerTraits = buildTakerTraits({
-            makingAmount: isMakingAmount,
-            minReturn,
-            extension: order.extension,
-            interaction: resolver.address + (isInnermostOrder ? '01' : '00') + trim0x(additionalDataForSettlement),
-            target: resolver.address,
-        });
-
-        return lopv4.interface.encodeFunctionData('fillOrderArgs', [
-            order,
-            r,
-            vs,
-            fillingAmount,
-            takerTraits.traits,
-            takerTraits.args,
-        ]);
-    }
-
     it('opposite direction recursive swap', async function () {
-        const dataFormFixture = await loadFixture(initContracts);
+        const dataFormFixture = await loadFixture(initContractsForSettlement);
         const {
             contracts: { dai, weth, resolver },
             accounts: { owner, alice },
@@ -157,7 +55,7 @@ describe('Settlement', function () {
     });
 
     it('settle orders with permits, permit', async function () {
-        const dataFormFixture = await loadFixture(initContracts);
+        const dataFormFixture = await loadFixture(initContractsForSettlement);
         const {
             contracts: { dai, weth, lopv4, resolver },
             accounts: { owner, alice },
@@ -207,7 +105,7 @@ describe('Settlement', function () {
     });
 
     it('settle orders with permits, permit2', async function () {
-        const dataFormFixture = await loadFixture(initContracts);
+        const dataFormFixture = await loadFixture(initContractsForSettlement);
         const {
             contracts: { dai, weth, lopv4, resolver },
             accounts: { owner, alice },
@@ -261,7 +159,7 @@ describe('Settlement', function () {
     });
 
     it('opposite direction recursive swap with taking fee', async function () {
-        const dataFormFixture = await loadFixture(initContracts);
+        const dataFormFixture = await loadFixture(initContractsForSettlement);
         const {
             contracts: { dai, weth, settlement, resolver },
             accounts: { owner, alice, bob },
@@ -320,7 +218,7 @@ describe('Settlement', function () {
     });
 
     it('unidirectional recursive swap', async function () {
-        const dataFormFixture = await loadFixture(initContracts);
+        const dataFormFixture = await loadFixture(initContractsForSettlement);
         const {
             contracts: { dai, weth, resolver },
             accounts: { owner, alice },
@@ -382,7 +280,7 @@ describe('Settlement', function () {
     });
 
     it('triple recursive swap', async function () {
-        const dataFormFixture = await loadFixture(initContracts);
+        const dataFormFixture = await loadFixture(initContractsForSettlement);
         const {
             contracts: { dai, weth, resolver },
             accounts: { owner, alice },
@@ -518,7 +416,7 @@ describe('Settlement', function () {
         };
 
         it('matching order before orderTime has maximal rate bump', async function () {
-            const dataFormFixture = await loadFixture(initContracts);
+            const dataFormFixture = await loadFixture(initContractsForSettlement);
             const {
                 contracts: { dai, weth, resolver },
                 accounts: { owner, alice },
@@ -537,7 +435,7 @@ describe('Settlement', function () {
 
         describe.skip('order with one bump point', async function () {
             it('matching order before bump point', async function () {
-                const dataFormFixture = await loadFixture(initContracts);
+                const dataFormFixture = await loadFixture(initContractsForSettlement);
                 const {
                     contracts: { dai, weth, resolver },
                     accounts: { owner, alice },
@@ -562,7 +460,7 @@ describe('Settlement', function () {
             });
 
             it('matching order after bump point', async function () {
-                const dataFormFixture = await loadFixture(initContracts);
+                const dataFormFixture = await loadFixture(initContractsForSettlement);
                 const {
                     contracts: { dai, weth, resolver },
                     accounts: { owner, alice },
@@ -587,7 +485,7 @@ describe('Settlement', function () {
         });
 
         it('set initial rate', async function () {
-            const dataFormFixture = await loadFixture(initContracts);
+            const dataFormFixture = await loadFixture(initContractsForSettlement);
             const {
                 contracts: { dai, weth, resolver },
                 accounts: { owner, alice },
@@ -606,7 +504,7 @@ describe('Settlement', function () {
         });
 
         it.skip('set auctionDuration', async function () {
-            const dataFormFixture = await loadFixture(initContracts);
+            const dataFormFixture = await loadFixture(initContractsForSettlement);
             const {
                 contracts: { dai, weth, resolver },
                 accounts: { owner, alice },
@@ -628,7 +526,7 @@ describe('Settlement', function () {
     });
 
     it('should change availableCredit with non-zero fee', async function () {
-        const dataFormFixture = await loadFixture(initContracts);
+        const dataFormFixture = await loadFixture(initContractsForSettlement);
         const {
             contracts: { dai, weth, settlement, resolver },
             accounts: { owner, alice },
@@ -678,7 +576,7 @@ describe('Settlement', function () {
     });
 
     it('partial fill with taking fee', async function () {
-        const dataFormFixture = await loadFixture(initContracts);
+        const dataFormFixture = await loadFixture(initContractsForSettlement);
         const {
             contracts: { dai, weth, settlement, resolver },
             accounts: { owner, alice },
@@ -733,7 +631,7 @@ describe('Settlement', function () {
     });
 
     it('resolver should pay minimal 1 wei fee', async function () {
-        const dataFormFixture = await loadFixture(initContracts);
+        const dataFormFixture = await loadFixture(initContractsForSettlement);
         const {
             contracts: { dai, weth, settlement, resolver },
             accounts: { owner, alice },
@@ -789,7 +687,7 @@ describe('Settlement', function () {
     });
 
     it('should not change when availableCredit is not enough', async function () {
-        const dataFormFixture = await loadFixture(initContracts);
+        const dataFormFixture = await loadFixture(initContractsForSettlement);
         const {
             contracts: { dai, weth, resolver },
             accounts: { owner, alice },
@@ -841,7 +739,7 @@ describe('Settlement', function () {
 
     describe('whitelist lock period', async function () {
         it('should change only after whitelistedCutOff', async function () {
-            const dataFormFixture = await loadFixture(initContracts);
+            const dataFormFixture = await loadFixture(initContractsForSettlement);
             const {
                 contracts: { dai, weth, resolver },
                 accounts: { owner, alice },
@@ -892,7 +790,7 @@ describe('Settlement', function () {
         });
 
         it.skip('should change by non-whitelisted resolver after publicCutOff', async function () {
-            const dataFormFixture = await loadFixture(initContracts);
+            const dataFormFixture = await loadFixture(initContractsForSettlement);
             const {
                 contracts: { dai, weth, settlement, resolver },
                 accounts: { owner, alice },
