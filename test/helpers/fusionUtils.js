@@ -1,12 +1,12 @@
-const { trim0x } = require('@1inch/solidity-utils');
+const { time, trim0x } = require('@1inch/solidity-utils');
 const { ethers } = require('hardhat');
-const { buildOrder, signOrder, buildTakerTraits } = require('@1inch/limit-order-protocol-contract/test/helpers/orderUtils');
+const { buildOrder, buildTakerTraits, signOrder } = require('@1inch/limit-order-protocol-contract/test/helpers/orderUtils');
 
 async function buildCalldataForOrder({
     orderData,
     orderSigner,
     minReturn,
-    dataFormFixture,
+    setupData,
     additionalDataForSettlement = '',
     isInnermostOrder = false,
     isMakingAmount = true,
@@ -14,13 +14,13 @@ async function buildCalldataForOrder({
     feeType = 0,
     integrator = orderSigner.address,
     resolverFee = 0,
-    auctionDetails = dataFormFixture.others.auctionDetails,
-    whitelistData = '0x' + dataFormFixture.contracts.resolver.address.substring(22),
+    whitelistData = '0x' + setupData.contracts.resolver.address.substring(22),
 }) {
     const {
         contracts: { lopv4, settlement, resolver },
-        others: { chainId, auctionStartTime },
-    } = dataFormFixture;
+        others: { chainId },
+        auction: { startTime: auctionStartTime, details: auctionDetails },
+    } = setupData;
 
     let postInteractionFeeDataTypes = ['uint8'];
     let postInteractionFeeData = [0];
@@ -63,6 +63,24 @@ async function buildCalldataForOrder({
     ]);
 }
 
+async function buildAuctionDetails({
+    startTime, // default is time.latest()
+    duration = 1800, // default is 30 minutes
+    delay = 0,
+    initialRateBump = 0,
+    points = [],
+} = {}) {
+    startTime = startTime || await time.latest();
+    let details = ethers.utils.solidityPack(
+        ['uint32', 'uint24', 'uint24'], [startTime + delay, duration, initialRateBump],
+    );
+    for (let i = 0; i < points.length; i++) {
+        details += trim0x(ethers.utils.solidityPack(['uint24', 'uint16'], [points[i][0], points[i][1]]));
+    }
+    return { startTime, details, delay, duration, initialRateBump };
+}
+
 module.exports = {
+    buildAuctionDetails,
     buildCalldataForOrder,
 };

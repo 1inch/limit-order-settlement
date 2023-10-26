@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { ethers } = require('hardhat');
-const { ether, deployContract, time } = require('@1inch/solidity-utils');
+const { ether, deployContract } = require('@1inch/solidity-utils');
 
 async function getChainId() {
     return (await ethers.provider.getNetwork()).chainId;
@@ -51,15 +51,10 @@ async function initContractsForSettlement() {
     await resolver.approve(dai.address, lopv4.address);
     await resolver.approve(weth.address, lopv4.address);
 
-    const auctionStartTime = await time.latest();
-    const auctionDetails = ethers.utils.solidityPack(
-        ['uint32', 'uint24', 'uint24'], [auctionStartTime, time.duration.hours(1), 0],
-    );
-
     return {
         contracts: { dai, weth, lopv4, settlement, feeBank, resolver },
         accounts: { owner, alice, bob },
-        others: { chainId, abiCoder, auctionStartTime, auctionDetails },
+        others: { chainId, abiCoder },
     };
 }
 

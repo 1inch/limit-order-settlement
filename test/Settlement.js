@@ -1,9 +1,8 @@
-const { ethers } = require('hardhat');
 const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
 const { time, expect, ether, trim0x, timeIncreaseTo, getPermit, getPermit2, compressPermit, permit2Contract } = require('@1inch/solidity-utils');
 const { buildMakerTraits } = require('@1inch/limit-order-protocol-contract/test/helpers/orderUtils');
 const { initContractsForSettlement } = require('./helpers/fixtures');
-const { buildCalldataForOrder } = require('./helpers/fusionUtils');
+const { buildAuctionDetails, buildCalldataForOrder } = require('./helpers/fusionUtils');
 
 const ORDER_FEE = 100n;
 const BACK_ORDER_FEE = 125n;
@@ -12,10 +11,12 @@ const BASE_POINTS = ether('0.001'); // 1e15
 describe('Settlement', function () {
     it('opposite direction recursive swap', async function () {
         const dataFormFixture = await loadFixture(initContractsForSettlement);
+        const auction = await buildAuctionDetails();
+        const setupData = { ...dataFormFixture, auction };
         const {
             contracts: { dai, weth, resolver },
             accounts: { owner, alice },
-        } = dataFormFixture;
+        } = setupData;
 
         const fillOrderToData1 = await buildCalldataForOrder({
             orderData: {
@@ -27,7 +28,7 @@ describe('Settlement', function () {
                 makerTraits: buildMakerTraits(),
             },
             orderSigner: alice,
-            dataFormFixture,
+            setupData,
             minReturn: ether('100'),
             isInnermostOrder: true,
             isMakingAmount: false,
@@ -43,7 +44,7 @@ describe('Settlement', function () {
                 makerTraits: buildMakerTraits(),
             },
             orderSigner: owner,
-            dataFormFixture,
+            setupData,
             minReturn: ether('0.11'),
             additionalDataForSettlement: fillOrderToData1,
             isMakingAmount: false,
@@ -56,11 +57,13 @@ describe('Settlement', function () {
 
     it('settle orders with permits, permit', async function () {
         const dataFormFixture = await loadFixture(initContractsForSettlement);
+        const auction = await buildAuctionDetails();
+        const setupData = { ...dataFormFixture, auction };
         const {
             contracts: { dai, weth, lopv4, resolver },
             accounts: { owner, alice },
             others: { chainId },
-        } = dataFormFixture;
+        } = setupData;
 
         const fillOrderToData1 = await buildCalldataForOrder({
             orderData: {
@@ -72,7 +75,7 @@ describe('Settlement', function () {
                 makerTraits: buildMakerTraits(),
             },
             orderSigner: alice,
-            dataFormFixture,
+            setupData,
             minReturn: ether('100'),
             isInnermostOrder: true,
             isMakingAmount: false,
@@ -88,7 +91,7 @@ describe('Settlement', function () {
                 makerTraits: buildMakerTraits(),
             },
             orderSigner: owner,
-            dataFormFixture,
+            setupData,
             minReturn: ether('0.11'),
             additionalDataForSettlement: fillOrderToData1,
             isMakingAmount: false,
@@ -106,11 +109,13 @@ describe('Settlement', function () {
 
     it('settle orders with permits, permit2', async function () {
         const dataFormFixture = await loadFixture(initContractsForSettlement);
+        const auction = await buildAuctionDetails();
+        const setupData = { ...dataFormFixture, auction };
         const {
             contracts: { dai, weth, lopv4, resolver },
             accounts: { owner, alice },
             others: { chainId },
-        } = dataFormFixture;
+        } = setupData;
 
         const fillOrderToData1 = await buildCalldataForOrder({
             orderData: {
@@ -122,7 +127,7 @@ describe('Settlement', function () {
                 makerTraits: buildMakerTraits(),
             },
             orderSigner: alice,
-            dataFormFixture,
+            setupData,
             minReturn: ether('100'),
             isInnermostOrder: true,
             isMakingAmount: false,
@@ -138,7 +143,7 @@ describe('Settlement', function () {
                 makerTraits: buildMakerTraits(),
             },
             orderSigner: owner,
-            dataFormFixture,
+            setupData,
             minReturn: ether('0.11'),
             additionalDataForSettlement: fillOrderToData1,
             isMakingAmount: false,
@@ -160,10 +165,12 @@ describe('Settlement', function () {
 
     it('opposite direction recursive swap with taking fee', async function () {
         const dataFormFixture = await loadFixture(initContractsForSettlement);
+        const auction = await buildAuctionDetails();
+        const setupData = { ...dataFormFixture, auction };
         const {
             contracts: { dai, weth, settlement, resolver },
             accounts: { owner, alice, bob },
-        } = dataFormFixture;
+        } = setupData;
 
         const fillOrderToData1 = await buildCalldataForOrder({
             orderData: {
@@ -175,7 +182,7 @@ describe('Settlement', function () {
                 makerTraits: buildMakerTraits(),
             },
             orderSigner: alice,
-            dataFormFixture,
+            setupData,
             minReturn: ether('100'),
             isInnermostOrder: true,
             isMakingAmount: false,
@@ -194,7 +201,7 @@ describe('Settlement', function () {
                 makerTraits: buildMakerTraits(),
             },
             orderSigner: owner,
-            dataFormFixture,
+            setupData,
             minReturn: ether('0.11'),
             additionalDataForSettlement: fillOrderToData1,
             isMakingAmount: false,
@@ -219,11 +226,13 @@ describe('Settlement', function () {
 
     it('unidirectional recursive swap', async function () {
         const dataFormFixture = await loadFixture(initContractsForSettlement);
+        const auction = await buildAuctionDetails();
+        const setupData = { ...dataFormFixture, auction };
         const {
             contracts: { dai, weth, resolver },
             accounts: { owner, alice },
             others: { abiCoder },
-        } = dataFormFixture;
+        } = setupData;
 
         const resolverArgs = abiCoder.encode(
             ['address[]', 'bytes[]'],
@@ -249,7 +258,7 @@ describe('Settlement', function () {
                 makerTraits: buildMakerTraits(),
             },
             orderSigner: alice,
-            dataFormFixture,
+            setupData,
             minReturn: ether('15'),
             additionalDataForSettlement: resolverArgs,
             isInnermostOrder: true,
@@ -266,7 +275,7 @@ describe('Settlement', function () {
                 makerTraits: buildMakerTraits(),
             },
             orderSigner: alice,
-            dataFormFixture,
+            setupData,
             minReturn: ether('10'),
             additionalDataForSettlement: fillOrderToData1,
             isMakingAmount: false,
@@ -281,10 +290,12 @@ describe('Settlement', function () {
 
     it('triple recursive swap', async function () {
         const dataFormFixture = await loadFixture(initContractsForSettlement);
+        const auction = await buildAuctionDetails();
+        const setupData = { ...dataFormFixture, auction };
         const {
             contracts: { dai, weth, resolver },
             accounts: { owner, alice },
-        } = dataFormFixture;
+        } = setupData;
 
         const fillOrderToData2 = await buildCalldataForOrder({
             orderData: {
@@ -296,7 +307,7 @@ describe('Settlement', function () {
                 makerTraits: buildMakerTraits(),
             },
             orderSigner: owner,
-            dataFormFixture,
+            setupData,
             minReturn: ether('0.025'),
             isInnermostOrder: true,
             isMakingAmount: false,
@@ -312,7 +323,7 @@ describe('Settlement', function () {
                 makerTraits: buildMakerTraits(),
             },
             orderSigner: alice,
-            dataFormFixture,
+            setupData,
             minReturn: ether('15'),
             additionalDataForSettlement: fillOrderToData2,
             isMakingAmount: false,
@@ -328,7 +339,7 @@ describe('Settlement', function () {
                 makerTraits: buildMakerTraits(),
             },
             orderSigner: alice,
-            dataFormFixture,
+            setupData,
             minReturn: ether('10'),
             additionalDataForSettlement: fillOrderToData1,
             isMakingAmount: false,
@@ -341,32 +352,28 @@ describe('Settlement', function () {
 
     describe('dutch auction params', function () {
         const prepareSingleOrder = async ({
-            startTime,
-            auctionDelay = 0,
-            initialRateBump = 1000000n,
-            auctionDuration = 1800,
             targetTakingAmount = 0n,
-            points = [],
-            dataFormFixture,
+            setupData,
         }) => {
             const {
                 contracts: { dai, weth, resolver },
                 accounts: { owner, alice },
                 others: { abiCoder },
-            } = dataFormFixture;
+                auction: { startTime, delay, duration, initialRateBump },
+            } = setupData;
 
             let actualTakingAmount = targetTakingAmount;
             if (actualTakingAmount === 0n) {
                 actualTakingAmount = ether('0.1');
                 const ts = await time.latest();
                 // TODO: avoid this shit (as well as any other computations in tests)
-                if (ts < startTime + auctionDelay + auctionDuration) {
+                if (ts < startTime + delay + duration) {
                     // actualTakingAmount = actualTakingAmount * (
-                    //    _BASE_POINTS + initialRateBump * (startTime + auctionDelay + auctionDuration - currentTimestamp) / auctionDuration
+                    //    _BASE_POINTS + initialRateBump * (startTime + delay + duration - currentTimestamp) / duration
                     // ) / _BASE_POINTS
-                    const minDuration = startTime + auctionDelay + auctionDuration - ts > auctionDuration ? auctionDuration : startTime + auctionDelay + auctionDuration - ts - 2;
+                    const minDuration = startTime + delay + duration - ts > duration ? duration : startTime + delay + duration - ts - 2;
                     actualTakingAmount =
-                        (actualTakingAmount * (10000000n + (BigInt(initialRateBump) * BigInt(minDuration)) / BigInt(auctionDuration))) /
+                        (actualTakingAmount * (10000000n + (BigInt(initialRateBump) * BigInt(minDuration)) / BigInt(duration))) /
                         10000000n;
                 }
             }
@@ -385,13 +392,6 @@ describe('Settlement', function () {
                 ],
             );
 
-            let auctionDetails = ethers.utils.solidityPack(
-                ['uint32', 'uint24', 'uint24'], [startTime + auctionDelay, time.duration.hours(1), initialRateBump],
-            );
-            for (let i = 0; i < points.length; i++) {
-                auctionDetails += trim0x(ethers.utils.solidityPack(['uint24', 'uint16'], [points[i][0], points[i][1]]));
-            }
-
             const fillOrderToData = await buildCalldataForOrder({
                 orderData: {
                     maker: alice.address,
@@ -402,13 +402,12 @@ describe('Settlement', function () {
                     makerTraits: buildMakerTraits(),
                 },
                 orderSigner: alice,
-                dataFormFixture,
+                setupData,
                 minReturn: ether('100'),
                 additionalDataForSettlement: resolverCalldata,
                 isInnermostOrder: true,
                 isMakingAmount: false,
                 fillingAmount: actualTakingAmount,
-                auctionDetails,
             });
 
             await weth.approve(resolver.address, actualTakingAmount);
@@ -417,66 +416,58 @@ describe('Settlement', function () {
 
         it('matching order before orderTime has maximal rate bump', async function () {
             const dataFormFixture = await loadFixture(initContractsForSettlement);
+            const auction = await buildAuctionDetails({ delay: 60, initialRateBump: 1000000n });
+            const setupData = { ...dataFormFixture, auction };
             const {
                 contracts: { dai, weth, resolver },
                 accounts: { owner, alice },
-            } = dataFormFixture;
+            } = setupData;
 
-            const fillOrderToData = await prepareSingleOrder({
-                startTime: dataFormFixture.others.auctionStartTime,
-                auctionDelay: 60, // seconds
-                dataFormFixture,
-            });
+            const fillOrderToData = await prepareSingleOrder({ setupData });
 
             const txn = await resolver.settleOrders(fillOrderToData);
             await expect(txn).to.changeTokenBalances(dai, [resolver, alice], [ether('100'), ether('-100')]);
             await expect(txn).to.changeTokenBalances(weth, [owner, alice], [ether('-0.11'), ether('0.11')]);
         });
 
-        describe.skip('order with one bump point', async function () {
-            it('matching order before bump point', async function () {
+        describe('order with one bump point', async function () {
+            it.skip('matching order before bump point', async function () {
                 const dataFormFixture = await loadFixture(initContractsForSettlement);
+                const auction = await buildAuctionDetails({ initialRateBump: 10000n, points: [[240, 9000]] });
+                const setupData = { ...dataFormFixture, auction };
                 const {
                     contracts: { dai, weth, resolver },
                     accounts: { owner, alice },
-                } = dataFormFixture;
+                } = setupData;
 
-                const startTime = await time.latest();
                 const actualTakingAmount = ether('0.109');
                 const fillOrderToData = await prepareSingleOrder({
-                    startTime,
-                    initialRateBump: 10000n,
-                    auctionDuration: 1800,
-                    points: [[240, 9000]],
                     targetTakingAmount: actualTakingAmount,
-                    dataFormFixture,
+                    setupData,
                 });
 
-                await timeIncreaseTo(startTime + 239);
+                await timeIncreaseTo(setupData.auction.startTime + 239);
 
                 const txn = await resolver.settleOrders(fillOrderToData);
                 await expect(txn).to.changeTokenBalances(dai, [resolver, alice], [ether('100'), ether('-100')]);
                 await expect(txn).to.changeTokenBalances(weth, [owner, alice], [ether('-0.109'), ether('0.109')]);
             });
 
-            it('matching order after bump point', async function () {
+            it.skip('matching order after bump point', async function () {
                 const dataFormFixture = await loadFixture(initContractsForSettlement);
+                const auction = await buildAuctionDetails({ initialRateBump: 10000n, points: [[240, 9000n]] });
+                const setupData = { ...dataFormFixture, auction };
                 const {
                     contracts: { dai, weth, resolver },
                     accounts: { owner, alice },
-                } = dataFormFixture;
+                } = setupData;
 
-                const startTime = await time.latest();
                 const actualTakingAmount = ether('0.106');
                 const fillOrderToData = await prepareSingleOrder({
-                    startTime,
-                    initialRateBump: 1000000n,
-                    auctionDuration: 1800,
-                    points: [[240, 900000n]],
                     targetTakingAmount: actualTakingAmount,
-                    dataFormFixture,
+                    setupData,
                 });
-                await timeIncreaseTo(startTime + 759);
+                await timeIncreaseTo(setupData.auction.startTime + 759);
 
                 const txn = await resolver.settleOrders(fillOrderToData);
                 await expect(txn).to.changeTokenBalances(dai, [resolver, alice], [ether('100'), ether('-100')]);
@@ -486,17 +477,14 @@ describe('Settlement', function () {
 
         it('set initial rate', async function () {
             const dataFormFixture = await loadFixture(initContractsForSettlement);
+            const auction = await buildAuctionDetails({ delay: 60, initialRateBump: 2000000n });
+            const setupData = { ...dataFormFixture, auction };
             const {
                 contracts: { dai, weth, resolver },
                 accounts: { owner, alice },
-            } = dataFormFixture;
+            } = setupData;
 
-            const fillOrderToData = await prepareSingleOrder({
-                startTime: await time.latest(),
-                auctionDelay: 60,
-                initialRateBump: 2000000n,
-                dataFormFixture,
-            });
+            const fillOrderToData = await prepareSingleOrder({ setupData });
 
             const txn = await resolver.settleOrders(fillOrderToData);
             await expect(txn).to.changeTokenBalances(dai, [resolver, alice], [ether('100'), ether('-100')]);
@@ -505,18 +493,18 @@ describe('Settlement', function () {
 
         it.skip('set auctionDuration', async function () {
             const dataFormFixture = await loadFixture(initContractsForSettlement);
+
+            const normalizeTime = Math.floor(((await time.latest()) + 59) / 60) * 60;
+            const auction = await buildAuctionDetails({ startTime: normalizeTime - 448, duration: 900, initialRateBump: 1000000n });
+            const setupData = { ...dataFormFixture, auction };
             const {
                 contracts: { dai, weth, resolver },
                 accounts: { owner, alice },
-            } = dataFormFixture;
+            } = setupData;
 
-            const normalizeTime = Math.floor(((await time.latest()) + 59) / 60) * 60;
             await time.increaseTo(normalizeTime);
             const fillOrderToData = await prepareSingleOrder({
-                startTime: normalizeTime - 448,
-                initialRateBump: 1000000n,
-                auctionDuration: 900,
-                dataFormFixture,
+                setupData,
             });
 
             const txn = await resolver.settleOrders(fillOrderToData);
@@ -527,10 +515,12 @@ describe('Settlement', function () {
 
     it('should change availableCredit with non-zero fee', async function () {
         const dataFormFixture = await loadFixture(initContractsForSettlement);
+        const auction = await buildAuctionDetails();
+        const setupData = { ...dataFormFixture, auction };
         const {
             contracts: { dai, weth, settlement, resolver },
             accounts: { owner, alice },
-        } = dataFormFixture;
+        } = setupData;
 
         const fillOrderToData1 = await buildCalldataForOrder({
             orderData: {
@@ -542,7 +532,7 @@ describe('Settlement', function () {
                 makerTraits: buildMakerTraits(),
             },
             orderSigner: alice,
-            dataFormFixture,
+            setupData,
             minReturn: ether('0.1'),
             isInnermostOrder: true,
             isMakingAmount: false,
@@ -560,7 +550,7 @@ describe('Settlement', function () {
                 makerTraits: buildMakerTraits(),
             },
             orderSigner: owner,
-            dataFormFixture,
+            setupData,
             minReturn: ether('100'),
             additionalDataForSettlement: fillOrderToData1,
             isMakingAmount: false,
@@ -577,11 +567,13 @@ describe('Settlement', function () {
 
     it('partial fill with taking fee', async function () {
         const dataFormFixture = await loadFixture(initContractsForSettlement);
+        const auction = await buildAuctionDetails();
+        const setupData = { ...dataFormFixture, auction };
         const {
             contracts: { dai, weth, settlement, resolver },
             accounts: { owner, alice },
             others: { abiCoder },
-        } = dataFormFixture;
+        } = setupData;
 
         const partialModifier = 40n;
         const points = 100n;
@@ -610,7 +602,7 @@ describe('Settlement', function () {
                 makerTraits: buildMakerTraits(),
             },
             orderSigner: alice,
-            dataFormFixture,
+            setupData,
             minReturn: ether('0.01') * partialModifier / points,
             additionalDataForSettlement: resolverArgs,
             isInnermostOrder: true,
@@ -632,11 +624,13 @@ describe('Settlement', function () {
 
     it('resolver should pay minimal 1 wei fee', async function () {
         const dataFormFixture = await loadFixture(initContractsForSettlement);
+        const auction = await buildAuctionDetails();
+        const setupData = { ...dataFormFixture, auction };
         const {
             contracts: { dai, weth, settlement, resolver },
             accounts: { owner, alice },
             others: { abiCoder },
-        } = dataFormFixture;
+        } = setupData;
 
         const minimalPartialModifier = 1n;
         const points = ether('0.01');
@@ -666,7 +660,7 @@ describe('Settlement', function () {
                 makerTraits: buildMakerTraits(),
             },
             orderSigner: alice,
-            dataFormFixture,
+            setupData,
             minReturn: ether('0.01'),
             additionalDataForSettlement: resolverArgs,
             isInnermostOrder: true,
@@ -688,11 +682,12 @@ describe('Settlement', function () {
 
     it('should not change when availableCredit is not enough', async function () {
         const dataFormFixture = await loadFixture(initContractsForSettlement);
+        const auction = await buildAuctionDetails();
+        const setupData = { ...dataFormFixture, auction };
         const {
             contracts: { dai, weth, resolver },
             accounts: { owner, alice },
-            others: { BACK_ORDER_FEE },
-        } = dataFormFixture;
+        } = setupData;
 
         const fillOrderToData1 = await buildCalldataForOrder({
             orderData: {
@@ -704,7 +699,7 @@ describe('Settlement', function () {
                 makerTraits: buildMakerTraits(),
             },
             orderSigner: alice,
-            dataFormFixture,
+            setupData,
             minReturn: ether('100'),
             isInnermostOrder: true,
             feeType: 1,
@@ -721,7 +716,7 @@ describe('Settlement', function () {
                 makerTraits: buildMakerTraits(),
             },
             orderSigner: owner,
-            dataFormFixture,
+            setupData,
             minReturn: ether('0.1'),
             additionalDataForSettlement: fillOrderToData1,
             feeType: 1,
@@ -740,12 +735,13 @@ describe('Settlement', function () {
     describe('whitelist lock period', async function () {
         it('should change only after whitelistedCutOff', async function () {
             const dataFormFixture = await loadFixture(initContractsForSettlement);
+            const auction = await buildAuctionDetails({ startTime: await time.latest() + time.duration.hours('3') });
+            const setupData = { ...dataFormFixture, auction };
             const {
                 contracts: { dai, weth, resolver },
                 accounts: { owner, alice },
-            } = dataFormFixture;
+            } = setupData;
 
-            dataFormFixture.others.auctionStartTime += time.duration.hours('3');
             const fillOrderToData1 = await buildCalldataForOrder({
                 orderData: {
                     maker: alice.address,
@@ -756,7 +752,7 @@ describe('Settlement', function () {
                     makerTraits: buildMakerTraits(),
                 },
                 orderSigner: alice,
-                dataFormFixture,
+                setupData,
                 minReturn: ether('100'),
                 isInnermostOrder: true,
             });
@@ -771,7 +767,7 @@ describe('Settlement', function () {
                     makerTraits: buildMakerTraits(),
                 },
                 orderSigner: owner,
-                dataFormFixture,
+                setupData,
                 minReturn: ether('0.1'),
                 additionalDataForSettlement: fillOrderToData1,
             });
@@ -784,51 +780,8 @@ describe('Settlement', function () {
                 expect(e.message).to.include('0xfac829a0'); // ResolverIsNotWhitelisted()
             }
 
-            await timeIncreaseTo(dataFormFixture.others.auctionStartTime + 1);
+            await timeIncreaseTo(setupData.auction.startTime + 1);
 
-            await resolver.settleOrders(fillOrderToData0);
-        });
-
-        it.skip('should change by non-whitelisted resolver after publicCutOff', async function () {
-            const dataFormFixture = await loadFixture(initContractsForSettlement);
-            const {
-                contracts: { dai, weth, settlement, resolver },
-                accounts: { owner, alice },
-            } = dataFormFixture;
-
-            const fillOrderToData1 = await buildCalldataForOrder({
-                orderData: {
-                    maker: alice.address,
-                    makerAsset: weth.address,
-                    takerAsset: dai.address,
-                    makingAmount: ether('0.1'),
-                    takingAmount: ether('100'),
-                    makerTraits: buildMakerTraits({ allowedSender: settlement.address }),
-                },
-                singleFusionData: { publicTimeDelay: 60n, resolverFee: BACK_ORDER_FEE },
-                orderSigner: alice,
-                dataFormFixture,
-                isInnermostOrder: true,
-            });
-
-            const fillOrderToData0 = await buildCalldataForOrder({
-                orderData: {
-                    maker: owner.address,
-                    makerAsset: dai.address,
-                    takerAsset: weth.address,
-                    makingAmount: ether('100'),
-                    takingAmount: ether('0.1'),
-                    makerTraits: buildMakerTraits({ allowedSender: settlement.address }),
-                },
-                singleFusionData: { publicTimeDelay: 60n, resolverFee: ORDER_FEE },
-                orderSigner: owner,
-                dataFormFixture,
-                additionalDataForSettlement: fillOrderToData1,
-                needAddResolvers: true,
-            });
-
-            await expect(resolver.settleOrders(fillOrderToData0)).to.be.revertedWithCustomError(settlement, 'ResolverIsNotWhitelisted');
-            await timeIncreaseTo(BigInt(await time.latest()) + 100n);
             await resolver.settleOrders(fillOrderToData0);
         });
     });

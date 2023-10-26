@@ -3,16 +3,18 @@ const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
 const { expect, ether, constants } = require('@1inch/solidity-utils');
 const { buildOrder, buildMakerTraits } = require('@1inch/limit-order-protocol-contract/test/helpers/orderUtils');
 const { initContractsForSettlement } = require('./helpers/fixtures');
-const { buildCalldataForOrder } = require('./helpers/fusionUtils');
+const { buildAuctionDetails, buildCalldataForOrder } = require('./helpers/fusionUtils');
 
 describe('WhitelistChecker', function () {
     describe('should not work with non-whitelisted address', function () {
         it('whitelist check in postInteraction method', async function () {
             const dataFormFixture = await loadFixture(initContractsForSettlement);
+            const auction = await buildAuctionDetails();
+            const setupData = { ...dataFormFixture, auction };
             const {
                 contracts: { dai, weth, resolver },
                 accounts: { alice },
-            } = dataFormFixture;
+            } = setupData;
 
             weth.transfer(resolver.address, ether('0.1'));
 
@@ -26,7 +28,7 @@ describe('WhitelistChecker', function () {
                     makerTraits: buildMakerTraits(),
                 },
                 orderSigner: alice,
-                dataFormFixture,
+                setupData,
                 minReturn: ether('0.1'),
                 isInnermostOrder: true,
                 whitelistData: '0x' + constants.ZERO_ADDRESS.substring(22),
@@ -43,10 +45,12 @@ describe('WhitelistChecker', function () {
 
         it('only resolver can use takerInteraction method', async function () {
             const dataFormFixture = await loadFixture(initContractsForSettlement);
+            const auction = await buildAuctionDetails();
+            const setupData = { ...dataFormFixture, auction };
             const {
                 contracts: { dai, weth, resolver, settlement, lopv4 },
                 accounts: { alice },
-            } = dataFormFixture;
+            } = setupData;
 
             // Deploy another resolver
             const ResolverMock = await ethers.getContractFactory('ResolverMock');
@@ -62,7 +66,7 @@ describe('WhitelistChecker', function () {
                     makerTraits: buildMakerTraits(),
                 },
                 orderSigner: alice,
-                dataFormFixture,
+                setupData,
                 minReturn: ether('0.1'),
                 isInnermostOrder: true,
             });
@@ -103,10 +107,12 @@ describe('WhitelistChecker', function () {
     describe('should work with whitelisted address', function () {
         it('whitelist check in settleOrders method', async function () {
             const dataFormFixture = await loadFixture(initContractsForSettlement);
+            const auction = await buildAuctionDetails();
+            const setupData = { ...dataFormFixture, auction };
             const {
                 contracts: { dai, weth, resolver },
                 accounts: { alice },
-            } = dataFormFixture;
+            } = setupData;
 
             weth.transfer(resolver.address, ether('0.1'));
 
@@ -120,7 +126,7 @@ describe('WhitelistChecker', function () {
                     makerTraits: buildMakerTraits(),
                 },
                 orderSigner: alice,
-                dataFormFixture,
+                setupData,
                 minReturn: ether('0.1'),
                 isInnermostOrder: true,
                 whitelistData: '0x' + resolver.address.substring(22),
