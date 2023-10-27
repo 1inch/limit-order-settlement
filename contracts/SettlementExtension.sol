@@ -94,16 +94,14 @@ contract SettlementExtension is IPostInteraction, IAmountGetter, FeeBankCharger 
         uint256 currentRateBump = initialRateBump;
 
         for (uint256 i = 0; i < pointsSize; i++) {
-            uint256 nextRateBump = uint24(bytes3(auctionDetails[:3]));
-            uint256 nextPointTime = currentPointTime + uint16(bytes2(auctionDetails[3:5]));
+            uint256 nextRateBump = uint24(bytes3(auctionDetails[i*5:i*5+3]));
+            uint256 nextPointTime = currentPointTime + uint16(bytes2(auctionDetails[i*5+3:5*(i+1)]));
             if (block.timestamp <= nextPointTime) {
                 return ((block.timestamp - currentPointTime) * nextRateBump + (nextPointTime - block.timestamp) * currentRateBump) / (nextPointTime - currentPointTime);
             }
             currentRateBump = nextRateBump;
             currentPointTime = nextPointTime;
-            auctionDetails = auctionDetails[5:];
         }
-
         return (auctionFinishTime - block.timestamp) * currentRateBump / (auctionFinishTime - currentPointTime);
     }
 

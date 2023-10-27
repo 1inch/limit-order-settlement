@@ -371,7 +371,7 @@ describe('Settlement', function () {
                     // actualTakingAmount = actualTakingAmount * (
                     //    _BASE_POINTS + initialRateBump * (startTime + delay + duration - currentTimestamp) / duration
                     // ) / _BASE_POINTS
-                    const minDuration = startTime + delay + duration - ts > duration ? duration : startTime + delay + duration - ts - 2;
+                    const minDuration = startTime + delay + duration - ts > duration ? duration : startTime + delay + duration - ts - 3;
                     actualTakingAmount =
                         (actualTakingAmount * (10000000n + (BigInt(initialRateBump) * BigInt(minDuration)) / BigInt(duration))) /
                         10000000n;
@@ -431,18 +431,17 @@ describe('Settlement', function () {
         });
 
         describe('order with one bump point', async function () {
-            it.skip('matching order before bump point', async function () {
+            it('matching order equal to bump point', async function () {
                 const dataFormFixture = await loadFixture(initContractsForSettlement);
-                const auction = await buildAuctionDetails({ initialRateBump: 10000n, points: [[240, 9000]] });
+                const auction = await buildAuctionDetails({ points: [[900000, 240]] });
                 const setupData = { ...dataFormFixture, auction };
                 const {
                     contracts: { dai, weth, resolver },
                     accounts: { owner, alice },
                 } = setupData;
 
-                const actualTakingAmount = ether('0.109');
                 const fillOrderToData = await prepareSingleOrder({
-                    targetTakingAmount: actualTakingAmount,
+                    targetTakingAmount: ether('0.109'),
                     setupData,
                 });
 
@@ -453,18 +452,38 @@ describe('Settlement', function () {
                 await expect(txn).to.changeTokenBalances(weth, [owner, alice], [ether('-0.109'), ether('0.109')]);
             });
 
-            it.skip('matching order after bump point', async function () {
+            it('matching order before bump point', async function () {
                 const dataFormFixture = await loadFixture(initContractsForSettlement);
-                const auction = await buildAuctionDetails({ initialRateBump: 10000n, points: [[240, 9000n]] });
+                const auction = await buildAuctionDetails({ initialRateBump: 1000000n, points: [[900000, 240]] });
                 const setupData = { ...dataFormFixture, auction };
                 const {
                     contracts: { dai, weth, resolver },
                     accounts: { owner, alice },
                 } = setupData;
 
-                const actualTakingAmount = ether('0.106');
                 const fillOrderToData = await prepareSingleOrder({
-                    targetTakingAmount: actualTakingAmount,
+                    targetTakingAmount: ether('0.1095'), // 1/2 * (takingAmount * 10%) + 1/2 * (takingAmount * 9%)
+                    setupData,
+                });
+
+                await timeIncreaseTo(setupData.auction.startTime + 240 / 2 - 1);
+
+                const txn = await resolver.settleOrders(fillOrderToData);
+                await expect(txn).to.changeTokenBalances(dai, [resolver, alice], [ether('100'), ether('-100')]);
+                await expect(txn).to.changeTokenBalances(weth, [owner, alice], [ether('-0.1095'), ether('0.1095')]);
+            });
+
+            it('matching order after bump point', async function () {
+                const dataFormFixture = await loadFixture(initContractsForSettlement);
+                const auction = await buildAuctionDetails({ points: [[900000, 240]] });
+                const setupData = { ...dataFormFixture, auction };
+                const {
+                    contracts: { dai, weth, resolver },
+                    accounts: { owner, alice },
+                } = setupData;
+
+                const fillOrderToData = await prepareSingleOrder({
+                    targetTakingAmount: ether('0.106'),
                     setupData,
                 });
                 await timeIncreaseTo(setupData.auction.startTime + 759);
@@ -472,6 +491,26 @@ describe('Settlement', function () {
                 const txn = await resolver.settleOrders(fillOrderToData);
                 await expect(txn).to.changeTokenBalances(dai, [resolver, alice], [ether('100'), ether('-100')]);
                 await expect(txn).to.changeTokenBalances(weth, [owner, alice], [ether('-0.106'), ether('0.106')]);
+            });
+
+            it('matching order between 2 bump point', async function () {
+                const dataFormFixture = await loadFixture(initContractsForSettlement);
+                const auction = await buildAuctionDetails({ points: [[500000, 240], [100000, 1240]] });
+                const setupData = { ...dataFormFixture, auction };
+                const {
+                    contracts: { dai, weth, resolver },
+                    accounts: { owner, alice },
+                } = setupData;
+
+                const fillOrderToData = await prepareSingleOrder({
+                    targetTakingAmount: ether('0.103'),
+                    setupData,
+                });
+                await timeIncreaseTo(setupData.auction.startTime + 859);
+
+                const txn = await resolver.settleOrders(fillOrderToData);
+                await expect(txn).to.changeTokenBalances(dai, [resolver, alice], [ether('100'), ether('-100')]);
+                await expect(txn).to.changeTokenBalances(weth, [owner, alice], [ether('-0.103'), ether('0.103')]);
             });
         });
 
@@ -491,18 +530,16 @@ describe('Settlement', function () {
             await expect(txn).to.changeTokenBalances(weth, [owner, alice], [ether('-0.12'), ether('0.12')]);
         });
 
-        it.skip('set auctionDuration', async function () {
+        it('set auctionDuration', async function () {
             const dataFormFixture = await loadFixture(initContractsForSettlement);
 
-            const normalizeTime = Math.floor(((await time.latest()) + 59) / 60) * 60;
-            const auction = await buildAuctionDetails({ startTime: normalizeTime - 448, duration: 900, initialRateBump: 1000000n });
+            const auction = await buildAuctionDetails({ startTime: (await time.latest()) - (450 - 3), duration: 900, initialRateBump: 1000000n });
             const setupData = { ...dataFormFixture, auction };
             const {
                 contracts: { dai, weth, resolver },
                 accounts: { owner, alice },
             } = setupData;
 
-            await time.increaseTo(normalizeTime);
             const fillOrderToData = await prepareSingleOrder({
                 setupData,
             });
