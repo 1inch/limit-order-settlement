@@ -2,14 +2,10 @@
 
 pragma solidity 0.8.19;
 
-import "@openzeppelin/contracts/interfaces/IERC1271.sol";
 import "../interfaces/IResolver.sol";
-import "../interfaces/ISettlement.sol";
 import "@1inch/solidity-utils/contracts/libraries/SafeERC20.sol";
-import "@1inch/solidity-utils/contracts/libraries/ECDSA.sol";
-import "@1inch/limit-order-protocol-contract/contracts/interfaces/IOrderMixin.sol";
 
-contract ResolverMock is IResolver, IERC1271 {
+contract ResolverMock is IResolver {
     error OnlyOwner();
     error NotTaker();
     error OnlyLOP();
@@ -19,15 +15,15 @@ contract ResolverMock is IResolver, IERC1271 {
     using AddressLib for Address;
 
     bytes1 private constant _FINALIZE_INTERACTION = 0x01;
-    uint256 private constant _RESOLVER_ADDRESS_BYTES_SIZE = 10;
-    uint256 private constant _BASE_POINTS = 10_000_000; // 100%
-    uint256 private constant _TAKING_FEE_BASE = 1e9;
-    uint256 private constant _TAKING_FEE_RATIO_OFFSET = 160;
-
 
     address private immutable _settlementExtension;
     IOrderMixin private immutable _lopv4;
     address private immutable _owner;
+
+    modifier onlyOwner () {
+        if (msg.sender != _owner) revert OnlyOwner();
+        _;
+    }
 
     constructor(address settlementExtension, IOrderMixin limitOrderProtocol) {
         _settlementExtension = settlementExtension;
@@ -35,32 +31,23 @@ contract ResolverMock is IResolver, IERC1271 {
         _owner = msg.sender;
     }
 
-    function isValidSignature(bytes32 hash, bytes calldata signature) external view returns (bytes4 magicValue) {
-        if (ECDSA.recoverOrIsValidSignature(_owner, hash, signature)) {
-            return IERC1271.isValidSignature.selector;
-        }
-        return 0xFFFFFFFF;
-    }
-
-    function approve(IERC20 token, address to) external {
-        if (msg.sender != _owner) revert OnlyOwner();
+    function approve(IERC20 token, address to) external onlyOwner {
         token.forceApprove(to, type(uint256).max);
     }
 
-    function settleOrders(bytes calldata data) public {
-        if (msg.sender != _owner) revert OnlyOwner();
+    function settleOrders(bytes calldata data) external onlyOwner() {
+        _settleOrders(data);
+    }
+
+    // @dev High byte of `packing` contains number of permits, each 2 bits from lowest contains length of permit (index in [92,120,148] array)
+    function settleOrdersWithPermits(bytes calldata data, uint256 packing, bytes calldata packedPermits) external onlyOwner {
+        _performPermits(packing, packedPermits);
         _settleOrders(data);
     }
 
     function _settleOrders(bytes calldata data) internal {
-        (bool success, bytes memory reason) = address(_lopv4).call(data); // abi.encodeWithSelector(_lopv4.fillOrderArgs.selector, data)
+        (bool success, bytes memory reason) = address(_lopv4).call(data);
         if (!success) revert FailedExternalCall(0, reason);
-    }
-
-    // @dev High byte of `packing` contains number of permits, each 2 bits from lowest contains length of permit (index in [92,120,148] array)
-    function settleOrdersWithPermits(bytes calldata data, uint256 packing, bytes calldata packedPermits) external {
-        _performPermits(packing, packedPermits);
-        settleOrders(data);
     }
 
     function takerInteraction(
@@ -87,7 +74,6 @@ contract ResolverMock is IResolver, IERC1271 {
                     }
                 }
             } else {
-                // _lopv4.call(abi.encodeWithSelector(extraData[1:4], args[5:]));
                 _settleOrders(extraData[1:]);
             }
         }
