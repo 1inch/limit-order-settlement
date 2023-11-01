@@ -21,38 +21,36 @@ describe('Settlement', function () {
         const fillOrderToData1 = await buildCalldataForOrder({
             orderData: {
                 maker: alice.address,
-                makerAsset: dai.address,
-                takerAsset: weth.address,
-                makingAmount: ether('100'),
-                takingAmount: ether('0.1'),
-                makerTraits: buildMakerTraits(),
-            },
-            orderSigner: alice,
-            setupData,
-            minReturn: ether('100'),
-            isInnermostOrder: true,
-            isMakingAmount: false,
-        });
-
-        const fillOrderToData0 = await buildCalldataForOrder({
-            orderData: {
-                maker: owner.address,
                 makerAsset: weth.address,
                 takerAsset: dai.address,
                 makingAmount: ether('0.11'),
                 takingAmount: ether('100'),
                 makerTraits: buildMakerTraits(),
             },
+            orderSigner: alice,
+            setupData,
+            minReturn: ether('100'),
+            isInnermostOrder: true,
+        });
+
+        const fillOrderToData0 = await buildCalldataForOrder({
+            orderData: {
+                maker: owner.address,
+                makerAsset: dai.address,
+                takerAsset: weth.address,
+                makingAmount: ether('100'),
+                takingAmount: ether('0.1'),
+                makerTraits: buildMakerTraits(),
+            },
             orderSigner: owner,
             setupData,
-            minReturn: ether('0.11'),
+            minReturn: ether('0.1'),
             additionalDataForSettlement: fillOrderToData1,
-            isMakingAmount: false,
         });
 
         const txn = await resolver.settleOrders(fillOrderToData0);
-        await expect(txn).to.changeTokenBalances(dai, [owner, alice, resolver], [ether('100'), ether('-100'), ether('0')]);
-        await expect(txn).to.changeTokenBalances(weth, [owner, alice, resolver], [ether('-0.11'), ether('0.1'), ether('0.01')]);
+        await expect(txn).to.changeTokenBalances(dai, [owner, alice, resolver], [ether('-100'), ether('100'), ether('0')]);
+        await expect(txn).to.changeTokenBalances(weth, [owner, alice, resolver], [ether('0.1'), ether('-0.11'), ether('0.01')]);
     });
 
     it('settle orders with permits, permit', async function () {
@@ -68,33 +66,31 @@ describe('Settlement', function () {
         const fillOrderToData1 = await buildCalldataForOrder({
             orderData: {
                 maker: alice.address,
-                makerAsset: dai.address,
-                takerAsset: weth.address,
-                makingAmount: ether('100'),
-                takingAmount: ether('0.1'),
-                makerTraits: buildMakerTraits(),
-            },
-            orderSigner: alice,
-            setupData,
-            minReturn: ether('100'),
-            isInnermostOrder: true,
-            isMakingAmount: false,
-        });
-
-        const fillOrderToData0 = await buildCalldataForOrder({
-            orderData: {
-                maker: owner.address,
                 makerAsset: weth.address,
                 takerAsset: dai.address,
                 makingAmount: ether('0.11'),
                 takingAmount: ether('100'),
                 makerTraits: buildMakerTraits(),
             },
+            orderSigner: alice,
+            setupData,
+            minReturn: ether('100'),
+            isInnermostOrder: true,
+        });
+
+        const fillOrderToData0 = await buildCalldataForOrder({
+            orderData: {
+                maker: owner.address,
+                makerAsset: dai.address,
+                takerAsset: weth.address,
+                makingAmount: ether('100'),
+                takingAmount: ether('0.1'),
+                makerTraits: buildMakerTraits(),
+            },
             orderSigner: owner,
             setupData,
-            minReturn: ether('0.11'),
+            minReturn: ether('0.1'),
             additionalDataForSettlement: fillOrderToData1,
-            isMakingAmount: false,
         });
 
         await weth.connect(alice).approve(lopv4.address, ether('0.11'));
@@ -103,8 +99,8 @@ describe('Settlement', function () {
         const packing = (1n << 248n) | 1n;
         const txn = await resolver.settleOrdersWithPermits(fillOrderToData0, packing,
             owner.address + trim0x(dai.address) + trim0x(permit0));
-        await expect(txn).to.changeTokenBalances(dai, [owner, alice, resolver], [ether('100'), ether('-100'), ether('0')]);
-        await expect(txn).to.changeTokenBalances(weth, [owner, alice, resolver], [ether('-0.11'), ether('0.1'), ether('0.01')]);
+        await expect(txn).to.changeTokenBalances(dai, [owner, alice, resolver], [ether('-100'), ether('100'), ether('0')]);
+        await expect(txn).to.changeTokenBalances(weth, [owner, alice, resolver], [ether('0.1'), ether('-0.11'), ether('0.01')]);
     });
 
     it('settle orders with permits, permit2', async function () {
@@ -120,33 +116,31 @@ describe('Settlement', function () {
         const fillOrderToData1 = await buildCalldataForOrder({
             orderData: {
                 maker: alice.address,
-                makerAsset: dai.address,
-                takerAsset: weth.address,
-                makingAmount: ether('100'),
-                takingAmount: ether('0.1'),
-                makerTraits: buildMakerTraits(),
+                makerAsset: weth.address,
+                takerAsset: dai.address,
+                makingAmount: ether('0.11'),
+                takingAmount: ether('100'),
+                makerTraits: buildMakerTraits({ usePermit2: true }),
             },
             orderSigner: alice,
             setupData,
             minReturn: ether('100'),
             isInnermostOrder: true,
-            isMakingAmount: false,
         });
 
         const fillOrderToData0 = await buildCalldataForOrder({
             orderData: {
                 maker: owner.address,
-                makerAsset: weth.address,
-                takerAsset: dai.address,
-                makingAmount: ether('0.11'),
-                takingAmount: ether('100'),
-                makerTraits: buildMakerTraits(),
+                makerAsset: dai.address,
+                takerAsset: weth.address,
+                makingAmount: ether('100'),
+                takingAmount: ether('0.1'),
+                makerTraits: buildMakerTraits({ usePermit2: true }),
             },
             orderSigner: owner,
             setupData,
-            minReturn: ether('0.11'),
+            minReturn: ether('0.1'),
             additionalDataForSettlement: fillOrderToData1,
-            isMakingAmount: false,
         });
 
         const permit2 = await permit2Contract();
@@ -159,8 +153,8 @@ describe('Settlement', function () {
         const packing = (2n << 248n) | 2n | 8n;
         const txn = await resolver.settleOrdersWithPermits(fillOrderToData0, packing,
             owner.address + trim0x(dai.address) + trim0x(permit0) + trim0x(alice.address) + trim0x(weth.address) + trim0x(permit1));
-        await expect(txn).to.changeTokenBalances(dai, [owner, alice, resolver], [ether('100'), ether('-100'), ether('0')]);
-        await expect(txn).to.changeTokenBalances(weth, [owner, alice, resolver], [ether('-0.11'), ether('0.1'), ether('0.01')]);
+        await expect(txn).to.changeTokenBalances(dai, [owner, alice, resolver], [ether('-100'), ether('100'), ether('0')]);
+        await expect(txn).to.changeTokenBalances(weth, [owner, alice, resolver], [ether('0.1'), ether('-0.11'), ether('0.01')]);
     });
 
     it('opposite direction recursive swap with taking fee', async function () {
@@ -175,17 +169,16 @@ describe('Settlement', function () {
         const fillOrderToData1 = await buildCalldataForOrder({
             orderData: {
                 maker: alice.address,
-                makerAsset: dai.address,
-                takerAsset: weth.address,
-                makingAmount: ether('100'),
-                takingAmount: ether('0.1'),
+                makerAsset: weth.address,
+                takerAsset: dai.address,
+                makingAmount: ether('0.11'),
+                takingAmount: ether('100'),
                 makerTraits: buildMakerTraits(),
             },
             orderSigner: alice,
             setupData,
             minReturn: ether('100'),
             isInnermostOrder: true,
-            isMakingAmount: false,
             feeType: 2,
             integrator: bob.address,
             resolverFee: 1000000,
@@ -194,17 +187,16 @@ describe('Settlement', function () {
         const fillOrderToData0 = await buildCalldataForOrder({
             orderData: {
                 maker: owner.address,
-                makerAsset: weth.address,
-                takerAsset: dai.address,
-                makingAmount: ether('0.11'),
-                takingAmount: ether('100'),
+                makerAsset: dai.address,
+                takerAsset: weth.address,
+                makingAmount: ether('100'),
+                takingAmount: ether('0.1'),
                 makerTraits: buildMakerTraits(),
             },
             orderSigner: owner,
             setupData,
-            minReturn: ether('0.11'),
+            minReturn: ether('0.1'),
             additionalDataForSettlement: fillOrderToData1,
-            isMakingAmount: false,
             feeType: 2,
             integrator: bob.address,
             resolverFee: 1000000,
@@ -220,8 +212,8 @@ describe('Settlement', function () {
         await resolver.approve(dai.address, settlement.address);
 
         const txn = await resolver.settleOrders(fillOrderToData0);
-        await expect(txn).to.changeTokenBalances(dai, [owner, alice, bob], [ether('100'), ether('-100'), ether('0.1')]);
-        await expect(txn).to.changeTokenBalances(weth, [owner, alice, bob], [ether('-0.11'), ether('0.1'), ether('0.0001')]);
+        await expect(txn).to.changeTokenBalances(dai, [owner, alice, bob], [ether('-100'), ether('100'), ether('0.1')]);
+        await expect(txn).to.changeTokenBalances(weth, [owner, alice, bob], [ether('0.1'), ether('-0.11'), ether('0.0001')]);
     });
 
     it('unidirectional recursive swap', async function () {
