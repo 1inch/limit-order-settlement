@@ -46,6 +46,7 @@ contract ResolverMock is ITakerInteraction {
     }
 
     function _settleOrders(bytes calldata data) internal {
+        // solhint-disable-next-line avoid-low-level-calls
         (bool success, bytes memory reason) = address(_lopv4).call(data);
         if (!success) revert FailedExternalCall(0, reason);
     }
