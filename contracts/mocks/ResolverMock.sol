@@ -39,7 +39,7 @@ contract ResolverMock is ITakerInteraction {
         _settleOrders(data);
     }
 
-    // @dev High byte of `packing` contains number of permits, each 2 bits from lowest contains length of permit (index in [92,120,148] array)
+    /// @dev High byte of `packing` contains number of permits, each 2 bits from lowest contains length of permit (index in [92,120,148] array)
     function settleOrdersWithPermits(bytes calldata data, uint256 packing, bytes calldata packedPermits) external onlyOwner {
         _performPermits(packing, packedPermits);
         _settleOrders(data);
