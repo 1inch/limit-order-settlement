@@ -762,13 +762,9 @@ describe('Settlement', function () {
             resolverFee: '1000000',
         });
 
-        try {
-            await resolver.settleOrders(fillOrderToData0);
-            expect.fail('should revert');
-        } catch (e) {
-            expect(e.message).to.include('FailedExternalCall');
-            expect(e.message).to.include('0xa7fd3792'); // NotEnoughCredit()
-        }
+        await expect(resolver.settleOrders(fillOrderToData0)).to.be.revertedWithCustomError(
+            dataFormFixture.contracts.settlement, 'NotEnoughCredit'
+        );
     });
 
     describe('whitelist lock period', async function () {
@@ -811,13 +807,9 @@ describe('Settlement', function () {
                 additionalDataForSettlement: fillOrderToData1,
             });
 
-            try {
-                await resolver.settleOrders(fillOrderToData0);
-                expect.fail('should revert');
-            } catch (e) {
-                expect(e.message).to.include('FailedExternalCall');
-                expect(e.message).to.include('0xfac829a0'); // ResolverIsNotWhitelisted()
-            }
+            await expect(resolver.settleOrders(fillOrderToData0)).to.be.revertedWithCustomError(
+                setupData.contracts.settlement, 'ResolverIsNotWhitelisted'
+            );
 
             await timeIncreaseTo(setupData.auction.startTime + 1);
 

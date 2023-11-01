@@ -3,6 +3,7 @@
 pragma solidity 0.8.19;
 
 import "@1inch/solidity-utils/contracts/libraries/SafeERC20.sol";
+import "@1inch/solidity-utils/contracts/libraries/RevertReasonForwarder.sol";
 import "@1inch/limit-order-protocol-contract/contracts/interfaces/ITakerInteraction.sol";
 
 contract ResolverMock is ITakerInteraction {
@@ -47,8 +48,8 @@ contract ResolverMock is ITakerInteraction {
 
     function _settleOrders(bytes calldata data) internal {
         // solhint-disable-next-line avoid-low-level-calls
-        (bool success, bytes memory reason) = address(_lopv4).call(data);
-        if (!success) revert FailedExternalCall(0, reason);
+        (bool success,) = address(_lopv4).call(data);
+        if (!success) RevertReasonForwarder.reRevert();
     }
 
     function takerInteraction(

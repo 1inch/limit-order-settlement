@@ -34,13 +34,9 @@ describe('WhitelistChecker', function () {
                 whitelistData: '0x' + constants.ZERO_ADDRESS.substring(22),
             });
 
-            try {
-                await resolver.settleOrders(fillOrderToData);
-                expect.fail('should revert');
-            } catch (e) {
-                expect(e.message).to.include('FailedExternalCall');
-                expect(e.message).to.include('0x4b576069'); // ResolverIsNotWhitelisted()
-            }
+            await expect(resolver.settleOrders(fillOrderToData)).to.be.revertedWithCustomError(
+                dataFormFixture.contracts.settlement, 'ResolverIsNotWhitelisted'
+            );
         });
 
         it('only resolver can use takerInteraction method', async function () {
@@ -74,13 +70,9 @@ describe('WhitelistChecker', function () {
             // Change resolver to fakeResolver in takerInteraction
             const fakeFillOrderToData = fillOrderToData.slice(0, fillOrderToData.length - 86) + fakeResolver.address.substring(2) + fillOrderToData.slice(-46);
 
-            try {
-                await resolver.settleOrders(fakeFillOrderToData);
-                expect.fail('should revert');
-            } catch (e) {
-                expect(e.message).to.include('FailedExternalCall');
-                expect(e.message).to.include('0x5211a079'); // NotTaker()
-            }
+            await expect(resolver.settleOrders(fakeFillOrderToData)).to.be.revertedWithCustomError(
+                resolver, 'NotTaker'
+            );
         });
 
         it('only LOP can use takerInteraction method', async function () {
