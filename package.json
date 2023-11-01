@@ -35,12 +35,13 @@
   "dependencies": {
     "@1inch/delegating": "0.0.21",
     "@1inch/erc20-pods": "0.0.17",
-    "@1inch/limit-order-protocol-contract": "4.0.0-prerelease-7",
+    "@1inch/limit-order-protocol-contract": "4.0.0-prerelease-14",
     "@1inch/solidity-utils": "2.2.27",
     "@1inch/st1inch": "2.0.3",
     "@openzeppelin/contracts": "4.8.2"
   },
   "devDependencies": {
+    "@1inch/limit-order-settlement-v1": "git+https://github.com/1inch/limit-order-settlement.git#1.0.0",
     "@matterlabs/hardhat-zksync-deploy": "0.6.3",
     "@matterlabs/hardhat-zksync-solc": "0.3.16",
     "@matterlabs/hardhat-zksync-verify": "0.1.4",

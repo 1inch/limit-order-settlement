@@ -2,59 +2,83 @@
 
 pragma solidity 0.8.19;
 
-import "../interfaces/IResolver.sol";
-import "../interfaces/ISettlement.sol";
-import "../libraries/TokensAndAmounts.sol";
 import "@1inch/solidity-utils/contracts/libraries/SafeERC20.sol";
+import "@1inch/solidity-utils/contracts/libraries/RevertReasonForwarder.sol";
+import "@1inch/limit-order-protocol-contract/contracts/interfaces/ITakerInteraction.sol";
 
-contract ResolverMock is IResolver {
+contract ResolverMock is ITakerInteraction {
     error OnlyOwner();
-    error OnlySettlement();
+    error NotTaker();
+    error OnlyLOP();
     error FailedExternalCall(uint256 index, bytes reason);
 
-    using TokensAndAmounts for bytes;
     using SafeERC20 for IERC20;
     using AddressLib for Address;
 
-    ISettlement private immutable _settlement;
-    address private immutable _limitOrderProtocol;
+    bytes1 private constant _FINALIZE_INTERACTION = 0x01;
+
+    address private immutable _settlementExtension;
+    IOrderMixin private immutable _lopv4;
     address private immutable _owner;
 
-    constructor(ISettlement settlement, address limitOrderProtocol) {
-        _settlement = settlement;
-        _limitOrderProtocol = limitOrderProtocol;
+    modifier onlyOwner () {
+        if (msg.sender != _owner) revert OnlyOwner();
+        _;
+    }
+
+    constructor(address settlementExtension, IOrderMixin limitOrderProtocol) {
+        _settlementExtension = settlementExtension;
+        _lopv4 = limitOrderProtocol;
         _owner = msg.sender;
     }
 
-    function settleOrders(bytes calldata data) public {
-        if (msg.sender != _owner) revert OnlyOwner();
-        _settlement.settleOrders(data);
+    function approve(IERC20 token, address to) external onlyOwner {
+        token.forceApprove(to, type(uint256).max);
+    }
+
+    function settleOrders(bytes calldata data) external onlyOwner() {
+        _settleOrders(data);
     }
 
     /// @dev High byte of `packing` contains number of permits, each 2 bits from lowest contains length of permit (index in [92,120,148] array)
-    function settleOrdersWithPermits(bytes calldata data, uint256 packing, bytes calldata packedPermits) external {
+    function settleOrdersWithPermits(bytes calldata data, uint256 packing, bytes calldata packedPermits) external onlyOwner {
         _performPermits(packing, packedPermits);
-        settleOrders(data);
+        _settleOrders(data);
     }
 
-    function resolveOrders(bytes calldata tokensAndAmounts, bytes calldata data) external returns(bool) {
-        if (msg.sender != address(_settlement)) revert OnlySettlement();
+    function _settleOrders(bytes calldata data) internal {
+        // solhint-disable-next-line avoid-low-level-calls
+        (bool success,) = address(_lopv4).call(data);
+        if (!success) RevertReasonForwarder.reRevert();
+    }
 
-        if (data.length > 0) {
-            (Address[] memory targets, bytes[] memory calldatas) = abi.decode(data, (Address[], bytes[]));
-            for (uint256 i = 0; i < targets.length; ++i) {
-                // solhint-disable-next-line avoid-low-level-calls
-                (bool success, bytes memory reason) = targets[i].get().call(calldatas[i]);
-                if (!success) revert FailedExternalCall(i, reason);
+    function takerInteraction(
+        IOrderMixin.Order calldata /* order */,
+        bytes calldata /* extension */,
+        bytes32 /* orderHash */,
+        address taker,
+        uint256 /* makingAmount */,
+        uint256 /* takingAmount */,
+        uint256 /* remainingMakingAmount */,
+        bytes calldata extraData
+    ) public {
+        if (msg.sender != address(_lopv4)) revert OnlyLOP();
+        if (taker != address(this)) revert NotTaker();
+
+        unchecked {
+            if (extraData[0] == _FINALIZE_INTERACTION) {
+                if (extraData.length > 1) {
+                    (Address[] memory targets, bytes[] memory calldatas) = abi.decode(extraData[1:], (Address[], bytes[]));
+                    for (uint256 i = 0; i < targets.length; ++i) {
+                        // solhint-disable-next-line avoid-low-level-calls
+                        (bool success, bytes memory reason) = targets[i].get().call(calldatas[i]);
+                        if (!success) revert FailedExternalCall(i, reason);
+                    }
+                }
+            } else {
+                _settleOrders(extraData[1:]);
             }
         }
-
-        TokensAndAmounts.Data[] calldata items = tokensAndAmounts.decode();
-        for (uint256 i = 0; i < items.length; i++) {
-            IERC20(items[i].token.get()).safeTransfer(msg.sender, items[i].amount);
-        }
-
-        return true;
     }
 
     function _performPermits(uint256 packing, bytes calldata packedPermits) private {
@@ -70,7 +94,7 @@ contract ResolverMock is IResolver {
                 bytes calldata permit = packedPermits[start:start + length];
                 address owner = address(bytes20(permit));
                 IERC20 token = IERC20(address(bytes20(permit[20:])));
-                token.safePermit(owner, _limitOrderProtocol, permit[40:]);
+                token.safePermit(owner, address(_lopv4), permit[40:]);
                 start += length;
             }
         }

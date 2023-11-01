@@ -1,161 +1,132 @@
 const { ethers } = require('hardhat');
 const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
-const { signOrder, buildOrder, compactSignature, fillWithMakingAmount } = require('@1inch/limit-order-protocol-contract/test/helpers/orderUtils');
-const { expect, ether, trim0x, deployContract } = require('@1inch/solidity-utils');
-const { deploySwapTokens, getChainId } = require('./helpers/fixtures');
-const { buildFusions } = require('./helpers/fusionUtils');
+const { expect, ether, constants } = require('@1inch/solidity-utils');
+const { buildOrder, buildMakerTraits } = require('@1inch/limit-order-protocol-contract/test/helpers/orderUtils');
+const { initContractsForSettlement } = require('./helpers/fixtures');
+const { buildAuctionDetails, buildCalldataForOrder } = require('./helpers/fusionUtils');
 
 describe('WhitelistChecker', function () {
-    async function initContracts() {
-        const [owner, alice] = await ethers.getSigners();
-        const chainId = await getChainId();
-        const { dai, weth, swap } = await deploySwapTokens();
-
-        await dai.mint(owner.address, ether('100'));
-        await dai.mint(alice.address, ether('100'));
-        await weth.deposit({ value: ether('1') });
-        await weth.connect(alice).deposit({ value: ether('1') });
-
-        await dai.approve(swap.address, ether('100'));
-        await dai.connect(alice).approve(swap.address, ether('100'));
-        await weth.approve(swap.address, ether('1'));
-        await weth.connect(alice).approve(swap.address, ether('1'));
-
-        const whitelistRegistrySimple = await deployContract('WhitelistRegistrySimple', []);
-        const settlement = await deployContract('Settlement', [swap.address, weth.address]);
-
-        const ResolverMock = await ethers.getContractFactory('ResolverMock');
-        const resolver = await ResolverMock.deploy(settlement.address, swap.address);
-
-        return {
-            contracts: { dai, weth, swap, whitelistRegistrySimple, settlement, resolver },
-            accounts: { owner, alice },
-            others: { chainId },
-        };
-    }
-
     describe('should not work with non-whitelisted address', function () {
-        it('whitelist check in settleOrders method', async function () {
-            const { contracts: { dai, weth, swap, settlement }, accounts: { owner, alice }, others: { chainId } } = await loadFixture(initContracts);
+        it('whitelist check in postInteraction method', async function () {
+            const dataFormFixture = await loadFixture(initContractsForSettlement);
+            const auction = await buildAuctionDetails();
+            const setupData = { ...dataFormFixture, auction };
+            const {
+                contracts: { dai, weth, resolver },
+                accounts: { alice },
+            } = setupData;
 
-            const { fusions: [fusionDetails], hashes: [fusionHash], resolvers } = await buildFusions([{}]);
+            weth.transfer(resolver.address, ether('0.1'));
 
-            const order = buildOrder({
-                makerAsset: dai.address,
-                takerAsset: weth.address,
-                makingAmount: ether('10'),
-                takingAmount: ether('0.01'),
-                maker: alice.address,
+            const fillOrderToData = await buildCalldataForOrder({
+                orderData: {
+                    maker: alice.address,
+                    makerAsset: dai.address,
+                    takerAsset: weth.address,
+                    makingAmount: ether('100'),
+                    takingAmount: ether('0.1'),
+                    makerTraits: buildMakerTraits(),
+                },
+                orderSigner: alice,
+                setupData,
+                minReturn: ether('0.1'),
+                isInnermostOrder: true,
+                whitelistData: '0x' + constants.ZERO_ADDRESS.substring(22),
             });
-            order.salt = fusionHash;
 
-            const { r, vs } = compactSignature(await signOrder(order, chainId, swap.address, alice));
-            const fillOrderToData = swap.interface.encodeFunctionData('fillOrderTo', [
-                order,
-                r,
-                vs,
-                ether('10'),
-                fillWithMakingAmount('0'),
-                owner.address,
-                settlement.address + '01' + trim0x(fusionDetails),
-            ]) + trim0x(resolvers);
-
-            await expect(settlement.settleOrders(fillOrderToData))
-                .to.be.revertedWithCustomError(settlement, 'ResolverIsNotWhitelisted');
+            await expect(resolver.settleOrders(fillOrderToData)).to.be.revertedWithCustomError(
+                dataFormFixture.contracts.settlement, 'ResolverIsNotWhitelisted',
+            );
         });
 
-        it('onlyThis modifier in takerInteraction method', async function () {
-            const { contracts: { dai, weth, swap, settlement }, accounts: { owner, alice }, others: { chainId } } = await loadFixture(initContracts);
+        it('only resolver can use takerInteraction method', async function () {
+            const dataFormFixture = await loadFixture(initContractsForSettlement);
+            const auction = await buildAuctionDetails();
+            const setupData = { ...dataFormFixture, auction };
+            const {
+                contracts: { dai, weth, resolver, settlement, lopv4 },
+                accounts: { alice },
+            } = setupData;
+
+            // Deploy another resolver
+            const ResolverMock = await ethers.getContractFactory('ResolverMock');
+            const fakeResolver = await ResolverMock.deploy(settlement.address, lopv4.address);
+
+            const fillOrderToData = await buildCalldataForOrder({
+                orderData: {
+                    maker: alice.address,
+                    makerAsset: dai.address,
+                    takerAsset: weth.address,
+                    makingAmount: ether('100'),
+                    takingAmount: ether('0.1'),
+                    makerTraits: buildMakerTraits(),
+                },
+                orderSigner: alice,
+                setupData,
+                minReturn: ether('0.1'),
+                isInnermostOrder: true,
+            });
+
+            // Change resolver to fakeResolver in takerInteraction
+            const fakeFillOrderToData = fillOrderToData.slice(0, fillOrderToData.length - 86) + fakeResolver.address.substring(2) + fillOrderToData.slice(-46);
+
+            await expect(resolver.settleOrders(fakeFillOrderToData)).to.be.revertedWithCustomError(
+                resolver, 'NotTaker',
+            );
+        });
+
+        it('only LOP can use takerInteraction method', async function () {
+            const dataFormFixture = await loadFixture(initContractsForSettlement);
+            const {
+                contracts: { dai, weth, resolver, lopv4 },
+                accounts: { alice },
+            } = dataFormFixture;
 
             const order = buildOrder({
+                maker: alice.address,
                 makerAsset: dai.address,
                 takerAsset: weth.address,
                 makingAmount: ether('100'),
                 takingAmount: ether('0.1'),
-                maker: alice.address,
             });
+            const orderHash = await lopv4.hashOrder(order);
 
-            const { r, vs } = compactSignature(await signOrder(order, chainId, swap.address, alice));
-            await expect(swap.fillOrderTo(order, r, vs, ether('10'), fillWithMakingAmount('0'), owner.address, settlement.address + '01'))
-                .to.be.revertedWithCustomError(settlement, 'AccessDenied');
-        });
-
-        it('onlyLimitOrderProtocol modifier', async function () {
-            const { contracts: { dai, weth, swap, settlement }, accounts: { owner, alice } } = await loadFixture(initContracts);
-
-            const order = buildOrder({
-                makerAsset: dai.address,
-                takerAsset: weth.address,
-                makingAmount: ether('100'),
-                takingAmount: ether('0.1'),
-                maker: alice.address,
-            });
-            const orderHash = await swap.hashOrder(order);
-
-            await expect(settlement.takerInteraction(order, orderHash, owner.address, '1', '1', '0', '0x'))
-                .to.be.revertedWithCustomError(settlement, 'AccessDenied');
+            await expect(resolver.takerInteraction(order, '0x', orderHash, alice.address, '0', '0', '0', '0x'))
+                .to.be.revertedWithCustomError(resolver, 'OnlyLOP');
         });
     });
 
     describe('should work with whitelisted address', function () {
-        async function initContractsAndSetStatus() {
-            const data = await initContracts();
-            const { contracts: { whitelistRegistrySimple }, accounts: { owner } } = data;
-            await whitelistRegistrySimple.setStatus(owner.address, true);
-            return data;
-        }
-
         it('whitelist check in settleOrders method', async function () {
-            const { contracts: { dai, weth, swap, settlement, resolver }, accounts: { owner, alice }, others: { chainId } } = await loadFixture(initContractsAndSetStatus);
+            const dataFormFixture = await loadFixture(initContractsForSettlement);
+            const auction = await buildAuctionDetails();
+            const setupData = { ...dataFormFixture, auction };
+            const {
+                contracts: { dai, weth, resolver },
+                accounts: { alice },
+            } = setupData;
 
-            const { fusions: [fusionDetails0, fusionDetails1], hashes: [fusionHash0, fusionHash1], resolvers } = await buildFusions([
-                { resolvers: [resolver.address] },
-                { resolvers: [resolver.address] },
-            ]);
+            weth.transfer(resolver.address, ether('0.1'));
 
-            const order0 = buildOrder({
-                makerAsset: dai.address,
-                takerAsset: weth.address,
-                makingAmount: ether('100'),
-                takingAmount: ether('0.1'),
-                maker: owner.address,
+            const fillOrderToData = await buildCalldataForOrder({
+                orderData: {
+                    maker: alice.address,
+                    makerAsset: dai.address,
+                    takerAsset: weth.address,
+                    makingAmount: ether('100'),
+                    takingAmount: ether('0.1'),
+                    makerTraits: buildMakerTraits(),
+                },
+                orderSigner: alice,
+                setupData,
+                minReturn: ether('0.1'),
+                isInnermostOrder: true,
+                whitelistData: '0x' + resolver.address.substring(22),
             });
-            order0.salt = fusionHash0;
 
-            const order1 = buildOrder({
-                makerAsset: weth.address,
-                takerAsset: dai.address,
-                makingAmount: ether('0.1'),
-                takingAmount: ether('100'),
-                maker: alice.address,
-            });
-            order1.salt = fusionHash1;
-
-            const { r: r1, vs: vs1 } = compactSignature(await signOrder(order1, chainId, swap.address, alice));
-            const fillOrderToData1 = swap.interface.encodeFunctionData('fillOrderTo', [
-                order1,
-                r1,
-                vs1,
-                ether('0.1'),
-                fillWithMakingAmount('0'),
-                resolver.address,
-                settlement.address + '01' + trim0x(fusionDetails1),
-            ]);
-
-            const { r: r0, vs: vs0 } = compactSignature(await signOrder(order0, chainId, swap.address, owner));
-            const fillOrderToData0 = swap.interface.encodeFunctionData('fillOrderTo', [
-                order0,
-                r0,
-                vs0,
-                ether('100'),
-                fillWithMakingAmount('0'),
-                resolver.address,
-                settlement.address + '00' + trim0x(fusionDetails0) + trim0x(fillOrderToData1),
-            ]) + trim0x(resolvers);
-
-            const txn = await resolver.settleOrders(fillOrderToData0);
-            await expect(txn).to.changeTokenBalances(dai, [owner, alice], [ether('-100'), ether('100')]);
-            await expect(txn).to.changeTokenBalances(weth, [owner, alice], [ether('0.1'), ether('-0.1')]);
+            const txn = await resolver.settleOrders(fillOrderToData);
+            await expect(txn).to.changeTokenBalances(dai, [alice, resolver], [ether('-100'), ether('100')]);
+            await expect(txn).to.changeTokenBalances(weth, [alice, resolver], [ether('0.1'), ether('-0.1')]);
         });
     });
 });
