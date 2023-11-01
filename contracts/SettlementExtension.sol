@@ -78,32 +78,34 @@ contract SettlementExtension is IPostInteraction, IAmountGetter, FeeBankCharger 
     /// }
 
     function _getRateBump(bytes calldata auctionDetails) private view returns (uint256) {
-        uint256 auctionStartTime = uint32(bytes4(auctionDetails[0:4]));
-        uint256 auctionFinishTime = auctionStartTime + uint24(bytes3(auctionDetails[4:7]));
-        uint256 initialRateBump = uint24(bytes3(auctionDetails[7:10]));
+        unchecked {
+            uint256 auctionStartTime = uint32(bytes4(auctionDetails[0:4]));
+            uint256 auctionFinishTime = auctionStartTime + uint24(bytes3(auctionDetails[4:7]));
+            uint256 initialRateBump = uint24(bytes3(auctionDetails[7:10]));
 
-        if (block.timestamp <= auctionStartTime) {
-            return initialRateBump;
-        } else if (block.timestamp >= auctionFinishTime) {
-            return 0; // Means 0% bump
-        }
-
-        auctionDetails = auctionDetails[10:];
-        uint256 pointsSize = auctionDetails.length / 5;
-        uint256 currentPointTime = auctionStartTime;
-        uint256 currentRateBump = initialRateBump;
-
-        for (uint256 i = 0; i < pointsSize; i++) {
-            uint256 nextRateBump = uint24(bytes3(auctionDetails[:3]));
-            uint256 nextPointTime = currentPointTime + uint16(bytes2(auctionDetails[3:5]));
-            if (block.timestamp <= nextPointTime) {
-                return ((block.timestamp - currentPointTime) * nextRateBump + (nextPointTime - block.timestamp) * currentRateBump) / (nextPointTime - currentPointTime);
+            if (block.timestamp <= auctionStartTime) {
+                return initialRateBump;
+            } else if (block.timestamp >= auctionFinishTime) {
+                return 0; // Means 0% bump
             }
-            currentRateBump = nextRateBump;
-            currentPointTime = nextPointTime;
-            auctionDetails = auctionDetails[5:];
+
+            auctionDetails = auctionDetails[10:];
+            uint256 pointsSize = auctionDetails.length / 5;
+            uint256 currentPointTime = auctionStartTime;
+            uint256 currentRateBump = initialRateBump;
+
+            for (uint256 i = 0; i < pointsSize; i++) {
+                uint256 nextRateBump = uint24(bytes3(auctionDetails[:3]));
+                uint256 nextPointTime = currentPointTime + uint16(bytes2(auctionDetails[3:5]));
+                if (block.timestamp <= nextPointTime) {
+                    return ((block.timestamp - currentPointTime) * nextRateBump + (nextPointTime - block.timestamp) * currentRateBump) / (nextPointTime - currentPointTime);
+                }
+                currentRateBump = nextRateBump;
+                currentPointTime = nextPointTime;
+                auctionDetails = auctionDetails[5:];
+            }
+            return (auctionFinishTime - block.timestamp) * currentRateBump / (auctionFinishTime - currentPointTime);
         }
-        return (auctionFinishTime - block.timestamp) * currentRateBump / (auctionFinishTime - currentPointTime);
     }
 
     function postInteraction(
@@ -160,20 +162,22 @@ contract SettlementExtension is IPostInteraction, IAmountGetter, FeeBankCharger 
     /// }
 
     function _isWhitelisted(bytes calldata whitelist, address resolver) private view returns (bool) {
-        uint256 allowedTime = uint32(bytes4(whitelist[0:4])); // initially set to auction start time
-        whitelist = whitelist[4:];
-        uint256 whitelistSize = whitelist.length / 12;
-        uint80 maskedResolverAddress = uint80(uint160(resolver) & _RESOLVER_ADDRESS_MASK);
-        for (uint256 i = 0; i < whitelistSize; i++) {
-            uint80 whitelistedAddress = uint80(bytes10(whitelist[:10]));
-            allowedTime += uint16(bytes2(whitelist[10:12])); // add next time delta
-            if (maskedResolverAddress == whitelistedAddress) {
-                return allowedTime <= block.timestamp;
-            } else if (allowedTime > block.timestamp) {
-                return false;
+        unchecked {
+            uint256 allowedTime = uint32(bytes4(whitelist[0:4])); // initially set to auction start time
+            whitelist = whitelist[4:];
+            uint256 whitelistSize = whitelist.length / 12;
+            uint80 maskedResolverAddress = uint80(uint160(resolver) & _RESOLVER_ADDRESS_MASK);
+            for (uint256 i = 0; i < whitelistSize; i++) {
+                uint80 whitelistedAddress = uint80(bytes10(whitelist[:10]));
+                allowedTime += uint16(bytes2(whitelist[10:12])); // add next time delta
+                if (maskedResolverAddress == whitelistedAddress) {
+                    return allowedTime <= block.timestamp;
+                } else if (allowedTime > block.timestamp) {
+                    return false;
+                }
+                whitelist = whitelist[12:];
             }
-            whitelist = whitelist[12:];
+            return false;
         }
-        return false;
     }
 }
