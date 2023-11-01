@@ -35,7 +35,7 @@ describe('WhitelistChecker', function () {
             });
 
             await expect(resolver.settleOrders(fillOrderToData)).to.be.revertedWithCustomError(
-                dataFormFixture.contracts.settlement, 'ResolverIsNotWhitelisted'
+                dataFormFixture.contracts.settlement, 'ResolverIsNotWhitelisted',
             );
         });
 
@@ -71,7 +71,7 @@ describe('WhitelistChecker', function () {
             const fakeFillOrderToData = fillOrderToData.slice(0, fillOrderToData.length - 86) + fakeResolver.address.substring(2) + fillOrderToData.slice(-46);
 
             await expect(resolver.settleOrders(fakeFillOrderToData)).to.be.revertedWithCustomError(
-                resolver, 'NotTaker'
+                resolver, 'NotTaker',
             );
         });
 

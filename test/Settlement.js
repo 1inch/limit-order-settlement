@@ -763,7 +763,7 @@ describe('Settlement', function () {
         });
 
         await expect(resolver.settleOrders(fillOrderToData0)).to.be.revertedWithCustomError(
-            dataFormFixture.contracts.settlement, 'NotEnoughCredit'
+            dataFormFixture.contracts.settlement, 'NotEnoughCredit',
         );
     });
 
@@ -808,7 +808,7 @@ describe('Settlement', function () {
             });
 
             await expect(resolver.settleOrders(fillOrderToData0)).to.be.revertedWithCustomError(
-                setupData.contracts.settlement, 'ResolverIsNotWhitelisted'
+                setupData.contracts.settlement, 'ResolverIsNotWhitelisted',
             );
 
             await timeIncreaseTo(setupData.auction.startTime + 1);
