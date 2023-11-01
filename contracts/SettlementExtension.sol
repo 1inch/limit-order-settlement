@@ -108,7 +108,7 @@ contract SettlementExtension is IPostInteraction, IAmountGetter, FeeBankCharger 
                     for { } lt(cdPtr, cdEnd) { cdPtr := add(cdPtr, 5) } {
                         let data := calldataload(cdPtr)
                         let nextRateBump := shr(232, data)
-                        data := shl(32, data)
+                        data := shl(24, data)
                         let nextPointTime := add(currentPointTime, shr(240, data))
                         switch gt(timestamp(), nextPointTime)
                         case 0 {
