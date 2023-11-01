@@ -56,14 +56,14 @@
     "@chainlink/contracts" "0.6.1"
     "@openzeppelin/contracts" "4.9.0"
 
-"@1inch/limit-order-settlement-v1@git+https://github.com/1inch/limit-order-settlement.git#feature/settlement-v1":
+"@1inch/limit-order-settlement-v1@git+https://github.com/1inch/limit-order-settlement.git#1.0.0":
   version "0.0.1"
-  resolved "git+https://github.com/1inch/limit-order-settlement.git#7801eca16384e52705eafe3e7bcffc96223a50ed"
+  resolved "git+https://github.com/1inch/limit-order-settlement.git#934a8e7db4b98258c4c734566e8fcbc15b818ab5"
   dependencies:
     "@1inch/delegating" "0.0.21"
-    "@1inch/erc20-pods" "0.0.16"
+    "@1inch/erc20-pods" "0.0.17"
     "@1inch/limit-order-protocol-contract" "3.0.0"
-    "@1inch/solidity-utils" "2.2.5"
+    "@1inch/solidity-utils" "2.2.6"
     "@openzeppelin/contracts" "4.8.0"
 
 "@1inch/solidity-utils@2.2.2":
@@ -109,6 +109,19 @@
   version "2.2.5"
   resolved "https://registry.yarnpkg.com/@1inch/solidity-utils/-/solidity-utils-2.2.5.tgz#1d372065cdd8bae096aa831867f22f4b2baeef30"
   integrity sha512-zdrFYmQYQS0eTkoxgylRq9/2sFMSCMIT73pNLfcYIf4zmkB2cvNzQCiU3W9GvnQTktTMJrmIdbxsCyo/ZZkgbg==
+  dependencies:
+    "@metamask/eth-sig-util" "4.0.1"
+    "@nomicfoundation/hardhat-network-helpers" "1.0.6"
+    "@nomiclabs/hardhat-ethers" "2.1.1"
+    "@openzeppelin/contracts" "4.7.3"
+    ethereumjs-util "7.1.5"
+    ethers "5.7.1"
+    hardhat "2.11.2"
+
+"@1inch/solidity-utils@2.2.6":
+  version "2.2.6"
+  resolved "https://registry.yarnpkg.com/@1inch/solidity-utils/-/solidity-utils-2.2.6.tgz#79a1c2e94e5c3b29f5dfbbc8b3158deb4f292f50"
+  integrity sha512-XYwpPMZA5uIU5fyvkE0Zt/D4Kb/oPZCyGk3MhB8L0F3gAWbc4BD9RpUo9vEQ02K83uR5wMvB2W/Ac0Pe3YkbcQ==
   dependencies:
     "@metamask/eth-sig-util" "4.0.1"
     "@nomicfoundation/hardhat-network-helpers" "1.0.6"
