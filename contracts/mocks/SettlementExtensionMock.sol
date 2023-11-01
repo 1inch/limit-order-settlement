@@ -2,11 +2,11 @@
 
 pragma solidity 0.8.19;
 
-import "../Settlement.sol";
+import "../SettlementExtension.sol";
 
-contract SettlementMock is Settlement {
+contract SettlementExtensionMock is SettlementExtension {
     constructor(IOrderMixin limitOrderProtocol, IERC20 token)
-        Settlement(limitOrderProtocol, token)
+        SettlementExtension(limitOrderProtocol, token)
     {}
 
     function decreaseAvailableCreditMock(address account, uint256 amount) external {
