@@ -2,10 +2,10 @@
 
 pragma solidity 0.8.19;
 
-import "../interfaces/IResolver.sol";
 import "@1inch/solidity-utils/contracts/libraries/SafeERC20.sol";
+import "@1inch/limit-order-protocol-contract/contracts/interfaces/ITakerInteraction.sol";
 
-contract ResolverMock is IResolver {
+contract ResolverMock is ITakerInteraction {
     error OnlyOwner();
     error NotTaker();
     error OnlyLOP();
