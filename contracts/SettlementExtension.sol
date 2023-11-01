@@ -54,7 +54,7 @@ contract SettlementExtension is IPostInteraction, IAmountGetter, FeeBankCharger 
         bytes calldata extraData
     ) external view returns (uint256) {
         uint256 rateBump = _getRateBump(extraData);
-        return order.makingAmount * takingAmount * (_BASE_POINTS + rateBump) / _BASE_POINTS / order.takingAmount;
+        return Math.mulDiv(order.makingAmount, takingAmount * _BASE_POINTS, order.takingAmount * (_BASE_POINTS + rateBump));
     }
 
     function getTakingAmount(
@@ -67,7 +67,7 @@ contract SettlementExtension is IPostInteraction, IAmountGetter, FeeBankCharger 
         bytes calldata extraData
     ) external view returns (uint256) {
         uint256 rateBump = _getRateBump(extraData);
-        return Math.ceilDiv(order.takingAmount * makingAmount * (_BASE_POINTS + rateBump), _BASE_POINTS * order.makingAmount);
+        return Math.mulDiv(order.takingAmount, makingAmount * (_BASE_POINTS + rateBump), order.makingAmount * _BASE_POINTS, Math.Rounding.Up);
     }
 
     /// struct AuctionDetails {
