@@ -3,8 +3,9 @@ const hre = require('hardhat');
 const path = require('path');
 const { ethers } = hre;
 const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
-const { time, expect, ether, trim0x, deployContract } = require('@1inch/solidity-utils');
+const { constants, time, expect, ether, trim0x, deployContract } = require('@1inch/solidity-utils');
 const { deploySwapTokens, getChainId } = require('./helpers/fixtures');
+const { buildAuctionDetails } = require('./helpers/fusionUtils');
 const { buildOrder, signOrder, buildTakerTraits, buildMakerTraits } = require('@1inch/limit-order-protocol-contract/test/helpers/orderUtils');
 const settlementV1Utils = require('@1inch/limit-order-settlement-v1/test/helpers/orderUtils');
 
@@ -221,6 +222,68 @@ describe('MeasureGas', function () {
             console.log(`1 fill for 5 orders in a batch gasUsed: ${(await tx.wait()).gasUsed}`);
             await expect(tx).to.changeTokenBalances(weth, [owner, alice], [ether('-0.11'), ether('0.1')]);
             await expect(tx).to.changeTokenBalances(dai, [owner, alice, resolversV1[0]], [ether('1'), ether('-10'), ether('9')]);
+        });
+    });
+
+    describe('Extension check', function () {
+        it('post interaction', async function () {
+            const { contracts: { dai, weth }, accounts: { owner } } = await loadFixture(initContractsAndApproves);
+            const settlementExtension = await deployContract('SettlementExtension', [owner.address, weth.address]);
+            const currentTime = (await time.latest()) - time.duration.minutes(1);
+
+            const postInteractionData = ethers.utils.solidityPack(
+                ['uint8', 'uint32', 'bytes10', 'uint16', 'bytes10', 'uint16', 'bytes10', 'uint16', 'bytes10', 'uint16', 'bytes10', 'uint16'],
+                [
+                    0, currentTime,
+                    '0x' + weth.address.substring(22), 0,
+                    '0x' + weth.address.substring(22), 0,
+                    '0x' + weth.address.substring(22), 0,
+                    '0x' + owner.address.substring(22), 0,
+                    '0x' + weth.address.substring(22), 0,
+                ],
+            );
+
+            const order = buildOrder({
+                maker: owner.address,
+                makerAsset: dai.address,
+                takerAsset: weth.address,
+                makingAmount: ether('10'),
+                takingAmount: ether('1'),
+                makerTraits: buildMakerTraits(),
+            }, {
+                postInteraction: settlementExtension.address + trim0x(postInteractionData),
+            });
+
+            await settlementExtension.postInteraction(order, '0x', constants.ZERO_BYTES32, owner.address, ether('10'), ether('1'), ether('10'), postInteractionData);
+        });
+
+        it('making getter', async function () {
+            const { contracts: { dai, weth, settlementExtension }, accounts: { owner } } = await loadFixture(initContractsAndApproves);
+
+            const currentTime = await time.latest();
+            const { details } = await buildAuctionDetails({
+                startTime: currentTime - time.duration.minutes(5),
+                initialRateBump: 900000,
+                points: [[800000, 100], [700000, 100], [600000, 100], [500000, 100], [400000, 100]],
+            });
+
+            const order = buildOrder({
+                maker: owner.address,
+                makerAsset: dai.address,
+                takerAsset: weth.address,
+                makingAmount: ether('10'),
+                takingAmount: ether('1'),
+                makerTraits: buildMakerTraits(),
+            }, {
+                makingAmountData: settlementExtension.address + trim0x(details),
+                takingAmountData: settlementExtension.address + trim0x(details),
+                postInteraction: settlementExtension.address + trim0x(ethers.utils.solidityPack(
+                    ['uint8', 'uint32', 'bytes10', 'uint16'], [0, currentTime, '0x' + owner.address.substring(22), 0],
+                )),
+            });
+
+            const txn = await settlementExtension.populateTransaction.getMakingAmount(order, '0x', constants.ZERO_BYTES32, constants.ZERO_ADDRESS, ether('1'), ether('10'), details);
+            await owner.sendTransaction(txn);
         });
     });
 
