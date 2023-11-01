@@ -44,13 +44,6 @@ contract SettlementExtension is IPostInteraction, IAmountGetter, FeeBankCharger 
         _limitOrderProtocol = limitOrderProtocol;
     }
 
-    /// struct AuctionDetails {
-    ///     bytes4 auctionStartTime;
-    ///     bytes3 auctionDuration;
-    ///     bytes3 initialRateBump;
-    ///     (bytes3,bytes2)[N] pointsAndTimeDeltas;
-    /// }
-
     function getMakingAmount(
         IOrderMixin.Order calldata order,
         bytes calldata /* extension */,
@@ -76,6 +69,13 @@ contract SettlementExtension is IPostInteraction, IAmountGetter, FeeBankCharger 
         uint256 rateBump = _getRateBump(extraData);
         return Math.mulDiv(order.takingAmount, makingAmount * (_BASE_POINTS + rateBump), order.makingAmount * _BASE_POINTS, Math.Rounding.Up);
     }
+
+    /// struct AuctionDetails {
+    ///     bytes4 auctionStartTime;
+    ///     bytes3 auctionDuration;
+    ///     bytes3 initialRateBump;
+    ///     (bytes3,bytes2)[N] pointsAndTimeDeltas;
+    /// }
 
     function _getRateBump(bytes calldata auctionDetails) private view returns (uint256) {
         uint256 auctionStartTime = uint32(bytes4(auctionDetails[0:4]));
