@@ -6,6 +6,14 @@ const hre = require('hardhat');
 const { ethers, network } = hre;
 
 describe('PriorityFeeLimiter', function () {
+    before(async function () {
+        if (hre.__SOLIDITY_COVERAGE_RUNNING) { this.skip(); }
+    });
+
+    after(async function () {
+        await network.provider.send('hardhat_setNextBlockBaseFeePerGas', ['0x1']);
+    });
+
     async function prepare() {
         const { contracts: { dai, weth }, accounts: { owner } } = await initContractsForSettlement();
         const settlementExtension = await deployContract('SettlementExtension', [owner.address, weth.address]);
