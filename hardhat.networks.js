@@ -1,4 +1,9 @@
-const networks = {};
+const networks = {
+    hardhat: {
+        initialBaseFeePerGas: 1,
+        gasPrice: 1,
+    },
+};
 const etherscan = { apiKey: {}, customChains: [] };
 
 if (process.env.ZKSYNC_PRIVATE_KEY) {

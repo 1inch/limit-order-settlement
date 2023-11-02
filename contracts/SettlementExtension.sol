@@ -19,6 +19,7 @@ contract SettlementExtension is IPostInteraction, IAmountGetter, FeeBankCharger 
 
     error OnlyLimitOrderProtocol();
     error ResolverIsNotWhitelisted();
+    error InvalidPriorityFee();
 
     uint256 private constant _TAKING_FEE_BASE = 1e9;
     uint256 private constant _ORDER_FEE_BASE_POINTS = 1e15;
@@ -119,7 +120,10 @@ contract SettlementExtension is IPostInteraction, IAmountGetter, FeeBankCharger 
         bytes calldata extraData
     ) external onlyLimitOrderProtocol {
         (uint256 resolverFee, address integrator, uint256 integrationFee, bytes calldata whitelist) = _parseFeeData(extraData, order.makingAmount, makingAmount, takingAmount);
+
         if (!_isWhitelisted(whitelist, taker)) revert ResolverIsNotWhitelisted();
+        if (!_isPriorityFeeValid()) revert InvalidPriorityFee();
+
         _chargeFee(taker, resolverFee);
         if (integrationFee > 0) {
             IERC20(order.takerAsset.get()).safeTransferFrom(taker, integrator, integrationFee);
@@ -178,6 +182,26 @@ contract SettlementExtension is IPostInteraction, IAmountGetter, FeeBankCharger 
                 whitelist = whitelist[12:];
             }
             return false;
+        }
+    }
+
+    /// @notice Validates priority fee according to the spec
+    /// https://snapshot.org/#/1inch.eth/proposal/0xa040c60050147a0f67042ae024673e92e813b5d2c0f748abf70ddfa1ed107cbe
+    /// For blocks with baseFee <10.6 gwei – the priorityFee is capped at 70% of the baseFee.
+    /// For blocks with baseFee between 10.6 gwei and 104.1 gwei – the priorityFee is capped at 50% of the baseFee.
+    /// For blocks with baseFee >104.1 gwei – priorityFee is capped at 65% of the block’s baseFee.
+    function _isPriorityFeeValid() private view returns(bool) {
+        unchecked {
+            uint256 baseFee = block.basefee;
+            uint256 priorityFee = tx.gasprice - baseFee;
+
+            if (baseFee < 10.6 gwei) {
+                return priorityFee * 100 <= baseFee * 70;
+            } else if (baseFee < 104.1 gwei) {
+                return priorityFee * 2 <= baseFee;
+            } else {
+                return priorityFee * 100 <= baseFee * 65;
+            }
         }
     }
 }
