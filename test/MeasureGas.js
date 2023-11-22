@@ -69,6 +69,23 @@ describe('MeasureGas', function () {
     }
 
     describe('SettlementV1', function () {
+        // Patch wallet._signTypedData in settlementV1Utils
+        settlementV1Utils.signOrder = async (order, chainId, target, wallet) => {
+            const Order = [
+                { name: 'salt', type: 'uint256' },
+                { name: 'makerAsset', type: 'address' },
+                { name: 'takerAsset', type: 'address' },
+                { name: 'maker', type: 'address' },
+                { name: 'receiver', type: 'address' },
+                { name: 'allowedSender', type: 'address' },
+                { name: 'makingAmount', type: 'uint256' },
+                { name: 'takingAmount', type: 'uint256' },
+                { name: 'offsets', type: 'uint256' },
+                { name: 'interactions', type: 'bytes' },
+            ];
+            return await wallet.signTypedData({ name: settlementV1Utils.name, version: settlementV1Utils.version, chainId, verifyingContract: target }, { Order }, order);
+        };
+
         it('1 fill for 1 order', async function () {
             const { contracts: { dai, weth, lopv3, settlement, resolversV1 }, accounts: { owner, alice }, others: { chainId } } = await loadFixture(initContractsAndApproves);
 
