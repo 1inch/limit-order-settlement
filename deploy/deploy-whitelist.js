@@ -1,6 +1,6 @@
 const hre = require('hardhat');
 const { getChainId } = hre;
-const { idempotentDeployGetContract } = require('../test/helpers/utils.js');
+const { deployAndGetContract } = require('@1inch/solidity-utils');
 
 const DAO_ADDRESS = '0x7951c7ef839e26F63DA87a42C9a87986507f1c07';
 
@@ -13,17 +13,15 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     const { deployer } = await getNamedAccounts();
 
     const delegation = await deployments.get('PowerPod');
-    console.log('delegation: ', delegation.address);
+    console.log('delegation: ', await delegation.getAddress());
 
-    const whitelist = await idempotentDeployGetContract(
-        'WhitelistRegistry',
-        // 1000 = 10% threshold
-        [delegation.address, '1000'],
+    const whitelist = await deployAndGetContract({
+        contractName: 'WhitelistRegistry',
+        constructorArgs: [await delegation.getAddress(), '1000'], // 1000 = 10% threshold
         deployments,
         deployer,
-        'WhitelistRegistryV2',
-        // true,
-    );
+        deploymentName: 'WhitelistRegistryV2',
+    });
 
     const tx = await whitelist.transferOwnership(DAO_ADDRESS);
     await tx.wait();
