@@ -21,35 +21,35 @@ async function deploySwapTokens() {
 }
 
 async function initContractsForSettlement() {
-    const abiCoder = ethers.utils.defaultAbiCoder;
+    const abiCoder = ethers.AbiCoder.defaultAbiCoder();
     const chainId = await getChainId();
     const [owner, alice, bob] = await ethers.getSigners();
 
     const { dai, weth, inch, lopv4 } = await deploySwapTokens();
 
-    await dai.transfer(alice.address, ether('101'));
-    await inch.mint(owner.address, ether('100'));
+    await dai.transfer(alice, ether('101'));
+    await inch.mint(owner, ether('100'));
     await weth.deposit({ value: ether('1') });
     await weth.connect(alice).deposit({ value: ether('1') });
 
-    const settlement = await deployContract('SettlementExtensionMock', [lopv4.address, inch.address]);
+    const settlement = await deployContract('SettlementExtensionMock', [lopv4, inch]);
 
     const FeeBank = await ethers.getContractFactory('FeeBank');
     const feeBank = FeeBank.attach(await settlement.feeBank());
 
     const ResolverMock = await ethers.getContractFactory('ResolverMock');
-    const resolver = await ResolverMock.deploy(settlement.address, lopv4.address);
+    const resolver = await ResolverMock.deploy(settlement, lopv4);
 
-    await inch.approve(feeBank.address, ether('100'));
-    await feeBank.depositFor(resolver.address, ether('100'));
+    await inch.approve(feeBank, ether('100'));
+    await feeBank.depositFor(resolver, ether('100'));
 
-    await dai.approve(lopv4.address, ether('100'));
-    await dai.connect(alice).approve(lopv4.address, ether('100'));
-    await weth.approve(lopv4.address, ether('1'));
-    await weth.connect(alice).approve(lopv4.address, ether('1'));
+    await dai.approve(lopv4, ether('100'));
+    await dai.connect(alice).approve(lopv4, ether('100'));
+    await weth.approve(lopv4, ether('1'));
+    await weth.connect(alice).approve(lopv4, ether('1'));
 
-    await resolver.approve(dai.address, lopv4.address);
-    await resolver.approve(weth.address, lopv4.address);
+    await resolver.approve(dai, lopv4);
+    await resolver.approve(weth, lopv4);
 
     return {
         contracts: { dai, weth, lopv4, settlement, feeBank, resolver },
