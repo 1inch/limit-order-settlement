@@ -71,11 +71,11 @@ async function buildAuctionDetails({
     points = [],
 } = {}) {
     startTime = startTime || await time.latest();
-    let details = ethers.utils.solidityPack(
+    let details = ethers.solidityPacked(
         ['uint32', 'uint24', 'uint24'], [startTime + delay, duration, initialRateBump],
     );
     for (let i = 0; i < points.length; i++) {
-        details += trim0x(ethers.utils.solidityPack(['uint24', 'uint16'], [points[i][0], points[i][1]]));
+        details += trim0x(ethers.solidityPacked(['uint24', 'uint16'], [points[i][0], points[i][1]]));
     }
     return { startTime, details, delay, duration, initialRateBump };
 }
