@@ -9,14 +9,14 @@ async function getChainId() {
 
 async function deploySwapTokens() {
     const [account] = await ethers.getSigners();
-    const dai = await deployContract('ERC20PermitMock', ['DAI', 'DAI', account.address, ether('1000')]);
+    const dai = await deployContract('ERC20PermitMock', ['DAI', 'DAI', account, ether('1000')]);
     const weth = await deployContract('WrappedTokenMock', ['WETH', 'WETH']);
     const inch = await deployContract('TokenMock', ['1INCH', '1INCH']);
-    const lopv4 = await deployContract('LimitOrderProtocol', [weth.address]);
+    const lopv4 = await deployContract('LimitOrderProtocol', [weth]);
 
     const LimitOrderProtocolV3 = JSON.parse(fs.readFileSync(path.join(__dirname, '../../artifacts-v1/LimitOrderProtocolV3.json'), 'utf8'));
     const ContractFactory = await ethers.getContractFactory(LimitOrderProtocolV3.abi, LimitOrderProtocolV3.bytecode);
-    const lopv3 = await ContractFactory.deploy(weth.address);
+    const lopv3 = await ContractFactory.deploy(weth);
     return { dai, weth, inch, lopv3, lopv4 };
 }
 
