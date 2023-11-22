@@ -1,6 +1,6 @@
 const { time, trim0x } = require('@1inch/solidity-utils');
 const { ethers } = require('hardhat');
-const { buildOrder, buildTakerTraits, signOrder } = require('@1inch/limit-order-protocol-contract/test/helpers/orderUtils');
+const { buildOrder, buildTakerTraits, signOrder, compactSignature } = require('@1inch/limit-order-protocol-contract/test/helpers/orderUtils');
 
 async function buildCalldataForOrder({
     orderData,
@@ -14,7 +14,7 @@ async function buildCalldataForOrder({
     feeType = 0,
     integrator = orderSigner.address,
     resolverFee = 0,
-    whitelistData = '0x' + setupData.contracts.resolver.address.substring(22),
+    whitelistData = '0x' + setupData.contracts.resolver.target.substring(22),
 }) {
     const {
         contracts: { lopv4, settlement, resolver },
@@ -34,23 +34,23 @@ async function buildCalldataForOrder({
     }
 
     const order = buildOrder(orderData, {
-        makingAmountData: settlement.address + trim0x(auctionDetails),
-        takingAmountData: settlement.address + trim0x(auctionDetails),
-        postInteraction: settlement.address +
-            trim0x(ethers.utils.solidityPack(postInteractionFeeDataTypes, postInteractionFeeData)) +
-            trim0x(ethers.utils.solidityPack(['uint32', 'bytes10', 'uint16'], [auctionStartTime, whitelistData, 0])),
+        makingAmountData: await settlement.getAddress() + trim0x(auctionDetails),
+        takingAmountData: await settlement.getAddress() + trim0x(auctionDetails),
+        postInteraction: await settlement.getAddress() +
+            trim0x(ethers.solidityPacked(postInteractionFeeDataTypes, postInteractionFeeData)) +
+            trim0x(ethers.solidityPacked(['uint32', 'bytes10', 'uint16'], [auctionStartTime, whitelistData, 0])),
     });
 
-    const { r, _vs: vs } = ethers.utils.splitSignature(await signOrder(order, chainId, lopv4.address, orderSigner));
+    const { r, vs } = compactSignature(await signOrder(order, chainId, await lopv4.getAddress(), orderSigner));
 
-    await resolver.approve(order.takerAsset, lopv4.address);
+    await resolver.approve(order.takerAsset, lopv4);
 
     const takerTraits = buildTakerTraits({
         makingAmount: isMakingAmount,
         minReturn,
         extension: order.extension,
-        interaction: resolver.address + (isInnermostOrder ? '01' : '00') + trim0x(additionalDataForSettlement),
-        target: resolver.address,
+        interaction: await resolver.getAddress() + (isInnermostOrder ? '01' : '00') + trim0x(additionalDataForSettlement),
+        target: await resolver.getAddress(),
     });
 
     return lopv4.interface.encodeFunctionData('fillOrderArgs', [
