@@ -1,7 +1,7 @@
 const { expect, time, ether, deployContract, constants } = require('@1inch/solidity-utils');
 const { ethers } = require('hardhat');
 const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
-const { expBase } = require('./helpers/utils');
+const { expBase } = require('./helpers/fusionUtils');
 
 const COMMON_LOCK_DURATION = time.duration.days('40');
 const MAX_WHITELISTED = 3;

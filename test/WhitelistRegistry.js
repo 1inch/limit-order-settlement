@@ -1,7 +1,7 @@
 const { expect, constants, ether, deployContract } = require('@1inch/solidity-utils');
 const { ethers } = require('hardhat');
 const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
-const { expBase } = require('./helpers/utils');
+const { expBase } = require('./helpers/fusionUtils');
 
 const BASIS_POINTS = 10000; // 100%
 const PERCENTAGE_THRESHOLD = 1000; // 10%

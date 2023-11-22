@@ -2,6 +2,8 @@ const { time, trim0x } = require('@1inch/solidity-utils');
 const { ethers } = require('hardhat');
 const { buildOrder, buildTakerTraits, signOrder, compactSignature } = require('@1inch/limit-order-protocol-contract/test/helpers/orderUtils');
 
+const expBase = 999999952502977513n; // 0.05^(1/(2 years)) means 95% value loss over 2 years
+
 async function buildCalldataForOrder({
     orderData,
     orderSigner,
@@ -81,6 +83,7 @@ async function buildAuctionDetails({
 }
 
 module.exports = {
+    expBase,
     buildAuctionDetails,
     buildCalldataForOrder,
 };
