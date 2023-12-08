@@ -197,10 +197,10 @@ contract SettlementExtension is IPostInteraction, IAmountGetter, FeeBankCharger 
 
             if (baseFee < 10.6 gwei) {
                 return priorityFee * 100 <= baseFee * 70;
-            } else if (baseFee < 104.1 gwei) {
-                return priorityFee * 2 <= baseFee;
-            } else {
+            } else if (baseFee > 104.1 gwei) {
                 return priorityFee * 100 <= baseFee * 65;
+            } else {
+                return priorityFee * 2 <= baseFee;
             }
         }
     }
