@@ -22,6 +22,7 @@ contract WhitelistRegistry is Ownable {
     error AlreadyRegistered();
     error NotWhitelisted();
     error SamePromotee();
+    error InvalidThreshold();
 
     /// @notice Emitted after a new resolver is registered.
     event Registered(address addr);
@@ -64,6 +65,7 @@ contract WhitelistRegistry is Ownable {
      * @param resolverPercentageThreshold_ The new resolver threshold.
      */
     function setResolverPercentageThreshold(uint256 resolverPercentageThreshold_) external onlyOwner {
+        if (resolverPercentageThreshold_ > BASIS_POINTS) revert InvalidThreshold();
         _setResolverPercentageThreshold(resolverPercentageThreshold_);
     }
 
