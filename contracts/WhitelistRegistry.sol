@@ -19,7 +19,6 @@ contract WhitelistRegistry is Ownable {
 
     error BalanceLessThanThreshold();
     error AlreadyRegistered();
-    error NotWhitelisted();
     error SamePromotee();
     error InvalidThreshold();
 
