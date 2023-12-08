@@ -4,7 +4,6 @@ pragma solidity 0.8.19;
 
 import "@1inch/solidity-utils/contracts/libraries/UniERC20.sol";
 import "@1inch/solidity-utils/contracts/libraries/AddressSet.sol";
-import "@1inch/st1inch/contracts/interfaces/IVotable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 /**
@@ -34,7 +33,7 @@ contract WhitelistRegistry is Ownable {
     event Promotion(address promoter, uint256 chainId, address promotee);
 
     uint256 public constant BASIS_POINTS = 10000;
-    IVotable public immutable token;
+    IERC20 public immutable token;
 
     mapping(address => mapping(uint256 => address)) public promotions;
     // 100% = 10000, 10% = 1000, 1% = 100
@@ -43,7 +42,7 @@ contract WhitelistRegistry is Ownable {
     AddressSet.Data private _whitelist;
 
     constructor(
-        IVotable token_,
+        IERC20 token_,
         uint256 resolverPercentageThreshold_
     ) {
         token = token_;
