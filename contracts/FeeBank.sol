@@ -10,7 +10,7 @@ import "./interfaces/IFeeBank.sol";
 
 /**
  * @title FeeBank
- * @notice FeeBank contract stores introduces a credit system for paying fees.
+ * @notice FeeBank contract introduces a credit system for paying fees.
  * A user can deposit tokens to the FeeBank contract, obtain credits and then use them to pay fees.
  * @dev FeeBank is coupled with FeeBankCharger to actually charge fees.
  */
