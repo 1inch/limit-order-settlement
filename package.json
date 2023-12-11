@@ -65,7 +65,7 @@
     "prettier-plugin-solidity": "1.1.3",
     "solc": "0.8.19",
     "solhint": "3.4.1",
-    "solidity-coverage": "0.8.2",
+    "solidity-coverage": "0.8.5",
     "solidity-docgen": "0.6.0-beta.35",
     "zksync-web3": "0.14.3"
   }
