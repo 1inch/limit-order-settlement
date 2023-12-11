@@ -2,7 +2,7 @@
 
 pragma solidity 0.8.19;
 
-import "@1inch/delegating/contracts/interfaces/ITokenizedDelegationPod.sol";
+import { ITokenizedDelegationPod } from "@1inch/delegating/contracts/interfaces/ITokenizedDelegationPod.sol";
 
 /// @notice Stores resolvers link to their metadata, which is displayed in 1inch dapp.
 contract ResolverMetadata {

@@ -2,9 +2,10 @@
 
 pragma solidity 0.8.19;
 
-import "@1inch/solidity-utils/contracts/libraries/UniERC20.sol";
-import "@1inch/solidity-utils/contracts/libraries/AddressSet.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+import { UniERC20 } from "@1inch/solidity-utils/contracts/libraries/UniERC20.sol";
+import { AddressSet, AddressArray } from "@1inch/solidity-utils/contracts/libraries/AddressSet.sol";
 
 /**
  * @title WhitelistRegistry

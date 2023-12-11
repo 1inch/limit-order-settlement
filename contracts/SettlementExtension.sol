@@ -2,12 +2,14 @@
 
 pragma solidity 0.8.19;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/utils/math/Math.sol";
-import "@1inch/limit-order-protocol-contract/contracts/interfaces/IPostInteraction.sol";
-import "@1inch/limit-order-protocol-contract/contracts/interfaces/IAmountGetter.sol";
-import "@1inch/solidity-utils/contracts/libraries/SafeERC20.sol";
-import "./FeeBankCharger.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
+import { IOrderMixin } from "@1inch/limit-order-protocol-contract/contracts/interfaces/IOrderMixin.sol";
+import { IPostInteraction } from "@1inch/limit-order-protocol-contract/contracts/interfaces/IPostInteraction.sol";
+import { IAmountGetter } from "@1inch/limit-order-protocol-contract/contracts/interfaces/IAmountGetter.sol";
+import { SafeERC20 } from "@1inch/solidity-utils/contracts/libraries/SafeERC20.sol";
+import { Address, AddressLib } from "@1inch/solidity-utils/contracts/libraries/AddressLib.sol";
+import { FeeBankCharger } from "./FeeBankCharger.sol";
 
 /**
  * @title Settlement contract
