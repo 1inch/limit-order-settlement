@@ -26,7 +26,6 @@ contract SettlementExtension is IPostInteraction, IAmountGetter, FeeBankCharger 
     uint256 private constant _TAKING_FEE_BASE = 1e9;
     uint256 private constant _ORDER_FEE_BASE_POINTS = 1e15;
     uint256 private constant _BASE_POINTS = 10_000_000; // 100%
-    uint256 private constant _RESOLVER_ADDRESS_MASK = 0xffffffffffffffffffff;
 
     IOrderMixin private immutable _limitOrderProtocol;
 
@@ -201,7 +200,7 @@ contract SettlementExtension is IPostInteraction, IAmountGetter, FeeBankCharger 
             uint256 allowedTime = uint32(bytes4(whitelist[0:4])); // initially set to auction start time
             whitelist = whitelist[4:];
             uint256 whitelistSize = whitelist.length / 12;
-            uint80 maskedResolverAddress = uint80(uint160(resolver) & _RESOLVER_ADDRESS_MASK);
+            uint80 maskedResolverAddress = uint80(uint160(resolver));
             for (uint256 i = 0; i < whitelistSize; i++) {
                 uint80 whitelistedAddress = uint80(bytes10(whitelist[:10]));
                 allowedTime += uint16(bytes2(whitelist[10:12])); // add next time delta
