@@ -73,6 +73,27 @@ contract SettlementExtension is IPostInteraction, IAmountGetter, FeeBankCharger 
         return Math.mulDiv(order.takingAmount, makingAmount * (_BASE_POINTS + rateBump), order.makingAmount * _BASE_POINTS, Math.Rounding.Up);
     }
 
+    function postInteraction(
+        IOrderMixin.Order calldata order,
+        bytes calldata /* extension */,
+        bytes32 /* orderHash */,
+        address taker,
+        uint256 makingAmount,
+        uint256 takingAmount,
+        uint256 /* remainingMakingAmount */,
+        bytes calldata extraData
+    ) external onlyLimitOrderProtocol {
+        (uint256 resolverFee, address integrator, uint256 integrationFee, bytes calldata whitelist) = _parseFeeData(extraData, order.makingAmount, makingAmount, takingAmount);
+
+        if (!_isWhitelisted(whitelist, taker)) revert ResolverIsNotWhitelisted();
+        if (!_isPriorityFeeValid()) revert InvalidPriorityFee();
+
+        _chargeFee(taker, resolverFee);
+        if (integrationFee > 0) {
+            IERC20(order.takerAsset.get()).safeTransferFrom(taker, integrator, integrationFee);
+        }
+    }
+
     /// struct AuctionDetails {
     ///     bytes4 auctionStartTime;
     ///     bytes3 auctionDuration;
@@ -108,27 +129,6 @@ contract SettlementExtension is IPostInteraction, IAmountGetter, FeeBankCharger 
                 auctionDetails = auctionDetails[5:];
             }
             return (auctionFinishTime - block.timestamp) * currentRateBump / (auctionFinishTime - currentPointTime);
-        }
-    }
-
-    function postInteraction(
-        IOrderMixin.Order calldata order,
-        bytes calldata /* extension */,
-        bytes32 /* orderHash */,
-        address taker,
-        uint256 makingAmount,
-        uint256 takingAmount,
-        uint256 /* remainingMakingAmount */,
-        bytes calldata extraData
-    ) external onlyLimitOrderProtocol {
-        (uint256 resolverFee, address integrator, uint256 integrationFee, bytes calldata whitelist) = _parseFeeData(extraData, order.makingAmount, makingAmount, takingAmount);
-
-        if (!_isWhitelisted(whitelist, taker)) revert ResolverIsNotWhitelisted();
-        if (!_isPriorityFeeValid()) revert InvalidPriorityFee();
-
-        _chargeFee(taker, resolverFee);
-        if (integrationFee > 0) {
-            IERC20(order.takerAsset.get()).safeTransferFrom(taker, integrator, integrationFee);
         }
     }
 
