@@ -140,6 +140,11 @@ contract WhitelistRegistry is Ownable {
         ;
     }
 
+    /**
+     * @dev Removes addresses from the whitelist that fall below the resolver threshold.
+     * @param percentageThreshold The whitelist enforced minimal percentage of token's total suplly.
+     * @param totalSupply The total supply of the token.
+     */
     function _clean(uint256 percentageThreshold, uint256 totalSupply) private {
         uint256 whitelistLength = _whitelist.length();
         unchecked {

@@ -94,13 +94,23 @@ contract SettlementExtension is IPostInteraction, IAmountGetter, FeeBankCharger 
         }
     }
 
-    /// struct AuctionDetails {
-    ///     bytes4 auctionStartTime;
-    ///     bytes3 auctionDuration;
-    ///     bytes3 initialRateBump;
-    ///     (bytes3,bytes2)[N] pointsAndTimeDeltas;
-    /// }
-
+    /**
+     * @dev Parses rate bump data from the `auctionDetails` field. Auction is represented as a
+     * piecewise linear function with `N` points. Each point is represented as a pair of
+     * `(rateBump, timeDelta)`, where `rateBump` is the rate bump in basis points and `timeDelta`
+     * is the time delta in seconds. The rate bump is interpolated linearly between the points.
+     * The last point is assumed to be `(0, auctionDuration)`.
+     * @param auctionDetails AuctionDetails is a tihgtly packed struct of the following format:
+     * ```
+     * struct AuctionDetails {
+     *     bytes4 auctionStartTime;
+     *     bytes3 auctionDuration;
+     *     bytes3 initialRateBump;
+     *     (bytes3,bytes2)[N] pointsAndTimeDeltas;
+     * }
+     * ```
+     * @return rateBump The rate bump.
+     */
     function _getRateBump(bytes calldata auctionDetails) private view returns (uint256) {
         unchecked {
             uint256 auctionStartTime = uint32(bytes4(auctionDetails[0:4]));
@@ -132,14 +142,26 @@ contract SettlementExtension is IPostInteraction, IAmountGetter, FeeBankCharger 
         }
     }
 
-    /// struct FeeData {
-    ///     bytes1 feeTypes; 1 = resolverFee, 2 = integrationFee
-    ///     bytes4 resolverFee; optional
-    ///     bytes20 integrator; optional
-    ///     bytes4 integrationFee; optional
-    ///     bytes whitelist;
-    /// }
-
+    /**
+     * @dev Parses fee data from the extraData field.
+     * @param extraData ExtraData is a tihgtly packed struct of the following format:
+     * ```
+     * struct ExtraData {
+     *     bytes1 feeTypes; 1 = resolverFee, 2 = integrationFee
+     *     bytes4 resolverFee; optional
+     *     bytes20 integrator; optional
+     *     bytes4 integrationFee; optional
+     *     bytes whitelist;
+     * }
+     * ```
+     * @param orderMakingAmount The order making amount.
+     * @param actualMakingAmount The actual making amount.
+     * @param actualTakingAmount The actual taking amount.
+     * @return resolverFee The resolver fee.
+     * @return integrator The integrator address.
+     * @return integrationFee The integration fee.
+     * @return whitelist The whitelist.
+     */
     function _parseFeeData(
         bytes calldata extraData,
         uint256 orderMakingAmount,
@@ -162,11 +184,18 @@ contract SettlementExtension is IPostInteraction, IAmountGetter, FeeBankCharger 
         whitelist = extraData;
     }
 
-    /// struct WhitelistDetails {
-    ///     bytes4 auctionStartTime;
-    ///     (bytes10,bytes2)[N] resolversAddressesAndTimeDeltas;
-    /// }
-
+    /**
+     * @dev Validates whether the resolver is whitelisted.
+     * @param whitelist Whitelist is tighly packed struct of the following format:
+     * ```
+     * struct WhitelistDetails {
+     *     bytes4 auctionStartTime;
+     *     (bytes10,bytes2)[N] resolversAddressesAndTimeDeltas;
+     * }
+     * ```
+     * @param resolver The resolver to check.
+     * @return Whether the resolver is whitelisted.
+     */
     function _isWhitelisted(bytes calldata whitelist, address resolver) private view returns (bool) {
         unchecked {
             uint256 allowedTime = uint32(bytes4(whitelist[0:4])); // initially set to auction start time
@@ -187,11 +216,13 @@ contract SettlementExtension is IPostInteraction, IAmountGetter, FeeBankCharger 
         }
     }
 
-    /// @notice Validates priority fee according to the spec
-    /// https://snapshot.org/#/1inch.eth/proposal/0xa040c60050147a0f67042ae024673e92e813b5d2c0f748abf70ddfa1ed107cbe
-    /// For blocks with baseFee <10.6 gwei – the priorityFee is capped at 70% of the baseFee.
-    /// For blocks with baseFee between 10.6 gwei and 104.1 gwei – the priorityFee is capped at 50% of the baseFee.
-    /// For blocks with baseFee >104.1 gwei – priorityFee is capped at 65% of the block’s baseFee.
+    /**
+     * @dev Validates priority fee according to the spec
+     * https://snapshot.org/#/1inch.eth/proposal/0xa040c60050147a0f67042ae024673e92e813b5d2c0f748abf70ddfa1ed107cbe
+     * For blocks with baseFee <10.6 gwei – the priorityFee is capped at 70% of the baseFee.
+     * For blocks with baseFee between 10.6 gwei and 104.1 gwei – the priorityFee is capped at 50% of the baseFee.
+     * For blocks with baseFee >104.1 gwei – priorityFee is capped at 65% of the block’s baseFee.
+     */
     function _isPriorityFeeValid() private view returns(bool) {
         unchecked {
             uint256 baseFee = block.basefee;
