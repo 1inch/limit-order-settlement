@@ -35,7 +35,7 @@ contract WhitelistRegistry is Ownable {
     uint256 public constant BASIS_POINTS = 10000;
     IERC20 public immutable token;
 
-    mapping(address => mapping(uint256 => address)) public promotions;
+    mapping(address promoter => mapping(uint256 chainId => address promotee)) public promotions;
     // 100% = 10000, 10% = 1000, 1% = 100
     uint256 public resolverPercentageThreshold;
 

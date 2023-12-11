@@ -22,7 +22,7 @@ contract FeeBank is IFeeBank, Ownable {
     IERC20 private immutable _token;
     IFeeBankCharger private immutable _charger;
 
-    mapping(address => uint256) private _accountDeposits;
+    mapping(address account => uint256 availableCredit) private _accountDeposits;
 
     constructor(IFeeBankCharger charger_, IERC20 inch_, address owner_) {
         if (address(inch_) == address(0)) revert ZeroAddress();

@@ -11,7 +11,7 @@ contract ResolverMetadata {
     error NotRegisteredDelegatee();
 
     ITokenizedDelegationPod public immutable delegation;
-    mapping (address => string) public getUrl;
+    mapping(address resolver => string url) public getUrl;
 
     /// @dev Modifier to check if the sender is a registered resolver.
     modifier onlyRegistered {

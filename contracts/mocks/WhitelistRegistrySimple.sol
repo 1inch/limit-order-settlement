@@ -15,7 +15,7 @@ contract WhitelistRegistrySimple is Ownable {
 
     event StatusUpdate(address indexed addr, bool status);
 
-    mapping(address => bool) public isWhitelisted;
+    mapping(address resolver => bool isWhitelisted) public isWhitelisted;
 
     function batchSetStatus(address[] calldata addresses, bool[] calldata statuses) external onlyOwner {
         uint256 length = addresses.length;
