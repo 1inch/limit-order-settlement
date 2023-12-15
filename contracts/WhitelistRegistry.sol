@@ -64,7 +64,6 @@ contract WhitelistRegistry is Ownable {
      * @param resolverPercentageThreshold_ The new resolver threshold.
      */
     function setResolverPercentageThreshold(uint256 resolverPercentageThreshold_) external onlyOwner {
-        if (resolverPercentageThreshold_ > BASIS_POINTS) revert InvalidThreshold();
         _setResolverPercentageThreshold(resolverPercentageThreshold_);
     }
 
@@ -124,6 +123,7 @@ contract WhitelistRegistry is Ownable {
     }
 
     function _setResolverPercentageThreshold(uint256 resolverPercentageThreshold_) private {
+        if (resolverPercentageThreshold_ > BASIS_POINTS) revert InvalidThreshold();
         resolverPercentageThreshold = resolverPercentageThreshold_;
         emit ResolverPercentageThresholdSet(resolverPercentageThreshold_);
     }
