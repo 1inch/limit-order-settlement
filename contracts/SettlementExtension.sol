@@ -13,8 +13,24 @@ import { BasicSettlementExtension } from "./BasicSettlementExtension.sol";
  */
 contract SettlementExtension is BasicSettlementExtension {
 
+    error InvalidPriorityFee();
+
     constructor(IOrderMixin limitOrderProtocol, IERC20 token)
         BasicSettlementExtension(limitOrderProtocol, token) {}
+
+    function _postInteraction(
+        IOrderMixin.Order calldata order,
+        bytes calldata extension,
+        bytes32 orderHash,
+        address taker,
+        uint256 makingAmount,
+        uint256 takingAmount,
+        uint256 remainingMakingAmount,
+        bytes calldata extraData
+    ) internal virtual override {
+        if (!_isPriorityFeeValid()) revert InvalidPriorityFee();
+        super._postInteraction(order, extension, orderHash, taker, makingAmount, takingAmount, remainingMakingAmount, extraData);
+    }
 
     /**
      * @dev Validates priority fee according to the spec
@@ -23,7 +39,7 @@ contract SettlementExtension is BasicSettlementExtension {
      * For blocks with baseFee between 10.6 gwei and 104.1 gwei – the priorityFee is capped at 50% of the baseFee.
      * For blocks with baseFee >104.1 gwei – priorityFee is capped at 65% of the block’s baseFee.
      */
-    function _isPriorityFeeValid() internal view override returns(bool) {
+    function _isPriorityFeeValid() internal view returns(bool) {
         unchecked {
             uint256 baseFee = block.basefee;
             uint256 priorityFee = tx.gasprice - baseFee;
