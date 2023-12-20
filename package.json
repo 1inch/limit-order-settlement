@@ -66,7 +66,7 @@
     "solc": "0.8.23",
     "solhint": "3.6.2",
     "solidity-coverage": "0.8.5",
-    "solidity-docgen": "0.6.0-beta.35",
+    "solidity-docgen": "0.5.17",
     "zksync-ethers": "6.0.0"
   }
 }
