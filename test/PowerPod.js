@@ -11,7 +11,7 @@ describe('PowerPod', function () {
     const stakeAndRegisterInDelegation = async (st1inch, delegation, user, amount, userIndex) => {
         await st1inch.connect(user).deposit(0, COMMON_LOCK_DURATION);
         await st1inch.depositFor(user, amount);
-        await st1inch.connect(user).addPod(delegation);
+        await st1inch.connect(user).addPlugin(delegation);
         await delegation
             .connect(user)['register(string,string)'](
                 `${userIndex}DelegatingToken`,
@@ -22,7 +22,7 @@ describe('PowerPod', function () {
 
     const depositAndDelegateTo = async (st1inch, delegation, from, to, amount, duration = COMMON_LOCK_DURATION) => {
         await st1inch.connect(from).deposit(amount, duration);
-        await st1inch.connect(from).addPod(delegation);
+        await st1inch.connect(from).addPlugin(delegation);
         await delegation.connect(from).delegate(to);
     };
 
@@ -91,7 +91,7 @@ describe('PowerPod', function () {
                 accounts: { owner, alice },
             } = await loadFixture(initContracts);
             // delegate to owner and deposit 1inch
-            await st1inch.connect(alice).addPod(delegation);
+            await st1inch.connect(alice).addPlugin(delegation);
             await delegation.connect(alice).delegate(owner);
             await st1inch.connect(alice).deposit(ether('2'), COMMON_LOCK_DURATION);
 

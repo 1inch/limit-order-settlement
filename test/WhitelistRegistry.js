@@ -53,7 +53,7 @@ describe('WhitelistRegistry', function () {
             const newThreshold = 100; // 1%
             await expect(
                 whitelistRegistry.connect(accounts[1]).setResolverPercentageThreshold(newThreshold),
-            ).to.be.revertedWith('Ownable: caller is not the owner');
+            ).to.be.revertedWithCustomError(whitelistRegistry, 'OwnableUnauthorizedAccount');
             expect(await whitelistRegistry.resolverPercentageThreshold()).to.equal(PERCENTAGE_THRESHOLD);
         });
     });
@@ -82,7 +82,7 @@ describe('WhitelistRegistry', function () {
             expect(await ethers.provider.getBalance(whitelistRegistry)).to.be.equal(amount);
             await expect(
                 whitelistRegistry.connect(accounts[1]).rescueFunds(constants.ZERO_ADDRESS, amount / 2),
-            ).to.be.revertedWith('Ownable: caller is not the owner');
+            ).to.be.revertedWithCustomError(whitelistRegistry, 'OwnableUnauthorizedAccount');
             expect(await ethers.provider.getBalance(whitelistRegistry)).to.be.equal(amount);
         });
     });
