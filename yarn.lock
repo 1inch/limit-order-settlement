@@ -3159,7 +3159,7 @@ ethers@6.9.1:
     tslib "2.4.0"
     ws "8.5.0"
 
-ethers@^5.3.1, ethers@^5.6.1, ethers@^5.7.0, ethers@^5.7.1, ethers@^5.7.2, ethers@~5.7.0:
+ethers@^5.3.1, ethers@^5.6.1, ethers@^5.7.0, ethers@^5.7.1, ethers@^5.7.2:
   version "5.7.2"
   resolved "https://registry.yarnpkg.com/ethers/-/ethers-5.7.2.tgz#3a7deeabbb8c030d4126b24f84e525466145872e"
   integrity sha512-wswUsmWo1aOK8rR7DIKiWSw9DbLWe6x98Jrn8wcTflTVvaXhAMaB5zGAXy0GYQEQp9iO1iSHWVyARQm11zUtyg==
@@ -6256,13 +6256,6 @@ zksync-ethers@6.0.0, zksync-ethers@^6.0.0:
   version "6.0.0"
   resolved "https://registry.yarnpkg.com/zksync-ethers/-/zksync-ethers-6.0.0.tgz#60ec1c38bb2a0b844433fa59a33633e258cb00d6"
   integrity sha512-eQv8V3eK6dDHobI27mHydT1liqlKAoVJzdhxYfP4weE7emPMCcHfJBVVxN5HyitEkuwZC7ir7fa1Q7PK6ox+Cw==
-
-zksync-web3@0.16.0:
-  version "0.16.0"
-  resolved "https://registry.yarnpkg.com/zksync-web3/-/zksync-web3-0.16.0.tgz#407b258e61923d104864cff284bb54dc8b6af753"
-  integrity sha512-ER/qDpuRkoHrqwi2f4RCP6HXCQP1KB9o7Ih2K7h+QzfCSyDRL0apPMT9LkVQspeIeqRoXhl+1tit3vQdDIGe4w==
-  dependencies:
-    ethers "~5.7.0"
 
 zksync-web3@^0.14.3:
   version "0.14.4"

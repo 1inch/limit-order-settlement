@@ -2,9 +2,12 @@
 
 pragma solidity 0.8.23;
 
-import "@1inch/solidity-utils/contracts/libraries/SafeERC20.sol";
-import "@1inch/solidity-utils/contracts/libraries/RevertReasonForwarder.sol";
-import "@1inch/limit-order-protocol-contract/contracts/interfaces/ITakerInteraction.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { Address, AddressLib} from "@1inch/solidity-utils/contracts/libraries/AddressLib.sol";
+import { SafeERC20 } from "@1inch/solidity-utils/contracts/libraries/SafeERC20.sol";
+import { RevertReasonForwarder } from "@1inch/solidity-utils/contracts/libraries/RevertReasonForwarder.sol";
+import { IOrderMixin } from "@1inch/limit-order-protocol-contract/contracts/interfaces/IOrderMixin.sol";
+import { ITakerInteraction } from "@1inch/limit-order-protocol-contract/contracts/interfaces/ITakerInteraction.sol";
 
 contract ResolverMock is ITakerInteraction {
     error OnlyOwner();

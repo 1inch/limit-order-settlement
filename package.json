@@ -45,9 +45,9 @@
     "@matterlabs/hardhat-zksync-solc": "1.0.5",
     "@matterlabs/hardhat-zksync-verify": "1.2.1",
     "@nomicfoundation/hardhat-chai-matchers": "2.0.2",
-    "@nomicfoundation/hardhat-ethers": "3.0.5",
     "@nomicfoundation/hardhat-network-helpers": "1.0.10",
     "@nomicfoundation/hardhat-verify": "2.0.3",
+    "@nomicfoundation/hardhat-ethers": "3.0.5",
     "chai": "4.3.10",
     "dotenv": "16.3.1",
     "eslint": "8.56.0",
@@ -67,7 +67,6 @@
     "solhint": "3.6.2",
     "solidity-coverage": "0.8.5",
     "solidity-docgen": "0.6.0-beta.35",
-    "zksync-ethers": "6.0.0",
-    "zksync-web3": "0.16.0"
+    "zksync-ethers": "6.0.0"
   }
 }

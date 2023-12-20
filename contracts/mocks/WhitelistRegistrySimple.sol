@@ -2,8 +2,9 @@
 
 pragma solidity 0.8.23;
 
-import "@1inch/solidity-utils/contracts/libraries/UniERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { UniERC20 } from "@1inch/solidity-utils/contracts/libraries/UniERC20.sol";
+import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 
 /// @title Contract with simple whitelist
 contract WhitelistRegistrySimple is Ownable {
@@ -14,7 +15,7 @@ contract WhitelistRegistrySimple is Ownable {
 
     event StatusUpdate(address indexed addr, bool status);
 
-    mapping(address => bool) public isWhitelisted;
+    mapping(address resolver => bool isWhitelisted) public isWhitelisted;
 
     constructor() Ownable(msg.sender) {} // solhint-disable-line no-empty-blocks
 
