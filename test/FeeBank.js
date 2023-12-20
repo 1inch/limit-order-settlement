@@ -197,8 +197,8 @@ describe('FeeBank', function () {
 
         it('should not work by non-owner', async function () {
             const { contracts: { feeBank }, accounts: { owner, alice } } = await loadFixture(initContracts);
-            await expect(feeBank.connect(alice).gatherFees([owner.address, alice.address])).to.be.revertedWith(
-                'Ownable: caller is not the owner',
+            await expect(feeBank.connect(alice).gatherFees([owner.address, alice.address])).to.be.revertedWithCustomError(
+                feeBank, 'OwnableUnauthorizedAccount',
             );
         });
     });

@@ -6,7 +6,7 @@ const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
 const { constants, time, expect, ether, trim0x, deployContract } = require('@1inch/solidity-utils');
 const { deploySwapTokens, getChainId } = require('./helpers/fixtures');
 const { buildAuctionDetails } = require('./helpers/fusionUtils');
-const { buildOrder, signOrder, buildTakerTraits, buildMakerTraits, compactSignature } = require('@1inch/limit-order-protocol-contract/test/helpers/orderUtils');
+const { buildOrder, signOrder, buildTakerTraits, buildMakerTraits } = require('@1inch/limit-order-protocol-contract/test/helpers/orderUtils');
 const settlementV1Utils = require('@1inch/limit-order-settlement-v1/test/helpers/orderUtils');
 
 const RESOLVERS_NUMBER = 10;
@@ -328,7 +328,7 @@ describe('MeasureGas', function () {
                 )),
             });
 
-            const { r, vs } = compactSignature(await signOrder(order, chainId, await lopv4.getAddress(), alice));
+            const { r, yParityAndS: vs } = ethers.Signature.from(await signOrder(order, chainId, await lopv4.getAddress(), alice));
             await weth.approve(lopv4, ether('0.1'));
 
             const takerTraits = buildTakerTraits({
@@ -373,7 +373,7 @@ describe('MeasureGas', function () {
                 )),
             });
 
-            const { r, vs } = compactSignature(await signOrder(order, chainId, await lopv4.getAddress(), alice));
+            const { r, yParityAndS: vs } = ethers.Signature.from(await signOrder(order, chainId, await lopv4.getAddress(), alice));
 
             const takerTraits = buildTakerTraits({
                 makingAmount: true,
@@ -435,7 +435,7 @@ describe('MeasureGas', function () {
                 )),
             });
 
-            const { r, vs } = compactSignature(await signOrder(order, chainId, await lopv4.getAddress(), alice));
+            const { r, yParityAndS: vs } = ethers.Signature.from(await signOrder(order, chainId, await lopv4.getAddress(), alice));
 
             const takerTraits = buildTakerTraits({
                 makingAmount: true,

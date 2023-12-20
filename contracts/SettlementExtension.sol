@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity 0.8.19;
+pragma solidity 0.8.23;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
@@ -68,7 +68,7 @@ contract SettlementExtension is IPostInteraction, IAmountGetter, FeeBankCharger 
         bytes calldata extraData
     ) external view returns (uint256) {
         uint256 rateBump = _getRateBump(extraData);
-        return Math.mulDiv(order.takingAmount, makingAmount * (_BASE_POINTS + rateBump), order.makingAmount * _BASE_POINTS, Math.Rounding.Up);
+        return Math.mulDiv(order.takingAmount, makingAmount * (_BASE_POINTS + rateBump), order.makingAmount * _BASE_POINTS, Math.Rounding.Ceil);
     }
 
     /// struct AuctionDetails {

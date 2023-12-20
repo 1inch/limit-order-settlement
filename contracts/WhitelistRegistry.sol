@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity 0.8.19;
+pragma solidity 0.8.23;
 
 import "@1inch/solidity-utils/contracts/libraries/UniERC20.sol";
 import "@1inch/solidity-utils/contracts/libraries/AddressSet.sol";
@@ -44,7 +44,7 @@ contract WhitelistRegistry is Ownable {
     constructor(
         IVotable token_,
         uint256 resolverPercentageThreshold_
-    ) {
+    ) Ownable(msg.sender) {
         token = token_;
         _setResolverPercentageThreshold(resolverPercentageThreshold_);
     }

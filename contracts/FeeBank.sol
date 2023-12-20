@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity 0.8.19;
+pragma solidity 0.8.23;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@1inch/solidity-utils/contracts/libraries/SafeERC20.sol";
@@ -24,11 +24,10 @@ contract FeeBank is IFeeBank, Ownable {
 
     mapping(address => uint256) private _accountDeposits;
 
-    constructor(IFeeBankCharger charger_, IERC20 inch_, address owner_) {
+    constructor(IFeeBankCharger charger_, IERC20 inch_, address owner_) Ownable(owner_) {
         if (address(inch_) == address(0)) revert ZeroAddress();
         _charger = charger_;
         _token = inch_;
-        transferOwnership(owner_);
     }
 
     /**

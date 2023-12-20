@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity 0.8.19;
+pragma solidity 0.8.23;
 
-import "@1inch/delegating/contracts/interfaces/ITokenizedDelegationPod.sol";
+import "@1inch/delegating/contracts/interfaces/ITokenizedDelegationPlugin.sol";
 
 /// @notice Stores resolvers link to their metadata, which is displayed in 1inch dapp.
 contract ResolverMetadata {
@@ -10,7 +10,7 @@ contract ResolverMetadata {
     /// @dev Emitted when an unregistered resolver tries to perform a restricted operation.
     error NotRegisteredDelegatee();
 
-    ITokenizedDelegationPod public immutable delegation;
+    ITokenizedDelegationPlugin public immutable delegation;
     mapping (address => string) public getUrl;
 
     /// @dev Modifier to check if the sender is a registered resolver.
@@ -19,7 +19,7 @@ contract ResolverMetadata {
         _;
     }
 
-    constructor(ITokenizedDelegationPod delegation_) {
+    constructor(ITokenizedDelegationPlugin delegation_) {
         delegation = delegation_;
     }
 
