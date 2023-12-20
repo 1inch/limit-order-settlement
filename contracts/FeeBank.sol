@@ -19,22 +19,22 @@ contract FeeBank is IFeeBank, Ownable {
 
     error ZeroAddress();
 
-    IERC20 private immutable _token;
-    IFeeBankCharger private immutable _charger;
+    IERC20 private immutable _TOKEN;
+    IFeeBankCharger private immutable _CHARGER;
 
     mapping(address account => uint256 availableCredit) private _accountDeposits;
 
     constructor(IFeeBankCharger charger_, IERC20 inch_, address owner_) Ownable(owner_) {
         if (address(inch_) == address(0)) revert ZeroAddress();
-        _charger = charger_;
-        _token = inch_;
+        _CHARGER = charger_;
+        _TOKEN = inch_;
     }
 
     /**
      * @notice See {IFeeBank-availableCredit}.
      */
     function availableCredit(address account) external view returns (uint256) {
-        return _charger.availableCredit(account);
+        return _CHARGER.availableCredit(account);
     }
 
     /**
@@ -66,7 +66,7 @@ contract FeeBank is IFeeBank, Ownable {
         uint256 amount,
         bytes calldata permit
     ) public returns (uint256) {
-        _token.safePermit(permit);
+        _TOKEN.safePermit(permit);
         return _depositFor(account, amount);
     }
 
@@ -95,28 +95,28 @@ contract FeeBank is IFeeBank, Ownable {
             for (uint256 i = 0; i < accountsLength; ++i) {
                 address account = accounts[i];
                 uint256 accountDeposit = _accountDeposits[account];
-                uint256 availableCredit_ = _charger.availableCredit(account);
+                uint256 availableCredit_ = _CHARGER.availableCredit(account);
                 _accountDeposits[account] = availableCredit_;
                 totalAccountFees += accountDeposit - availableCredit_;  // overflow is impossible due to checks in FeeBankCharger
             }
         }
-        _token.safeTransfer(msg.sender, totalAccountFees);
+        _TOKEN.safeTransfer(msg.sender, totalAccountFees);
     }
 
     function _depositFor(address account, uint256 amount) internal returns (uint256 totalAvailableCredit) {
         if (account == address(0)) revert ZeroAddress();
-        _token.safeTransferFrom(msg.sender, address(this), amount);
+        _TOKEN.safeTransferFrom(msg.sender, address(this), amount);
         unchecked {
-            _accountDeposits[account] += amount;  // overflow is impossible due to limited _token supply
+            _accountDeposits[account] += amount;  // overflow is impossible due to limited _TOKEN supply
         }
-        totalAvailableCredit = _charger.increaseAvailableCredit(account, amount);
+        totalAvailableCredit = _CHARGER.increaseAvailableCredit(account, amount);
     }
 
     function _withdrawTo(address account, uint256 amount) internal returns (uint256 totalAvailableCredit) {
-        totalAvailableCredit = _charger.decreaseAvailableCredit(msg.sender, amount);
+        totalAvailableCredit = _CHARGER.decreaseAvailableCredit(msg.sender, amount);
         unchecked {
             _accountDeposits[msg.sender] -= amount;  // underflow is impossible due to checks in FeeBankCharger
         }
-        _token.safeTransfer(account, amount);
+        _TOKEN.safeTransfer(account, amount);
     }
 }

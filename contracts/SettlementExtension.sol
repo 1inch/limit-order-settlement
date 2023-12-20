@@ -27,11 +27,11 @@ contract SettlementExtension is IPostInteraction, IAmountGetter, FeeBankCharger 
     uint256 private constant _ORDER_FEE_BASE_POINTS = 1e15;
     uint256 private constant _BASE_POINTS = 10_000_000; // 100%
 
-    IOrderMixin private immutable _limitOrderProtocol;
+    IOrderMixin private immutable _LIMIT_ORDER_PROTOCOL;
 
     /// @dev Modifier to check if the caller is the limit order protocol contract.
     modifier onlyLimitOrderProtocol {
-        if (msg.sender != address(_limitOrderProtocol)) revert OnlyLimitOrderProtocol();
+        if (msg.sender != address(_LIMIT_ORDER_PROTOCOL)) revert OnlyLimitOrderProtocol();
         _;
     }
 
@@ -43,7 +43,7 @@ contract SettlementExtension is IPostInteraction, IAmountGetter, FeeBankCharger 
     constructor(IOrderMixin limitOrderProtocol, IERC20 token)
         FeeBankCharger(token)
     {
-        _limitOrderProtocol = limitOrderProtocol;
+        _LIMIT_ORDER_PROTOCOL = limitOrderProtocol;
     }
 
     function getMakingAmount(

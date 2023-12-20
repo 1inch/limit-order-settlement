@@ -36,7 +36,7 @@ describe('WhitelistRegistry', function () {
         it('check storage vars', async function () {
             const { contracts: { rewardableDelegationPod, whitelistRegistry } } = await loadFixture(initContracts);
             expect(await whitelistRegistry.resolverPercentageThreshold()).to.equal(PERCENTAGE_THRESHOLD);
-            expect(await whitelistRegistry.token()).to.equal(await rewardableDelegationPod.getAddress());
+            expect(await whitelistRegistry.TOKEN()).to.equal(await rewardableDelegationPod.getAddress());
         });
     });
 

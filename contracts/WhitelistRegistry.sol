@@ -33,7 +33,7 @@ contract WhitelistRegistry is Ownable {
     event Promotion(address promoter, uint256 chainId, address promotee);
 
     uint256 public constant BASIS_POINTS = 10000;
-    IERC20 public immutable token;
+    IERC20 public immutable TOKEN;
 
     mapping(address promoter => mapping(uint256 chainId => address promotee)) public promotions;
     // 100% = 10000, 10% = 1000, 1% = 100
@@ -45,7 +45,7 @@ contract WhitelistRegistry is Ownable {
         IERC20 token_,
         uint256 resolverPercentageThreshold_
     ) Ownable(msg.sender) {
-        token = token_;
+        TOKEN = token_;
         _setResolverPercentageThreshold(resolverPercentageThreshold_);
     }
 
@@ -74,8 +74,8 @@ contract WhitelistRegistry is Ownable {
      */
     function register() external {
         uint256 percentageThreshold = resolverPercentageThreshold;
-        uint256 totalSupply = token.totalSupply();
-        if (!_isValidBalance(percentageThreshold, token.balanceOf(msg.sender), totalSupply)) revert BalanceLessThanThreshold();
+        uint256 totalSupply = TOKEN.totalSupply();
+        if (!_isValidBalance(percentageThreshold, TOKEN.balanceOf(msg.sender), totalSupply)) revert BalanceLessThanThreshold();
         if (!_whitelist.add(msg.sender)) revert AlreadyRegistered();
         emit Registered(msg.sender);
         _clean(percentageThreshold, totalSupply);
@@ -96,7 +96,7 @@ contract WhitelistRegistry is Ownable {
      * @notice Cleans the whitelist by removing addresses that fall below the resolver threshold.
      */
     function clean() external {
-        _clean(resolverPercentageThreshold, token.totalSupply());
+        _clean(resolverPercentageThreshold, TOKEN.totalSupply());
     }
 
     /**
@@ -150,7 +150,7 @@ contract WhitelistRegistry is Ownable {
         unchecked {
             for (uint256 i = 0; i < whitelistLength; ) {
                 address curWhitelisted = _whitelist.at(i);
-                uint256 balance = token.balanceOf(curWhitelisted);
+                uint256 balance = TOKEN.balanceOf(curWhitelisted);
                 if (!_isValidBalance(percentageThreshold, balance, totalSupply)) {
                     _removeFromWhitelist(curWhitelisted);
                     whitelistLength--;

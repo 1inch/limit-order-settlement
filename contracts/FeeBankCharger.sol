@@ -18,19 +18,19 @@ contract FeeBankCharger is IFeeBankCharger {
     /**
      * @notice See {IFeeBankCharger-feeBank}.
      */
-    IFeeBank public immutable feeBank;
+    IFeeBank public immutable FEE_BANK;
     mapping(address => uint256) private _creditAllowance;
 
     /**
-     * @dev Modifier to check if the sender is a feeBank contract.
+     * @dev Modifier to check if the sender is a FEE_BANK contract.
      */
     modifier onlyFeeBank() {
-        if (msg.sender != address(feeBank)) revert OnlyFeeBankAccess();
+        if (msg.sender != address(FEE_BANK)) revert OnlyFeeBankAccess();
         _;
     }
 
     constructor(IERC20 token) {
-        feeBank = new FeeBank(this, token, msg.sender);
+        FEE_BANK = new FeeBank(this, token, msg.sender);
     }
 
     /**

@@ -14,7 +14,7 @@ describe('FeeBank', function () {
         const matcher = await deployContract('SettlementExtensionMock', [lopv4, inch]);
 
         const FeeBank = await ethers.getContractFactory('FeeBank');
-        const feeBank = FeeBank.attach(await matcher.feeBank());
+        const feeBank = FeeBank.attach(await matcher.FEE_BANK());
 
         await inch.transfer(alice, ether('100'));
         await inch.approve(feeBank, ether('1000'));

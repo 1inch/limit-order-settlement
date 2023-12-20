@@ -10,17 +10,17 @@ contract ResolverMetadata {
     /// @dev Emitted when an unregistered resolver tries to perform a restricted operation.
     error NotRegisteredDelegatee();
 
-    ITokenizedDelegationPlugin public immutable delegation;
+    ITokenizedDelegationPlugin public immutable DELEGATION;
     mapping (address resolver => string url) public getUrl;
 
     /// @dev Modifier to check if the sender is a registered resolver.
     modifier onlyRegistered {
-        if (address(delegation.registration(msg.sender)) == address(0)) revert NotRegisteredDelegatee();
+        if (address(DELEGATION.registration(msg.sender)) == address(0)) revert NotRegisteredDelegatee();
         _;
     }
 
     constructor(ITokenizedDelegationPlugin delegation_) {
-        delegation = delegation_;
+        DELEGATION = delegation_;
     }
 
     /**
