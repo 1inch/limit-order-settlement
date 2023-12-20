@@ -2,7 +2,7 @@
 
 pragma solidity 0.8.19;
 
-import "@1inch/delegating/contracts/interfaces/ITokenizedDelegationPod.sol";
+import { ITokenizedDelegationPod } from "@1inch/delegating/contracts/interfaces/ITokenizedDelegationPod.sol";
 
 /// @notice Stores resolvers link to their metadata, which is displayed in 1inch dapp.
 contract ResolverMetadata {
@@ -11,7 +11,7 @@ contract ResolverMetadata {
     error NotRegisteredDelegatee();
 
     ITokenizedDelegationPod public immutable delegation;
-    mapping (address => string) public getUrl;
+    mapping(address resolver => string url) public getUrl;
 
     /// @dev Modifier to check if the sender is a registered resolver.
     modifier onlyRegistered {

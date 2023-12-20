@@ -2,7 +2,7 @@
 
 pragma solidity 0.8.19;
 
-import "./IFeeBank.sol";
+import { IFeeBank } from "./IFeeBank.sol";
 
 interface IFeeBankCharger {
     /**

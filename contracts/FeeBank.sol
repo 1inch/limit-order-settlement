@@ -2,15 +2,15 @@
 
 pragma solidity 0.8.19;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@1inch/solidity-utils/contracts/libraries/SafeERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "./interfaces/IFeeBankCharger.sol";
-import "./interfaces/IFeeBank.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "@1inch/solidity-utils/contracts/libraries/SafeERC20.sol";
+import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+import { IFeeBankCharger } from "./interfaces/IFeeBankCharger.sol";
+import { IFeeBank } from "./interfaces/IFeeBank.sol";
 
 /**
  * @title FeeBank
- * @notice FeeBank contract stores introduces a credit system for paying fees.
+ * @notice FeeBank contract introduces a credit system for paying fees.
  * A user can deposit tokens to the FeeBank contract, obtain credits and then use them to pay fees.
  * @dev FeeBank is coupled with FeeBankCharger to actually charge fees.
  */
@@ -22,7 +22,7 @@ contract FeeBank is IFeeBank, Ownable {
     IERC20 private immutable _token;
     IFeeBankCharger private immutable _charger;
 
-    mapping(address => uint256) private _accountDeposits;
+    mapping(address account => uint256 availableCredit) private _accountDeposits;
 
     constructor(IFeeBankCharger charger_, IERC20 inch_, address owner_) {
         if (address(inch_) == address(0)) revert ZeroAddress();

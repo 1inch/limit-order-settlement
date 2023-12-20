@@ -2,9 +2,10 @@
 
 pragma solidity 0.8.19;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "./interfaces/IFeeBankCharger.sol";
-import "./FeeBank.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { IFeeBank } from "./interfaces/IFeeBank.sol";
+import { IFeeBankCharger } from "./interfaces/IFeeBankCharger.sol";
+import { FeeBank } from "./FeeBank.sol";
 
 /**
  * @title FeeBankCharger

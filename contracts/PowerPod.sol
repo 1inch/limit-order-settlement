@@ -2,10 +2,10 @@
 
 pragma solidity 0.8.19;
 
-import "@1inch/delegating/contracts/FarmingDelegationPod.sol";
-import "@1inch/st1inch/contracts/helpers/VotingPowerCalculator.sol";
-import "@1inch/st1inch/contracts/interfaces/IVotable.sol";
-import "@1inch/st1inch/contracts/interfaces/ISt1inch.sol";
+import { FarmingDelegationPod } from "@1inch/delegating/contracts/FarmingDelegationPod.sol";
+import { IVotable } from "@1inch/st1inch/contracts/interfaces/IVotable.sol";
+import { ISt1inch } from "@1inch/st1inch/contracts/interfaces/ISt1inch.sol";
+import { VotingPowerCalculator } from "@1inch/st1inch/contracts/helpers/VotingPowerCalculator.sol";
 
 /**
  * @title PowerPod
