@@ -12,11 +12,7 @@ describe('PowerPod', function () {
         await st1inch.connect(user).deposit(0, COMMON_LOCK_DURATION);
         await st1inch.depositFor(user, amount);
         await st1inch.connect(user).addPlugin(delegation);
-        await delegation
-            .connect(user)['register(string,string)'](
-                `${userIndex}DelegatingToken`,
-                `A${userIndex}DT`,
-            );
+        await delegation.connect(user).register(`${userIndex}DelegatingToken`, `A${userIndex}DT`);
         await delegation.connect(user).delegate(user);
     };
 
