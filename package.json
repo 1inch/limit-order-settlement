@@ -1,6 +1,6 @@
 {
   "name": "@1inch/limit-order-settlement",
-  "version": "2.0.0-beta.2",
+  "version": "2.0.0-prerelease",
   "description": "1inch Limit Order Settlement",
   "repository": {
     "type": "git",
@@ -16,7 +16,7 @@
   ],
   "license": "MIT",
   "scripts": {
-    "clean": "rimraf artifacts cache coverage contracts/hardhat-dependency-compiler",
+    "clean": "rimraf artifacts cache coverage contracts/hardhat-dependency-compiler cache-zk artifacts-zk",
     "deploy": "hardhat deploy --network",
     "coverage": "hardhat coverage",
     "docify": "npx solidity-utils-docify",
@@ -33,14 +33,13 @@
     "test:ci": "hardhat test"
   },
   "dependencies": {
-    "@1inch/delegating": "0.0.21",
+    "@1inch/delegating": "1.1.0",
     "@1inch/limit-order-protocol-contract": "4.0.0-prerelease-16",
-    "@1inch/solidity-utils": "3.2.0",
-    "@1inch/st1inch": "2.0.3",
-    "@openzeppelin/contracts": "4.8.2"
+    "@1inch/solidity-utils": "3.5.5",
+    "@1inch/st1inch": "2.2.0",
+    "@openzeppelin/contracts": "5.0.1"
   },
   "devDependencies": {
-    "@1inch/limit-order-settlement-v1": "git+https://github.com/1inch/limit-order-settlement.git#1.0.0",
     "@matterlabs/hardhat-zksync-deploy": "1.1.1",
     "@matterlabs/hardhat-zksync-solc": "1.0.5",
     "@matterlabs/hardhat-zksync-verify": "1.2.1",
@@ -66,7 +65,7 @@
     "solc": "0.8.23",
     "solhint": "3.6.2",
     "solidity-coverage": "0.8.5",
-    "solidity-docgen": "0.6.0-beta.35",
+    "solidity-docgen": "0.5.17",
     "zksync-ethers": "6.0.0"
   }
 }

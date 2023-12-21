@@ -6,8 +6,8 @@ const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
 const { constants, time, expect, ether, trim0x, deployContract } = require('@1inch/solidity-utils');
 const { deploySwapTokens, getChainId } = require('./helpers/fixtures');
 const { buildAuctionDetails } = require('./helpers/fusionUtils');
-const { buildOrder, signOrder, buildTakerTraits, buildMakerTraits, compactSignature } = require('@1inch/limit-order-protocol-contract/test/helpers/orderUtils');
-const settlementV1Utils = require('@1inch/limit-order-settlement-v1/test/helpers/orderUtils');
+const { buildOrder: buildOrderV1, buildSalt: buildSaltV1, signOrder: signOrderV1 } = require('./helpers/orderUtilsV1');
+const { buildOrder, signOrder, buildTakerTraits, buildMakerTraits } = require('@1inch/limit-order-protocol-contract/test/helpers/orderUtils');
 
 const RESOLVERS_NUMBER = 10;
 
@@ -69,23 +69,6 @@ describe('MeasureGas', function () {
     }
 
     describe('SettlementV1', function () {
-        // Patch wallet._signTypedData in settlementV1Utils
-        settlementV1Utils.signOrder = async (order, chainId, target, wallet) => {
-            const Order = [
-                { name: 'salt', type: 'uint256' },
-                { name: 'makerAsset', type: 'address' },
-                { name: 'takerAsset', type: 'address' },
-                { name: 'maker', type: 'address' },
-                { name: 'receiver', type: 'address' },
-                { name: 'allowedSender', type: 'address' },
-                { name: 'makingAmount', type: 'uint256' },
-                { name: 'takingAmount', type: 'uint256' },
-                { name: 'offsets', type: 'uint256' },
-                { name: 'interactions', type: 'bytes' },
-            ];
-            return await wallet.signTypedData({ name: settlementV1Utils.name, version: settlementV1Utils.version, chainId, verifyingContract: target }, { Order }, order);
-        };
-
         it('1 fill for 1 order', async function () {
             const { contracts: { dai, weth, lopv3, settlement, resolversV1 }, accounts: { owner, alice }, others: { chainId } } = await loadFixture(initContractsAndApproves);
 
@@ -93,9 +76,9 @@ describe('MeasureGas', function () {
             const takerAsset = await weth.getAddress();
             const makingAmount = ether('100');
             const takingAmount = ether('0.1');
-            const order = await settlementV1Utils.buildOrder(
+            const order = await buildOrderV1(
                 {
-                    salt: settlementV1Utils.buildSalt({
+                    salt: buildSaltV1({
                         orderStartTime: await time.latest(),
                         initialStartRate: 0,
                         duration: time.duration.hours(1),
@@ -112,7 +95,7 @@ describe('MeasureGas', function () {
                     publicCutOff: time.duration.minutes(30),
                 },
             );
-            const signature = await settlementV1Utils.signOrder(order, chainId, await lopv3.getAddress(), alice);
+            const signature = await signOrderV1(order, chainId, await lopv3.getAddress(), alice);
 
             const interaction =
                 await settlement.getAddress() +
@@ -148,9 +131,9 @@ describe('MeasureGas', function () {
             const orders = [];
             const signatures = [];
             for (let i = 0; i < 4; i++) {
-                orders[i] = await settlementV1Utils.buildOrder(
+                orders[i] = await buildOrderV1(
                     {
-                        salt: settlementV1Utils.buildSalt({
+                        salt: buildSaltV1({
                             orderStartTime: await time.latest(),
                             initialStartRate: 0,
                             duration: time.duration.hours(1),
@@ -167,11 +150,11 @@ describe('MeasureGas', function () {
                         publicCutOff: time.duration.minutes(30),
                     },
                 );
-                signatures[i] = await settlementV1Utils.signOrder(orders[i], chainId, await lopv3.getAddress(), alice);
+                signatures[i] = await signOrderV1(orders[i], chainId, await lopv3.getAddress(), alice);
             }
-            orders[4] = await settlementV1Utils.buildOrder(
+            orders[4] = await buildOrderV1(
                 {
-                    salt: settlementV1Utils.buildSalt({
+                    salt: buildSaltV1({
                         orderStartTime: await time.latest(),
                         initialStartRate: 0,
                         duration: time.duration.hours(1),
@@ -188,7 +171,7 @@ describe('MeasureGas', function () {
                     publicCutOff: time.duration.minutes(30),
                 },
             );
-            signatures[4] = await settlementV1Utils.signOrder(orders[4], chainId, await lopv3.getAddress(), owner);
+            signatures[4] = await signOrderV1(orders[4], chainId, await lopv3.getAddress(), owner);
 
             // Encode data for fillingg orders
             const fillOrdersToData = [];
@@ -328,7 +311,7 @@ describe('MeasureGas', function () {
                 )),
             });
 
-            const { r, vs } = compactSignature(await signOrder(order, chainId, await lopv4.getAddress(), alice));
+            const { r, yParityAndS: vs } = ethers.Signature.from(await signOrder(order, chainId, await lopv4.getAddress(), alice));
             await weth.approve(lopv4, ether('0.1'));
 
             const takerTraits = buildTakerTraits({
@@ -373,7 +356,7 @@ describe('MeasureGas', function () {
                 )),
             });
 
-            const { r, vs } = compactSignature(await signOrder(order, chainId, await lopv4.getAddress(), alice));
+            const { r, yParityAndS: vs } = ethers.Signature.from(await signOrder(order, chainId, await lopv4.getAddress(), alice));
 
             const takerTraits = buildTakerTraits({
                 makingAmount: true,
@@ -435,7 +418,7 @@ describe('MeasureGas', function () {
                 )),
             });
 
-            const { r, vs } = compactSignature(await signOrder(order, chainId, await lopv4.getAddress(), alice));
+            const { r, yParityAndS: vs } = ethers.Signature.from(await signOrder(order, chainId, await lopv4.getAddress(), alice));
 
             const takerTraits = buildTakerTraits({
                 makingAmount: true,

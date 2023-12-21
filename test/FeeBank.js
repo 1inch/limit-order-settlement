@@ -14,7 +14,7 @@ describe('FeeBank', function () {
         const matcher = await deployContract('SettlementExtensionMock', [lopv4, inch]);
 
         const FeeBank = await ethers.getContractFactory('FeeBank');
-        const feeBank = FeeBank.attach(await matcher.feeBank());
+        const feeBank = FeeBank.attach(await matcher.FEE_BANK());
 
         await inch.transfer(alice, ether('100'));
         await inch.approve(feeBank, ether('1000'));
@@ -197,8 +197,8 @@ describe('FeeBank', function () {
 
         it('should not work by non-owner', async function () {
             const { contracts: { feeBank }, accounts: { owner, alice } } = await loadFixture(initContracts);
-            await expect(feeBank.connect(alice).gatherFees([owner.address, alice.address])).to.be.revertedWith(
-                'Ownable: caller is not the owner',
+            await expect(feeBank.connect(alice).gatherFees([owner.address, alice.address])).to.be.revertedWithCustomError(
+                feeBank, 'OwnableUnauthorizedAccount',
             );
         });
     });

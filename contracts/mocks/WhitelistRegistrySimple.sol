@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity 0.8.19;
+pragma solidity 0.8.23;
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { UniERC20 } from "@1inch/solidity-utils/contracts/libraries/UniERC20.sol";
@@ -16,6 +16,8 @@ contract WhitelistRegistrySimple is Ownable {
     event StatusUpdate(address indexed addr, bool status);
 
     mapping(address resolver => bool isWhitelisted) public isWhitelisted;
+
+    constructor() Ownable(msg.sender) {} // solhint-disable-line no-empty-blocks
 
     function batchSetStatus(address[] calldata addresses, bool[] calldata statuses) external onlyOwner {
         uint256 length = addresses.length;

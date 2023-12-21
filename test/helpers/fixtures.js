@@ -35,7 +35,7 @@ async function initContractsForSettlement() {
     const settlement = await deployContract('SettlementExtensionMock', [lopv4, inch]);
 
     const FeeBank = await ethers.getContractFactory('FeeBank');
-    const feeBank = FeeBank.attach(await settlement.feeBank());
+    const feeBank = FeeBank.attach(await settlement.FEE_BANK());
 
     const ResolverMock = await ethers.getContractFactory('ResolverMock');
     const resolver = await ResolverMock.deploy(settlement, lopv4);

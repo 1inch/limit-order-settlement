@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity 0.8.19;
+pragma solidity 0.8.23;
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { Address, AddressLib} from "@1inch/solidity-utils/contracts/libraries/AddressLib.sol";
@@ -20,19 +20,19 @@ contract ResolverMock is ITakerInteraction {
 
     bytes1 private constant _FINALIZE_INTERACTION = 0x01;
 
-    address private immutable _settlementExtension;
-    IOrderMixin private immutable _lopv4;
-    address private immutable _owner;
+    address private immutable _SETTLEMENT_EXTENSION;
+    IOrderMixin private immutable _LOPV4;
+    address private immutable _OWNER;
 
     modifier onlyOwner () {
-        if (msg.sender != _owner) revert OnlyOwner();
+        if (msg.sender != _OWNER) revert OnlyOwner();
         _;
     }
 
     constructor(address settlementExtension, IOrderMixin limitOrderProtocol) {
-        _settlementExtension = settlementExtension;
-        _lopv4 = limitOrderProtocol;
-        _owner = msg.sender;
+        _SETTLEMENT_EXTENSION = settlementExtension;
+        _LOPV4 = limitOrderProtocol;
+        _OWNER = msg.sender;
     }
 
     function approve(IERC20 token, address to) external onlyOwner {
@@ -51,7 +51,7 @@ contract ResolverMock is ITakerInteraction {
 
     function _settleOrders(bytes calldata data) internal {
         // solhint-disable-next-line avoid-low-level-calls
-        (bool success,) = address(_lopv4).call(data);
+        (bool success,) = address(_LOPV4).call(data);
         if (!success) RevertReasonForwarder.reRevert();
     }
 
@@ -65,7 +65,7 @@ contract ResolverMock is ITakerInteraction {
         uint256 /* remainingMakingAmount */,
         bytes calldata extraData
     ) public {
-        if (msg.sender != address(_lopv4)) revert OnlyLOP();
+        if (msg.sender != address(_LOPV4)) revert OnlyLOP();
         if (taker != address(this)) revert NotTaker();
 
         unchecked {
@@ -97,7 +97,7 @@ contract ResolverMock is ITakerInteraction {
                 bytes calldata permit = packedPermits[start:start + length];
                 address owner = address(bytes20(permit));
                 IERC20 token = IERC20(address(bytes20(permit[20:])));
-                token.safePermit(owner, address(_lopv4), permit[40:]);
+                token.safePermit(owner, address(_LOPV4), permit[40:]);
                 start += length;
             }
         }

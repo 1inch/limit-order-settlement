@@ -1,11 +1,14 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity 0.8.19;
+pragma solidity 0.8.23;
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 contract GovernanceMothership is ERC20 {
+    error EmptyStake();
+    error EmptyUnstake();
+
     IERC20 public inchToken;
 
     constructor (IERC20 inchToken_) ERC20("1INCH Token (Staked)", "st1INCH") {
@@ -13,7 +16,7 @@ contract GovernanceMothership is ERC20 {
     }
 
     function stake(uint256 amount) external {
-        require(amount > 0, "Empty stake is not allowed");
+        if (amount == 0) revert EmptyStake();
 
         inchToken.transferFrom(msg.sender, address(this), amount);
         _mint(msg.sender, amount);
@@ -22,7 +25,7 @@ contract GovernanceMothership is ERC20 {
     }
 
     function unstake(uint256 amount) external {
-        require(amount > 0, "Empty unstake is not allowed");
+        if (amount == 0) revert EmptyUnstake();
 
         _burn(msg.sender, amount);
         // _notifyFor(msg.sender, balanceOf(msg.sender));

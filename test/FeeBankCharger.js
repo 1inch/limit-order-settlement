@@ -10,7 +10,7 @@ describe('FeeBankCharger', function () {
         const charger = await deployContract('FeeBankCharger', [inch]);
 
         const FeeBank = await ethers.getContractFactory('FeeBank');
-        const feeBank = FeeBank.attach(await charger.feeBank());
+        const feeBank = FeeBank.attach(await charger.FEE_BANK());
 
         await inch.transfer(alice, ether('100'));
         await inch.approve(feeBank, ether('1000'));
