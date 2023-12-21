@@ -33,10 +33,10 @@
     "test:ci": "hardhat test"
   },
   "dependencies": {
-    "@1inch/delegating": "https://github.com/1inch/delegating.git#feature/oz_5",
+    "@1inch/delegating": "1.1.0",
     "@1inch/limit-order-protocol-contract": "4.0.0-prerelease-16",
     "@1inch/solidity-utils": "3.5.5",
-    "@1inch/st1inch": "https://github.com/1inch/st1inch.git#feature/oz_5",
+    "@1inch/st1inch": "2.2.0",
     "@openzeppelin/contracts": "5.0.1"
   },
   "devDependencies": {

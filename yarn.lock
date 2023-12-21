@@ -13,15 +13,15 @@
     "@openzeppelin/contracts" "4.8.0"
     hardhat-dependency-compiler "1.1.3"
 
-"@1inch/delegating@https://github.com/1inch/delegating.git#feature/oz_5":
-  version "1.0.2"
-  resolved "https://github.com/1inch/delegating.git#7a0cd341a8786ad4c9fde4a64b8afc88f686c8b0"
+"@1inch/delegating@1.1.0":
+  version "1.1.0"
+  resolved "https://registry.yarnpkg.com/@1inch/delegating/-/delegating-1.1.0.tgz#d7a14c5033ffa297e92d78c96b71aecc5162795f"
+  integrity sha512-7FGsu7xRYy/hEhOmlj60rJ4yrhtEWPX6ikqq7dbadWZpdqg+Mfe3rHOUZ2sV/YgRLZu4N+VDNzKhv0mws/oo8g==
   dependencies:
-    "@1inch/farming" "https://github.com/1inch/farming.git#feature/bump-solidity"
+    "@1inch/farming" "3.2.0"
     "@1inch/solidity-utils" "3.5.5"
     "@1inch/token-plugins" "1.3.0"
     "@openzeppelin/contracts" "5.0.1"
-    hardhat-dependency-compiler "1.1.3"
 
 "@1inch/erc20-pods@0.0.16":
   version "0.0.16"
@@ -48,9 +48,10 @@
     "@1inch/solidity-utils" "2.2.5"
     "@openzeppelin/contracts" "4.8.0"
 
-"@1inch/farming@https://github.com/1inch/farming.git#feature/bump-solidity":
-  version "3.3.0"
-  resolved "https://github.com/1inch/farming.git#eba1470c1d55e7ce086734bcb98d71a40e1433dd"
+"@1inch/farming@3.2.0":
+  version "3.2.0"
+  resolved "https://registry.yarnpkg.com/@1inch/farming/-/farming-3.2.0.tgz#0091a713f7df3c99050e7a98b5d168ddc83fb3de"
+  integrity sha512-5XM2hH5fC5pkCYW6diCl2/TuaitPHQbkqfIOFgXyBUFqKey9+ZaKG/qtKTtS8r2S2SACjUiM54lczVMw4meZfg==
   dependencies:
     "@1inch/solidity-utils" "3.5.5"
     "@1inch/token-plugins" "1.3.0"
@@ -141,11 +142,12 @@
     hardhat "2.19.2"
     hardhat-deploy "0.11.44"
 
-"@1inch/st1inch@https://github.com/1inch/st1inch.git#feature/oz_5":
-  version "2.1.2"
-  resolved "https://github.com/1inch/st1inch.git#a96e918f3050d9374d584ae61d282cf8bdb9c036"
+"@1inch/st1inch@2.2.0":
+  version "2.2.0"
+  resolved "https://registry.yarnpkg.com/@1inch/st1inch/-/st1inch-2.2.0.tgz#3dc39ee49d6954613dc951233afdd0c766864507"
+  integrity sha512-bsle68chQS/d2K1//1S6u9g/Yq3so1qtuQEXIJw9vs74lZbdpLUcgMTQ9MTmGaCfs4cn2Da2MmTKSLX/yXMnog==
   dependencies:
-    "@1inch/farming" "https://github.com/1inch/farming.git#feature/bump-solidity"
+    "@1inch/farming" "3.2.0"
     "@1inch/solidity-utils" "3.5.5"
     "@1inch/token-plugins" "1.3.0"
     "@openzeppelin/contracts" "5.0.1"
