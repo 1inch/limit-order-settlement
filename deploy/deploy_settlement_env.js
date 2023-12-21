@@ -14,7 +14,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
 
     const { deployer } = await getNamedAccounts();
 
-    const st1inch = (await ethers.getContractFactory('St1inch')).attach(ST1INCH_ADDR); // eslint-disable-line no-unused-vars
+    const st1inch = (await ethers.getContractFactory('St1inch')).attach(ST1INCH_ADDR);
 
     const settlement = await deployAndGetContract({
         contractName: 'SettlementExtension',
@@ -33,33 +33,26 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         });
     }
 
-    // const delegation = await deployAndGetContract({
-    //     contractName: 'PowerPod',
-    //     constructorArgs: ['Delegated st1INCH', 'dst1INCH', await st1inch.getAddress()],
-    //     deployments,
-    //     deployer,
-    // });
+    const delegation = await deployAndGetContract({
+        contractName: 'PowerPod',
+        constructorArgs: ['Delegated st1INCH', 'dst1INCH', await st1inch.getAddress()],
+        deployments,
+        deployer,
+    });
 
-    // /* const resolverMetadata = */ await deployAndGetContract({
-    //     contractName: 'ResolverMetadata',
-    //     constructorArgs: [await delegation.getAddress()],
-    //     deployments,
-    //     deployer,
-    // });
+    await deployAndGetContract({
+        contractName: 'ResolverMetadata',
+        constructorArgs: [await delegation.getAddress()],
+        deployments,
+        deployer,
+    });
 
-    // const whitelist = await deployAndGetContract({
-    //     contractName: 'WhitelistRegistry',
-    //     constructorArgs: [await delegation.getAddress(), '1000'], // 1000 = 10% threshold
-    //     deployments,
-    //     deployer,
-    // });
-
-    // /* const whitelistHelper = */ await deployAndGetContract({
-    //     contractName: 'WhitelistHelper',
-    //     constructorArgs: [await whitelist.getAddress()],
-    //     deployments,
-    //     deployer,
-    // });
+    await deployAndGetContract({
+        contractName: 'WhitelistRegistry',
+        constructorArgs: [await delegation.getAddress(), '1000'], // 1000 = 10% threshold
+        deployments,
+        deployer,
+    });
 };
 
 module.exports.skip = async () => true;
