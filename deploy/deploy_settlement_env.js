@@ -1,6 +1,6 @@
 const hre = require('hardhat');
 const { getChainId, ethers } = hre;
-const { idempotentDeployGetContract } = require('../test/helpers/utils.js');
+const { deployAndGetContract } = require('@1inch/solidity-utils');
 
 const INCH_ADDR = '0x111111111117dC0aa78b770fA6A738034120C302';
 const ST1INCH_ADDR = '0x9A0C8Ff858d273f57072D714bca7411D717501D7';
@@ -16,61 +16,43 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
 
     const st1inch = (await ethers.getContractFactory('St1inch')).attach(ST1INCH_ADDR);
 
-    const settlement = await idempotentDeployGetContract(
-        'Settlement',
-        [ROUTER_V5_ADDR, INCH_ADDR],
+    const settlement = await deployAndGetContract({
+        contractName: 'SettlementExtension',
+        constructorArgs: [ROUTER_V5_ADDR, INCH_ADDR],
         deployments,
         deployer,
-        'Settlement',
-        // true,
-    );
+        deploymentName: 'Settlement',
+    });
 
     const feeBankAddress = await settlement.feeBank();
     console.log('FeeBank deployed to:', feeBankAddress);
-
     if (chainId !== '31337') {
         await hre.run('verify:verify', {
             address: feeBankAddress,
-            constructorArguments: [settlement.address, INCH_ADDR, deployer],
+            constructorArguments: [await settlement.getAddress(), INCH_ADDR, deployer],
         });
     }
 
-    const delegation = await idempotentDeployGetContract(
-        'PowerPod',
-        ['Delegated st1INCH', 'dst1INCH', st1inch.address],
+    const delegation = await deployAndGetContract({
+        contractName: 'PowerPod',
+        constructorArgs: ['Delegated st1INCH', 'dst1INCH', await st1inch.getAddress()],
         deployments,
         deployer,
-        'PowerPod',
-        // true,
-    );
+    });
 
-    /* const resolverMetadata = */ await idempotentDeployGetContract(
-        'ResolverMetadata',
-        [delegation.address],
+    await deployAndGetContract({
+        contractName: 'ResolverMetadata',
+        constructorArgs: [await delegation.getAddress()],
         deployments,
         deployer,
-        'ResolverMetadata',
-        // true,
-    );
+    });
 
-    const whitelist = await idempotentDeployGetContract(
-        'WhitelistRegistry',
-        // 1000 = 10% threshold
-        [delegation.address, '1000'],
+    await deployAndGetContract({
+        contractName: 'WhitelistRegistry',
+        constructorArgs: [await delegation.getAddress(), '1000'], // 1000 = 10% threshold
         deployments,
         deployer,
-        'WhitelistRegistry',
-        // true,
-    );
-
-    /* const whitelistHelper = */ await idempotentDeployGetContract(
-        'WhitelistHelper',
-        [whitelist.address],
-        deployments,
-        deployer,
-        'WhitelistHelper',
-        // true,
-    );
+    });
 };
 
 module.exports.skip = async () => true;

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity 0.8.19;
+pragma solidity 0.8.23;
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
@@ -27,11 +27,11 @@ contract SettlementExtension is IPostInteraction, IAmountGetter, FeeBankCharger 
     uint256 private constant _ORDER_FEE_BASE_POINTS = 1e15;
     uint256 private constant _BASE_POINTS = 10_000_000; // 100%
 
-    IOrderMixin private immutable _limitOrderProtocol;
+    IOrderMixin private immutable _LIMIT_ORDER_PROTOCOL;
 
     /// @dev Modifier to check if the caller is the limit order protocol contract.
     modifier onlyLimitOrderProtocol {
-        if (msg.sender != address(_limitOrderProtocol)) revert OnlyLimitOrderProtocol();
+        if (msg.sender != address(_LIMIT_ORDER_PROTOCOL)) revert OnlyLimitOrderProtocol();
         _;
     }
 
@@ -43,7 +43,7 @@ contract SettlementExtension is IPostInteraction, IAmountGetter, FeeBankCharger 
     constructor(IOrderMixin limitOrderProtocol, IERC20 token)
         FeeBankCharger(token)
     {
-        _limitOrderProtocol = limitOrderProtocol;
+        _LIMIT_ORDER_PROTOCOL = limitOrderProtocol;
     }
 
     function getMakingAmount(
@@ -69,7 +69,7 @@ contract SettlementExtension is IPostInteraction, IAmountGetter, FeeBankCharger 
         bytes calldata extraData
     ) external view returns (uint256) {
         uint256 rateBump = _getRateBump(extraData);
-        return Math.mulDiv(order.takingAmount, makingAmount * (_BASE_POINTS + rateBump), order.makingAmount * _BASE_POINTS, Math.Rounding.Up);
+        return Math.mulDiv(order.takingAmount, makingAmount * (_BASE_POINTS + rateBump), order.makingAmount * _BASE_POINTS, Math.Rounding.Ceil);
     }
 
     function postInteraction(

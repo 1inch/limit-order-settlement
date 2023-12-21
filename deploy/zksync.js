@@ -16,16 +16,16 @@ module.exports = async function (hre) {
 
     const Settlement = await deployer.loadArtifact('Settlement');
     const settlement = await deployer.deploy(Settlement, [ROUTER, USDC]);
-    console.log(`${Settlement.contractName} was deployed to ${settlement.address}`);
+    console.log(`${Settlement.contractName} was deployed to ${await settlement.getAddress()}`);
     if (await hre.getChainId() !== '31337') {
         await hre.run('verify:verify', {
-            address: settlement.address,
+            address: await settlement.getAddress(),
             constructorArguments: [ROUTER, USDC],
         });
     }
 
     const settlementStaging = await deployer.deploy(Settlement, [ROUTER, USDC]);
-    console.log(`${Settlement.contractName}Staging was deployed to ${settlementStaging.address}`);
+    console.log(`${Settlement.contractName}Staging was deployed to ${await settlementStaging.getAddress()}`);
 };
 
 module.exports.skip = async () => true;

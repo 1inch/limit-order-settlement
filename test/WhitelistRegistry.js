@@ -1,7 +1,7 @@
-const { expect, constants, ether, trackReceivedTokenAndTx, deployContract } = require('@1inch/solidity-utils');
+const { expect, constants, ether, deployContract } = require('@1inch/solidity-utils');
 const { ethers } = require('hardhat');
 const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
-const { expBase } = require('./helpers/utils');
+const { expBase } = require('./helpers/fusionUtils');
 
 const BASIS_POINTS = 10000; // 100%
 const PERCENTAGE_THRESHOLD = 1000; // 10%
@@ -23,9 +23,9 @@ describe('WhitelistRegistry', function () {
 
     async function initContracts() {
         const accounts = await ethers.getSigners();
-        const st1inch = await deployContract('St1inch', [constants.ZERO_ADDRESS, expBase, accounts[0].address]);
-        const rewardableDelegationPod = await deployContract('PowerPodMock', ['reward1INCH', 'reward1INCH', st1inch.address]);
-        const whitelistRegistry = await deployContract('WhitelistRegistry', [rewardableDelegationPod.address, PERCENTAGE_THRESHOLD]);
+        const st1inch = await deployContract('St1inch', [constants.ZERO_ADDRESS, expBase, accounts[0]]);
+        const rewardableDelegationPod = await deployContract('PowerPodMock', ['reward1INCH', 'reward1INCH', st1inch]);
+        const whitelistRegistry = await deployContract('WhitelistRegistry', [rewardableDelegationPod, PERCENTAGE_THRESHOLD]);
         return {
             contracts: { rewardableDelegationPod, whitelistRegistry },
             accounts,
@@ -36,7 +36,7 @@ describe('WhitelistRegistry', function () {
         it('check storage vars', async function () {
             const { contracts: { rewardableDelegationPod, whitelistRegistry } } = await loadFixture(initContracts);
             expect(await whitelistRegistry.resolverPercentageThreshold()).to.equal(PERCENTAGE_THRESHOLD);
-            expect(await whitelistRegistry.token()).to.equal(rewardableDelegationPod.address);
+            expect(await whitelistRegistry.TOKEN()).to.equal(await rewardableDelegationPod.getAddress());
         });
     });
 
@@ -53,7 +53,7 @@ describe('WhitelistRegistry', function () {
             const newThreshold = 100; // 1%
             await expect(
                 whitelistRegistry.connect(accounts[1]).setResolverPercentageThreshold(newThreshold),
-            ).to.be.revertedWith('Ownable: caller is not the owner');
+            ).to.be.revertedWithCustomError(whitelistRegistry, 'OwnableUnauthorizedAccount');
             expect(await whitelistRegistry.resolverPercentageThreshold()).to.equal(PERCENTAGE_THRESHOLD);
         });
     });
@@ -63,28 +63,27 @@ describe('WhitelistRegistry', function () {
             const { contracts: { whitelistRegistry }, accounts } = await loadFixture(initContracts);
             const amount = '0x100';
             await ethers.provider.send('hardhat_setBalance', [
-                whitelistRegistry.address,
+                await whitelistRegistry.getAddress(),
                 amount,
             ]);
-            expect(await ethers.provider.getBalance(whitelistRegistry.address)).to.be.equal(amount);
-            const rescueFunds = () => whitelistRegistry.rescueFunds(constants.ZERO_ADDRESS, amount / 2);
-            const [diff] = await trackReceivedTokenAndTx(ethers.provider, { address: constants.ZERO_ADDRESS }, accounts[0].address, rescueFunds);
-            expect(diff).to.be.equal(amount / 2);
-            expect(await ethers.provider.getBalance(whitelistRegistry.address)).to.be.equal(amount / 2);
+            expect(await ethers.provider.getBalance(whitelistRegistry)).to.be.equal(amount);
+            const tx = whitelistRegistry.rescueFunds(constants.ZERO_ADDRESS, amount / 2);
+            await expect(tx).to.changeEtherBalance(accounts[0], amount / 2);
+            expect(await ethers.provider.getBalance(whitelistRegistry)).to.be.equal(amount / 2);
         });
 
         it('should not rescue funds by non-owner', async function () {
             const { contracts: { whitelistRegistry }, accounts } = await loadFixture(initContracts);
             const amount = '0x100';
             await ethers.provider.send('hardhat_setBalance', [
-                whitelistRegistry.address,
+                await whitelistRegistry.getAddress(),
                 amount,
             ]);
-            expect(await ethers.provider.getBalance(whitelistRegistry.address)).to.be.equal(amount);
+            expect(await ethers.provider.getBalance(whitelistRegistry)).to.be.equal(amount);
             await expect(
                 whitelistRegistry.connect(accounts[1]).rescueFunds(constants.ZERO_ADDRESS, amount / 2),
-            ).to.be.revertedWith('Ownable: caller is not the owner');
-            expect(await ethers.provider.getBalance(whitelistRegistry.address)).to.be.equal(amount);
+            ).to.be.revertedWithCustomError(whitelistRegistry, 'OwnableUnauthorizedAccount');
+            expect(await ethers.provider.getBalance(whitelistRegistry)).to.be.equal(amount);
         });
     });
 
@@ -94,7 +93,7 @@ describe('WhitelistRegistry', function () {
                 const { contracts: { rewardableDelegationPod, whitelistRegistry }, accounts } = await loadFixture(initContracts);
                 expect(await rewardableDelegationPod.totalSupply()).to.equal(0);
                 for (let i = 1; i <= WHITELIST_LIMIT; ++i) {
-                    await rewardableDelegationPod.mint(accounts[i].address, RESOLVER_BALANCE);
+                    await rewardableDelegationPod.mint(accounts[i], RESOLVER_BALANCE);
                 }
                 for (let i = 1; i <= WHITELIST_LIMIT; ++i) {
                     await whitelistRegistry.connect(accounts[i]).register();
@@ -105,7 +104,7 @@ describe('WhitelistRegistry', function () {
             it('10/10 addresses, then fail to whitelist due to not enough balance, then move power and whitelist successfully', async function () {
                 const { contracts: { rewardableDelegationPod, whitelistRegistry }, accounts } = await loadFixture(initContracts);
                 for (let i = 1; i <= WHITELIST_LIMIT; ++i) {
-                    await rewardableDelegationPod.mint(accounts[i].address, RESOLVER_BALANCE);
+                    await rewardableDelegationPod.mint(accounts[i], RESOLVER_BALANCE);
                 }
                 for (let i = 1; i <= WHITELIST_LIMIT; ++i) {
                     await whitelistRegistry.connect(accounts[i]).register();
@@ -116,8 +115,8 @@ describe('WhitelistRegistry', function () {
                 ).to.be.revertedWithCustomError(whitelistRegistry, 'BalanceLessThanThreshold');
                 expect(await whitelistRegistry.getWhitelist()).to.not.contain(accounts[WHITELIST_LIMIT + 1].address);
 
-                await rewardableDelegationPod.burn(accounts[1].address, RESOLVER_BALANCE);
-                await rewardableDelegationPod.mint(accounts[WHITELIST_LIMIT + 1].address, RESOLVER_BALANCE);
+                await rewardableDelegationPod.burn(accounts[1], RESOLVER_BALANCE);
+                await rewardableDelegationPod.mint(accounts[WHITELIST_LIMIT + 1], RESOLVER_BALANCE);
 
                 await whitelistRegistry.connect(accounts[WHITELIST_LIMIT + 1]).register();
                 const whitelist = await whitelistRegistry.getWhitelist();
@@ -129,17 +128,17 @@ describe('WhitelistRegistry', function () {
                 const { contracts: { rewardableDelegationPod, whitelistRegistry }, accounts } = await loadFixture(initContracts);
                 const resolversNumber = WHITELIST_LIMIT / 2;
                 for (let i = 1; i <= resolversNumber; ++i) {
-                    await rewardableDelegationPod.mint(accounts[i].address, RESOLVER_BALANCE);
+                    await rewardableDelegationPod.mint(accounts[i], RESOLVER_BALANCE);
                 }
                 for (let i = 1; i <= resolversNumber; ++i) {
                     await whitelistRegistry.connect(accounts[i]).register();
                     expect(await whitelistRegistry.getWhitelist()).to.contain(accounts[i].address);
                 }
-                await rewardableDelegationPod.burn(accounts[3].address, RESOLVER_BALANCE / 2n);
+                await rewardableDelegationPod.burn(accounts[3], RESOLVER_BALANCE / 2n);
                 expect(await whitelistRegistry.getWhitelist()).to.contain(accounts[3].address);
                 await whitelistRegistry.clean();
                 expect(await whitelistRegistry.getWhitelist()).to.contain(accounts[3].address);
-                await rewardableDelegationPod.mint(accounts[resolversNumber + 1].address, RESOLVER_BALANCE / 2n);
+                await rewardableDelegationPod.mint(accounts[resolversNumber + 1], RESOLVER_BALANCE / 2n);
                 await whitelistRegistry.connect(accounts[resolversNumber + 1]).register();
                 const whitelist = await whitelistRegistry.getWhitelist();
                 expect(whitelist).to.contain(accounts[3].address);
@@ -150,17 +149,17 @@ describe('WhitelistRegistry', function () {
                 const { contracts: { rewardableDelegationPod, whitelistRegistry }, accounts } = await loadFixture(initContracts);
                 const resolversNumber = WHITELIST_LIMIT / 2;
                 for (let i = 1; i <= resolversNumber; ++i) {
-                    await rewardableDelegationPod.mint(accounts[i].address, RESOLVER_BALANCE);
+                    await rewardableDelegationPod.mint(accounts[i], RESOLVER_BALANCE);
                 }
                 for (let i = 1; i <= resolversNumber; ++i) {
                     await whitelistRegistry.connect(accounts[i]).register();
                     expect(await whitelistRegistry.getWhitelist()).to.contain(accounts[i].address);
                 }
-                await rewardableDelegationPod.burn(accounts[3].address, RESOLVER_BALANCE / 4n * 3n);
+                await rewardableDelegationPod.burn(accounts[3], RESOLVER_BALANCE / 4n * 3n);
                 expect(await whitelistRegistry.getWhitelist()).to.contain(accounts[3].address);
                 await whitelistRegistry.clean();
                 expect(await whitelistRegistry.getWhitelist()).to.not.contain(accounts[3].address);
-                await rewardableDelegationPod.mint(accounts[resolversNumber + 1].address, RESOLVER_BALANCE / 2n);
+                await rewardableDelegationPod.mint(accounts[resolversNumber + 1], RESOLVER_BALANCE / 2n);
                 await whitelistRegistry.connect(accounts[resolversNumber + 1]).register();
                 await expect(
                     whitelistRegistry.connect(accounts[3]).register(),
@@ -174,7 +173,7 @@ describe('WhitelistRegistry', function () {
         describe('should fail to whitelist', function () {
             it('due to zero balance', async function () {
                 const { contracts: { rewardableDelegationPod, whitelistRegistry }, accounts } = await loadFixture(initContracts);
-                expect(await rewardableDelegationPod.balanceOf(accounts[1].address)).to.be.equal(0n);
+                expect(await rewardableDelegationPod.balanceOf(accounts[1])).to.be.equal(0n);
                 await expect(whitelistRegistry.connect(accounts[1]).register()).to.be.revertedWithCustomError(
                     whitelistRegistry,
                     'BalanceLessThanThreshold',
@@ -185,7 +184,7 @@ describe('WhitelistRegistry', function () {
             it('due to percentage lower than threshold', async function () {
                 const { contracts: { rewardableDelegationPod, whitelistRegistry }, accounts } = await loadFixture(initContracts);
                 // increasing total supply to avoid multiplying by zero
-                await rewardableDelegationPod.mint(accounts[0].address, RESOLVER_BALANCE);
+                await rewardableDelegationPod.mint(accounts[0], RESOLVER_BALANCE);
                 await expect(whitelistRegistry.connect(accounts[1]).register()).to.be.revertedWithCustomError(
                     whitelistRegistry,
                     'BalanceLessThanThreshold',
@@ -194,7 +193,7 @@ describe('WhitelistRegistry', function () {
 
             it('the same address twice', async function () {
                 const { contracts: { rewardableDelegationPod, whitelistRegistry }, accounts } = await loadFixture(initContracts);
-                await rewardableDelegationPod.mint(accounts[1].address, RESOLVER_BALANCE);
+                await rewardableDelegationPod.mint(accounts[1], RESOLVER_BALANCE);
                 await whitelistRegistry.connect(accounts[1]).register();
                 await expect(whitelistRegistry.connect(accounts[1]).register()).to.be.revertedWithCustomError(
                     whitelistRegistry,
@@ -207,9 +206,9 @@ describe('WhitelistRegistry', function () {
     describe('promote', function () {
         it('should register and promote provided address', async function () {
             const { contracts: { rewardableDelegationPod, whitelistRegistry }, accounts } = await loadFixture(initContracts);
-            await rewardableDelegationPod.mint(accounts[0].address, RESOLVER_BALANCE);
+            await rewardableDelegationPod.mint(accounts[0], RESOLVER_BALANCE);
             await whitelistRegistry.register();
-            await whitelistRegistry.promote(1, accounts[1].address);
+            await whitelistRegistry.promote(1, accounts[1]);
             const promotees = await whitelistRegistry.getPromotees(1);
             expect(promotees).to.not.contain(accounts[0].address);
             expect(promotees).to.contain(accounts[1].address);
@@ -217,17 +216,17 @@ describe('WhitelistRegistry', function () {
 
         it('should change promotee', async function () {
             const { contracts: { rewardableDelegationPod, whitelistRegistry }, accounts } = await loadFixture(initContracts);
-            await rewardableDelegationPod.mint(accounts[0].address, RESOLVER_BALANCE);
+            await rewardableDelegationPod.mint(accounts[0], RESOLVER_BALANCE);
             await whitelistRegistry.register();
             expect(await whitelistRegistry.getWhitelist()).to.contain(accounts[0].address);
             await expect(
-                whitelistRegistry.promote(1, accounts[1].address),
+                whitelistRegistry.promote(1, accounts[1]),
             ).to.emit(whitelistRegistry, 'Promotion').withArgs(accounts[0].address, 1, accounts[1].address);
             let promotees = await whitelistRegistry.getPromotees(1);
             expect(promotees).to.not.contain(accounts[0].address);
             expect(promotees).to.contain(accounts[1].address);
             await expect(
-                whitelistRegistry.promote(1, accounts[2].address),
+                whitelistRegistry.promote(1, accounts[2]),
             ).to.emit(whitelistRegistry, 'Promotion').withArgs(accounts[0].address, 1, accounts[2].address);
             promotees = await whitelistRegistry.getPromotees(1);
             expect(promotees).to.not.contain(accounts[1].address);
@@ -236,10 +235,10 @@ describe('WhitelistRegistry', function () {
 
         it('should delete promotee on removal', async function () {
             const { contracts: { rewardableDelegationPod, whitelistRegistry }, accounts } = await loadFixture(initContracts);
-            await rewardableDelegationPod.mint(accounts[0].address, RESOLVER_BALANCE);
+            await rewardableDelegationPod.mint(accounts[0], RESOLVER_BALANCE);
             await whitelistRegistry.register();
-            await whitelistRegistry.promote(1, accounts[1].address);
-            await rewardableDelegationPod.mint(accounts[2].address, RESOLVER_BALANCE * BigInt(WHITELIST_LIMIT));
+            await whitelistRegistry.promote(1, accounts[1]);
+            await rewardableDelegationPod.mint(accounts[2], RESOLVER_BALANCE * BigInt(WHITELIST_LIMIT));
             await whitelistRegistry.clean();
             const promotees = await whitelistRegistry.getPromotees(1);
             expect(promotees).to.not.contain(accounts[0].address);
@@ -248,15 +247,15 @@ describe('WhitelistRegistry', function () {
 
         it('should not register the same promote twice', async function () {
             const { contracts: { rewardableDelegationPod, whitelistRegistry }, accounts } = await loadFixture(initContracts);
-            await rewardableDelegationPod.mint(accounts[0].address, RESOLVER_BALANCE);
+            await rewardableDelegationPod.mint(accounts[0], RESOLVER_BALANCE);
             await whitelistRegistry.register();
-            await whitelistRegistry.promote(1, accounts[1].address);
+            await whitelistRegistry.promote(1, accounts[1]);
             const promotees = await whitelistRegistry.getPromotees(1);
             expect(promotees).to.not.contain(accounts[0].address);
             expect(promotees).to.contain(accounts[1].address);
 
             await expect(
-                whitelistRegistry.promote(1, accounts[1].address),
+                whitelistRegistry.promote(1, accounts[1]),
             ).to.be.revertedWithCustomError(whitelistRegistry, 'SamePromotee');
         });
     });
@@ -265,12 +264,12 @@ describe('WhitelistRegistry', function () {
         it('should remove from whitelist addresses which have not enough staked balance', async function () {
             const { contracts: { rewardableDelegationPod, whitelistRegistry }, accounts } = await loadFixture(initContracts);
             for (let i = 0; i < WHITELIST_LIMIT; ++i) {
-                await rewardableDelegationPod.mint(accounts[i].address, RESOLVER_BALANCE);
+                await rewardableDelegationPod.mint(accounts[i], RESOLVER_BALANCE);
                 await whitelistRegistry.connect(accounts[i]).register();
                 expect(await whitelistRegistry.getWhitelist()).to.contain(accounts[i].address);
                 if (i % 2 === 1) {
-                    await rewardableDelegationPod.burn(accounts[i].address, RESOLVER_BALANCE);
-                    await rewardableDelegationPod.mint(accounts[i - 1].address, RESOLVER_BALANCE);
+                    await rewardableDelegationPod.burn(accounts[i], RESOLVER_BALANCE);
+                    await rewardableDelegationPod.mint(accounts[i - 1], RESOLVER_BALANCE);
                 }
             }
             await whitelistRegistry.clean();
@@ -287,7 +286,7 @@ describe('WhitelistRegistry', function () {
         it('should not remove from whitelist addresses which have enough staked balance', async function () {
             const { contracts: { rewardableDelegationPod, whitelistRegistry }, accounts } = await loadFixture(initContracts);
             for (let i = 0; i < WHITELIST_LIMIT; ++i) {
-                await rewardableDelegationPod.mint(accounts[i].address, RESOLVER_BALANCE);
+                await rewardableDelegationPod.mint(accounts[i], RESOLVER_BALANCE);
                 await whitelistRegistry.connect(accounts[i]).register();
                 expect(await whitelistRegistry.getWhitelist()).to.contain(accounts[i].address);
             }
@@ -298,12 +297,12 @@ describe('WhitelistRegistry', function () {
         it('should remove from whitelist addresses with zero balance', async function () {
             const { contracts: { rewardableDelegationPod, whitelistRegistry }, accounts } = await loadFixture(initContracts);
             for (let i = 0; i < WHITELIST_LIMIT; ++i) {
-                await rewardableDelegationPod.mint(accounts[i].address, RESOLVER_BALANCE);
+                await rewardableDelegationPod.mint(accounts[i], RESOLVER_BALANCE);
                 await whitelistRegistry.connect(accounts[i]).register();
                 expect(await whitelistRegistry.getWhitelist()).to.contain(accounts[i].address);
             }
             for (let i = 0; i < WHITELIST_LIMIT; ++i) {
-                await rewardableDelegationPod.burn(accounts[i].address, RESOLVER_BALANCE);
+                await rewardableDelegationPod.burn(accounts[i], RESOLVER_BALANCE);
             }
             await whitelistRegistry.clean();
             expect(await whitelistRegistry.getWhitelist()).to.be.empty;
@@ -320,7 +319,7 @@ describe('WhitelistRegistry', function () {
     async function setupRegistry() {
         const { contracts: { rewardableDelegationPod, whitelistRegistry }, accounts } = await initContracts();
         for (let i = 0; i < MINT_COEFFICIENTS.length; ++i) {
-            await rewardableDelegationPod.mint(accounts[i].address, RESOLVER_BALANCE * BigInt(MINT_COEFFICIENTS[i]) / 100n);
+            await rewardableDelegationPod.mint(accounts[i], RESOLVER_BALANCE * BigInt(MINT_COEFFICIENTS[i]) / 100n);
             if (MINT_COEFFICIENTS[i] * BASIS_POINTS / 100 >= PERCENTAGE_THRESHOLD) {
                 await whitelistRegistry.connect(accounts[i]).register();
             }

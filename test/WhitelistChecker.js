@@ -16,13 +16,13 @@ describe('WhitelistChecker', function () {
                 accounts: { alice },
             } = setupData;
 
-            weth.transfer(resolver.address, ether('0.1'));
+            weth.transfer(resolver, ether('0.1'));
 
             const fillOrderToData = await buildCalldataForOrder({
                 orderData: {
                     maker: alice.address,
-                    makerAsset: dai.address,
-                    takerAsset: weth.address,
+                    makerAsset: await dai.getAddress(),
+                    takerAsset: await weth.getAddress(),
                     makingAmount: ether('100'),
                     takingAmount: ether('0.1'),
                     makerTraits: buildMakerTraits(),
@@ -50,13 +50,13 @@ describe('WhitelistChecker', function () {
 
             // Deploy another resolver
             const ResolverMock = await ethers.getContractFactory('ResolverMock');
-            const fakeResolver = await ResolverMock.deploy(settlement.address, lopv4.address);
+            const fakeResolver = await ResolverMock.deploy(settlement, lopv4);
 
             const fillOrderToData = await buildCalldataForOrder({
                 orderData: {
                     maker: alice.address,
-                    makerAsset: dai.address,
-                    takerAsset: weth.address,
+                    makerAsset: await dai.getAddress(),
+                    takerAsset: await weth.getAddress(),
                     makingAmount: ether('100'),
                     takingAmount: ether('0.1'),
                     makerTraits: buildMakerTraits(),
@@ -68,7 +68,7 @@ describe('WhitelistChecker', function () {
             });
 
             // Change resolver to fakeResolver in takerInteraction
-            const fakeFillOrderToData = fillOrderToData.slice(0, fillOrderToData.length - 86) + fakeResolver.address.substring(2) + fillOrderToData.slice(-46);
+            const fakeFillOrderToData = fillOrderToData.slice(0, fillOrderToData.length - 86) + fakeResolver.target.substring(2) + fillOrderToData.slice(-46);
 
             await expect(resolver.settleOrders(fakeFillOrderToData)).to.be.revertedWithCustomError(
                 resolver, 'NotTaker',
@@ -84,8 +84,8 @@ describe('WhitelistChecker', function () {
 
             const order = buildOrder({
                 maker: alice.address,
-                makerAsset: dai.address,
-                takerAsset: weth.address,
+                makerAsset: await dai.getAddress(),
+                takerAsset: await weth.getAddress(),
                 makingAmount: ether('100'),
                 takingAmount: ether('0.1'),
             });
@@ -106,13 +106,13 @@ describe('WhitelistChecker', function () {
                 accounts: { alice },
             } = setupData;
 
-            weth.transfer(resolver.address, ether('0.1'));
+            weth.transfer(resolver, ether('0.1'));
 
             const fillOrderToData = await buildCalldataForOrder({
                 orderData: {
                     maker: alice.address,
-                    makerAsset: dai.address,
-                    takerAsset: weth.address,
+                    makerAsset: await dai.getAddress(),
+                    takerAsset: await weth.getAddress(),
                     makingAmount: ether('100'),
                     takingAmount: ether('0.1'),
                     makerTraits: buildMakerTraits(),
@@ -121,7 +121,7 @@ describe('WhitelistChecker', function () {
                 setupData,
                 minReturn: ether('0.1'),
                 isInnermostOrder: true,
-                whitelistData: '0x' + resolver.address.substring(22),
+                whitelistData: '0x' + resolver.target.substring(22),
             });
 
             const txn = await resolver.settleOrders(fillOrderToData);

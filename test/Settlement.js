@@ -21,8 +21,8 @@ describe('Settlement', function () {
         const fillOrderToData1 = await buildCalldataForOrder({
             orderData: {
                 maker: alice.address,
-                makerAsset: weth.address,
-                takerAsset: dai.address,
+                makerAsset: await weth.getAddress(),
+                takerAsset: await dai.getAddress(),
                 makingAmount: ether('0.11'),
                 takingAmount: ether('100'),
                 makerTraits: buildMakerTraits(),
@@ -36,8 +36,8 @@ describe('Settlement', function () {
         const fillOrderToData0 = await buildCalldataForOrder({
             orderData: {
                 maker: owner.address,
-                makerAsset: dai.address,
-                takerAsset: weth.address,
+                makerAsset: await dai.getAddress(),
+                takerAsset: await weth.getAddress(),
                 makingAmount: ether('100'),
                 takingAmount: ether('0.1'),
                 makerTraits: buildMakerTraits(),
@@ -66,8 +66,8 @@ describe('Settlement', function () {
         const fillOrderToData1 = await buildCalldataForOrder({
             orderData: {
                 maker: alice.address,
-                makerAsset: weth.address,
-                takerAsset: dai.address,
+                makerAsset: await weth.getAddress(),
+                takerAsset: await dai.getAddress(),
                 makingAmount: ether('0.11'),
                 takingAmount: ether('100'),
                 makerTraits: buildMakerTraits(),
@@ -81,8 +81,8 @@ describe('Settlement', function () {
         const fillOrderToData0 = await buildCalldataForOrder({
             orderData: {
                 maker: owner.address,
-                makerAsset: dai.address,
-                takerAsset: weth.address,
+                makerAsset: await dai.getAddress(),
+                takerAsset: await weth.getAddress(),
                 makingAmount: ether('100'),
                 takingAmount: ether('0.1'),
                 makerTraits: buildMakerTraits(),
@@ -93,12 +93,12 @@ describe('Settlement', function () {
             additionalDataForSettlement: fillOrderToData1,
         });
 
-        await weth.connect(alice).approve(lopv4.address, ether('0.11'));
-        await dai.connect(owner).approve(lopv4.address, 0n); // remove direct approve
-        const permit0 = compressPermit(await getPermit(owner, dai, '1', chainId, lopv4.address, ether('100')));
+        await weth.connect(alice).approve(lopv4, ether('0.11'));
+        await dai.connect(owner).approve(lopv4, 0n); // remove direct approve
+        const permit0 = compressPermit(await getPermit(owner, dai, '1', chainId, await lopv4.getAddress(), ether('100')));
         const packing = (1n << 248n) | 1n;
         const txn = await resolver.settleOrdersWithPermits(fillOrderToData0, packing,
-            owner.address + trim0x(dai.address) + trim0x(permit0));
+            owner.address + trim0x(await dai.getAddress()) + trim0x(permit0));
         await expect(txn).to.changeTokenBalances(dai, [owner, alice, resolver], [ether('-100'), ether('100'), ether('0')]);
         await expect(txn).to.changeTokenBalances(weth, [owner, alice, resolver], [ether('0.1'), ether('-0.11'), ether('0.01')]);
     });
@@ -116,8 +116,8 @@ describe('Settlement', function () {
         const fillOrderToData1 = await buildCalldataForOrder({
             orderData: {
                 maker: alice.address,
-                makerAsset: weth.address,
-                takerAsset: dai.address,
+                makerAsset: await weth.getAddress(),
+                takerAsset: await dai.getAddress(),
                 makingAmount: ether('0.11'),
                 takingAmount: ether('100'),
                 makerTraits: buildMakerTraits({ usePermit2: true }),
@@ -131,8 +131,8 @@ describe('Settlement', function () {
         const fillOrderToData0 = await buildCalldataForOrder({
             orderData: {
                 maker: owner.address,
-                makerAsset: dai.address,
-                takerAsset: weth.address,
+                makerAsset: await dai.getAddress(),
+                takerAsset: await weth.getAddress(),
                 makingAmount: ether('100'),
                 takingAmount: ether('0.1'),
                 makerTraits: buildMakerTraits({ usePermit2: true }),
@@ -144,15 +144,15 @@ describe('Settlement', function () {
         });
 
         const permit2 = await permit2Contract();
-        await dai.approve(permit2.address, ether('100'));
-        await weth.connect(alice).approve(permit2.address, ether('0.11'));
-        await dai.connect(owner).approve(lopv4.address, 0n); // remove direct approve
-        await weth.connect(alice).approve(lopv4.address, 0n); // remove direct approve
-        const permit0 = compressPermit(await getPermit2(owner, dai.address, chainId, lopv4.address, ether('100')));
-        const permit1 = compressPermit(await getPermit2(alice, weth.address, chainId, lopv4.address, ether('0.11')));
+        await dai.approve(permit2, ether('100'));
+        await weth.connect(alice).approve(permit2, ether('0.11'));
+        await dai.connect(owner).approve(lopv4, 0n); // remove direct approve
+        await weth.connect(alice).approve(lopv4, 0n); // remove direct approve
+        const permit0 = compressPermit(await getPermit2(owner, await dai.getAddress(), chainId, await lopv4.getAddress(), ether('100')));
+        const permit1 = compressPermit(await getPermit2(alice, await weth.getAddress(), chainId, await lopv4.getAddress(), ether('0.11')));
         const packing = (2n << 248n) | 2n | 8n;
         const txn = await resolver.settleOrdersWithPermits(fillOrderToData0, packing,
-            owner.address + trim0x(dai.address) + trim0x(permit0) + trim0x(alice.address) + trim0x(weth.address) + trim0x(permit1));
+            owner.address + trim0x(await dai.getAddress()) + trim0x(permit0) + trim0x(alice.address) + trim0x(await weth.getAddress()) + trim0x(permit1));
         await expect(txn).to.changeTokenBalances(dai, [owner, alice, resolver], [ether('-100'), ether('100'), ether('0')]);
         await expect(txn).to.changeTokenBalances(weth, [owner, alice, resolver], [ether('0.1'), ether('-0.11'), ether('0.01')]);
     });
@@ -169,8 +169,8 @@ describe('Settlement', function () {
         const fillOrderToData1 = await buildCalldataForOrder({
             orderData: {
                 maker: alice.address,
-                makerAsset: weth.address,
-                takerAsset: dai.address,
+                makerAsset: await weth.getAddress(),
+                takerAsset: await dai.getAddress(),
                 makingAmount: ether('0.11'),
                 takingAmount: ether('100'),
                 makerTraits: buildMakerTraits(),
@@ -187,8 +187,8 @@ describe('Settlement', function () {
         const fillOrderToData0 = await buildCalldataForOrder({
             orderData: {
                 maker: owner.address,
-                makerAsset: dai.address,
-                takerAsset: weth.address,
+                makerAsset: await dai.getAddress(),
+                takerAsset: await weth.getAddress(),
                 makingAmount: ether('100'),
                 takingAmount: ether('0.1'),
                 makerTraits: buildMakerTraits(),
@@ -205,11 +205,11 @@ describe('Settlement', function () {
         const wethFeeAmount = ether('0.0001');
         const daiFeeAmount = ether('0.1');
         // send fee amounts to resolver contract
-        await weth.transfer(resolver.address, wethFeeAmount.toString());
-        await dai.connect(alice).transfer(resolver.address, daiFeeAmount.toString());
+        await weth.transfer(resolver, wethFeeAmount);
+        await dai.connect(alice).transfer(resolver, daiFeeAmount);
         // approve fee amounts to be spent by SettlementExtension
-        await resolver.approve(weth.address, settlement.address);
-        await resolver.approve(dai.address, settlement.address);
+        await resolver.approve(weth, settlement);
+        await resolver.approve(dai, settlement);
 
         const txn = await resolver.settleOrders(fillOrderToData0);
         await expect(txn).to.changeTokenBalances(dai, [owner, alice, bob], [ether('-100'), ether('100'), ether('0.1')]);
@@ -229,11 +229,11 @@ describe('Settlement', function () {
         const resolverArgs = abiCoder.encode(
             ['address[]', 'bytes[]'],
             [
-                [weth.address],
+                [await weth.getAddress()],
                 [
                     weth.interface.encodeFunctionData('transferFrom', [
                         owner.address,
-                        resolver.address,
+                        await resolver.getAddress(),
                         ether('0.025'),
                     ]),
                 ],
@@ -243,8 +243,8 @@ describe('Settlement', function () {
         const fillOrderToData1 = await buildCalldataForOrder({
             orderData: {
                 maker: alice.address,
-                makerAsset: dai.address,
-                takerAsset: weth.address,
+                makerAsset: await dai.getAddress(),
+                takerAsset: await weth.getAddress(),
                 makingAmount: ether('15'),
                 takingAmount: ether('0.015'),
                 makerTraits: buildMakerTraits(),
@@ -260,8 +260,8 @@ describe('Settlement', function () {
         const fillOrderToData0 = await buildCalldataForOrder({
             orderData: {
                 maker: alice.address,
-                makerAsset: dai.address,
-                takerAsset: weth.address,
+                makerAsset: await dai.getAddress(),
+                takerAsset: await weth.getAddress(),
                 makingAmount: ether('10'),
                 takingAmount: ether('0.01'),
                 makerTraits: buildMakerTraits(),
@@ -273,7 +273,7 @@ describe('Settlement', function () {
             isMakingAmount: false,
         });
 
-        await weth.approve(resolver.address, ether('0.025'));
+        await weth.approve(resolver, ether('0.025'));
 
         const txn = await resolver.settleOrders(fillOrderToData0);
         await expect(txn).to.changeTokenBalances(dai, [resolver, alice], [ether('25'), ether('-25')]);
@@ -292,8 +292,8 @@ describe('Settlement', function () {
         const fillOrderToData2 = await buildCalldataForOrder({
             orderData: {
                 maker: owner.address,
-                makerAsset: weth.address,
-                takerAsset: dai.address,
+                makerAsset: await weth.getAddress(),
+                takerAsset: await dai.getAddress(),
                 makingAmount: ether('0.025'),
                 takingAmount: ether('25'),
                 makerTraits: buildMakerTraits(),
@@ -308,8 +308,8 @@ describe('Settlement', function () {
         const fillOrderToData1 = await buildCalldataForOrder({
             orderData: {
                 maker: alice.address,
-                makerAsset: dai.address,
-                takerAsset: weth.address,
+                makerAsset: await dai.getAddress(),
+                takerAsset: await weth.getAddress(),
                 makingAmount: ether('15'),
                 takingAmount: ether('0.015'),
                 makerTraits: buildMakerTraits(),
@@ -324,8 +324,8 @@ describe('Settlement', function () {
         const fillOrderToData0 = await buildCalldataForOrder({
             orderData: {
                 maker: alice.address,
-                makerAsset: dai.address,
-                takerAsset: weth.address,
+                makerAsset: await dai.getAddress(),
+                takerAsset: await weth.getAddress(),
                 makingAmount: ether('10'),
                 takingAmount: ether('0.01'),
                 makerTraits: buildMakerTraits(),
@@ -365,7 +365,7 @@ describe('Settlement', function () {
                     // ) / _BASE_POINTS
                     const minDuration = startTime + delay + duration - ts > duration ? duration : startTime + delay + duration - ts - 3;
                     actualTakingAmount =
-                        (actualTakingAmount * (10000000n + (BigInt(initialRateBump) * BigInt(minDuration)) / BigInt(duration))) /
+                        (actualTakingAmount * (10000000n + BigInt(initialRateBump) * BigInt(minDuration) / BigInt(duration))) /
                         10000000n;
                 }
             }
@@ -373,11 +373,11 @@ describe('Settlement', function () {
             const resolverCalldata = abiCoder.encode(
                 ['address[]', 'bytes[]'],
                 [
-                    [weth.address],
+                    [await weth.getAddress()],
                     [
                         weth.interface.encodeFunctionData('transferFrom', [
                             owner.address,
-                            resolver.address,
+                            await resolver.getAddress(),
                             actualTakingAmount,
                         ]),
                     ],
@@ -387,8 +387,8 @@ describe('Settlement', function () {
             const fillOrderToData = await buildCalldataForOrder({
                 orderData: {
                     maker: alice.address,
-                    makerAsset: dai.address,
-                    takerAsset: weth.address,
+                    makerAsset: await dai.getAddress(),
+                    takerAsset: await weth.getAddress(),
                     makingAmount: ether('100'),
                     takingAmount: ether('0.1'),
                     makerTraits: buildMakerTraits(),
@@ -402,7 +402,7 @@ describe('Settlement', function () {
                 fillingAmount: actualTakingAmount,
             });
 
-            await weth.approve(resolver.address, actualTakingAmount);
+            await weth.approve(resolver, actualTakingAmount);
             return fillOrderToData;
         };
 
@@ -525,15 +525,14 @@ describe('Settlement', function () {
         it('set auctionDuration', async function () {
             const dataFormFixture = await loadFixture(initContractsForSettlement);
 
-            const normalizeTime = Math.floor(((await time.latest()) + 59) / 60) * 60;
-            const auction = await buildAuctionDetails({ startTime: normalizeTime - (450 - 3), duration: 900, initialRateBump: 1000000n });
+            const auction = await buildAuctionDetails({ startTime: (await time.latest()) - (450 - 4), duration: 900, initialRateBump: 1000000n });
             const setupData = { ...dataFormFixture, auction };
             const {
                 contracts: { dai, weth, resolver },
                 accounts: { owner, alice },
             } = setupData;
 
-            await time.increaseTo(normalizeTime);
+            await time.increaseTo(await time.latest() + 1);
             const fillOrderToData = await prepareSingleOrder({
                 setupData,
             });
@@ -556,8 +555,8 @@ describe('Settlement', function () {
         const fillOrderToData1 = await buildCalldataForOrder({
             orderData: {
                 maker: alice.address,
-                makerAsset: weth.address,
-                takerAsset: dai.address,
+                makerAsset: await weth.getAddress(),
+                takerAsset: await dai.getAddress(),
                 makingAmount: ether('0.1'),
                 takingAmount: ether('100'),
                 makerTraits: buildMakerTraits(),
@@ -574,8 +573,8 @@ describe('Settlement', function () {
         const fillOrderToData0 = await buildCalldataForOrder({
             orderData: {
                 maker: owner.address,
-                makerAsset: dai.address,
-                takerAsset: weth.address,
+                makerAsset: await dai.getAddress(),
+                takerAsset: await weth.getAddress(),
                 makingAmount: ether('100'),
                 takingAmount: ether('0.1'),
                 makerTraits: buildMakerTraits(),
@@ -588,11 +587,11 @@ describe('Settlement', function () {
             feeType: 1,
             resolverFee: ORDER_FEE,
         });
-        const availableCreditBefore = await settlement.availableCredit(resolver.address);
+        const availableCreditBefore = await settlement.availableCredit(resolver);
 
         await resolver.settleOrders(fillOrderToData0);
-        expect(await settlement.availableCredit(resolver.address)).to.equal(
-            availableCreditBefore.toBigInt() - BASE_POINTS * (ORDER_FEE + BACK_ORDER_FEE),
+        expect(await settlement.availableCredit(resolver)).to.equal(
+            availableCreditBefore - BASE_POINTS * (ORDER_FEE + BACK_ORDER_FEE),
         );
     });
 
@@ -612,11 +611,11 @@ describe('Settlement', function () {
         const resolverArgs = abiCoder.encode(
             ['address[]', 'bytes[]'],
             [
-                [weth.address],
+                [await weth.getAddress()],
                 [
                     weth.interface.encodeFunctionData('transferFrom', [
                         owner.address,
-                        resolver.address,
+                        await resolver.getAddress(),
                         ether('0.01') * partialModifier / points,
                     ]),
                 ],
@@ -626,8 +625,8 @@ describe('Settlement', function () {
         const fillOrderToData0 = await buildCalldataForOrder({
             orderData: {
                 maker: alice.address,
-                makerAsset: dai.address,
-                takerAsset: weth.address,
+                makerAsset: await dai.getAddress(),
+                takerAsset: await weth.getAddress(),
                 makingAmount: ether('10'),
                 takingAmount: ether('0.01'),
                 makerTraits: buildMakerTraits(),
@@ -642,14 +641,14 @@ describe('Settlement', function () {
             resolverFee: ORDER_FEE,
         });
 
-        await weth.approve(resolver.address, ether('0.01'));
-        const availableCreditBefore = await settlement.availableCredit(resolver.address);
+        await weth.approve(resolver, ether('0.01'));
+        const availableCreditBefore = await settlement.availableCredit(resolver);
 
         const txn = await resolver.settleOrders(fillOrderToData0);
         await expect(txn).to.changeTokenBalances(dai, [resolver, alice], [ether('10') * partialModifier / points, ether('-10') * partialModifier / points]);
         await expect(txn).to.changeTokenBalances(weth, [owner, alice], [ether('-0.01') * partialModifier / points, ether('0.01') * partialModifier / points]);
-        expect(await settlement.availableCredit(resolver.address)).to.equal(
-            availableCreditBefore.toBigInt() - (ORDER_FEE * partialModifier / points) * BASE_POINTS,
+        expect(await settlement.availableCredit(resolver)).to.equal(
+            availableCreditBefore - (ORDER_FEE * partialModifier / points) * BASE_POINTS,
         );
     });
 
@@ -670,11 +669,11 @@ describe('Settlement', function () {
         const resolverArgs = abiCoder.encode(
             ['address[]', 'bytes[]'],
             [
-                [weth.address],
+                [await weth.getAddress()],
                 [
                     weth.interface.encodeFunctionData('transferFrom', [
                         owner.address,
-                        resolver.address,
+                        await resolver.getAddress(),
                         ether('0.01') * minimalPartialModifier / points,
                     ]),
                 ],
@@ -684,8 +683,8 @@ describe('Settlement', function () {
         const fillOrderToData0 = await buildCalldataForOrder({
             orderData: {
                 maker: alice.address,
-                makerAsset: dai.address,
-                takerAsset: weth.address,
+                makerAsset: await dai.getAddress(),
+                takerAsset: await weth.getAddress(),
                 makingAmount: ether('10'),
                 takingAmount: ether('0.01'),
                 makerTraits: buildMakerTraits(),
@@ -700,14 +699,14 @@ describe('Settlement', function () {
             resolverFee: minimalOrderFee,
         });
 
-        await weth.approve(resolver.address, ether('0.01'));
-        const availableCreditBefore = await settlement.availableCredit(resolver.address);
+        await weth.approve(resolver, ether('0.01'));
+        const availableCreditBefore = await settlement.availableCredit(resolver);
 
         const txn = await resolver.settleOrders(fillOrderToData0);
         await expect(txn).to.changeTokenBalances(dai, [resolver, alice], [ether('10') * minimalPartialModifier / points, ether('-10') * minimalPartialModifier / points]);
         await expect(txn).to.changeTokenBalances(weth, [owner, alice], [ether('-0.01') * minimalPartialModifier / points, ether('0.01') * minimalPartialModifier / points]);
-        expect(await settlement.availableCredit(resolver.address)).to.equal(
-            availableCreditBefore.toBigInt() - 1n,
+        expect(await settlement.availableCredit(resolver)).to.equal(
+            availableCreditBefore - 1n,
         );
     });
 
@@ -723,8 +722,8 @@ describe('Settlement', function () {
         const fillOrderToData1 = await buildCalldataForOrder({
             orderData: {
                 maker: alice.address,
-                makerAsset: weth.address,
-                takerAsset: dai.address,
+                makerAsset: await weth.getAddress(),
+                takerAsset: await dai.getAddress(),
                 makingAmount: ether('0.1'),
                 takingAmount: ether('100'),
                 makerTraits: buildMakerTraits(),
@@ -740,8 +739,8 @@ describe('Settlement', function () {
         const fillOrderToData0 = await buildCalldataForOrder({
             orderData: {
                 maker: owner.address,
-                makerAsset: dai.address,
-                takerAsset: weth.address,
+                makerAsset: await dai.getAddress(),
+                takerAsset: await weth.getAddress(),
                 makingAmount: ether('100'),
                 takingAmount: ether('0.1'),
                 makerTraits: buildMakerTraits(),
@@ -772,8 +771,8 @@ describe('Settlement', function () {
             const fillOrderToData1 = await buildCalldataForOrder({
                 orderData: {
                     maker: alice.address,
-                    makerAsset: weth.address,
-                    takerAsset: dai.address,
+                    makerAsset: await weth.getAddress(),
+                    takerAsset: await dai.getAddress(),
                     makingAmount: ether('0.1'),
                     takingAmount: ether('100'),
                     makerTraits: buildMakerTraits(),
@@ -787,8 +786,8 @@ describe('Settlement', function () {
             const fillOrderToData0 = await buildCalldataForOrder({
                 orderData: {
                     maker: owner.address,
-                    makerAsset: dai.address,
-                    takerAsset: weth.address,
+                    makerAsset: await dai.getAddress(),
+                    takerAsset: await weth.getAddress(),
                     makingAmount: ether('100'),
                     takingAmount: ether('0.1'),
                     makerTraits: buildMakerTraits(),

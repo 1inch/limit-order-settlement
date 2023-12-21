@@ -1,6 +1,6 @@
 const hre = require('hardhat');
 const { getChainId } = hre;
-const { idempotentDeployGetContract } = require('../test/helpers/utils.js');
+const { deployAndGetContract } = require('@1inch/solidity-utils');
 
 const INCH = {
     1: '0x111111111117dC0aa78b770fA6A738034120C302', // Mainnet
@@ -27,16 +27,15 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
 
     const { deployer } = await getNamedAccounts();
 
-    const settlement = await idempotentDeployGetContract(
-        'Settlement',
-        [ROUTER_V5_ADDR, INCH[chainId]],
+    const settlement = await deployAndGetContract({
+        contractName: 'SettlementExtension',
+        constructorArgs: [ROUTER_V5_ADDR, INCH[chainId]],
         deployments,
         deployer,
-        'Settlement',
-        // true,
-    );
+        deploymentName: 'Settlement',
+    });
 
-    console.log('Settlement deployed to:', settlement.address);
+    console.log('Settlement deployed to:', await settlement.getAddress());
 
     const feeBankAddress = await settlement.feeBank();
     console.log('FeeBank deployed to:', feeBankAddress);
@@ -44,20 +43,19 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     if (chainId !== '31337') {
         await hre.run('verify:verify', {
             address: feeBankAddress,
-            constructorArguments: [settlement.address, INCH[chainId], deployer],
+            constructorArguments: [await settlement.getAddress(), INCH[chainId], deployer],
         });
     }
 
-    const settlementStaging = await idempotentDeployGetContract(
-        'Settlement',
-        [ROUTER_V5_ADDR, INCH[chainId]],
+    const settlementStaging = await deployAndGetContract({
+        contractName: 'SettlementExtension',
+        constructorArgs: [ROUTER_V5_ADDR, INCH[chainId]],
         deployments,
         deployer,
-        'SettlementStaging',
-        true,
-    );
+        deploymentName: 'SettlementStaging',
+    });
 
-    console.log('Settlement staging to:', settlementStaging.address);
+    console.log('Settlement staging to:', await settlementStaging.getAddress());
 };
 
 module.exports.skip = async () => true;
