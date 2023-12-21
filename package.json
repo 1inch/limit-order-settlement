@@ -40,7 +40,6 @@
     "@openzeppelin/contracts": "5.0.1"
   },
   "devDependencies": {
-    "@1inch/limit-order-settlement-v1": "git+https://github.com/1inch/limit-order-settlement.git#1.0.0",
     "@matterlabs/hardhat-zksync-deploy": "1.1.1",
     "@matterlabs/hardhat-zksync-solc": "1.0.5",
     "@matterlabs/hardhat-zksync-verify": "1.2.1",
