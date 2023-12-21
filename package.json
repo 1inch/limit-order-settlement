@@ -16,7 +16,7 @@
   ],
   "license": "MIT",
   "scripts": {
-    "clean": "rimraf artifacts cache coverage contracts/hardhat-dependency-compiler",
+    "clean": "rimraf artifacts cache coverage contracts/hardhat-dependency-compiler cache-zk artifacts-zk",
     "deploy": "hardhat deploy --network",
     "coverage": "hardhat coverage",
     "docify": "npx solidity-utils-docify",
