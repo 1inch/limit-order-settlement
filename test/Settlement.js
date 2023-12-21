@@ -525,15 +525,14 @@ describe('Settlement', function () {
         it('set auctionDuration', async function () {
             const dataFormFixture = await loadFixture(initContractsForSettlement);
 
-            const normalizeTime = Math.floor(((await time.latest()) + 59) / 60) * 60;
-            const auction = await buildAuctionDetails({ startTime: normalizeTime - (450 - 3), duration: 900, initialRateBump: 1000000n });
+            const auction = await buildAuctionDetails({ startTime: (await time.latest()) - (450 - 4), duration: 900, initialRateBump: 1000000n });
             const setupData = { ...dataFormFixture, auction };
             const {
                 contracts: { dai, weth, resolver },
                 accounts: { owner, alice },
             } = setupData;
 
-            await time.increaseTo(normalizeTime);
+            await time.increaseTo(await time.latest() + 1);
             const fillOrderToData = await prepareSingleOrder({
                 setupData,
             });
