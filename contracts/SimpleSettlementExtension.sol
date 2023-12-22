@@ -47,28 +47,28 @@ contract SimpleSettlementExtension is ExtensionBase, FeeBankCharger {
      * @return resolverFee The resolver fee.
      * @return integrator The integrator address.
      * @return integrationFee The integration fee.
-     * @return dataReturned The data remaining after parsing.
+     * @return extraData The data remaining after parsing.
      */
     function _parseFeeData(
-        bytes calldata extraData,
+        bytes calldata data,
         uint256 orderMakingAmount,
         uint256 actualMakingAmount,
         uint256 actualTakingAmount
-    ) internal pure virtual returns (uint256 resolverFee, address integrator, uint256 integrationFee, bytes calldata dataReturned) {
-        bytes1 feeType = extraData[0];
-        extraData = extraData[1:];
+    ) internal pure virtual returns (uint256 resolverFee, address integrator, uint256 integrationFee, bytes calldata extraData) {
+        bytes1 feeType = data[0];
+        data = data[1:];
         if (feeType & 0x01 == 0x01) {
             // resolverFee enabled
-            resolverFee = uint256(uint32(bytes4(extraData[:4]))) * _ORDER_FEE_BASE_POINTS * actualMakingAmount / orderMakingAmount;
-            extraData = extraData[4:];
+            resolverFee = uint256(uint32(bytes4(data[:4]))) * _ORDER_FEE_BASE_POINTS * actualMakingAmount / orderMakingAmount;
+            data = data[4:];
         }
         if (feeType & 0x02 == 0x02) {
             // integratorFee enabled
-            integrator = address(bytes20(extraData[:20]));
-            integrationFee = actualTakingAmount * uint256(uint32(bytes4(extraData[20:24]))) / _TAKING_FEE_BASE;
-            extraData = extraData[24:];
+            integrator = address(bytes20(data[:20]));
+            integrationFee = actualTakingAmount * uint256(uint32(bytes4(data[20:24]))) / _TAKING_FEE_BASE;
+            data = data[24:];
         }
-        dataReturned = extraData;
+        extraData = data;
     }
 
     /**
@@ -117,10 +117,10 @@ contract SimpleSettlementExtension is ExtensionBase, FeeBankCharger {
             uint256 resolverFee,
             address integrator,
             uint256 integrationFee,
-            bytes calldata dataReturned
+            bytes calldata whitelist
         ) = _parseFeeData(extraData, order.makingAmount, makingAmount, takingAmount);
 
-        if (!_isWhitelisted(dataReturned, taker)) revert ResolverIsNotWhitelisted();
+        if (!_isWhitelisted(whitelist, taker)) revert ResolverIsNotWhitelisted();
 
         _chargeFee(taker, resolverFee);
         if (integrationFee > 0) {
