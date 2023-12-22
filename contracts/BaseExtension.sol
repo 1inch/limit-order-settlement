@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity 0.8.19;
+pragma solidity 0.8.23;
 
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import { IOrderMixin } from "@1inch/limit-order-protocol-contract/contracts/interfaces/IOrderMixin.sol";
@@ -17,11 +17,11 @@ contract BaseExtension is IPreInteraction, IPostInteraction, IAmountGetter {
 
     uint256 private constant _BASE_POINTS = 10_000_000; // 100%
 
-    IOrderMixin private immutable _limitOrderProtocol;
+    IOrderMixin private immutable _LIMIT_ORDER_PROTOCOL;
 
     /// @dev Modifier to check if the caller is the limit order protocol contract.
     modifier onlyLimitOrderProtocol {
-        if (msg.sender != address(_limitOrderProtocol)) revert OnlyLimitOrderProtocol();
+        if (msg.sender != address(_LIMIT_ORDER_PROTOCOL)) revert OnlyLimitOrderProtocol();
         _;
     }
 
@@ -30,7 +30,7 @@ contract BaseExtension is IPreInteraction, IPostInteraction, IAmountGetter {
      * @param limitOrderProtocol The limit order protocol contract.
      */
     constructor(IOrderMixin limitOrderProtocol) {
-        _limitOrderProtocol = limitOrderProtocol;
+        _LIMIT_ORDER_PROTOCOL = limitOrderProtocol;
     }
 
     function getMakingAmount(
@@ -56,7 +56,7 @@ contract BaseExtension is IPreInteraction, IPostInteraction, IAmountGetter {
         bytes calldata extraData
     ) external view returns (uint256) {
         uint256 rateBump = _getRateBump(extraData);
-        return Math.mulDiv(order.takingAmount, makingAmount * (_BASE_POINTS + rateBump), order.makingAmount * _BASE_POINTS, Math.Rounding.Up);
+        return Math.mulDiv(order.takingAmount, makingAmount * (_BASE_POINTS + rateBump), order.makingAmount * _BASE_POINTS, Math.Rounding.Ceil);
     }
 
     function preInteraction(
