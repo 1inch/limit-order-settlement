@@ -12,16 +12,16 @@ import { IAmountGetter } from "@1inch/limit-order-protocol-contract/contracts/in
  * @title Base Extension contract
  * @notice Contract to define the basic functionality for the limit orders settlement.
  */
-contract BaseExtension is IPreInteraction, IPostInteraction, IAmountGetter {
+contract ExtensionBase is IPreInteraction, IPostInteraction, IAmountGetter {
     error OnlyLimitOrderProtocol();
 
     uint256 private constant _BASE_POINTS = 10_000_000; // 100%
 
-    IOrderMixin private immutable _LIMIT_ORDER_PROTOCOL;
+    address private immutable _LIMIT_ORDER_PROTOCOL;
 
     /// @dev Modifier to check if the caller is the limit order protocol contract.
     modifier onlyLimitOrderProtocol {
-        if (msg.sender != address(_LIMIT_ORDER_PROTOCOL)) revert OnlyLimitOrderProtocol();
+        if (msg.sender != _LIMIT_ORDER_PROTOCOL) revert OnlyLimitOrderProtocol();
         _;
     }
 
@@ -29,7 +29,7 @@ contract BaseExtension is IPreInteraction, IPostInteraction, IAmountGetter {
      * @notice Initializes the contract.
      * @param limitOrderProtocol The limit order protocol contract.
      */
-    constructor(IOrderMixin limitOrderProtocol) {
+    constructor(address limitOrderProtocol) {
         _LIMIT_ORDER_PROTOCOL = limitOrderProtocol;
     }
 

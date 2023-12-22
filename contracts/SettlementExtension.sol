@@ -5,18 +5,16 @@ pragma solidity 0.8.23;
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IOrderMixin } from "@1inch/limit-order-protocol-contract/contracts/interfaces/IOrderMixin.sol";
 
-import { BasicSettlementExtension } from "./BasicSettlementExtension.sol";
+import { SimpleSettlementExtension } from "./SimpleSettlementExtension.sol";
 
 /**
  * @title Settlement contract
  * @notice Contract to execute limit orders settlement on Mainnet, created by Fusion mode.
  */
-contract SettlementExtension is BasicSettlementExtension {
-
+contract SettlementExtension is SimpleSettlementExtension {
     error InvalidPriorityFee();
 
-    constructor(IOrderMixin limitOrderProtocol, IERC20 token)
-        BasicSettlementExtension(limitOrderProtocol, token) {}
+    constructor(address limitOrderProtocol, IERC20 token) SimpleSettlementExtension(limitOrderProtocol, token) {}
 
     function _postInteraction(
         IOrderMixin.Order calldata order,

@@ -6,14 +6,14 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IOrderMixin } from "@1inch/limit-order-protocol-contract/contracts/interfaces/IOrderMixin.sol";
 import { SafeERC20 } from "@1inch/solidity-utils/contracts/libraries/SafeERC20.sol";
 import { Address, AddressLib } from "@1inch/solidity-utils/contracts/libraries/AddressLib.sol";
-import { BaseExtension } from "./BaseExtension.sol";
+import { ExtensionBase } from "./ExtensionBase.sol";
 import { FeeBankCharger } from "./FeeBankCharger.sol";
 
 /**
- * @title Basic Settlement contract
+ * @title Simple Settlement contract
  * @notice Contract to execute limit orders settlement, created by Fusion mode.
  */
-contract BasicSettlementExtension is BaseExtension, FeeBankCharger {
+contract SimpleSettlementExtension is ExtensionBase, FeeBankCharger {
     using SafeERC20 for IERC20;
     using AddressLib for Address;
 
@@ -27,9 +27,7 @@ contract BasicSettlementExtension is BaseExtension, FeeBankCharger {
      * @param limitOrderProtocol The limit order protocol contract.
      * @param token The token to charge protocol fees in.
      */
-    constructor(IOrderMixin limitOrderProtocol, IERC20 token)
-        BaseExtension(limitOrderProtocol)
-        FeeBankCharger(token) {}
+    constructor(address limitOrderProtocol, IERC20 token) ExtensionBase(limitOrderProtocol) FeeBankCharger(token) {}
 
     /**
      * @dev Parses fee data from the extraData field.
