@@ -64,7 +64,7 @@ contract FeeBankCharger is IFeeBankCharger {
      * @param account The address of the account from which the fee is being charged.
      * @param fee The amount of fee to be charged from the account.
      */
-    function _chargeFee(address account, uint256 fee) internal {
+    function _chargeFee(address account, uint256 fee) internal virtual {
         if (fee > 0) {
             uint256 currentAllowance = _creditAllowance[account];
             if (currentAllowance < fee) revert NotEnoughCredit();
