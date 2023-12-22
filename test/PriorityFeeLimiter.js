@@ -16,23 +16,23 @@ describe('PriorityFeeLimiter', function () {
 
     async function prepare() {
         const { contracts: { dai, weth }, accounts: { owner } } = await initContractsForSettlement();
-        const settlementExtension = await deployContract('SettlementExtension', [owner.address, weth.address]);
+        const settlementExtension = await deployContract('SettlementExtension', [owner, weth]);
         const currentTime = (await time.latest()) - time.duration.minutes(1);
 
-        const postInteractionData = ethers.utils.solidityPack(
+        const postInteractionData = ethers.solidityPacked(
             ['uint8', 'uint32', 'bytes10', 'uint16'],
             [0, currentTime, '0x' + owner.address.substring(22), 0],
         );
 
         const order = buildOrder({
             maker: owner.address,
-            makerAsset: dai.address,
-            takerAsset: weth.address,
+            makerAsset: await dai.getAddress(),
+            takerAsset: await weth.getAddress(),
             makingAmount: ether('10'),
             takingAmount: ether('1'),
             makerTraits: buildMakerTraits(),
         }, {
-            postInteraction: settlementExtension.address + trim0x(postInteractionData),
+            postInteraction: await settlementExtension.getAddress() + trim0x(postInteractionData),
         });
 
         return { order, owner, postInteractionData, settlementExtension };

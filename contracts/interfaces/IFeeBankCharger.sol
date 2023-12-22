@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity 0.8.19;
+pragma solidity ^0.8.0;
 
 import { IFeeBank } from "./IFeeBank.sol";
 
@@ -9,7 +9,7 @@ interface IFeeBankCharger {
      * @notice Returns the instance of the FeeBank contract.
      * @return The instance of the FeeBank contract.
      */
-    function feeBank() external view returns (IFeeBank);
+    function FEE_BANK() external view returns (IFeeBank); // solhint-disable-line func-name-mixedcase
 
     /**
      * @notice Returns the available credit for a given account.

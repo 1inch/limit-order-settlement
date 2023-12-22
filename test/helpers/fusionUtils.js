@@ -2,6 +2,8 @@ const { time, trim0x } = require('@1inch/solidity-utils');
 const { ethers } = require('hardhat');
 const { buildOrder, buildTakerTraits, signOrder } = require('@1inch/limit-order-protocol-contract/test/helpers/orderUtils');
 
+const expBase = 999999952502977513n; // 0.05^(1/(2 years)) means 95% value loss over 2 years
+
 async function buildCalldataForOrder({
     orderData,
     orderSigner,
@@ -14,7 +16,7 @@ async function buildCalldataForOrder({
     feeType = 0,
     integrator = orderSigner.address,
     resolverFee = 0,
-    whitelistData = '0x' + setupData.contracts.resolver.address.substring(22),
+    whitelistData = '0x' + setupData.contracts.resolver.target.substring(22),
 }) {
     const {
         contracts: { lopv4, settlement, resolver },
@@ -34,23 +36,23 @@ async function buildCalldataForOrder({
     }
 
     const order = buildOrder(orderData, {
-        makingAmountData: settlement.address + trim0x(auctionDetails),
-        takingAmountData: settlement.address + trim0x(auctionDetails),
-        postInteraction: settlement.address +
-            trim0x(ethers.utils.solidityPack(postInteractionFeeDataTypes, postInteractionFeeData)) +
-            trim0x(ethers.utils.solidityPack(['uint32', 'bytes10', 'uint16'], [auctionStartTime, whitelistData, 0])),
+        makingAmountData: await settlement.getAddress() + trim0x(auctionDetails),
+        takingAmountData: await settlement.getAddress() + trim0x(auctionDetails),
+        postInteraction: await settlement.getAddress() +
+            trim0x(ethers.solidityPacked(postInteractionFeeDataTypes, postInteractionFeeData)) +
+            trim0x(ethers.solidityPacked(['uint32', 'bytes10', 'uint16'], [auctionStartTime, whitelistData, 0])),
     });
 
-    const { r, _vs: vs } = ethers.utils.splitSignature(await signOrder(order, chainId, lopv4.address, orderSigner));
+    const { r, yParityAndS: vs } = ethers.Signature.from(await signOrder(order, chainId, await lopv4.getAddress(), orderSigner));
 
-    await resolver.approve(order.takerAsset, lopv4.address);
+    await resolver.approve(order.takerAsset, lopv4);
 
     const takerTraits = buildTakerTraits({
         makingAmount: isMakingAmount,
         minReturn,
         extension: order.extension,
-        interaction: resolver.address + (isInnermostOrder ? '01' : '00') + trim0x(additionalDataForSettlement),
-        target: resolver.address,
+        interaction: await resolver.getAddress() + (isInnermostOrder ? '01' : '00') + trim0x(additionalDataForSettlement),
+        target: await resolver.getAddress(),
     });
 
     return lopv4.interface.encodeFunctionData('fillOrderArgs', [
@@ -71,16 +73,17 @@ async function buildAuctionDetails({
     points = [],
 } = {}) {
     startTime = startTime || await time.latest();
-    let details = ethers.utils.solidityPack(
+    let details = ethers.solidityPacked(
         ['uint32', 'uint24', 'uint24'], [startTime + delay, duration, initialRateBump],
     );
     for (let i = 0; i < points.length; i++) {
-        details += trim0x(ethers.utils.solidityPack(['uint24', 'uint16'], [points[i][0], points[i][1]]));
+        details += trim0x(ethers.solidityPacked(['uint24', 'uint16'], [points[i][0], points[i][1]]));
     }
     return { startTime, details, delay, duration, initialRateBump };
 }
 
 module.exports = {
+    expBase,
     buildAuctionDetails,
     buildCalldataForOrder,
 };
