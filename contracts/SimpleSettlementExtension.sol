@@ -30,6 +30,21 @@ contract SimpleSettlementExtension is ExtensionBase, FeeBankCharger {
     constructor(address limitOrderProtocol, IERC20 token) ExtensionBase(limitOrderProtocol) FeeBankCharger(token) {}
 
     /**
+     * @dev Calculates the resolver fee.
+     * @param fee Scaled resolver fee.
+     * @param orderMakingAmount Making amount from the order.
+     * @param actualMakingAmount Making amount that was actually filled.
+     * @return resolverFee Calculated resolver fee.
+     */
+    function _getResolverFee(
+        uint256 fee,
+        uint256 orderMakingAmount,
+        uint256 actualMakingAmount
+    ) internal pure virtual returns(uint256) {
+        return fee * _ORDER_FEE_BASE_POINTS * actualMakingAmount / orderMakingAmount;
+    }
+
+    /**
      * @dev Parses fee data from the extraData field.
      * @param extraData ExtraData is a tihgtly packed struct of the following format:
      * ```
@@ -59,7 +74,7 @@ contract SimpleSettlementExtension is ExtensionBase, FeeBankCharger {
         data = data[1:];
         if (feeType & 0x01 == 0x01) {
             // resolverFee enabled
-            resolverFee = uint256(uint32(bytes4(data[:4]))) * _ORDER_FEE_BASE_POINTS * actualMakingAmount / orderMakingAmount;
+            resolverFee = _getResolverFee(uint256(uint32(bytes4(data[:4]))), orderMakingAmount, actualMakingAmount);
             data = data[4:];
         }
         if (feeType & 0x02 == 0x02) {
