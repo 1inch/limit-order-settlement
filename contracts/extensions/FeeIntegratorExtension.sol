@@ -8,6 +8,10 @@ import { SafeERC20 } from "@1inch/solidity-utils/contracts/libraries/SafeERC20.s
 import { Address, AddressLib } from "@1inch/solidity-utils/contracts/libraries/AddressLib.sol";
 import { ExtensionBase } from "../ExtensionBase.sol";
 
+/**
+ * @title Fee Integrator Extension
+ * @notice Abstract contract designed to integrate fee processing within the post-interaction phase of order execution.
+ */
 abstract contract FeeIntegratorExtension is ExtensionBase {
     using SafeERC20 for IERC20;
     using AddressLib for Address;
