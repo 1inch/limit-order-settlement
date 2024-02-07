@@ -24,15 +24,15 @@ async function buildCalldataForOrder({
         auction: { startTime: auctionStartTime, details: auctionDetails },
     } = setupData;
 
-    let postInteractionFeeDataTypes = ['uint8'];
-    let postInteractionFeeData = [0];
+    let postInteractionFeeDataTypes = [];
+    let postInteractionFeeData = [];
     if (feeType === 1) {
-        postInteractionFeeDataTypes = [...postInteractionFeeDataTypes, 'bytes4'];
-        postInteractionFeeData = [feeType, '0x' + resolverFee.toString(16).padStart(8, '0')];
+        postInteractionFeeDataTypes = ['bytes4'];
+        postInteractionFeeData = ['0x' + resolverFee.toString(16).padStart(8, '0')];
     }
     if (feeType === 2) {
-        postInteractionFeeDataTypes = [...postInteractionFeeDataTypes, 'bytes20', 'bytes4'];
-        postInteractionFeeData = [feeType, integrator, '0x' + resolverFee.toString(16).padStart(8, '0')];
+        postInteractionFeeDataTypes = ['bytes20', 'bytes4'];
+        postInteractionFeeData = [integrator, '0x' + resolverFee.toString(16).padStart(8, '0')];
     }
 
     const order = buildOrder(orderData, {
@@ -40,7 +40,8 @@ async function buildCalldataForOrder({
         takingAmountData: await settlement.getAddress() + trim0x(auctionDetails),
         postInteraction: await settlement.getAddress() +
             trim0x(ethers.solidityPacked(postInteractionFeeDataTypes, postInteractionFeeData)) +
-            trim0x(ethers.solidityPacked(['uint32', 'bytes10', 'uint16'], [auctionStartTime, whitelistData, 0])),
+            trim0x(ethers.solidityPacked(['uint8', 'uint32', 'bytes10', 'uint16'], [16, auctionStartTime, whitelistData, 0])) +
+            trim0x(ethers.solidityPacked(['bytes1'], ['0x' + feeType.toString(16).padStart(2, '0')])),
     });
 
     const { r, yParityAndS: vs } = ethers.Signature.from(await signOrder(order, chainId, await lopv4.getAddress(), orderSigner));
