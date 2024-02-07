@@ -11,7 +11,7 @@ import { SimpleSettlementExtension } from "./extensions/SimpleSettlementExtensio
  * @title Settlement contract
  * @notice Contract to execute limit orders settlement on Mainnet, created by Fusion mode.
  */
-contract SettlementExtension is SimpleSettlementExtension  {
+contract SettlementExtension is SimpleSettlementExtension {
     error InvalidPriorityFee();
 
     constructor(address limitOrderProtocol, IERC20 token) SimpleSettlementExtension(limitOrderProtocol, token) {}
