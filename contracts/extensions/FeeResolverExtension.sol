@@ -28,6 +28,12 @@ abstract contract FeeResolverExtension is ExtensionBase, FeeBankCharger {
         return fee * _ORDER_FEE_BASE_POINTS * actualMakingAmount / orderMakingAmount;
     }
 
+    /**
+     * @param extraData Structured data of length n bytes, segmented as follows:
+     * [0:4] - Resolver fee information.
+     * [4:n] - ExtraData for other extensions, not utilized by this resolver fee extension.
+     * [n] - Bitmap indicating usage flags, where `xxxx xxx1` signifies resolver fee usage. Other bits in this bitmap are not used by this extension.
+     */
     function _postInteraction(
         IOrderMixin.Order calldata order,
         bytes calldata extension,

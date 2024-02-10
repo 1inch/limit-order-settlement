@@ -4,6 +4,20 @@ const { buildOrder, buildTakerTraits, signOrder } = require('@1inch/limit-order-
 
 const expBase = 999999952502977513n; // 0.05^(1/(2 years)) means 95% value loss over 2 years
 
+function buildExtensionsBitmapData({
+    resolvers = 1,
+    feeType = 0,
+} = {}) {
+    const WHITELIST_BITMAP_OFFSET = 3; // Bitmap: VVVVVxxx
+    const FEE_RESOLVER_FLAG = 1;
+    const FEE_INTEGRATOR_FLAG = 2;
+    return ethers.toBeHex(
+        (resolvers << WHITELIST_BITMAP_OFFSET) |
+        feeType & FEE_RESOLVER_FLAG |
+        feeType & FEE_INTEGRATOR_FLAG,
+    );
+}
+
 async function buildCalldataForOrder({
     orderData,
     orderSigner,
@@ -34,14 +48,17 @@ async function buildCalldataForOrder({
         postInteractionFeeDataTypes = ['bytes20', 'bytes4'];
         postInteractionFeeData = [integrator, '0x' + resolverFee.toString(16).padStart(8, '0')];
     }
+    if (feeType > 2) {
+        throw new Error('Invalid feeType in buildCalldataForOrder for postInteraction');
+    }
 
     const order = buildOrder(orderData, {
         makingAmountData: await settlement.getAddress() + trim0x(auctionDetails),
         takingAmountData: await settlement.getAddress() + trim0x(auctionDetails),
         postInteraction: await settlement.getAddress() +
             trim0x(ethers.solidityPacked(postInteractionFeeDataTypes, postInteractionFeeData)) +
-            trim0x(ethers.solidityPacked(['uint8', 'uint32', 'bytes10', 'uint16'], [16, auctionStartTime, whitelistData, 0])) +
-            trim0x(ethers.solidityPacked(['bytes1'], ['0x' + feeType.toString(16).padStart(2, '0')])),
+            trim0x(ethers.solidityPacked(['uint32', 'bytes10', 'uint16'], [auctionStartTime, whitelistData, 0])) +
+            trim0x(ethers.solidityPacked(['bytes1'], [buildExtensionsBitmapData({ resolvers: 1, feeType })])),
     });
 
     const { r, yParityAndS: vs } = ethers.Signature.from(await signOrder(order, chainId, await lopv4.getAddress(), orderSigner));
@@ -87,4 +104,5 @@ module.exports = {
     expBase,
     buildAuctionDetails,
     buildCalldataForOrder,
+    buildExtensionsBitmapData,
 };

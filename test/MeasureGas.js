@@ -5,7 +5,7 @@ const { ethers } = hre;
 const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
 const { constants, time, expect, ether, trim0x, deployContract } = require('@1inch/solidity-utils');
 const { deploySwapTokens, getChainId } = require('./helpers/fixtures');
-const { buildAuctionDetails } = require('./helpers/fusionUtils');
+const { buildAuctionDetails, buildExtensionsBitmapData } = require('./helpers/fusionUtils');
 const { buildOrder: buildOrderV1, buildSalt: buildSaltV1, signOrder: signOrderV1 } = require('./helpers/orderUtilsV1');
 const { buildOrder, signOrder, buildTakerTraits, buildMakerTraits } = require('@1inch/limit-order-protocol-contract/test/helpers/orderUtils');
 
@@ -232,16 +232,15 @@ describe('MeasureGas', function () {
             const currentTime = (await time.latest()) - time.duration.minutes(1);
 
             const postInteractionData = ethers.solidityPacked(
-                ['uint8', 'uint32', 'bytes10', 'uint16', 'bytes10', 'uint16', 'bytes10', 'uint16', 'bytes10', 'uint16', 'bytes10', 'uint16', 'bytes1'],
+                ['uint32', 'bytes10', 'uint16', 'bytes10', 'uint16', 'bytes10', 'uint16', 'bytes10', 'uint16', 'bytes10', 'uint16', 'bytes1'],
                 [
-                    64,
                     currentTime,
                     '0x' + weth.target.substring(22), 0,
                     '0x' + weth.target.substring(22), 0,
                     '0x' + weth.target.substring(22), 0,
                     '0x' + owner.address.substring(22), 0,
                     '0x' + weth.target.substring(22), 0,
-                    '0x00',
+                    buildExtensionsBitmapData({ resolvers: 5 }),
                 ],
             );
 
@@ -309,7 +308,7 @@ describe('MeasureGas', function () {
                 makingAmountData: await settlementExtension.getAddress() + trim0x(auctionDetails),
                 takingAmountData: await settlementExtension.getAddress() + trim0x(auctionDetails),
                 postInteraction: await settlementExtension.getAddress() + trim0x(ethers.solidityPacked(
-                    ['uint8', 'uint32', 'bytes10', 'uint16', 'bytes1'], [16, auctionStartTime, '0x' + owner.address.substring(22), 0, '0x00'],
+                    ['uint32', 'bytes10', 'uint16', 'bytes1'], [auctionStartTime, '0x' + owner.address.substring(22), 0, buildExtensionsBitmapData()],
                 )),
             });
 
@@ -354,7 +353,7 @@ describe('MeasureGas', function () {
                 makingAmountData: await settlementExtension.getAddress() + trim0x(auctionDetails),
                 takingAmountData: await settlementExtension.getAddress() + trim0x(auctionDetails),
                 postInteraction: await settlementExtension.getAddress() + trim0x(ethers.solidityPacked(
-                    ['uint8', 'uint32', 'bytes10', 'uint16', 'bytes1'], [16, auctionStartTime, '0x' + resolver.target.substring(22), 0, '0x00'],
+                    ['uint32', 'bytes10', 'uint16', 'bytes1'], [auctionStartTime, '0x' + resolver.target.substring(22), 0, buildExtensionsBitmapData()],
                 )),
             });
 
@@ -416,7 +415,7 @@ describe('MeasureGas', function () {
                 makingAmountData: await settlementExtension.getAddress() + trim0x(auctionDetails),
                 takingAmountData: await settlementExtension.getAddress() + trim0x(auctionDetails),
                 postInteraction: await settlementExtension.getAddress() + trim0x(ethers.solidityPacked(
-                    ['uint8', 'uint32', 'bytes10', 'uint16', 'bytes1'], [16, auctionStartTime, '0x' + resolver.target.substring(22), 0, '0x00'],
+                    ['uint32', 'bytes10', 'uint16', 'bytes1'], [auctionStartTime, '0x' + resolver.target.substring(22), 0, buildExtensionsBitmapData()],
                 )),
             });
 

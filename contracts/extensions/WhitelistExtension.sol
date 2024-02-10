@@ -45,6 +45,13 @@ abstract contract WhitelistExtension is ExtensionBase {
         }
     }
 
+    /**
+     * @param extraData Structured data of length n bytes, segmented as follows:
+     * [0:k] - Data as defined by the `whitelist` parameter for the `_isWhitelisted` method,
+     *         where k depends on the amount of resolvers in the whitelist, as indicated by the bitmap in the last byte.
+     * [k:n] - ExtraData for other extensions, not utilized by this whitelist extension.
+     * [n]   - Bitmap `VVVV Vxxx` where V bits represent the amount of resolvers in the whitelist. The remaining bits in this bitmap are not used by this extension.
+     */
     function _postInteraction(
         IOrderMixin.Order calldata order,
         bytes calldata extension,
@@ -55,9 +62,10 @@ abstract contract WhitelistExtension is ExtensionBase {
         uint256 remainingMakingAmount,
         bytes calldata extraData
     ) internal virtual override {
-        uint8 whitelistLength = uint8(extraData[0]);
-        bytes calldata whitelist = extraData[1:1 + whitelistLength];
+        uint8 resolversLength = uint8(extraData[extraData.length - 1]) >> 3;
+        uint256 whitelistLength = 4 + resolversLength * 12;
+        bytes calldata whitelist = extraData[:whitelistLength];
         if (!_isWhitelisted(whitelist, taker)) revert ResolverIsNotWhitelisted();
-        super._postInteraction(order, extension, orderHash, taker, makingAmount, takingAmount, remainingMakingAmount, extraData[1 + whitelistLength:]);
+        super._postInteraction(order, extension, orderHash, taker, makingAmount, takingAmount, remainingMakingAmount, extraData[whitelistLength:]);
     }
 }

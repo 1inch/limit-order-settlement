@@ -18,6 +18,13 @@ abstract contract FeeIntegratorExtension is ExtensionBase {
 
     uint256 private constant _TAKING_FEE_BASE = 1e9;
 
+    /**
+     * @param extraData Structured data of length n bytes, segmented as follows:
+     * [0:20]  - Integrator address.
+     * [20:24] - Integration fee information.
+     * [24:n]  - ExtraData for other extensions, not utilized by this integration fee extension.
+     * [n] - Bitmap indicating usage flags, where `xxxx xx1x` signifies integration fee usage. Other bits in this bitmap are not used by this extension.
+     */
     function _postInteraction(
         IOrderMixin.Order calldata order,
         bytes calldata extension,

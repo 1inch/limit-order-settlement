@@ -3,6 +3,7 @@ const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
 const { buildOrder, buildMakerTraits } = require('@1inch/limit-order-protocol-contract/test/helpers/orderUtils');
 const { initContractsForSettlement } = require('./helpers/fixtures');
 const hre = require('hardhat');
+const { buildExtensionsBitmapData } = require('./helpers/fusionUtils');
 const { ethers, network } = hre;
 
 describe('PriorityFeeLimiter', function () {
@@ -20,8 +21,8 @@ describe('PriorityFeeLimiter', function () {
         const currentTime = (await time.latest()) - time.duration.minutes(1);
 
         const postInteractionData = ethers.solidityPacked(
-            ['uint8', 'uint32', 'bytes10', 'uint16', 'bytes1'],
-            [16, currentTime, '0x' + owner.address.substring(22), 0, '0x00'],
+            ['uint32', 'bytes10', 'uint16', 'bytes1'],
+            [currentTime, '0x' + owner.address.substring(22), 0, buildExtensionsBitmapData()],
         );
 
         const order = buildOrder({

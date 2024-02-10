@@ -68,7 +68,7 @@ describe('WhitelistChecker', function () {
             });
 
             // Change resolver to fakeResolver in takerInteraction
-            const fakeFillOrderToData = fillOrderToData.slice(0, fillOrderToData.length - 84) + fakeResolver.target.substring(2) + fillOrderToData.slice(-44);
+            const fakeFillOrderToData = fillOrderToData.slice(0, fillOrderToData.length - 86) + fakeResolver.target.substring(2) + fillOrderToData.slice(-46);
 
             await expect(resolver.settleOrders(fakeFillOrderToData)).to.be.revertedWithCustomError(
                 resolver, 'NotTaker',
