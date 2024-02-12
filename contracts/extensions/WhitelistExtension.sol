@@ -22,14 +22,14 @@ abstract contract WhitelistExtension is ExtensionBase {
      *     (bytes10,bytes2)[N] resolversAddressesAndTimeDeltas;
      * }
      * ```
+     * @param whitelistSize The amount of resolvers in the whitelist.
      * @param resolver The resolver to check.
      * @return Whether the resolver is whitelisted.
      */
-    function _isWhitelisted(bytes calldata whitelist, address resolver) internal view virtual returns (bool) {
+    function _isWhitelisted(bytes calldata whitelist, uint256 whitelistSize, address resolver) internal view virtual returns (bool) {
         unchecked {
             uint256 allowedTime = uint32(bytes4(whitelist[0:4])); // initially set to auction start time
             whitelist = whitelist[4:];
-            uint256 whitelistSize = whitelist.length / 12;
             uint80 maskedResolverAddress = uint80(uint160(resolver));
             for (uint256 i = 0; i < whitelistSize; i++) {
                 uint80 whitelistedAddress = uint80(bytes10(whitelist[:10]));
@@ -65,7 +65,7 @@ abstract contract WhitelistExtension is ExtensionBase {
         uint8 resolversLength = uint8(extraData[extraData.length - 1]) >> 3;
         uint256 whitelistLength = 4 + resolversLength * 12;
         bytes calldata whitelist = extraData[:whitelistLength];
-        if (!_isWhitelisted(whitelist, taker)) revert ResolverIsNotWhitelisted();
+        if (!_isWhitelisted(whitelist, resolversLength, taker)) revert ResolverIsNotWhitelisted();
         super._postInteraction(order, extension, orderHash, taker, makingAmount, takingAmount, remainingMakingAmount, extraData[whitelistLength:]);
     }
 }
