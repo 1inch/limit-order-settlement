@@ -48,7 +48,7 @@ async function buildCalldataForOrder({
         postInteractionFeeDataTypes = ['bytes20', 'bytes4'];
         postInteractionFeeData = [integrator, '0x' + resolverFee.toString(16).padStart(8, '0')];
     }
-    if (feeType > 2) {
+    if (feeType > 3) {
         throw new Error('Invalid feeType in buildCalldataForOrder for postInteraction');
     }
 
