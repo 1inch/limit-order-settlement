@@ -38,17 +38,15 @@ async function buildCalldataForOrder({
         auction: { startTime: auctionStartTime, details: auctionDetails },
     } = setupData;
 
-    let postInteractionFeeDataTypes = [];
-    let postInteractionFeeData = [];
-    if (feeType === 1) {
-        postInteractionFeeDataTypes = ['bytes4'];
-        postInteractionFeeData = ['0x' + resolverFee.toString(16).padStart(8, '0')];
+    let postInteractionFeeResolver = '';
+    let postInteractionFeeIntegrator = '';
+    if ((feeType & 1) === 1) {
+        postInteractionFeeResolver = trim0x(ethers.solidityPacked(['bytes4'], ['0x' + resolverFee.toString(16).padStart(8, '0')]));
     }
-    if (feeType === 2) {
-        postInteractionFeeDataTypes = ['bytes20', 'bytes4'];
-        postInteractionFeeData = [integrator, '0x' + resolverFee.toString(16).padStart(8, '0')];
+    if ((feeType & 2) === 2) {
+        postInteractionFeeIntegrator = trim0x(ethers.solidityPacked(['bytes20', 'bytes4'], [integrator, '0x' + resolverFee.toString(16).padStart(8, '0')]));
     }
-    if (feeType > 2) {
+    if (feeType > 3) {
         throw new Error('Invalid feeType in buildCalldataForOrder for postInteraction');
     }
 
@@ -56,7 +54,8 @@ async function buildCalldataForOrder({
         makingAmountData: await settlement.getAddress() + trim0x(auctionDetails),
         takingAmountData: await settlement.getAddress() + trim0x(auctionDetails),
         postInteraction: await settlement.getAddress() +
-            trim0x(ethers.solidityPacked(postInteractionFeeDataTypes, postInteractionFeeData)) +
+            postInteractionFeeIntegrator +
+            postInteractionFeeResolver +
             trim0x(ethers.solidityPacked(['uint32', 'bytes10', 'uint16'], [auctionStartTime, whitelistData, 0])) +
             trim0x(ethers.solidityPacked(['bytes1'], [buildExtensionsBitmapData({ resolvers: 1, feeType })])),
     });
