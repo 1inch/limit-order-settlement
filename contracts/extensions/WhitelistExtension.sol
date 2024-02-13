@@ -3,14 +3,14 @@
 pragma solidity 0.8.23;
 
 import { IOrderMixin } from "@1inch/limit-order-protocol-contract/contracts/interfaces/IOrderMixin.sol";
-import { ExtensionBase } from "../ExtensionBase.sol";
+import { BaseExtension } from "./BaseExtension.sol";
 
 /**
  * @title Whitelist Extension
  * @notice Abstract contract designed to check resolvers from orders in whitelist within the post-interaction phase of order execution.
  * Ensures that only transactions from whitelisted resolvers are processed, enhancing security and compliance.
  */
-abstract contract WhitelistExtension is ExtensionBase {
+abstract contract WhitelistExtension is BaseExtension {
     error ResolverIsNotWhitelisted();
 
     /**

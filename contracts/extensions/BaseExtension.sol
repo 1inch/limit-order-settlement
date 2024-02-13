@@ -12,7 +12,7 @@ import { IAmountGetter } from "@1inch/limit-order-protocol-contract/contracts/in
  * @title Base Extension contract
  * @notice Contract to define the basic functionality for the limit orders settlement.
  */
-contract ExtensionBase is IPreInteraction, IPostInteraction, IAmountGetter {
+contract BaseExtension is IPreInteraction, IPostInteraction, IAmountGetter {
     error OnlyLimitOrderProtocol();
 
     uint256 private constant _BASE_POINTS = 10_000_000; // 100%

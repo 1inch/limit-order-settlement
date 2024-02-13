@@ -3,14 +3,14 @@
 pragma solidity 0.8.23;
 
 import { IOrderMixin } from "@1inch/limit-order-protocol-contract/contracts/interfaces/IOrderMixin.sol";
-import { ExtensionBase } from "../ExtensionBase.sol";
+import { BaseExtension } from "./BaseExtension.sol";
 import { FeeBankCharger } from "../FeeBankCharger.sol";
 
 /**
  * @title Fee Resolver Extension
  * @notice Abstract contract used as an extension in settlement contract to charge a fee resolver in the `postInteraction` method.
  */
-abstract contract FeeResolverExtension is ExtensionBase, FeeBankCharger {
+abstract contract FeeResolverExtension is BaseExtension, FeeBankCharger {
     uint256 private constant _ORDER_FEE_BASE_POINTS = 1e15;
 
     /**
