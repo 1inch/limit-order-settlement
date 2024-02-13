@@ -179,9 +179,8 @@ describe('Settlement', function () {
             setupData,
             minReturn: ether('100'),
             isInnermostOrder: true,
-            feeType: 2,
             integrator: bob.address,
-            resolverFee: 1000000,
+            integratorFee: 1000000,
         });
 
         const fillOrderToData0 = await buildCalldataForOrder({
@@ -197,9 +196,8 @@ describe('Settlement', function () {
             setupData,
             minReturn: ether('0.1'),
             additionalDataForSettlement: fillOrderToData1,
-            feeType: 2,
             integrator: bob.address,
-            resolverFee: 1000000,
+            integratorFee: 1000000,
         });
 
         const wethFeeAmount = ether('0.0001');
@@ -278,6 +276,66 @@ describe('Settlement', function () {
         const txn = await resolver.settleOrders(fillOrderToData0);
         await expect(txn).to.changeTokenBalances(dai, [resolver, alice], [ether('25'), ether('-25')]);
         await expect(txn).to.changeTokenBalances(weth, [owner, alice], [ether('-0.025'), ether('0.025')]);
+    });
+
+    it('opposite direction recursive swap with resolverFee and integratorFee', async function () {
+        const dataFormFixture = await loadFixture(initContractsForSettlement);
+        const auction = await buildAuctionDetails();
+        const setupData = { ...dataFormFixture, auction };
+        const {
+            contracts: { dai, weth, resolver, settlement },
+            accounts: { owner, alice, bob },
+        } = setupData;
+
+        const INTEGRATOR_FEE = 115n;
+        const fillOrderToData1 = await buildCalldataForOrder({
+            orderData: {
+                maker: alice.address,
+                makerAsset: await weth.getAddress(),
+                takerAsset: await dai.getAddress(),
+                makingAmount: ether('0.11'),
+                takingAmount: ether('100'),
+                makerTraits: buildMakerTraits(),
+            },
+            orderSigner: alice,
+            setupData,
+            minReturn: ether('100'),
+            isInnermostOrder: true,
+            resolverFee: BACK_ORDER_FEE,
+            integrator: bob.address,
+            integratorFee: INTEGRATOR_FEE,
+        });
+
+        const fillOrderToData0 = await buildCalldataForOrder({
+            orderData: {
+                maker: owner.address,
+                makerAsset: await dai.getAddress(),
+                takerAsset: await weth.getAddress(),
+                makingAmount: ether('100'),
+                takingAmount: ether('0.1'),
+                makerTraits: buildMakerTraits(),
+            },
+            orderSigner: owner,
+            setupData,
+            minReturn: ether('0.1'),
+            additionalDataForSettlement: fillOrderToData1,
+            resolverFee: ORDER_FEE,
+        });
+
+        const availableCreditBefore = await settlement.availableCredit(resolver);
+
+        // send fee amounts to resolver contract
+        await dai.connect(alice).transfer(resolver, ether('100') * BACK_ORDER_FEE / BigInt(1e9));
+        // approve fee amounts to be spent by SettlementExtension
+        await resolver.approve(dai, settlement);
+
+        const tx = await resolver.settleOrders(fillOrderToData0);
+        // Check resolverFee
+        expect(await settlement.availableCredit(resolver)).to.equal(
+            availableCreditBefore - BASE_POINTS * (ORDER_FEE + BACK_ORDER_FEE),
+        );
+        // Check integratorFee
+        expect(tx).changeTokenBalance(dai, bob, ether('100') * INTEGRATOR_FEE / BigInt(1e9));
     });
 
     it('triple recursive swap', async function () {
@@ -566,7 +624,6 @@ describe('Settlement', function () {
             minReturn: ether('0.1'),
             isInnermostOrder: true,
             isMakingAmount: false,
-            feeType: 1,
             resolverFee: BACK_ORDER_FEE,
         });
 
@@ -584,7 +641,6 @@ describe('Settlement', function () {
             minReturn: ether('100'),
             additionalDataForSettlement: fillOrderToData1,
             isMakingAmount: false,
-            feeType: 1,
             resolverFee: ORDER_FEE,
         });
         const availableCreditBefore = await settlement.availableCredit(resolver);
@@ -637,7 +693,6 @@ describe('Settlement', function () {
             additionalDataForSettlement: resolverArgs,
             isInnermostOrder: true,
             fillingAmount: ether('10') * partialModifier / points,
-            feeType: 1,
             resolverFee: ORDER_FEE,
         });
 
@@ -695,7 +750,6 @@ describe('Settlement', function () {
             additionalDataForSettlement: resolverArgs,
             isInnermostOrder: true,
             fillingAmount: ether('10') * minimalPartialModifier / points,
-            feeType: 1,
             resolverFee: minimalOrderFee,
         });
 
@@ -732,7 +786,6 @@ describe('Settlement', function () {
             setupData,
             minReturn: ether('100'),
             isInnermostOrder: true,
-            feeType: 1,
             resolverFee: BACK_ORDER_FEE,
         });
 
@@ -749,7 +802,6 @@ describe('Settlement', function () {
             setupData,
             minReturn: ether('0.1'),
             additionalDataForSettlement: fillOrderToData1,
-            feeType: 1,
             resolverFee: '1000000',
         });
 

@@ -27,9 +27,9 @@ async function buildCalldataForOrder({
     isInnermostOrder = false,
     isMakingAmount = true,
     fillingAmount = isMakingAmount ? orderData.makingAmount : orderData.takingAmount,
-    feeType = 0,
     integrator = orderSigner.address,
     resolverFee = 0,
+    integratorFee = 0,
     whitelistData = '0x' + setupData.contracts.resolver.target.substring(22),
 }) {
     const {
@@ -40,14 +40,14 @@ async function buildCalldataForOrder({
 
     let postInteractionFeeResolver = '';
     let postInteractionFeeIntegrator = '';
-    if ((feeType & 1) === 1) {
+    let feeType = 0;
+    if (resolverFee > 0) {
+        feeType += 1;
         postInteractionFeeResolver = trim0x(ethers.solidityPacked(['bytes4'], ['0x' + resolverFee.toString(16).padStart(8, '0')]));
     }
-    if ((feeType & 2) === 2) {
-        postInteractionFeeIntegrator = trim0x(ethers.solidityPacked(['bytes20', 'bytes4'], [integrator, '0x' + resolverFee.toString(16).padStart(8, '0')]));
-    }
-    if (feeType > 3) {
-        throw new Error('Invalid feeType in buildCalldataForOrder for postInteraction');
+    if (integratorFee > 0) {
+        feeType += 2;
+        postInteractionFeeIntegrator = trim0x(ethers.solidityPacked(['bytes20', 'bytes4'], [integrator, '0x' + integratorFee.toString(16).padStart(8, '0')]));
     }
 
     const order = buildOrder(orderData, {
