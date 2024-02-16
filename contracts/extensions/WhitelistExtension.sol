@@ -4,6 +4,7 @@ pragma solidity 0.8.23;
 
 import { IOrderMixin } from "@1inch/limit-order-protocol-contract/contracts/interfaces/IOrderMixin.sol";
 import { BaseExtension } from "./BaseExtension.sol";
+import { ExtensionLib } from "./ExtensionLib.sol";
 
 /**
  * @title Whitelist Extension
@@ -11,6 +12,8 @@ import { BaseExtension } from "./BaseExtension.sol";
  * Ensures that only transactions from whitelisted resolvers are processed, enhancing security and compliance.
  */
 abstract contract WhitelistExtension is BaseExtension {
+    using ExtensionLib for bytes;
+
     error ResolverIsNotWhitelisted();
 
     /**
@@ -62,10 +65,11 @@ abstract contract WhitelistExtension is BaseExtension {
         uint256 remainingMakingAmount,
         bytes calldata extraData
     ) internal virtual override {
-        uint8 resolversLength = uint8(extraData[extraData.length - 1]) >> 3;
-        uint256 whitelistLength = 4 + resolversLength * 12;
-        bytes calldata whitelist = extraData[:whitelistLength];
-        if (!_isWhitelisted(whitelist, resolversLength, taker)) revert ResolverIsNotWhitelisted();
-        super._postInteraction(order, extension, orderHash, taker, makingAmount, takingAmount, remainingMakingAmount, extraData[whitelistLength:]);
+        uint256 resolversCount = extraData.whitelistCount();
+        unchecked {
+            uint256 whitelistSize = 4 + resolversCount * 12;
+            if (!_isWhitelisted(extraData[:whitelistSize], resolversCount, taker)) revert ResolverIsNotWhitelisted();
+            super._postInteraction(order, extension, orderHash, taker, makingAmount, takingAmount, remainingMakingAmount, extraData[whitelistSize:]);
+        }
     }
 }
