@@ -12,7 +12,7 @@ import { IAmountGetter } from "@1inch/limit-order-protocol-contract/contracts/in
  * @title Base Extension contract
  * @notice Contract to define the basic functionality for the limit orders settlement.
  */
-contract ExtensionBase is IPreInteraction, IPostInteraction, IAmountGetter {
+contract BaseExtension is IPreInteraction, IPostInteraction, IAmountGetter {
     error OnlyLimitOrderProtocol();
 
     uint256 private constant _BASE_POINTS = 10_000_000; // 100%
@@ -33,6 +33,9 @@ contract ExtensionBase is IPreInteraction, IPostInteraction, IAmountGetter {
         _LIMIT_ORDER_PROTOCOL = limitOrderProtocol;
     }
 
+    /**
+     * See {IAmountGetter-getMakingAmount}
+     */
     function getMakingAmount(
         IOrderMixin.Order calldata order,
         bytes calldata /* extension */,
@@ -46,6 +49,9 @@ contract ExtensionBase is IPreInteraction, IPostInteraction, IAmountGetter {
         return Math.mulDiv(order.makingAmount, takingAmount * _BASE_POINTS, order.takingAmount * (_BASE_POINTS + rateBump));
     }
 
+    /**
+     * See {IAmountGetter-getTakingAmount}
+     */
     function getTakingAmount(
         IOrderMixin.Order calldata order,
         bytes calldata /* extension */,
@@ -59,6 +65,9 @@ contract ExtensionBase is IPreInteraction, IPostInteraction, IAmountGetter {
         return Math.mulDiv(order.takingAmount, makingAmount * (_BASE_POINTS + rateBump), order.makingAmount * _BASE_POINTS, Math.Rounding.Ceil);
     }
 
+    /**
+     * See {IPreInteraction-preInteraction}
+     */
     function preInteraction(
         IOrderMixin.Order calldata order,
         bytes calldata extension,
@@ -72,6 +81,9 @@ contract ExtensionBase is IPreInteraction, IPostInteraction, IAmountGetter {
         _preInteraction(order, extension, orderHash, taker, makingAmount, takingAmount, remainingMakingAmount, extraData);
     }
 
+    /**
+     * See {IPostInteraction-postInteraction}
+     */
     function postInteraction(
         IOrderMixin.Order calldata order,
         bytes calldata extension,
