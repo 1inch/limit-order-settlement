@@ -9,10 +9,10 @@ import { BaseExtension } from "./BaseExtension.sol";
 import { ExtensionLib } from "./ExtensionLib.sol";
 
 /**
- * @title Fee Resolver Extension
+ * @title Resolver Fee Extension
  * @notice Abstract contract used as an extension in settlement contract to charge a fee resolver in the `postInteraction` method.
  */
-abstract contract FeeResolverExtension is BaseExtension, FeeBankCharger {
+abstract contract ResolverFeeExtension is BaseExtension, FeeBankCharger {
     using ExtensionLib for bytes;
 
     uint256 private constant _ORDER_FEE_BASE_POINTS = 1e15;
