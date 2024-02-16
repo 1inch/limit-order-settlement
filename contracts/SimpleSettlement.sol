@@ -4,7 +4,6 @@ pragma solidity 0.8.23;
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IOrderMixin } from "@1inch/limit-order-protocol-contract/contracts/interfaces/IOrderMixin.sol";
-import { FeeBankCharger } from "./FeeBankCharger.sol";
 import { BaseExtension } from "./extensions/BaseExtension.sol";
 import { FeeIntegratorExtension } from "./extensions/FeeIntegratorExtension.sol";
 import { FeeResolverExtension } from "./extensions/FeeResolverExtension.sol";
@@ -21,7 +20,7 @@ contract SimpleSettlement is WhitelistExtension, FeeResolverExtension, FeeIntegr
      * @param limitOrderProtocol The limit order protocol contract.
      * @param token The token to charge protocol fees in.
      */
-    constructor(address limitOrderProtocol, IERC20 token) BaseExtension(limitOrderProtocol) FeeBankCharger(token) {}
+    constructor(address limitOrderProtocol, IERC20 token) BaseExtension(limitOrderProtocol) FeeResolverExtension(token) {}
 
     function _postInteraction(
         IOrderMixin.Order calldata order,
