@@ -7,14 +7,16 @@ import { IOrderMixin } from "@1inch/limit-order-protocol-contract/contracts/inte
 import { SafeERC20 } from "@1inch/solidity-utils/contracts/libraries/SafeERC20.sol";
 import { Address, AddressLib } from "@1inch/solidity-utils/contracts/libraries/AddressLib.sol";
 import { BaseExtension } from "./BaseExtension.sol";
+import { ExtensionLib } from "./ExtensionLib.sol";
 
 /**
- * @title Fee Integrator Extension
+ * @title Integrator Fee Extension
  * @notice Abstract contract designed to integrate fee processing within the post-interaction phase of order execution.
  */
-abstract contract FeeIntegratorExtension is BaseExtension {
+abstract contract IntegratorFeeExtension is BaseExtension {
     using SafeERC20 for IERC20;
     using AddressLib for Address;
+    using ExtensionLib for bytes;
 
     uint256 private constant _TAKING_FEE_BASE = 1e9;
 
@@ -35,11 +37,11 @@ abstract contract FeeIntegratorExtension is BaseExtension {
         uint256 remainingMakingAmount,
         bytes calldata extraData
     ) internal virtual override {
-        if (extraData[extraData.length - 1] & 0x02 == 0x02) {
+        if (extraData.integratorFeeEnabled()) {
             address integrator = address(bytes20(extraData[:20]));
-            uint256 integrationFee = takingAmount * uint256(uint32(bytes4(extraData[20:24]))) / _TAKING_FEE_BASE;
-            if (integrationFee > 0) {
-                IERC20(order.takerAsset.get()).safeTransferFrom(taker, integrator, integrationFee);
+            uint256 fee = takingAmount * uint256(uint32(bytes4(extraData[20:24]))) / _TAKING_FEE_BASE;
+            if (fee > 0) {
+                IERC20(order.takerAsset.get()).safeTransferFrom(taker, integrator, fee);
             }
             extraData = extraData[24:];
         }

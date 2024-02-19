@@ -2,16 +2,22 @@
 
 pragma solidity 0.8.23;
 
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IOrderMixin } from "@1inch/limit-order-protocol-contract/contracts/interfaces/IOrderMixin.sol";
-import { BaseExtension } from "./BaseExtension.sol";
 import { FeeBankCharger } from "../FeeBankCharger.sol";
+import { BaseExtension } from "./BaseExtension.sol";
+import { ExtensionLib } from "./ExtensionLib.sol";
 
 /**
- * @title Fee Resolver Extension
+ * @title Resolver Fee Extension
  * @notice Abstract contract used as an extension in settlement contract to charge a fee resolver in the `postInteraction` method.
  */
-abstract contract FeeResolverExtension is BaseExtension, FeeBankCharger {
+abstract contract ResolverFeeExtension is BaseExtension, FeeBankCharger {
+    using ExtensionLib for bytes;
+
     uint256 private constant _ORDER_FEE_BASE_POINTS = 1e15;
+
+    constructor(IERC20 token) FeeBankCharger(token) {}
 
     /**
      * @dev Calculates the resolver fee.
@@ -44,7 +50,7 @@ abstract contract FeeResolverExtension is BaseExtension, FeeBankCharger {
         uint256 remainingMakingAmount,
         bytes calldata extraData
     ) internal virtual override {
-        if (extraData[extraData.length - 1] & 0x01 == 0x01) {
+        if (extraData.resolverFeeEnabled()) {
             uint256 resolverFee = _getResolverFee(uint256(uint32(bytes4(extraData[:4]))), order.makingAmount, makingAmount);
             _chargeFee(taker, resolverFee);
             extraData = extraData[4:];
