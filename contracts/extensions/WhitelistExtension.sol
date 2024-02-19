@@ -65,7 +65,7 @@ abstract contract WhitelistExtension is BaseExtension {
         uint256 remainingMakingAmount,
         bytes calldata extraData
     ) internal virtual override {
-        uint256 resolversCount = extraData.whitelistCount();
+        uint256 resolversCount = extraData.resolversCount();
         unchecked {
             uint256 whitelistSize = 4 + resolversCount * 12;
             if (!_isWhitelisted(extraData[:whitelistSize], resolversCount, taker)) revert ResolverIsNotWhitelisted();
