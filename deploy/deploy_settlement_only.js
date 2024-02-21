@@ -17,7 +17,7 @@ const INCH = {
     31337: '0x111111111117dC0aa78b770fA6A738034120C302', // Hardhat
 };
 
-const ROUTER_V5_ADDR = '0x1111111254EEB25477B68fb85Ed929f73A960582';
+const ROUTER_V6_ADDR = '0x111111125421ca6dc452d289314280a0f8842a65';
 
 module.exports = async ({ getNamedAccounts, deployments }) => {
     const chainId = await getChainId();
@@ -28,16 +28,16 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     const { deployer } = await getNamedAccounts();
 
     const settlement = await deployAndGetContract({
-        contractName: 'SettlementExtension',
-        constructorArgs: [ROUTER_V5_ADDR, INCH[chainId]],
+        contractName: 'Settlement',
+        constructorArgs: [ROUTER_V6_ADDR, INCH[chainId]],
         deployments,
         deployer,
-        deploymentName: 'Settlement',
+        skipIfAlreadyDeployed: false,
     });
 
     console.log('Settlement deployed to:', await settlement.getAddress());
 
-    const feeBankAddress = await settlement.feeBank();
+    const feeBankAddress = await settlement.FEE_BANK();
     console.log('FeeBank deployed to:', feeBankAddress);
 
     if (chainId !== '31337') {
@@ -46,16 +46,6 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
             constructorArguments: [await settlement.getAddress(), INCH[chainId], deployer],
         });
     }
-
-    const settlementStaging = await deployAndGetContract({
-        contractName: 'SettlementExtension',
-        constructorArgs: [ROUTER_V5_ADDR, INCH[chainId]],
-        deployments,
-        deployer,
-        deploymentName: 'SettlementStaging',
-    });
-
-    console.log('Settlement staging to:', await settlementStaging.getAddress());
 };
 
 module.exports.skip = async () => true;
