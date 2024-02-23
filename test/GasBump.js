@@ -3,7 +3,8 @@ const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
 const { buildOrder, buildMakerTraits } = require('@1inch/limit-order-protocol-contract/test/helpers/orderUtils');
 const { initContractsForSettlement } = require('./helpers/fixtures');
 const { buildAuctionDetails } = require('./helpers/fusionUtils');
-const { network } = require('hardhat');
+const hre = require('hardhat');
+const { network } = hre;
 
 describe('GasBump', function () {
     before(async function () {
