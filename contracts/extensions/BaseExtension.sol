@@ -122,7 +122,7 @@ contract BaseExtension is IPreInteraction, IPostInteraction, IAmountGetter {
         unchecked {
             uint256 gasBumpEstimate = uint24(bytes3(auctionDetails[0:3]));
             uint256 gasPriceEstimate = uint32(bytes4(auctionDetails[3:7]));
-            uint256 gasBump = gasBumpEstimate == 0 || gasPriceEstimate == 0 ? 0 : gasBumpEstimate * tx.gasprice / gasPriceEstimate / _GAS_PRICE_BASE;
+            uint256 gasBump = gasBumpEstimate == 0 || gasPriceEstimate == 0 ? 0 : gasBumpEstimate * block.basefee / gasPriceEstimate / _GAS_PRICE_BASE;
             uint256 auctionStartTime = uint32(bytes4(auctionDetails[7:11]));
             uint256 auctionFinishTime = auctionStartTime + uint24(bytes3(auctionDetails[11:14]));
             uint256 initialRateBump = uint24(bytes3(auctionDetails[14:17]));
