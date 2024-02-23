@@ -42,19 +42,19 @@ describe('GasBump', function () {
         expect(takingAmount).to.be.equal(ether('1.05'));
     });
 
-    it('0.1 gwei = 0.001% gas fee', async function () {
+    it('0.1 gwei = 0.01% gas fee', async function () {
         const { order, owner, auctionDetails, settlementExtension } = await loadFixture(prepare);
         const takingAmount = await callGetTakingAmount(settlementExtension, order, owner, auctionDetails, 1e8);
         expect(takingAmount).to.be.equal(ether('1.0499'));
     });
 
-    it('15 gwei = 0.15% gas fee', async function () {
+    it('15 gwei = 1.5% gas fee', async function () {
         const { order, owner, auctionDetails, settlementExtension } = await loadFixture(prepare);
         const takingAmount = await callGetTakingAmount(settlementExtension, order, owner, auctionDetails, 15e9);
         expect(takingAmount).to.be.equal(ether('1.035'));
     });
 
-    it('100 gwei = 1% gas fee, should be capped with takingAmount', async function () {
+    it('100 gwei = 10% gas fee, should be capped with takingAmount', async function () {
         const { order, owner, auctionDetails, settlementExtension } = await loadFixture(prepare);
         const takingAmount = await callGetTakingAmount(settlementExtension, order, owner, auctionDetails, 100e9);
         expect(takingAmount).to.be.equal(ether('1'));
