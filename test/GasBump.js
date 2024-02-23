@@ -1,10 +1,15 @@
-const { expect, deployContract, time, ether, constants } = require('@1inch/solidity-utils');
+const { deployContract, time, ether, constants } = require('@1inch/solidity-utils');
 const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
 const { buildOrder, buildMakerTraits } = require('@1inch/limit-order-protocol-contract/test/helpers/orderUtils');
 const { initContractsForSettlement } = require('./helpers/fixtures');
 const { buildAuctionDetails } = require('./helpers/fusionUtils');
+const { network } = require('hardhat');
 
 describe('GasBump', function () {
+    before(async function () {
+        if (hre.__SOLIDITY_COVERAGE_RUNNING) { this.skip(); }
+    });
+
     after(async function () {
         await network.provider.send('hardhat_setNextBlockBaseFeePerGas', ['0x1']);
     });
@@ -36,7 +41,7 @@ describe('GasBump', function () {
     async function testGetTakingAmount(checker, order, owner, auctionDetails, basefee, result) {
         await network.provider.send('hardhat_setNextBlockBaseFeePerGas', ['0x' + basefee.toString(16)]);
         await checker.testGetTakingAmount(
-            order, '0x', constants.ZERO_BYTES32, owner.address, ether('10'), ether('10'), auctionDetails, result, { gasPrice: basefee }
+            order, '0x', constants.ZERO_BYTES32, owner.address, ether('10'), ether('10'), auctionDetails, result, { gasPrice: basefee },
         );
     }
 
@@ -53,7 +58,6 @@ describe('GasBump', function () {
     it('15 gwei = 1.5% gas fee', async function () {
         const { order, owner, auctionDetails, checker } = await loadFixture(prepare);
         await testGetTakingAmount(checker, order, owner, auctionDetails, 15e9, ether('1.035'));
-
     });
 
     it('100 gwei = 10% gas fee, should be capped with takingAmount', async function () {
