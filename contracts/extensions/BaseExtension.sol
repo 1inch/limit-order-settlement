@@ -16,6 +16,7 @@ contract BaseExtension is IPreInteraction, IPostInteraction, IAmountGetter {
     error OnlyLimitOrderProtocol();
 
     uint256 private constant _BASE_POINTS = 10_000_000; // 100%
+    uint256 private constant _GAS_PRICE_BASE = 1_000_000; // 1000 means 1 Gwei
 
     address private immutable _LIMIT_ORDER_PROTOCOL;
 
@@ -102,10 +103,13 @@ contract BaseExtension is IPreInteraction, IPostInteraction, IAmountGetter {
      * piecewise linear function with `N` points. Each point is represented as a pair of
      * `(rateBump, timeDelta)`, where `rateBump` is the rate bump in basis points and `timeDelta`
      * is the time delta in seconds. The rate bump is interpolated linearly between the points.
-     * The last point is assumed to be `(0, auctionDuration)`.
-     * @param auctionDetails AuctionDetails is a tihgtly packed struct of the following format:
+     * The last point is assumed to be `(0, auctionDuration)`. `gasBumpEstimate` and `gasPriceEstimate`
+     * are used to estimate the transaction costs which are then offset from the rate bump.
+     * @param auctionDetails AuctionDetails is a tightly packed struct of the following format:
      * ```
      * struct AuctionDetails {
+     *     bytes3 gasBumpEstimate;
+     *     bytes4 gasPriceEstimate;
      *     bytes4 auctionStartTime;
      *     bytes3 auctionDuration;
      *     bytes3 initialRateBump;
@@ -116,30 +120,38 @@ contract BaseExtension is IPreInteraction, IPostInteraction, IAmountGetter {
      */
     function _getRateBump(bytes calldata auctionDetails) private view returns (uint256) {
         unchecked {
-            uint256 auctionStartTime = uint32(bytes4(auctionDetails[0:4]));
-            uint256 auctionFinishTime = auctionStartTime + uint24(bytes3(auctionDetails[4:7]));
-            uint256 initialRateBump = uint24(bytes3(auctionDetails[7:10]));
+            uint256 gasBumpEstimate = uint24(bytes3(auctionDetails[0:3]));
+            uint256 gasPriceEstimate = uint32(bytes4(auctionDetails[3:7]));
+            uint256 gasBump = gasBumpEstimate == 0 || gasPriceEstimate == 0 ? 0 : gasBumpEstimate * tx.gasprice / gasPriceEstimate / _GAS_PRICE_BASE;
+            uint256 auctionStartTime = uint32(bytes4(auctionDetails[7:11]));
+            uint256 auctionFinishTime = auctionStartTime + uint24(bytes3(auctionDetails[11:14]));
+            uint256 initialRateBump = uint24(bytes3(auctionDetails[14:17]));
+            uint256 auctionBump = _getAuctionBump(auctionStartTime, auctionFinishTime, initialRateBump, auctionDetails[17:]);
+            return auctionBump > gasBump ? auctionBump - gasBump : 0;
+        }
+    }
 
+    function _getAuctionBump(uint256 auctionStartTime, uint256 auctionFinishTime, uint256 initialRateBump, bytes calldata pointsAndTimeDeltas) private view returns (uint256) {
+        unchecked {
             if (block.timestamp <= auctionStartTime) {
                 return initialRateBump;
             } else if (block.timestamp >= auctionFinishTime) {
-                return 0; // Means 0% bump
+                return 0;
             }
 
-            auctionDetails = auctionDetails[10:];
-            uint256 pointsSize = auctionDetails.length / 5;
+            uint256 pointsSize = pointsAndTimeDeltas.length / 5;
             uint256 currentPointTime = auctionStartTime;
             uint256 currentRateBump = initialRateBump;
 
             for (uint256 i = 0; i < pointsSize; i++) {
-                uint256 nextRateBump = uint24(bytes3(auctionDetails[:3]));
-                uint256 nextPointTime = currentPointTime + uint16(bytes2(auctionDetails[3:5]));
+                uint256 nextRateBump = uint24(bytes3(pointsAndTimeDeltas[:3]));
+                uint256 nextPointTime = currentPointTime + uint16(bytes2(pointsAndTimeDeltas[3:5]));
                 if (block.timestamp <= nextPointTime) {
                     return ((block.timestamp - currentPointTime) * nextRateBump + (nextPointTime - block.timestamp) * currentRateBump) / (nextPointTime - currentPointTime);
                 }
                 currentRateBump = nextRateBump;
                 currentPointTime = nextPointTime;
-                auctionDetails = auctionDetails[5:];
+                pointsAndTimeDeltas = pointsAndTimeDeltas[5:];
             }
             return (auctionFinishTime - block.timestamp) * currentRateBump / (auctionFinishTime - currentPointTime);
         }

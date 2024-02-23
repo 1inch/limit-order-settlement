@@ -293,9 +293,7 @@ describe('MeasureGas', function () {
             const { contracts: { dai, weth, lopv4, settlementExtension }, accounts: { owner, alice }, others: { chainId } } = await loadFixture(initContractsAndApproves);
 
             const auctionStartTime = await time.latest();
-            const auctionDetails = ethers.solidityPacked(
-                ['uint32', 'uint24', 'uint24'], [auctionStartTime, time.duration.hours(1), 0],
-            );
+            const { details: auctionDetails } = await buildAuctionDetails({ startTime: auctionStartTime, duration: time.duration.hours(1) });
 
             const order = buildOrder({
                 maker: alice.address,
@@ -338,9 +336,7 @@ describe('MeasureGas', function () {
             const { contracts: { dai, weth, lopv4, settlementExtension, resolver }, accounts: { alice }, others: { chainId } } = await loadFixture(initContractsAndApproves);
 
             const auctionStartTime = await time.latest();
-            const auctionDetails = ethers.solidityPacked(
-                ['uint32', 'uint24', 'uint24'], [auctionStartTime, time.duration.hours(1), 0],
-            );
+            const { details: auctionDetails } = await buildAuctionDetails({ startTime: auctionStartTime, duration: time.duration.hours(1) });
 
             const order = buildOrder({
                 maker: alice.address,
@@ -386,9 +382,7 @@ describe('MeasureGas', function () {
             const { contracts: { dai, weth, lopv4, settlementExtension, resolver }, accounts: { owner, alice }, others: { chainId, abiCoder } } = await loadFixture(initContractsAndApproves);
 
             const auctionStartTime = await time.latest();
-            const auctionDetails = ethers.solidityPacked(
-                ['uint32', 'uint24', 'uint24'], [auctionStartTime, time.duration.hours(1), 0],
-            );
+            const { details: auctionDetails } = await buildAuctionDetails({ startTime: auctionStartTime, duration: time.duration.hours(1) });
 
             const resolverArgs = abiCoder.encode(
                 ['address[]', 'bytes[]'],

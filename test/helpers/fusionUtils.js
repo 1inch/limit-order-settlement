@@ -83,6 +83,8 @@ async function buildCalldataForOrder({
 }
 
 async function buildAuctionDetails({
+    gasBumpEstimate = 0,
+    gasPriceEstimate = 0,
     startTime, // default is time.latest()
     duration = 1800, // default is 30 minutes
     delay = 0,
@@ -91,12 +93,12 @@ async function buildAuctionDetails({
 } = {}) {
     startTime = startTime || await time.latest();
     let details = ethers.solidityPacked(
-        ['uint32', 'uint24', 'uint24'], [startTime + delay, duration, initialRateBump],
+        ['uint24', 'uint32', 'uint32', 'uint24', 'uint24'], [gasBumpEstimate, gasPriceEstimate, startTime + delay, duration, initialRateBump],
     );
     for (let i = 0; i < points.length; i++) {
         details += trim0x(ethers.solidityPacked(['uint24', 'uint16'], [points[i][0], points[i][1]]));
     }
-    return { startTime, details, delay, duration, initialRateBump };
+    return { gasBumpEstimate, gasPriceEstimate, startTime, duration, delay, initialRateBump, details };
 }
 
 module.exports = {
