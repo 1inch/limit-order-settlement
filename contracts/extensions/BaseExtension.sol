@@ -131,7 +131,7 @@ contract BaseExtension is IPreInteraction, IPostInteraction, IAmountGetter {
             uint256 currentPointTime = auctionStartTime;
             uint256 currentRateBump = initialRateBump;
 
-            for (uint256 i = 0; i < pointsSize; i++) {
+            while (auctionDetails.length > 0) {
                 uint256 nextRateBump = uint24(bytes3(auctionDetails[:3]));
                 uint256 nextPointTime = currentPointTime + uint16(bytes2(auctionDetails[3:5]));
                 if (block.timestamp <= nextPointTime) {
