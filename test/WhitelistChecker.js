@@ -67,12 +67,8 @@ describe('WhitelistChecker', function () {
                 isInnermostOrder: true,
             });
 
-            // Change resolver to fakeResolver in takerInteraction
-            const fakeFillOrderToData = fillOrderToData.slice(0, fillOrderToData.length - 86) + fakeResolver.target.substring(2) + fillOrderToData.slice(-46);
-
-            await expect(resolver.settleOrders(fakeFillOrderToData)).to.be.revertedWithCustomError(
-                resolver, 'NotTaker',
-            );
+            // try to make txn from fakeResolver
+            await expect(fakeResolver.settleOrders(fillOrderToData)).to.be.revertedWithCustomError(resolver, 'NotTaker');
         });
 
         it('only LOP can use takerInteraction method', async function () {
