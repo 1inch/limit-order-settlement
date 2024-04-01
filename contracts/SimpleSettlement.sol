@@ -20,6 +20,7 @@ contract SimpleSettlement is WhitelistExtension, ResolverFeeExtension, Integrato
      * @param limitOrderProtocol The limit order protocol contract.
      * @param feeToken The token to charge protocol fees in.
      * @param weth The WETH address.
+     * @param owner The owner of the contract.
      */
     constructor(address limitOrderProtocol, IERC20 feeToken, address weth, address owner)
         BaseExtension(limitOrderProtocol)
