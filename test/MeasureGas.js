@@ -27,7 +27,7 @@ describe('MeasureGas', function () {
         await weth.deposit({ value: ether('1') });
         await weth.connect(alice).deposit({ value: ether('1') });
 
-        const settlementExtension = await deployContract('Settlement', [lopv4, inch]);
+        const settlementExtension = await deployContract('Settlement', [lopv4, inch, weth, owner]);
         const SettlementV1 = JSON.parse(fs.readFileSync(path.join(__dirname, '../artifacts-v1/SettlementV1.json'), 'utf8'));
         // const settlement = await deployContract(SettlementV1.abi, [lopv3.address, inch.address]);
         const ContractFactory = await ethers.getContractFactory(SettlementV1.abi, SettlementV1.bytecode);
@@ -228,7 +228,7 @@ describe('MeasureGas', function () {
     describe('Extension check', function () {
         it('post interaction', async function () {
             const { contracts: { dai, weth }, accounts: { owner } } = await loadFixture(initContractsAndApproves);
-            const settlementExtension = await deployContract('Settlement', [owner, weth]);
+            const settlementExtension = await deployContract('Settlement', [owner, weth, weth, owner]);
             const currentTime = (await time.latest()) - time.duration.minutes(1);
 
             const postInteractionData = ethers.solidityPacked(

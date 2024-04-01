@@ -32,7 +32,7 @@ async function initContractsForSettlement() {
     await weth.deposit({ value: ether('1') });
     await weth.connect(alice).deposit({ value: ether('1') });
 
-    const settlement = await deployContract('SettlementMock', [lopv4, inch]);
+    const settlement = await deployContract('SettlementMock', [lopv4, inch, weth]);
 
     const FeeBank = await ethers.getContractFactory('FeeBank');
     const feeBank = FeeBank.attach(await settlement.FEE_BANK());

@@ -1,3 +1,4 @@
+const { ethers } = require('hardhat');
 const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
 const { time, expect, ether, trim0x, timeIncreaseTo, getPermit, getPermit2, compressPermit, permit2Contract } = require('@1inch/solidity-utils');
 const { buildMakerTraits } = require('@1inch/limit-order-protocol-contract/test/helpers/orderUtils');
@@ -162,7 +163,7 @@ describe('Settlement', function () {
         const auction = await buildAuctionDetails();
         const setupData = { ...dataFormFixture, auction };
         const {
-            contracts: { dai, weth, settlement, resolver },
+            contracts: { dai, weth, resolver },
             accounts: { owner, alice, bob },
         } = setupData;
 
@@ -180,7 +181,7 @@ describe('Settlement', function () {
             minReturn: ether('100'),
             isInnermostOrder: true,
             integrator: bob.address,
-            integratorFee: 1000000,
+            integratorFee: 100,
         });
 
         const fillOrderToData0 = await buildCalldataForOrder({
@@ -197,21 +198,12 @@ describe('Settlement', function () {
             minReturn: ether('0.1'),
             additionalDataForSettlement: fillOrderToData1,
             integrator: bob.address,
-            integratorFee: 1000000,
+            integratorFee: 100,
         });
 
-        const wethFeeAmount = ether('0.0001');
-        const daiFeeAmount = ether('0.1');
-        // send fee amounts to resolver contract
-        await weth.transfer(resolver, wethFeeAmount);
-        await dai.connect(alice).transfer(resolver, daiFeeAmount);
-        // approve fee amounts to be spent by SettlementExtension
-        await resolver.approve(weth, settlement);
-        await resolver.approve(dai, settlement);
-
         const txn = await resolver.settleOrders(fillOrderToData0);
-        await expect(txn).to.changeTokenBalances(dai, [owner, alice, bob], [ether('-100'), ether('100'), ether('0.1')]);
-        await expect(txn).to.changeTokenBalances(weth, [owner, alice, bob], [ether('0.1'), ether('-0.11'), ether('0.0001')]);
+        await expect(txn).to.changeTokenBalances(dai, [owner, alice, bob], [ether('-100'), ether('99.9'), ether('0.1')]);
+        await expect(txn).to.changeTokenBalances(weth, [owner, alice, bob], [ether('0.0999'), ether('-0.11'), ether('0.0001')]);
     });
 
     it('unidirectional recursive swap', async function () {
@@ -324,11 +316,6 @@ describe('Settlement', function () {
 
         const availableCreditBefore = await settlement.availableCredit(resolver);
 
-        // send fee amounts to resolver contract
-        await dai.connect(alice).transfer(resolver, ether('100') * BACK_ORDER_FEE / BigInt(1e9));
-        // approve fee amounts to be spent by SettlementExtension
-        await resolver.approve(dai, settlement);
-
         const tx = await resolver.settleOrders(fillOrderToData0);
         // Check resolverFee
         expect(await settlement.availableCredit(resolver)).to.equal(
@@ -336,6 +323,125 @@ describe('Settlement', function () {
         );
         // Check integratorFee
         expect(tx).changeTokenBalance(dai, bob, ether('100') * INTEGRATOR_FEE / BigInt(1e9));
+    });
+
+    it('opposite direction recursive swap with resolverFee and integratorFee and custom receiver', async function () {
+        const dataFormFixture = await loadFixture(initContractsForSettlement);
+        const auction = await buildAuctionDetails();
+        const setupData = { ...dataFormFixture, auction };
+        const {
+            contracts: { dai, weth, resolver, settlement },
+            accounts: { owner, alice, bob },
+        } = setupData;
+
+        const [,,, aliceReciever, ownerReciever] = await ethers.getSigners();
+
+        const INTEGRATOR_FEE = 115n;
+        const fillOrderToData1 = await buildCalldataForOrder({
+            orderData: {
+                maker: alice.address,
+                receiver: aliceReciever.address,
+                makerAsset: await weth.getAddress(),
+                takerAsset: await dai.getAddress(),
+                makingAmount: ether('0.11'),
+                takingAmount: ether('100'),
+                makerTraits: buildMakerTraits(),
+            },
+            orderSigner: alice,
+            setupData,
+            minReturn: ether('100'),
+            isInnermostOrder: true,
+            resolverFee: BACK_ORDER_FEE,
+            integrator: bob.address,
+            integratorFee: INTEGRATOR_FEE,
+        });
+
+        const fillOrderToData0 = await buildCalldataForOrder({
+            orderData: {
+                maker: owner.address,
+                receiver: ownerReciever.address,
+                makerAsset: await dai.getAddress(),
+                takerAsset: await weth.getAddress(),
+                makingAmount: ether('100'),
+                takingAmount: ether('0.1'),
+                makerTraits: buildMakerTraits(),
+            },
+            orderSigner: owner,
+            setupData,
+            minReturn: ether('0.1'),
+            additionalDataForSettlement: fillOrderToData1,
+            resolverFee: ORDER_FEE,
+        });
+
+        const availableCreditBefore = await settlement.availableCredit(resolver);
+
+        const tx = await resolver.settleOrders(fillOrderToData0);
+        // Check resolverFee
+        expect(await settlement.availableCredit(resolver)).to.equal(
+            availableCreditBefore - BASE_POINTS * (ORDER_FEE + BACK_ORDER_FEE),
+        );
+        await expect(tx).to.changeTokenBalances(dai, [owner, aliceReciever, bob], [ether('-100'), ether('99.885'), ether('0.115')]);
+        await expect(tx).to.changeTokenBalances(weth, [alice, ownerReciever, bob], [ether('-0.11'), ether('0.1'), 0]);
+    });
+
+    it('opposite direction recursive swap with resolverFee and integratorFee and custom receiver and weth unwrapping', async function () {
+        const dataFormFixture = await loadFixture(initContractsForSettlement);
+        const auction = await buildAuctionDetails();
+        const setupData = { ...dataFormFixture, auction };
+        const {
+            contracts: { dai, weth, resolver, settlement },
+            accounts: { owner, alice, bob },
+        } = setupData;
+
+        const [,,, aliceReciever, ownerReciever] = await ethers.getSigners();
+
+        const INTEGRATOR_FEE = 115n;
+        const fillOrderToData1 = await buildCalldataForOrder({
+            orderData: {
+                maker: alice.address,
+                receiver: aliceReciever.address,
+                makerAsset: await weth.getAddress(),
+                takerAsset: await dai.getAddress(),
+                makingAmount: ether('0.11'),
+                takingAmount: ether('100'),
+                makerTraits: buildMakerTraits(),
+            },
+            orderSigner: alice,
+            setupData,
+            minReturn: ether('100'),
+            isInnermostOrder: true,
+            resolverFee: BACK_ORDER_FEE,
+        });
+
+        const fillOrderToData0 = await buildCalldataForOrder({
+            orderData: {
+                maker: owner.address,
+                receiver: ownerReciever.address,
+                makerAsset: await dai.getAddress(),
+                takerAsset: await weth.getAddress(),
+                makingAmount: ether('100'),
+                takingAmount: ether('0.1'),
+                makerTraits: buildMakerTraits({ unwrapWeth: true }),
+            },
+            orderSigner: owner,
+            setupData,
+            minReturn: ether('0.1'),
+            additionalDataForSettlement: fillOrderToData1,
+            resolverFee: ORDER_FEE,
+            integrator: bob.address,
+            integratorFee: INTEGRATOR_FEE,
+        });
+
+        const availableCreditBefore = await settlement.availableCredit(resolver);
+
+        const tx = await resolver.settleOrders(fillOrderToData0);
+        // Check resolverFee
+        expect(await settlement.availableCredit(resolver)).to.equal(
+            availableCreditBefore - BASE_POINTS * (ORDER_FEE + BACK_ORDER_FEE),
+        );
+        await expect(tx).to.changeTokenBalances(dai, [owner, aliceReciever, bob], [ether('-100'), ether('100'), 0]);
+        await expect(tx).to.changeTokenBalances(weth, [alice, ownerReciever, bob], [ether('-0.11'), 0, 0]);
+        await expect(tx).to.changeEtherBalances([alice, ownerReciever, bob], [0, ether('0.099885'), ether('0.000115')]);
     });
 
     it('triple recursive swap', async function () {

@@ -9,6 +9,7 @@ pragma solidity ^0.8.0;
 library ExtensionLib {
     bytes1 private constant _RESOLVER_FEE_FLAG = 0x01;
     bytes1 private constant _INTEGRATOR_FEE_FLAG = 0x02;
+    bytes1 private constant _CUSTOM_RECEIVER_FLAG = 0x04;
     uint256 private constant _WHITELIST_SHIFT = 3;
 
     /**
@@ -27,6 +28,15 @@ library ExtensionLib {
      */
     function integratorFeeEnabled(bytes calldata extraData) internal pure returns (bool) {
         return extraData[extraData.length - 1] & _INTEGRATOR_FEE_FLAG == _INTEGRATOR_FEE_FLAG;
+    }
+
+    /**
+     * @notice Checks if the custom receiver is enabled
+     * @param extraData Data to be processed in the extension
+     * @return True if the custom receiver is specified
+     */
+    function hasCustomReceiver(bytes calldata extraData) internal pure returns (bool) {
+        return extraData[extraData.length - 1] & _CUSTOM_RECEIVER_FLAG == _CUSTOM_RECEIVER_FLAG;
     }
 
     /**

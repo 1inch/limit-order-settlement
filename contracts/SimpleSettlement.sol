@@ -3,12 +3,12 @@
 pragma solidity 0.8.23;
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { IOrderMixin } from "@1inch/limit-order-protocol-contract/contracts/interfaces/IOrderMixin.sol";
 import { BaseExtension } from "./extensions/BaseExtension.sol";
 import { IntegratorFeeExtension } from "./extensions/IntegratorFeeExtension.sol";
 import { ResolverFeeExtension } from "./extensions/ResolverFeeExtension.sol";
 import { WhitelistExtension } from "./extensions/WhitelistExtension.sol";
-
 
 /**
  * @title Simple Settlement contract
@@ -18,9 +18,15 @@ contract SimpleSettlement is WhitelistExtension, ResolverFeeExtension, Integrato
     /**
      * @notice Initializes the contract.
      * @param limitOrderProtocol The limit order protocol contract.
-     * @param token The token to charge protocol fees in.
+     * @param feeToken The token to charge protocol fees in.
+     * @param weth The WETH address.
      */
-    constructor(address limitOrderProtocol, IERC20 token) BaseExtension(limitOrderProtocol) ResolverFeeExtension(token) {}
+    constructor(address limitOrderProtocol, IERC20 feeToken, address weth, address owner)
+        BaseExtension(limitOrderProtocol)
+        ResolverFeeExtension(feeToken)
+        IntegratorFeeExtension(weth)
+        Ownable(owner)
+    {}
 
     function _postInteraction(
         IOrderMixin.Order calldata order,

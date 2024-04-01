@@ -17,7 +17,7 @@ describe('PriorityFeeLimiter', function () {
 
     async function prepare() {
         const { contracts: { dai, weth }, accounts: { owner } } = await initContractsForSettlement();
-        const settlementExtension = await deployContract('Settlement', [owner, weth]);
+        const settlementExtension = await deployContract('Settlement', [owner, weth, weth, owner]);
         const currentTime = (await time.latest()) - time.duration.minutes(1);
 
         const postInteractionData = ethers.solidityPacked(
