@@ -29,8 +29,8 @@ contract FeeBankCharger is IFeeBankCharger {
         _;
     }
 
-    constructor(IERC20 token) {
-        FEE_BANK = new FeeBank(this, token, msg.sender);
+    constructor(IERC20 feeToken) {
+        FEE_BANK = new FeeBank(this, feeToken, msg.sender);
     }
 
     /**

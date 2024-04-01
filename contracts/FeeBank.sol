@@ -19,15 +19,15 @@ contract FeeBank is IFeeBank, Ownable {
 
     error ZeroAddress();
 
-    IERC20 private immutable _TOKEN;
+    IERC20 private immutable _FEE_TOKEN;
     IFeeBankCharger private immutable _CHARGER;
 
     mapping(address account => uint256 availableCredit) private _accountDeposits;
 
-    constructor(IFeeBankCharger charger_, IERC20 inch_, address owner_) Ownable(owner_) {
-        if (address(inch_) == address(0)) revert ZeroAddress();
-        _CHARGER = charger_;
-        _TOKEN = inch_;
+    constructor(IFeeBankCharger charger, IERC20 feeToken, address owner) Ownable(owner) {
+        if (address(feeToken) == address(0)) revert ZeroAddress();
+        _CHARGER = charger;
+        _FEE_TOKEN = feeToken;
     }
 
     /**
@@ -66,7 +66,7 @@ contract FeeBank is IFeeBank, Ownable {
         uint256 amount,
         bytes calldata permit
     ) public returns (uint256) {
-        _TOKEN.safePermit(permit);
+        _FEE_TOKEN.safePermit(permit);
         return _depositFor(account, amount);
     }
 
@@ -100,14 +100,14 @@ contract FeeBank is IFeeBank, Ownable {
                 totalAccountFees += accountDeposit - availableCredit_;  // overflow is impossible due to checks in FeeBankCharger
             }
         }
-        _TOKEN.safeTransfer(msg.sender, totalAccountFees);
+        _FEE_TOKEN.safeTransfer(msg.sender, totalAccountFees);
     }
 
     function _depositFor(address account, uint256 amount) internal returns (uint256 totalAvailableCredit) {
         if (account == address(0)) revert ZeroAddress();
-        _TOKEN.safeTransferFrom(msg.sender, address(this), amount);
+        _FEE_TOKEN.safeTransferFrom(msg.sender, address(this), amount);
         unchecked {
-            _accountDeposits[account] += amount;  // overflow is impossible due to limited _TOKEN supply
+            _accountDeposits[account] += amount;  // overflow is impossible due to limited _FEE_TOKEN supply
         }
         totalAvailableCredit = _CHARGER.increaseAvailableCredit(account, amount);
     }
@@ -117,6 +117,6 @@ contract FeeBank is IFeeBank, Ownable {
         unchecked {
             _accountDeposits[msg.sender] -= amount;  // underflow is impossible due to checks in FeeBankCharger
         }
-        _TOKEN.safeTransfer(account, amount);
+        _FEE_TOKEN.safeTransfer(account, amount);
     }
 }
