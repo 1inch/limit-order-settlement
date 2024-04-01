@@ -18,7 +18,7 @@ abstract contract WhitelistExtension is BaseExtension {
 
     /**
      * @dev Validates whether the resolver is whitelisted.
-     * @param whitelist Whitelist is tighly packed struct of the following format:
+     * @param whitelist Whitelist is tightly packed struct of the following format:
      * ```
      * struct WhitelistDetails {
      *     bytes4 auctionStartTime;
