@@ -25,6 +25,9 @@ abstract contract WhitelistExtension is BaseExtension {
      *     (bytes10,bytes2)[N] resolversAddressesAndTimeDeltas;
      * }
      * ```
+     * Resolvers in the list are sorted in ascending order by the time when they are allowed to interact with the order.
+     * Time deltas represent the time in seconds between the adjacent resolvers.
+     * Only 10 lowest bytes of the resolver address are used for comparison.
      * @param whitelistSize The amount of resolvers in the whitelist.
      * @param resolver The resolver to check.
      * @return Whether the resolver is whitelisted.

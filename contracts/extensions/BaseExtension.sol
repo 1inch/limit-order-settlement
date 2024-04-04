@@ -98,13 +98,32 @@ contract BaseExtension is IPreInteraction, IPostInteraction, IAmountGetter {
         _postInteraction(order, extension, orderHash, taker, makingAmount, takingAmount, remainingMakingAmount, extraData);
     }
 
+    function _preInteraction(
+        IOrderMixin.Order calldata order,
+        bytes calldata extension,
+        bytes32 orderHash,
+        address taker,
+        uint256 makingAmount,
+        uint256 takingAmount,
+        uint256 remainingMakingAmount,
+        bytes calldata extraData
+    ) internal virtual {}
+
+    function _postInteraction(
+        IOrderMixin.Order calldata order,
+        bytes calldata extension,
+        bytes32 orderHash,
+        address taker,
+        uint256 makingAmount,
+        uint256 takingAmount,
+        uint256 remainingMakingAmount,
+        bytes calldata extraData
+    ) internal virtual {}
+
     /**
-     * @dev Parses rate bump data from the `auctionDetails` field. Auction is represented as a
-     * piecewise linear function with `N` points. Each point is represented as a pair of
-     * `(rateBump, timeDelta)`, where `rateBump` is the rate bump in basis points and `timeDelta`
-     * is the time delta in seconds. The rate bump is interpolated linearly between the points.
-     * The last point is assumed to be `(0, auctionDuration)`. `gasBumpEstimate` and `gasPriceEstimate`
-     * are used to estimate the transaction costs which are then offset from the rate bump.
+     * @dev Parses auction rate bump data from the `auctionDetails` field.
+     * `gasBumpEstimate` and `gasPriceEstimate` are used to estimate the transaction costs
+     * which are then offset from the auction rate bump.
      * @param auctionDetails AuctionDetails is a tightly packed struct of the following format:
      * ```
      * struct AuctionDetails {
@@ -131,6 +150,18 @@ contract BaseExtension is IPreInteraction, IPostInteraction, IAmountGetter {
         }
     }
 
+    /**
+     * @dev Calculates auction price bump. Auction is represented as a piecewise linear function with `N` points.
+     * Each point is represented as a pair of `(rateBump, timeDelta)`, where `rateBump` is the
+     * rate bump in basis points and `timeDelta` is the time delta in seconds.
+     * The rate bump is interpolated linearly between the points.
+     * The last point is assumed to be `(0, auctionDuration)`.
+     * @param auctionStartTime The time when the auction starts.
+     * @param auctionFinishTime The time when the auction finishes.
+     * @param initialRateBump The initial rate bump.
+     * @param pointsAndTimeDeltas The points and time deltas structure.
+     * @return The rate bump at the current time.
+     */
     function _getAuctionBump(uint256 auctionStartTime, uint256 auctionFinishTime, uint256 initialRateBump, bytes calldata pointsAndTimeDeltas) private view returns (uint256) {
         unchecked {
             if (block.timestamp <= auctionStartTime) {
@@ -155,26 +186,4 @@ contract BaseExtension is IPreInteraction, IPostInteraction, IAmountGetter {
             return (auctionFinishTime - block.timestamp) * currentRateBump / (auctionFinishTime - currentPointTime);
         }
     }
-
-    function _preInteraction(
-        IOrderMixin.Order calldata order,
-        bytes calldata extension,
-        bytes32 orderHash,
-        address taker,
-        uint256 makingAmount,
-        uint256 takingAmount,
-        uint256 remainingMakingAmount,
-        bytes calldata extraData
-    ) internal virtual {}
-
-    function _postInteraction(
-        IOrderMixin.Order calldata order,
-        bytes calldata extension,
-        bytes32 orderHash,
-        address taker,
-        uint256 makingAmount,
-        uint256 takingAmount,
-        uint256 remainingMakingAmount,
-        bytes calldata extraData
-    ) internal virtual {}
 }
