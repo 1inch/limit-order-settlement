@@ -98,6 +98,28 @@ contract BaseExtension is IPreInteraction, IPostInteraction, IAmountGetter {
         _postInteraction(order, extension, orderHash, taker, makingAmount, takingAmount, remainingMakingAmount, extraData);
     }
 
+    function _preInteraction(
+        IOrderMixin.Order calldata order,
+        bytes calldata extension,
+        bytes32 orderHash,
+        address taker,
+        uint256 makingAmount,
+        uint256 takingAmount,
+        uint256 remainingMakingAmount,
+        bytes calldata extraData
+    ) internal virtual {}
+
+    function _postInteraction(
+        IOrderMixin.Order calldata order,
+        bytes calldata extension,
+        bytes32 orderHash,
+        address taker,
+        uint256 makingAmount,
+        uint256 takingAmount,
+        uint256 remainingMakingAmount,
+        bytes calldata extraData
+    ) internal virtual {}
+
     /**
      * @dev Parses rate bump data from the `auctionDetails` field. Auction is represented as a
      * piecewise linear function with `N` points. Each point is represented as a pair of
@@ -155,26 +177,4 @@ contract BaseExtension is IPreInteraction, IPostInteraction, IAmountGetter {
             return (auctionFinishTime - block.timestamp) * currentRateBump / (auctionFinishTime - currentPointTime);
         }
     }
-
-    function _preInteraction(
-        IOrderMixin.Order calldata order,
-        bytes calldata extension,
-        bytes32 orderHash,
-        address taker,
-        uint256 makingAmount,
-        uint256 takingAmount,
-        uint256 remainingMakingAmount,
-        bytes calldata extraData
-    ) internal virtual {}
-
-    function _postInteraction(
-        IOrderMixin.Order calldata order,
-        bytes calldata extension,
-        bytes32 orderHash,
-        address taker,
-        uint256 makingAmount,
-        uint256 takingAmount,
-        uint256 remainingMakingAmount,
-        bytes calldata extraData
-    ) internal virtual {}
 }
