@@ -28,7 +28,7 @@ abstract contract IntegratorFeeExtension is BaseExtension, Ownable {
      */
     error EthTransferFailed();
 
-    /// @dev Allows fees in range [1e-5, 0.65536]
+    /// @dev Allows fees in range [1e-5, 0.65535]
     uint256 private constant _FEE_BASE = 1e5;
 
     address private immutable _WETH;
