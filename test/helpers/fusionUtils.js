@@ -1,4 +1,4 @@
-const { time, trim0x } = require('@1inch/solidity-utils');
+const { time, trim0x, constants } = require('@1inch/solidity-utils');
 const { ethers } = require('hardhat');
 const { buildOrder, buildTakerTraits, signOrder } = require('@1inch/limit-order-protocol-contract/test/helpers/orderUtils');
 
@@ -11,10 +11,12 @@ function buildExtensionsBitmapData({
     const WHITELIST_BITMAP_OFFSET = 3; // Bitmap: VVVVVxxx
     const FEE_RESOLVER_FLAG = 1;
     const FEE_INTEGRATOR_FLAG = 2;
+    const CUSTOM_RECEIVER_FLAG = 4;
     return ethers.toBeHex(
         (resolvers << WHITELIST_BITMAP_OFFSET) |
         feeType & FEE_RESOLVER_FLAG |
-        feeType & FEE_INTEGRATOR_FLAG,
+        feeType & FEE_INTEGRATOR_FLAG |
+        feeType & CUSTOM_RECEIVER_FLAG,
     );
 }
 
@@ -47,7 +49,12 @@ async function buildCalldataForOrder({
     }
     if (integratorFee > 0) {
         feeType += 2;
-        postInteractionIntegratorFee = trim0x(ethers.solidityPacked(['bytes20', 'bytes4'], [integrator, '0x' + integratorFee.toString(16).padStart(8, '0')]));
+        postInteractionIntegratorFee = trim0x(ethers.solidityPacked(['bytes2', 'bytes20'], ['0x' + integratorFee.toString(16).padStart(4, '0'), integrator]));
+        if (orderData.receiver && orderData.receiver !== constants.ZERO_ADDRESS) {
+            feeType += 4;
+            postInteractionIntegratorFee += trim0x(orderData.receiver);
+        }
+        orderData.receiver = setupData.contracts.settlement.target;
     }
 
     const order = buildOrder(orderData, {

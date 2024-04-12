@@ -6,8 +6,8 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { Settlement } from "../Settlement.sol";
 
 contract SettlementMock is Settlement {
-    constructor(address limitOrderProtocol, IERC20 token)
-        Settlement(limitOrderProtocol, token)
+    constructor(address limitOrderProtocol, IERC20 token, address weth)
+        Settlement(limitOrderProtocol, token, weth, msg.sender)
     {}
 
     function decreaseAvailableCreditMock(address account, uint256 amount) external {
