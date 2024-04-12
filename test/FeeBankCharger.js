@@ -7,7 +7,7 @@ describe('FeeBankCharger', function () {
         const [owner, alice] = await ethers.getSigners();
         const inch = await deployContract('ERC20PermitMock', ['1INCH', '1INCH', owner, ether('1000')]);
 
-        const charger = await deployContract('FeeBankCharger', [inch]);
+        const charger = await deployContract('FeeBankCharger', [inch, owner]);
 
         const FeeBank = await ethers.getContractFactory('FeeBank');
         const feeBank = FeeBank.attach(await charger.FEE_BANK());

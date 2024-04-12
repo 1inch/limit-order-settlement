@@ -17,7 +17,7 @@ abstract contract ResolverFeeExtension is BaseExtension, FeeBankCharger {
 
     uint256 private constant _ORDER_FEE_BASE_POINTS = 1e15;
 
-    constructor(IERC20 feeToken) FeeBankCharger(feeToken) {}
+    constructor(IERC20 feeToken, address owner) FeeBankCharger(feeToken, owner) {}
 
     /**
      * @dev Calculates the resolver fee.

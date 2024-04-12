@@ -24,7 +24,7 @@ contract SimpleSettlement is WhitelistExtension, ResolverFeeExtension, Integrato
      */
     constructor(address limitOrderProtocol, IERC20 feeToken, address weth, address owner)
         BaseExtension(limitOrderProtocol)
-        ResolverFeeExtension(feeToken)
+        ResolverFeeExtension(feeToken, owner)
         IntegratorFeeExtension(weth)
         Ownable(owner)
     {}
