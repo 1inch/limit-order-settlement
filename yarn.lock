@@ -21,12 +21,12 @@
     "@1inch/token-plugins" "1.3.0"
     "@openzeppelin/contracts" "5.0.1"
 
-"@1inch/limit-order-protocol-contract@4.0.0-prerelease-19":
-  version "4.0.0-prerelease-19"
-  resolved "https://registry.yarnpkg.com/@1inch/limit-order-protocol-contract/-/limit-order-protocol-contract-4.0.0-prerelease-19.tgz#f2718325c9f936247bcaf043fc04da9746aea930"
-  integrity sha512-lbPd1iRh6sS5nPvsVTa8vLD5FXO5mzkmDBJ+8dBUdlqTYdN2gR8K/lKWsplktBlQZAzJd0JPNJOrEOv5qoxkWg==
+"@1inch/limit-order-protocol-contract@4.0.1":
+  version "4.0.1"
+  resolved "https://registry.yarnpkg.com/@1inch/limit-order-protocol-contract/-/limit-order-protocol-contract-4.0.1.tgz#d7a8eedaa052f61cb3355b8b164c284b2d2afbb1"
+  integrity sha512-EzR+ekxMfHYiJfRC5f0Y2jr7uOkb5vODGa5+XWd4WsM4EtVdmpAybb6z+JGPrxENhlBUSYzRlwZX4hTXyCpv7g==
   dependencies:
-    "@1inch/solidity-utils" "3.7.1"
+    "@1inch/solidity-utils" "3.8.2"
     "@chainlink/contracts" "0.8.0"
     "@openzeppelin/contracts" "5.0.1"
 
@@ -48,25 +48,6 @@
     hardhat "2.19.2"
     hardhat-deploy "0.11.44"
 
-"@1inch/solidity-utils@3.7.1":
-  version "3.7.1"
-  resolved "https://registry.yarnpkg.com/@1inch/solidity-utils/-/solidity-utils-3.7.1.tgz#725ea9fe67ccb305e07c45270833e5d075c91564"
-  integrity sha512-ZuH7xbq9QIuqG4JjTbjpA5Fkdpo41JblDfyCAwBaFkqtFKm7DlelKtc1F1HOhkSeIYnYwzFKuSGiqheq6rB7fg==
-  dependencies:
-    "@metamask/eth-sig-util" "7.0.1"
-    "@nomicfoundation/hardhat-ethers" "3.0.5"
-    "@nomicfoundation/hardhat-network-helpers" "1.0.10"
-    "@nomicfoundation/hardhat-verify" "2.0.3"
-    "@openzeppelin/contracts" "5.0.1"
-    "@uniswap/permit2-sdk" "1.2.0"
-    chai "4.4.0"
-    dotenv "16.3.1"
-    ethereumjs-util "7.1.5"
-    ethers "6.9.2"
-    hardhat "2.19.4"
-    hardhat-deploy "0.11.45"
-    mocha-chai-jest-snapshot "1.1.4"
-
 "@1inch/solidity-utils@3.8.0":
   version "3.8.0"
   resolved "https://registry.yarnpkg.com/@1inch/solidity-utils/-/solidity-utils-3.8.0.tgz#59c5fa9dd6a2acb9c28024b0e9b84820d9603966"
@@ -83,6 +64,25 @@
     ethereumjs-util "7.1.5"
     ethers "6.10.0"
     hardhat "2.19.4"
+    hardhat-deploy "0.11.45"
+    mocha-chai-jest-snapshot "1.1.4"
+
+"@1inch/solidity-utils@3.8.2":
+  version "3.8.2"
+  resolved "https://registry.yarnpkg.com/@1inch/solidity-utils/-/solidity-utils-3.8.2.tgz#9dc1e1a4aa83affc274dc62c6218ba09e3566b3b"
+  integrity sha512-QcT9/h5xD4MQMxT2MaRIkQ/xVwlgLFXk5vv49iayKrvy3iNVBNEILoVQEIPcU+giClAxbnAIrhJe8QNBRzepew==
+  dependencies:
+    "@metamask/eth-sig-util" "7.0.1"
+    "@nomicfoundation/hardhat-ethers" "3.0.5"
+    "@nomicfoundation/hardhat-network-helpers" "1.0.10"
+    "@nomicfoundation/hardhat-verify" "2.0.4"
+    "@openzeppelin/contracts" "5.0.1"
+    "@uniswap/permit2-sdk" "1.2.0"
+    chai "4.4.0"
+    dotenv "16.4.3"
+    ethereumjs-util "7.1.5"
+    ethers "6.11.0"
+    hardhat "2.19.5"
     hardhat-deploy "0.11.45"
     mocha-chai-jest-snapshot "1.1.4"
 
@@ -1378,6 +1378,21 @@
   version "2.0.3"
   resolved "https://registry.yarnpkg.com/@nomicfoundation/hardhat-verify/-/hardhat-verify-2.0.3.tgz#173557f8cfa53c8c9da23a326f54d24fe459ae68"
   integrity sha512-ESbRu9by53wu6VvgwtMtm108RSmuNsVqXtzg061D+/4R7jaWh/Wl/8ve+p6SdDX7vA1Z3L02hDO1Q3BY4luLXQ==
+  dependencies:
+    "@ethersproject/abi" "^5.1.2"
+    "@ethersproject/address" "^5.0.2"
+    cbor "^8.1.0"
+    chalk "^2.4.2"
+    debug "^4.1.1"
+    lodash.clonedeep "^4.5.0"
+    semver "^6.3.0"
+    table "^6.8.0"
+    undici "^5.14.0"
+
+"@nomicfoundation/hardhat-verify@2.0.4":
+  version "2.0.4"
+  resolved "https://registry.yarnpkg.com/@nomicfoundation/hardhat-verify/-/hardhat-verify-2.0.4.tgz#65b86787fc7b47d38fd941862266065c7eb9bca4"
+  integrity sha512-B8ZjhOrmbbRWqJi65jvQblzjsfYktjqj2vmOm+oc2Vu8drZbT2cjeSCRHZKbS7lOtfW78aJZSFvw+zRLCiABJA==
   dependencies:
     "@ethersproject/abi" "^5.1.2"
     "@ethersproject/address" "^5.0.2"
@@ -3741,19 +3756,6 @@ ethers@6.9.0:
   version "6.9.0"
   resolved "https://registry.yarnpkg.com/ethers/-/ethers-6.9.0.tgz#a4534bdcdfde306aee94ef32f3d5c70d7e33fcb9"
   integrity sha512-pmfNyQzc2mseLe91FnT2vmNaTt8dDzhxZ/xItAV7uGsF4dI4ek2ufMu3rAkgQETL/TIs0GS5A+U05g9QyWnv3Q==
-  dependencies:
-    "@adraffy/ens-normalize" "1.10.0"
-    "@noble/curves" "1.2.0"
-    "@noble/hashes" "1.3.2"
-    "@types/node" "18.15.13"
-    aes-js "4.0.0-beta.5"
-    tslib "2.4.0"
-    ws "8.5.0"
-
-ethers@6.9.2:
-  version "6.9.2"
-  resolved "https://registry.yarnpkg.com/ethers/-/ethers-6.9.2.tgz#6f4632f62e2350fa8354ff28624027a175ef85a4"
-  integrity sha512-YpkrtILnMQz5jSEsJQRTpduaGT/CXuLnUIuOYzHA0v/7c8IX91m2J48wSKjzGL5L9J/Us3tLoUdb+OwE3U+FFQ==
   dependencies:
     "@adraffy/ens-normalize" "1.10.0"
     "@noble/curves" "1.2.0"
