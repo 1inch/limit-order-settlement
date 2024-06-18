@@ -2,19 +2,30 @@
 
 pragma solidity 0.8.23;
 
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IOrderMixin } from "@1inch/limit-order-protocol-contract/contracts/interfaces/IOrderMixin.sol";
+import { FeeBankCharger } from "../FeeBankCharger.sol";
 import { BaseExtension } from "./BaseExtension.sol";
 import { ExtensionLib } from "./ExtensionLib.sol";
 
 /**
- * @title Whitelist Extension
- * @notice Abstract contract designed to check resolvers from orders in whitelist within the post-interaction phase of order execution.
- * Ensures that only transactions from whitelisted resolvers are processed, enhancing security and compliance.
+ * @title Resolver Validation Extension
+ * @notice This abstract contract combines functionalities to enhance security and compliance in the order execution process.
+ * Ensures that only transactions from whitelisted resolvers or resolvers who own specific NFT tokens are processed within the post-interaction phase of order execution.
+ * Additionally, it allows charging a fee to resolvers in the `postInteraction` method, providing a mechanism for resolver fee management.
  */
-abstract contract WhitelistExtension is BaseExtension {
+abstract contract ResolverValidationExtension is BaseExtension, FeeBankCharger {
     using ExtensionLib for bytes;
 
-    error ResolverIsNotWhitelisted();
+    error ResolverCanNotFillOrder();
+
+    uint256 private constant _ORDER_FEE_BASE_POINTS = 1e15;
+    /// @notice NFT contract address whose tokens allow filling limit orders with a fee for resolvers that are outside the whitelist
+    IERC20 private immutable _NFT;
+
+    constructor(IERC20 feeToken, IERC20 nft, address owner) FeeBankCharger(feeToken, owner) {
+        _NFT = nft;
+    }
 
     /**
      * @dev Validates whether the resolver is whitelisted.
@@ -52,11 +63,30 @@ abstract contract WhitelistExtension is BaseExtension {
     }
 
     /**
+     * @dev Calculates the resolver fee.
+     * @param fee Scaled resolver fee.
+     * @param orderMakingAmount Making amount from the order.
+     * @param actualMakingAmount Making amount that was actually filled.
+     * @return resolverFee Calculated resolver fee.
+     */
+    function _getResolverFee(
+        uint256 fee,
+        uint256 orderMakingAmount,
+        uint256 actualMakingAmount
+    ) internal pure virtual returns(uint256) {
+        return fee * _ORDER_FEE_BASE_POINTS * actualMakingAmount / orderMakingAmount;
+    }
+
+    /**
      * @param extraData Structured data of length n bytes, segmented as follows:
-     * [0:k] - Data as defined by the `whitelist` parameter for the `_isWhitelisted` method,
+     * [0:4] - Resolver fee information.
+     * [4:k] - Data as defined by the `whitelist` parameter for the `_isWhitelisted` method,
      *         where k depends on the amount of resolvers in the whitelist, as indicated by the bitmap in the last byte.
      * [k:n] - ExtraData for other extensions, not utilized by this whitelist extension.
-     * [n]   - Bitmap `VVVV Vxxx` where V bits represent the amount of resolvers in the whitelist. The remaining bits in this bitmap are not used by this extension.
+     * [n] - Bitmap indicating various usage flags and values.
+     *       The bitmask xxxx xxx1 signifies resolver fee usage.
+     *       The bitmask VVVV Vxxx represents the number of resolvers in the whitelist, where the V bits denote the count of resolvers.
+     *       The remaining bits in this bitmap are not used by this extension.
      */
     function _postInteraction(
         IOrderMixin.Order calldata order,
@@ -71,8 +101,14 @@ abstract contract WhitelistExtension is BaseExtension {
         uint256 resolversCount = extraData.resolversCount();
         unchecked {
             uint256 whitelistSize = 4 + resolversCount * 12;
-            if (!_isWhitelisted(extraData[:whitelistSize], resolversCount, taker)) revert ResolverIsNotWhitelisted();
-            super._postInteraction(order, extension, orderHash, taker, makingAmount, takingAmount, remainingMakingAmount, extraData[whitelistSize:]);
+            if (!_isWhitelisted(extraData[4:4+whitelistSize], resolversCount, taker)) {
+                if (_NFT.balanceOf(taker) == 0) revert ResolverCanNotFillOrder();
+                if (extraData.resolverFeeEnabled()) {
+                    uint256 resolverFee = _getResolverFee(uint256(uint32(bytes4(extraData[:4]))), order.makingAmount, makingAmount);
+                    _chargeFee(taker, resolverFee);
+                }
+            }
+            super._postInteraction(order, extension, orderHash, taker, makingAmount, takingAmount, remainingMakingAmount, extraData[4+whitelistSize:]);
         }
     }
 }

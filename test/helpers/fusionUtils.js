@@ -40,12 +40,10 @@ async function buildCalldataForOrder({
         auction: { startTime: auctionStartTime, details: auctionDetails },
     } = setupData;
 
-    let postInteractionResolverFee = '';
     let postInteractionIntegratorFee = '';
     let feeType = 0;
     if (resolverFee > 0) {
         feeType += 1;
-        postInteractionResolverFee = trim0x(ethers.solidityPacked(['bytes4'], ['0x' + resolverFee.toString(16).padStart(8, '0')]));
     }
     if (integratorFee > 0) {
         feeType += 2;
@@ -62,8 +60,7 @@ async function buildCalldataForOrder({
         takingAmountData: await settlement.getAddress() + trim0x(auctionDetails),
         postInteraction: await settlement.getAddress() +
             postInteractionIntegratorFee +
-            postInteractionResolverFee +
-            trim0x(ethers.solidityPacked(['uint32', 'bytes10', 'uint16'], [auctionStartTime, whitelistData, 0])) +
+            trim0x(ethers.solidityPacked(['uint32', 'uint32', 'bytes10', 'uint16'], [resolverFee, auctionStartTime, whitelistData, 0])) +
             trim0x(ethers.solidityPacked(['bytes1'], [buildExtensionsBitmapData({ resolvers: 1, feeType })])),
     });
 

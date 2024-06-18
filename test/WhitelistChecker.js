@@ -12,7 +12,7 @@ describe('WhitelistChecker', function () {
             const auction = await buildAuctionDetails();
             const setupData = { ...dataFormFixture, auction };
             const {
-                contracts: { dai, weth, resolver },
+                contracts: { dai, weth, nft, resolver },
                 accounts: { alice },
             } = setupData;
 
@@ -34,8 +34,9 @@ describe('WhitelistChecker', function () {
                 whitelistData: '0x' + constants.ZERO_ADDRESS.substring(22),
             });
 
+            await nft.burn(resolver, 1);
             await expect(resolver.settleOrders(fillOrderToData)).to.be.revertedWithCustomError(
-                dataFormFixture.contracts.settlement, 'ResolverIsNotWhitelisted',
+                dataFormFixture.contracts.settlement, 'ResolverCanNotFillOrder',
             );
         });
 

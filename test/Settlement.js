@@ -1,6 +1,6 @@
 const { ethers } = require('hardhat');
 const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
-const { time, expect, ether, trim0x, timeIncreaseTo, getPermit, getPermit2, compressPermit, permit2Contract } = require('@1inch/solidity-utils');
+const { time, expect, ether, trim0x, timeIncreaseTo, getPermit, getPermit2, compressPermit, permit2Contract, constants } = require('@1inch/solidity-utils');
 const { buildMakerTraits } = require('@1inch/limit-order-protocol-contract/test/helpers/orderUtils');
 const { initContractsForSettlement } = require('./helpers/fixtures');
 const { buildAuctionDetails, buildCalldataForOrder } = require('./helpers/fusionUtils');
@@ -296,6 +296,7 @@ describe('Settlement', function () {
             resolverFee: BACK_ORDER_FEE,
             integrator: bob.address,
             integratorFee: INTEGRATOR_FEE,
+            whitelistData: '0x' + constants.ZERO_ADDRESS.substring(22),
         });
 
         const fillOrderToData0 = await buildCalldataForOrder({
@@ -312,6 +313,7 @@ describe('Settlement', function () {
             minReturn: ether('0.1'),
             additionalDataForSettlement: fillOrderToData1,
             resolverFee: ORDER_FEE,
+            whitelistData: '0x' + constants.ZERO_ADDRESS.substring(22),
         });
 
         const availableCreditBefore = await settlement.availableCredit(resolver);
@@ -354,6 +356,7 @@ describe('Settlement', function () {
             resolverFee: BACK_ORDER_FEE,
             integrator: bob.address,
             integratorFee: INTEGRATOR_FEE,
+            whitelistData: '0x' + constants.ZERO_ADDRESS.substring(22),
         });
 
         const fillOrderToData0 = await buildCalldataForOrder({
@@ -371,6 +374,7 @@ describe('Settlement', function () {
             minReturn: ether('0.1'),
             additionalDataForSettlement: fillOrderToData1,
             resolverFee: ORDER_FEE,
+            whitelistData: '0x' + constants.ZERO_ADDRESS.substring(22),
         });
 
         const availableCreditBefore = await settlement.availableCredit(resolver);
@@ -411,6 +415,7 @@ describe('Settlement', function () {
             minReturn: ether('100'),
             isInnermostOrder: true,
             resolverFee: BACK_ORDER_FEE,
+            whitelistData: '0x' + constants.ZERO_ADDRESS.substring(22),
         });
 
         const fillOrderToData0 = await buildCalldataForOrder({
@@ -430,6 +435,7 @@ describe('Settlement', function () {
             resolverFee: ORDER_FEE,
             integrator: bob.address,
             integratorFee: INTEGRATOR_FEE,
+            whitelistData: '0x' + constants.ZERO_ADDRESS.substring(22),
         });
 
         const availableCreditBefore = await settlement.availableCredit(resolver);
@@ -731,6 +737,7 @@ describe('Settlement', function () {
             isInnermostOrder: true,
             isMakingAmount: false,
             resolverFee: BACK_ORDER_FEE,
+            whitelistData: '0x' + constants.ZERO_ADDRESS.substring(22),
         });
 
         const fillOrderToData0 = await buildCalldataForOrder({
@@ -748,6 +755,7 @@ describe('Settlement', function () {
             additionalDataForSettlement: fillOrderToData1,
             isMakingAmount: false,
             resolverFee: ORDER_FEE,
+            whitelistData: '0x' + constants.ZERO_ADDRESS.substring(22),
         });
         const availableCreditBefore = await settlement.availableCredit(resolver);
 
@@ -800,6 +808,7 @@ describe('Settlement', function () {
             isInnermostOrder: true,
             fillingAmount: ether('10') * partialModifier / points,
             resolverFee: ORDER_FEE,
+            whitelistData: '0x' + constants.ZERO_ADDRESS.substring(22),
         });
 
         await weth.approve(resolver, ether('0.01'));
@@ -857,6 +866,7 @@ describe('Settlement', function () {
             isInnermostOrder: true,
             fillingAmount: ether('10') * minimalPartialModifier / points,
             resolverFee: minimalOrderFee,
+            whitelistData: '0x' + constants.ZERO_ADDRESS.substring(22),
         });
 
         await weth.approve(resolver, ether('0.01'));
@@ -893,6 +903,7 @@ describe('Settlement', function () {
             minReturn: ether('100'),
             isInnermostOrder: true,
             resolverFee: BACK_ORDER_FEE,
+            whitelistData: '0x' + constants.ZERO_ADDRESS.substring(22),
         });
 
         const fillOrderToData0 = await buildCalldataForOrder({
@@ -909,6 +920,7 @@ describe('Settlement', function () {
             minReturn: ether('0.1'),
             additionalDataForSettlement: fillOrderToData1,
             resolverFee: '1000000',
+            whitelistData: '0x' + constants.ZERO_ADDRESS.substring(22),
         });
 
         await expect(resolver.settleOrders(fillOrderToData0)).to.be.revertedWithCustomError(
@@ -922,7 +934,7 @@ describe('Settlement', function () {
             const auction = await buildAuctionDetails({ startTime: await time.latest() + time.duration.hours('3') });
             const setupData = { ...dataFormFixture, auction };
             const {
-                contracts: { dai, weth, resolver },
+                contracts: { dai, weth, nft, resolver },
                 accounts: { owner, alice },
             } = setupData;
 
@@ -956,8 +968,10 @@ describe('Settlement', function () {
                 additionalDataForSettlement: fillOrderToData1,
             });
 
+            await nft.burn(resolver, 1);
+
             await expect(resolver.settleOrders(fillOrderToData0)).to.be.revertedWithCustomError(
-                setupData.contracts.settlement, 'ResolverIsNotWhitelisted',
+                setupData.contracts.settlement, 'ResolverCanNotFillOrder',
             );
 
             await timeIncreaseTo(setupData.auction.startTime + 1);

@@ -11,7 +11,7 @@ describe('FeeBank', function () {
 
         const inch = await deployContract('ERC20PermitMock', ['1INCH', '1INCH', owner, ether('1000')]);
         const { lopv4 } = await deploySwapTokens();
-        const matcher = await deployContract('SettlementMock', [lopv4, inch, constants.ZERO_ADDRESS]);
+        const matcher = await deployContract('SettlementMock', [lopv4, inch, constants.ZERO_ADDRESS, constants.ZERO_ADDRESS]);
 
         const FeeBank = await ethers.getContractFactory('FeeBank');
         const feeBank = FeeBank.attach(await matcher.FEE_BANK());
