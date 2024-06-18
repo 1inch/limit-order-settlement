@@ -928,6 +928,150 @@ describe('Settlement', function () {
         );
     });
 
+    it('should not pay resolver fee when whitelisted address and it has nft', async function () {
+        const dataFormFixture = await loadFixture(initContractsForSettlement);
+        const auction = await buildAuctionDetails();
+        const setupData = { ...dataFormFixture, auction };
+        const {
+            contracts: { dai, weth, resolver, settlement },
+            accounts: { alice },
+        } = setupData;
+
+        weth.transfer(resolver, ether('0.1'));
+
+        const fillOrderToData = await buildCalldataForOrder({
+            orderData: {
+                maker: alice.address,
+                makerAsset: await dai.getAddress(),
+                takerAsset: await weth.getAddress(),
+                makingAmount: ether('100'),
+                takingAmount: ether('0.1'),
+                makerTraits: buildMakerTraits(),
+            },
+            orderSigner: alice,
+            setupData,
+            minReturn: ether('0.1'),
+            isInnermostOrder: true,
+            resolverFee: ORDER_FEE,
+        });
+
+        const availableCreditBefore = await settlement.availableCredit(resolver);
+        const txn = await resolver.settleOrders(fillOrderToData);
+        await expect(txn).to.changeTokenBalances(dai, [alice, resolver], [ether('-100'), ether('100')]);
+        await expect(txn).to.changeTokenBalances(weth, [alice, resolver], [ether('0.1'), ether('-0.1')]);
+        // Check resolverFee
+        expect(await settlement.availableCredit(resolver)).to.equal(availableCreditBefore);
+    });
+
+    it('should not pay resolver fee when whitelisted address and it has not nft', async function () {
+        const dataFormFixture = await loadFixture(initContractsForSettlement);
+        const auction = await buildAuctionDetails();
+        const setupData = { ...dataFormFixture, auction };
+        const {
+            contracts: { dai, weth, nft, resolver, settlement },
+            accounts: { alice },
+        } = setupData;
+
+        weth.transfer(resolver, ether('0.1'));
+
+        const fillOrderToData = await buildCalldataForOrder({
+            orderData: {
+                maker: alice.address,
+                makerAsset: await dai.getAddress(),
+                takerAsset: await weth.getAddress(),
+                makingAmount: ether('100'),
+                takingAmount: ether('0.1'),
+                makerTraits: buildMakerTraits(),
+            },
+            orderSigner: alice,
+            setupData,
+            minReturn: ether('0.1'),
+            isInnermostOrder: true,
+            resolverFee: ORDER_FEE,
+        });
+
+        await nft.burn(resolver, 1);
+
+        const availableCreditBefore = await settlement.availableCredit(resolver);
+        const txn = await resolver.settleOrders(fillOrderToData);
+        await expect(txn).to.changeTokenBalances(dai, [alice, resolver], [ether('-100'), ether('100')]);
+        await expect(txn).to.changeTokenBalances(weth, [alice, resolver], [ether('0.1'), ether('-0.1')]);
+        // Check resolverFee
+        expect(await settlement.availableCredit(resolver)).to.equal(availableCreditBefore);
+    });
+
+    it('should pay resolver fee when non-whitelisted address and it has nft', async function () {
+        const dataFormFixture = await loadFixture(initContractsForSettlement);
+        const auction = await buildAuctionDetails();
+        const setupData = { ...dataFormFixture, auction };
+        const {
+            contracts: { dai, weth, resolver, settlement },
+            accounts: { alice },
+        } = setupData;
+
+        weth.transfer(resolver, ether('0.1'));
+
+        const fillOrderToData = await buildCalldataForOrder({
+            orderData: {
+                maker: alice.address,
+                makerAsset: await dai.getAddress(),
+                takerAsset: await weth.getAddress(),
+                makingAmount: ether('100'),
+                takingAmount: ether('0.1'),
+                makerTraits: buildMakerTraits(),
+            },
+            orderSigner: alice,
+            setupData,
+            minReturn: ether('0.1'),
+            isInnermostOrder: true,
+            resolverFee: ORDER_FEE,
+            whitelistData: '0x' + constants.ZERO_ADDRESS.substring(22),
+        });
+
+        const availableCreditBefore = await settlement.availableCredit(resolver);
+        const txn = await resolver.settleOrders(fillOrderToData);
+        await expect(txn).to.changeTokenBalances(dai, [alice, resolver], [ether('-100'), ether('100')]);
+        await expect(txn).to.changeTokenBalances(weth, [alice, resolver], [ether('0.1'), ether('-0.1')]);
+        // Check resolverFee
+        expect(await settlement.availableCredit(resolver)).to.equal(
+            availableCreditBefore - BASE_POINTS * ORDER_FEE,
+        );
+    });
+
+    it('should revert when non-whitelisted address and it has not nft', async function () {
+        const dataFormFixture = await loadFixture(initContractsForSettlement);
+        const auction = await buildAuctionDetails();
+        const setupData = { ...dataFormFixture, auction };
+        const {
+            contracts: { dai, weth, nft, resolver },
+            accounts: { alice },
+        } = setupData;
+
+        weth.transfer(resolver, ether('0.1'));
+
+        const fillOrderToData = await buildCalldataForOrder({
+            orderData: {
+                maker: alice.address,
+                makerAsset: await dai.getAddress(),
+                takerAsset: await weth.getAddress(),
+                makingAmount: ether('100'),
+                takingAmount: ether('0.1'),
+                makerTraits: buildMakerTraits(),
+            },
+            orderSigner: alice,
+            setupData,
+            minReturn: ether('0.1'),
+            isInnermostOrder: true,
+            resolverFee: ORDER_FEE,
+            whitelistData: '0x' + constants.ZERO_ADDRESS.substring(22),
+        });
+
+        await nft.burn(resolver, 1);
+        await expect(resolver.settleOrders(fillOrderToData)).to.be.revertedWithCustomError(
+            dataFormFixture.contracts.settlement, 'ResolverCanNotFillOrder',
+        );
+    });
+
     describe('whitelist lock period', async function () {
         it('should change only after whitelistedCutOff', async function () {
             const dataFormFixture = await loadFixture(initContractsForSettlement);
