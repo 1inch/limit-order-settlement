@@ -4,6 +4,7 @@ pragma solidity 0.8.23;
 
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { ERC721 } from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import { ECDSA } from "@1inch/solidity-utils/contracts/libraries/ECDSA.sol";
 
 /**
  * @title KycNFT
@@ -12,6 +13,27 @@ import { ERC721 } from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 contract KycNFT is Ownable, ERC721 {
     /// @notice Thrown when an address attempts to own more than one NFT.
     error OnlyOneNFTPerAddress();
+    /// @notice Thrown when signature is incorrect.
+    error BadSignature();
+
+    /// @notice Nonce for each token ID.
+    mapping(uint256 => uint256) public nonces;
+
+    /**
+     * @notice Ensures that account is the owner or the provided signature is valid and signed by the owner.
+     * @param tokenId The ID of the token.
+     * @param signature The signature to be verified.
+     */
+    modifier onlyOwnerOrSignature(uint256 tokenId, bytes calldata signature) {
+        if (signature.length == 0) {
+            _checkOwner();
+        } else {
+            bytes memory message = abi.encodePacked(address(this), block.chainid, nonces[tokenId]++, tokenId);
+            bytes32 hash = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n116", message));
+            if (owner() != ECDSA.recover(hash, signature)) revert BadSignature();
+        }
+        _;
+    }
 
     /**
      * @notice Constructor that initializes the ERC721 token with a name and a symbol, and sets the contract owner.
@@ -22,11 +44,11 @@ contract KycNFT is Ownable, ERC721 {
     constructor(string memory name, string memory symbol, address owner) ERC721(name, symbol) Ownable(owner) {}
 
     /**
-     * @notice Transfers a token to a specified address. Only the owner can call this function.
+     * @notice Transfers a token to a specified address. Only the owner and account provided valid signature can call this function.
      * @param to The address to transfer the token to.
      * @param tokenId The ID of the token to be transferred.
      */
-    function transfer(address to, uint256 tokenId) external onlyOwner {
+    function transfer(address to, uint256 tokenId, bytes calldata signature) external onlyOwnerOrSignature(tokenId, signature) {
         _transfer(to, tokenId);
     }
 
@@ -43,19 +65,19 @@ contract KycNFT is Ownable, ERC721 {
     }
 
     /**
-     * @dev Mints a new token to a specified address. Only the owner can call this function.
+     * @dev Mints a new token to a specified address. Only the owner and account provided valid signature can call this function.
      * @param to The address to mint the token to.
      * @param tokenId The ID of the token to be minted.
      */
-    function mint(address to, uint256 tokenId) external onlyOwner {
+    function mint(address to, uint256 tokenId, bytes calldata signature) external onlyOwnerOrSignature(tokenId, signature) {
         _safeMint(to, tokenId);
     }
 
     /**
-     * @dev Burns a specified token. Only the owner can call this function.
+     * @dev Burns a specified token. Only the owner and account provided valid signature can call this function.
      * @param tokenId The ID of the token to be burned.
      */
-    function burn(uint256 tokenId) external onlyOwner {
+    function burn(uint256 tokenId, bytes calldata signature) external onlyOwnerOrSignature(tokenId, signature) {
         _burn(tokenId);
     }
 
