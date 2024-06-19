@@ -928,7 +928,7 @@ describe('Settlement', function () {
         );
     });
 
-    it('should not pay resolver fee when whitelisted address and it has nft', async function () {
+    it('should not pay resolver fee when whitelisted address and it has accessToken', async function () {
         const dataFormFixture = await loadFixture(initContractsForSettlement);
         const auction = await buildAuctionDetails();
         const setupData = { ...dataFormFixture, auction };
@@ -963,12 +963,12 @@ describe('Settlement', function () {
         expect(await settlement.availableCredit(resolver)).to.equal(availableCreditBefore);
     });
 
-    it('should not pay resolver fee when whitelisted address and it has not nft', async function () {
+    it('should not pay resolver fee when whitelisted address and it has not accessToken', async function () {
         const dataFormFixture = await loadFixture(initContractsForSettlement);
         const auction = await buildAuctionDetails();
         const setupData = { ...dataFormFixture, auction };
         const {
-            contracts: { dai, weth, nft, resolver, settlement },
+            contracts: { dai, weth, accessToken, resolver, settlement },
             accounts: { alice },
         } = setupData;
 
@@ -990,7 +990,7 @@ describe('Settlement', function () {
             resolverFee: ORDER_FEE,
         });
 
-        await nft.burn(resolver, 1);
+        await accessToken.burn(resolver, 1);
 
         const availableCreditBefore = await settlement.availableCredit(resolver);
         const txn = await resolver.settleOrders(fillOrderToData);
@@ -1000,7 +1000,7 @@ describe('Settlement', function () {
         expect(await settlement.availableCredit(resolver)).to.equal(availableCreditBefore);
     });
 
-    it('should pay resolver fee when non-whitelisted address and it has nft', async function () {
+    it('should pay resolver fee when non-whitelisted address and it has accessToken', async function () {
         const dataFormFixture = await loadFixture(initContractsForSettlement);
         const auction = await buildAuctionDetails();
         const setupData = { ...dataFormFixture, auction };
@@ -1038,12 +1038,12 @@ describe('Settlement', function () {
         );
     });
 
-    it('should revert when non-whitelisted address and it has not nft', async function () {
+    it('should revert when non-whitelisted address and it has not accessToken', async function () {
         const dataFormFixture = await loadFixture(initContractsForSettlement);
         const auction = await buildAuctionDetails();
         const setupData = { ...dataFormFixture, auction };
         const {
-            contracts: { dai, weth, nft, resolver },
+            contracts: { dai, weth, accessToken, resolver },
             accounts: { alice },
         } = setupData;
 
@@ -1066,7 +1066,7 @@ describe('Settlement', function () {
             whitelistData: '0x' + constants.ZERO_ADDRESS.substring(22),
         });
 
-        await nft.burn(resolver, 1);
+        await accessToken.burn(resolver, 1);
         await expect(resolver.settleOrders(fillOrderToData)).to.be.revertedWithCustomError(
             dataFormFixture.contracts.settlement, 'ResolverCanNotFillOrder',
         );
@@ -1078,7 +1078,7 @@ describe('Settlement', function () {
             const auction = await buildAuctionDetails({ startTime: await time.latest() + time.duration.hours('3') });
             const setupData = { ...dataFormFixture, auction };
             const {
-                contracts: { dai, weth, nft, resolver },
+                contracts: { dai, weth, accessToken, resolver },
                 accounts: { owner, alice },
             } = setupData;
 
@@ -1112,7 +1112,7 @@ describe('Settlement', function () {
                 additionalDataForSettlement: fillOrderToData1,
             });
 
-            await nft.burn(resolver, 1);
+            await accessToken.burn(resolver, 1);
 
             await expect(resolver.settleOrders(fillOrderToData0)).to.be.revertedWithCustomError(
                 setupData.contracts.settlement, 'ResolverCanNotFillOrder',

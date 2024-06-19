@@ -18,13 +18,13 @@ contract SimpleSettlement is ResolverValidationExtension, IntegratorFeeExtension
      * @notice Initializes the contract.
      * @param limitOrderProtocol The limit order protocol contract.
      * @param feeToken The token to charge protocol fees in.
-     * @param nft The NFT contract address whose tokens allow filling limit orders with a fee for resolvers that are outside the whitelist.
+     * @param accessToken Contract address whose tokens allow filling limit orders with a fee for resolvers that are outside the whitelist.
      * @param weth The WETH address.
      * @param owner The owner of the contract.
      */
-    constructor(address limitOrderProtocol, IERC20 feeToken, IERC20 nft, address weth, address owner)
+    constructor(address limitOrderProtocol, IERC20 feeToken, IERC20 accessToken, address weth, address owner)
         BaseExtension(limitOrderProtocol)
-        ResolverValidationExtension(feeToken, nft, owner)
+        ResolverValidationExtension(feeToken, accessToken, owner)
         IntegratorFeeExtension(weth)
         Ownable(owner)
     {}

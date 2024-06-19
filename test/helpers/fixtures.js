@@ -12,14 +12,14 @@ async function deploySwapTokens() {
     const dai = await deployContract('ERC20PermitMock', ['DAI', 'DAI', account, ether('1000')]);
     const weth = await deployContract('WrappedTokenMock', ['WETH', 'WETH']);
     const inch = await deployContract('TokenMock', ['1INCH', '1INCH']);
-    const nft = await deployContract('TokenMock', ['NFT', 'NFT']);
+    const accessToken = await deployContract('TokenMock', ['NFT', 'NFT']);
     const lopv4 = await deployContract('LimitOrderProtocol', [weth]);
 
     const LimitOrderProtocolV3 = JSON.parse(fs.readFileSync(path.join(__dirname, '../../artifacts-v1/LimitOrderProtocolV3.json'), 'utf8'));
     const ContractFactory = await ethers.getContractFactory(LimitOrderProtocolV3.abi, LimitOrderProtocolV3.bytecode);
     const lopv3 = await ContractFactory.deploy(weth);
 
-    return { dai, weth, inch, nft, lopv3, lopv4 };
+    return { dai, weth, inch, accessToken, lopv3, lopv4 };
 }
 
 async function initContractsForSettlement() {
@@ -27,14 +27,14 @@ async function initContractsForSettlement() {
     const chainId = await getChainId();
     const [owner, alice, bob] = await ethers.getSigners();
 
-    const { dai, weth, inch, nft, lopv4 } = await deploySwapTokens();
+    const { dai, weth, inch, accessToken, lopv4 } = await deploySwapTokens();
 
     await dai.transfer(alice, ether('101'));
     await inch.mint(owner, ether('100'));
     await weth.deposit({ value: ether('1') });
     await weth.connect(alice).deposit({ value: ether('1') });
 
-    const settlement = await deployContract('SettlementMock', [lopv4, inch, nft, weth]);
+    const settlement = await deployContract('SettlementMock', [lopv4, inch, accessToken, weth]);
 
     const FeeBank = await ethers.getContractFactory('FeeBank');
     const feeBank = FeeBank.attach(await settlement.FEE_BANK());
@@ -53,11 +53,11 @@ async function initContractsForSettlement() {
     await resolver.approve(dai, lopv4);
     await resolver.approve(weth, lopv4);
 
-    await nft.mint(resolver, 1);
-    await nft.mint(owner, 1);
+    await accessToken.mint(resolver, 1);
+    await accessToken.mint(owner, 1);
 
     return {
-        contracts: { dai, weth, nft, lopv4, settlement, feeBank, resolver },
+        contracts: { dai, weth, accessToken, lopv4, settlement, feeBank, resolver },
         accounts: { owner, alice, bob },
         others: { chainId, abiCoder },
     };

@@ -11,7 +11,7 @@ import { ExtensionLib } from "./ExtensionLib.sol";
 /**
  * @title Resolver Validation Extension
  * @notice This abstract contract combines functionalities to enhance security and compliance in the order execution process.
- * Ensures that only transactions from whitelisted resolvers or resolvers who own specific NFT tokens are processed within the post-interaction phase of order execution.
+ * Ensures that only transactions from whitelisted resolvers or resolvers who own specific accessToken are processed within the post-interaction phase of order execution.
  * Additionally, it allows charging a fee to resolvers in the `postInteraction` method, providing a mechanism for resolver fee management.
  */
 abstract contract ResolverValidationExtension is BaseExtension, FeeBankCharger {
@@ -20,11 +20,11 @@ abstract contract ResolverValidationExtension is BaseExtension, FeeBankCharger {
     error ResolverCanNotFillOrder();
 
     uint256 private constant _ORDER_FEE_BASE_POINTS = 1e15;
-    /// @notice NFT contract address whose tokens allow filling limit orders with a fee for resolvers that are outside the whitelist
-    IERC20 private immutable _NFT;
+    /// @notice Contract address whose tokens allow filling limit orders with a fee for resolvers that are outside the whitelist
+    IERC20 private immutable _ACCESS_TOKEN;
 
-    constructor(IERC20 feeToken, IERC20 nft, address owner) FeeBankCharger(feeToken, owner) {
-        _NFT = nft;
+    constructor(IERC20 feeToken, IERC20 accessToken, address owner) FeeBankCharger(feeToken, owner) {
+        _ACCESS_TOKEN = accessToken;
     }
 
     /**
@@ -102,7 +102,7 @@ abstract contract ResolverValidationExtension is BaseExtension, FeeBankCharger {
         unchecked {
             uint256 whitelistSize = 4 + resolversCount * 12;
             if (!_isWhitelisted(extraData[4:4+whitelistSize], resolversCount, taker)) {
-                if (_NFT.balanceOf(taker) == 0) revert ResolverCanNotFillOrder();
+                if (_ACCESS_TOKEN.balanceOf(taker) == 0) revert ResolverCanNotFillOrder();
                 if (extraData.resolverFeeEnabled()) {
                     uint256 resolverFee = _getResolverFee(uint256(uint32(bytes4(extraData[:4]))), order.makingAmount, makingAmount);
                     _chargeFee(taker, resolverFee);

@@ -14,8 +14,8 @@ import { SimpleSettlement } from "./SimpleSettlement.sol";
 contract Settlement is SimpleSettlement {
     error InvalidPriorityFee();
 
-    constructor(address limitOrderProtocol, IERC20 feeToken, IERC20 nft, address weth, address owner)
-        SimpleSettlement(limitOrderProtocol, feeToken, nft, weth, owner)
+    constructor(address limitOrderProtocol, IERC20 feeToken, IERC20 accessToken, address weth, address owner)
+        SimpleSettlement(limitOrderProtocol, feeToken, accessToken, weth, owner)
     {}
 
     function _postInteraction(

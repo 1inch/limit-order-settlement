@@ -20,14 +20,14 @@ describe('MeasureGas', function () {
         const [owner, alice] = await ethers.getSigners();
         const chainId = await getChainId();
         const abiCoder = ethers.AbiCoder.defaultAbiCoder();
-        const { dai, weth, inch, nft, lopv3, lopv4 } = await deploySwapTokens();
+        const { dai, weth, inch, accessToken, lopv3, lopv4 } = await deploySwapTokens();
 
         await dai.transfer(alice, ether('100'));
         await inch.mint(owner, ether('100'));
         await weth.deposit({ value: ether('1') });
         await weth.connect(alice).deposit({ value: ether('1') });
 
-        const settlementExtension = await deployContract('Settlement', [lopv4, inch, nft, weth, owner]);
+        const settlementExtension = await deployContract('Settlement', [lopv4, inch, accessToken, weth, owner]);
         const SettlementV1 = JSON.parse(fs.readFileSync(path.join(__dirname, '../artifacts-v1/SettlementV1.json'), 'utf8'));
         // const settlement = await deployContract(SettlementV1.abi, [lopv3.address, inch.address]);
         const ContractFactory = await ethers.getContractFactory(SettlementV1.abi, SettlementV1.bytecode);
@@ -50,7 +50,7 @@ describe('MeasureGas', function () {
         await resolver.approve(weth, lopv4);
 
         return {
-            contracts: { dai, weth, nft, lopv3, lopv4, settlement, settlementExtension, feeBank, resolversV1, resolver },
+            contracts: { dai, weth, accessToken, lopv3, lopv4, settlement, settlementExtension, feeBank, resolversV1, resolver },
             accounts: { owner, alice },
             others: { chainId, abiCoder },
         };
@@ -227,8 +227,8 @@ describe('MeasureGas', function () {
 
     describe('Extension check', function () {
         it('post interaction', async function () {
-            const { contracts: { dai, weth, nft }, accounts: { owner } } = await loadFixture(initContractsAndApproves);
-            const settlementExtension = await deployContract('Settlement', [owner, weth, nft, weth, owner]);
+            const { contracts: { dai, weth, accessToken }, accounts: { owner } } = await loadFixture(initContractsAndApproves);
+            const settlementExtension = await deployContract('Settlement', [owner, weth, accessToken, weth, owner]);
             const currentTime = (await time.latest()) - time.duration.minutes(1);
 
             const postInteractionData = ethers.solidityPacked(
