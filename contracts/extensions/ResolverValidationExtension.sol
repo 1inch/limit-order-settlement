@@ -98,17 +98,22 @@ abstract contract ResolverValidationExtension is BaseExtension, FeeBankCharger {
         uint256 remainingMakingAmount,
         bytes calldata extraData
     ) internal virtual override {
+        bool feeEnabled = extraData.resolverFeeEnabled();
         uint256 resolversCount = extraData.resolversCount();
         unchecked {
+            uint256 resolverFee;
+            if (feeEnabled) {
+                resolverFee = _getResolverFee(uint256(uint32(bytes4(extraData[:4]))), order.makingAmount, makingAmount);
+                extraData = extraData[4:];
+            }
             uint256 whitelistSize = 4 + resolversCount * 12;
-            if (!_isWhitelisted(extraData[4:4+whitelistSize], resolversCount, taker)) {
+            if (!_isWhitelisted(extraData[:whitelistSize], resolversCount, taker)) {
                 if (_ACCESS_TOKEN.balanceOf(taker) == 0) revert ResolverCanNotFillOrder();
-                if (extraData.resolverFeeEnabled()) {
-                    uint256 resolverFee = _getResolverFee(uint256(uint32(bytes4(extraData[:4]))), order.makingAmount, makingAmount);
+                if (feeEnabled) {
                     _chargeFee(taker, resolverFee);
                 }
             }
-            super._postInteraction(order, extension, orderHash, taker, makingAmount, takingAmount, remainingMakingAmount, extraData[4+whitelistSize:]);
+            super._postInteraction(order, extension, orderHash, taker, makingAmount, takingAmount, remainingMakingAmount, extraData[whitelistSize:]);
         }
     }
 }

@@ -232,9 +232,8 @@ describe('MeasureGas', function () {
             const currentTime = (await time.latest()) - time.duration.minutes(1);
 
             const postInteractionData = ethers.solidityPacked(
-                ['uint32', 'uint32', 'bytes10', 'uint16', 'bytes10', 'uint16', 'bytes10', 'uint16', 'bytes10', 'uint16', 'bytes10', 'uint16', 'bytes1'],
+                ['uint32', 'bytes10', 'uint16', 'bytes10', 'uint16', 'bytes10', 'uint16', 'bytes10', 'uint16', 'bytes10', 'uint16', 'bytes1'],
                 [
-                    0, // resolver fee information
                     currentTime,
                     '0x' + weth.target.substring(22), 0,
                     '0x' + weth.target.substring(22), 0,
@@ -307,7 +306,7 @@ describe('MeasureGas', function () {
                 makingAmountData: await settlementExtension.getAddress() + trim0x(auctionDetails),
                 takingAmountData: await settlementExtension.getAddress() + trim0x(auctionDetails),
                 postInteraction: await settlementExtension.getAddress() + trim0x(ethers.solidityPacked(
-                    ['uint32', 'uint32', 'bytes10', 'uint16', 'bytes1'], [0, auctionStartTime, '0x' + owner.address.substring(22), 0, buildExtensionsBitmapData()],
+                    ['uint32', 'bytes10', 'uint16', 'bytes1'], [auctionStartTime, '0x' + owner.address.substring(22), 0, buildExtensionsBitmapData()],
                 )),
             });
 
@@ -350,7 +349,7 @@ describe('MeasureGas', function () {
                 makingAmountData: await settlementExtension.getAddress() + trim0x(auctionDetails),
                 takingAmountData: await settlementExtension.getAddress() + trim0x(auctionDetails),
                 postInteraction: await settlementExtension.getAddress() + trim0x(ethers.solidityPacked(
-                    ['uint32', 'uint32', 'bytes10', 'uint16', 'bytes1'], [0, auctionStartTime, '0x' + resolver.target.substring(22), 0, buildExtensionsBitmapData()],
+                    ['uint32', 'bytes10', 'uint16', 'bytes1'], [auctionStartTime, '0x' + resolver.target.substring(22), 0, buildExtensionsBitmapData()],
                 )),
             });
 
@@ -410,7 +409,7 @@ describe('MeasureGas', function () {
                 makingAmountData: await settlementExtension.getAddress() + trim0x(auctionDetails),
                 takingAmountData: await settlementExtension.getAddress() + trim0x(auctionDetails),
                 postInteraction: await settlementExtension.getAddress() + trim0x(ethers.solidityPacked(
-                    ['uint32', 'uint32', 'bytes10', 'uint16', 'bytes1'], [0, auctionStartTime, '0x' + resolver.target.substring(22), 0, buildExtensionsBitmapData()],
+                    ['uint32', 'bytes10', 'uint16', 'bytes1'], [auctionStartTime, '0x' + resolver.target.substring(22), 0, buildExtensionsBitmapData()],
                 )),
             });
 
