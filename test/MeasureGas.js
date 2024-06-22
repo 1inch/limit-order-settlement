@@ -278,9 +278,6 @@ describe('MeasureGas', function () {
             }, {
                 makingAmountData: await settlementExtension.getAddress() + trim0x(details),
                 takingAmountData: await settlementExtension.getAddress() + trim0x(details),
-                postInteraction: await settlementExtension.getAddress() + trim0x(ethers.solidityPacked(
-                    ['uint8', 'uint32', 'bytes10', 'uint16'], [0, currentTime, '0x' + owner.address.substring(22), 0],
-                )),
             });
 
             const txn = await settlementExtension.getMakingAmount.populateTransaction(order, '0x', constants.ZERO_BYTES32, constants.ZERO_ADDRESS, ether('1'), ether('10'), details);

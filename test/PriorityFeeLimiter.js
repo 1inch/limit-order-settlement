@@ -21,8 +21,8 @@ describe('PriorityFeeLimiter', function () {
         const currentTime = (await time.latest()) - time.duration.minutes(1);
 
         const postInteractionData = ethers.solidityPacked(
-            ['uint32', 'uint32', 'bytes10', 'uint16', 'bytes1'],
-            [0, currentTime, '0x' + owner.address.substring(22), 0, buildExtensionsBitmapData()],
+            ['uint32', 'bytes1'],
+            [currentTime, buildExtensionsBitmapData({ resolvers: 0 })],
         );
 
         const order = buildOrder({

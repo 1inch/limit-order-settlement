@@ -953,6 +953,7 @@ describe('Settlement', function () {
             minReturn: ether('0.1'),
             isInnermostOrder: true,
             resolverFee: ORDER_FEE,
+            whitelistResolvers: ['0x' + resolver.target.substring(22)],
         });
 
         const availableCreditBefore = await settlement.availableCredit(resolver);
@@ -988,6 +989,7 @@ describe('Settlement', function () {
             minReturn: ether('0.1'),
             isInnermostOrder: true,
             resolverFee: ORDER_FEE,
+            whitelistResolvers: ['0x' + resolver.target.substring(22)],
         });
 
         await accessToken.burn(resolver, 1);
@@ -1025,7 +1027,6 @@ describe('Settlement', function () {
             minReturn: ether('0.1'),
             isInnermostOrder: true,
             resolverFee: ORDER_FEE,
-            whitelistData: '0x' + constants.ZERO_ADDRESS.substring(22),
         });
 
         const availableCreditBefore = await settlement.availableCredit(resolver);
@@ -1073,12 +1074,64 @@ describe('Settlement', function () {
     });
 
     describe('whitelist lock period', async function () {
-        it('should change only after whitelistedCutOff', async function () {
+        it('should change only after whitelistedCutOff without accessToken', async function () {
             const dataFormFixture = await loadFixture(initContractsForSettlement);
             const auction = await buildAuctionDetails({ startTime: await time.latest() + time.duration.hours('3') });
             const setupData = { ...dataFormFixture, auction };
             const {
                 contracts: { dai, weth, accessToken, resolver },
+                accounts: { owner, alice },
+            } = setupData;
+
+            const fillOrderToData1 = await buildCalldataForOrder({
+                orderData: {
+                    maker: alice.address,
+                    makerAsset: await weth.getAddress(),
+                    takerAsset: await dai.getAddress(),
+                    makingAmount: ether('0.1'),
+                    takingAmount: ether('100'),
+                    makerTraits: buildMakerTraits(),
+                },
+                orderSigner: alice,
+                setupData,
+                minReturn: ether('100'),
+                isInnermostOrder: true,
+                whitelistResolvers: ['0x' + resolver.target.substring(22)],
+            });
+
+            const fillOrderToData0 = await buildCalldataForOrder({
+                orderData: {
+                    maker: owner.address,
+                    makerAsset: await dai.getAddress(),
+                    takerAsset: await weth.getAddress(),
+                    makingAmount: ether('100'),
+                    takingAmount: ether('0.1'),
+                    makerTraits: buildMakerTraits(),
+                },
+                orderSigner: owner,
+                setupData,
+                minReturn: ether('0.1'),
+                additionalDataForSettlement: fillOrderToData1,
+                whitelistResolvers: ['0x' + resolver.target.substring(22)],
+            });
+
+            await accessToken.burn(resolver, 1);
+
+            await expect(resolver.settleOrders(fillOrderToData0)).to.be.revertedWithCustomError(
+                setupData.contracts.settlement, 'ResolverCanNotFillOrder',
+            );
+
+            await timeIncreaseTo(setupData.auction.startTime + 1);
+
+            await resolver.settleOrders(fillOrderToData0);
+        });
+
+        it('should change only after whitelistedCutOff with accessToken', async function () {
+            const dataFormFixture = await loadFixture(initContractsForSettlement);
+            const auction = await buildAuctionDetails({ startTime: await time.latest() + time.duration.hours('3') });
+            const setupData = { ...dataFormFixture, auction };
+            const {
+                contracts: { dai, weth, resolver },
                 accounts: { owner, alice },
             } = setupData;
 
@@ -1111,8 +1164,6 @@ describe('Settlement', function () {
                 minReturn: ether('0.1'),
                 additionalDataForSettlement: fillOrderToData1,
             });
-
-            await accessToken.burn(resolver, 1);
 
             await expect(resolver.settleOrders(fillOrderToData0)).to.be.revertedWithCustomError(
                 setupData.contracts.settlement, 'ResolverCanNotFillOrder',

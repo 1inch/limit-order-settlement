@@ -32,7 +32,8 @@ async function buildCalldataForOrder({
     integrator = orderSigner.address,
     resolverFee = 0,
     integratorFee = 0,
-    whitelistData = '0x' + setupData.contracts.resolver.target.substring(22),
+    whitelistResolvers = [], // bytes10[]
+    resolversAllowedTime = [], // uint16[]
 }) {
     const {
         contracts: { lopv4, settlement, resolver },
@@ -57,14 +58,20 @@ async function buildCalldataForOrder({
         orderData.receiver = setupData.contracts.settlement.target;
     }
 
+    let whitelistData = '';
+    for (let i = 0; i < whitelistResolvers.length; i++) {
+        whitelistData += trim0x(ethers.solidityPacked(['bytes10', 'uint16'], [whitelistResolvers[i], resolversAllowedTime[i] || 0]));
+    }
+
     const order = buildOrder(orderData, {
         makingAmountData: await settlement.getAddress() + trim0x(auctionDetails),
         takingAmountData: await settlement.getAddress() + trim0x(auctionDetails),
         postInteraction: await settlement.getAddress() +
             postInteractionIntegratorFee +
             postInteractionResolverFee +
-            trim0x(ethers.solidityPacked(['uint32', 'bytes10', 'uint16'], [auctionStartTime, whitelistData, 0])) +
-            trim0x(ethers.solidityPacked(['bytes1'], [buildExtensionsBitmapData({ resolvers: 1, feeType })])),
+            trim0x(ethers.solidityPacked(['uint32'], [auctionStartTime])) +
+            whitelistData +
+            trim0x(ethers.solidityPacked(['bytes1'], [buildExtensionsBitmapData({ resolvers: whitelistResolvers.length, feeType })])),
     });
 
     const { r, yParityAndS: vs } = ethers.Signature.from(await signOrder(order, chainId, await lopv4.getAddress(), orderSigner));

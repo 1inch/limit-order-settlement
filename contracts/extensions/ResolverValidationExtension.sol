@@ -29,10 +29,10 @@ abstract contract ResolverValidationExtension is BaseExtension, FeeBankCharger {
 
     /**
      * @dev Validates whether the resolver is whitelisted.
+     * @param allowedTime The time after which interaction with the order is allowed.
      * @param whitelist Whitelist is tightly packed struct of the following format:
      * ```
      * struct WhitelistDetails {
-     *     bytes4 auctionStartTime;
      *     (bytes10,bytes2)[N] resolversAddressesAndTimeDeltas;
      * }
      * ```
@@ -43,10 +43,8 @@ abstract contract ResolverValidationExtension is BaseExtension, FeeBankCharger {
      * @param resolver The resolver to check.
      * @return Whether the resolver is whitelisted.
      */
-    function _isWhitelisted(bytes calldata whitelist, uint256 whitelistSize, address resolver) internal view virtual returns (bool) {
+    function _isWhitelisted(uint256 allowedTime, bytes calldata whitelist, uint256 whitelistSize, address resolver) internal view virtual returns (bool) {
         unchecked {
-            uint256 allowedTime = uint32(bytes4(whitelist[0:4])); // initially set to auction start time
-            whitelist = whitelist[4:];
             uint80 maskedResolverAddress = uint80(uint160(resolver));
             for (uint256 i = 0; i < whitelistSize; i++) {
                 uint80 whitelistedAddress = uint80(bytes10(whitelist[:10]));
@@ -80,9 +78,10 @@ abstract contract ResolverValidationExtension is BaseExtension, FeeBankCharger {
     /**
      * @param extraData Structured data of length n bytes, segmented as follows:
      * [0:4] - Resolver fee information.
-     * [4:k] - Data as defined by the `whitelist` parameter for the `_isWhitelisted` method,
+     * [4:8] - The time after which interaction with the order is allowed.
+     * [8:k] - Data as defined by the `whitelist` parameter for the `_isWhitelisted` method,
      *         where k depends on the amount of resolvers in the whitelist, as indicated by the bitmap in the last byte.
-     * [k:n] - ExtraData for other extensions, not utilized by this whitelist extension.
+     * [k:n] - ExtraData for other extensions, not utilized by this validation extension.
      * [n] - Bitmap indicating various usage flags and values.
      *       The bitmask xxxx xxx1 signifies resolver fee usage.
      *       The bitmask VVVV Vxxx represents the number of resolvers in the whitelist, where the V bits denote the count of resolvers.
@@ -106,9 +105,12 @@ abstract contract ResolverValidationExtension is BaseExtension, FeeBankCharger {
                 resolverFee = _getResolverFee(uint256(uint32(bytes4(extraData[:4]))), order.makingAmount, makingAmount);
                 extraData = extraData[4:];
             }
-            uint256 whitelistSize = 4 + resolversCount * 12;
-            if (!_isWhitelisted(extraData[:whitelistSize], resolversCount, taker)) {
-                if (_ACCESS_TOKEN.balanceOf(taker) == 0) revert ResolverCanNotFillOrder();
+
+            uint256 auctionStartTime = uint32(bytes4(extraData[0:4]));
+            extraData = extraData[4:];
+            uint256 whitelistSize = resolversCount * 12;
+            if (resolversCount == 0 || !_isWhitelisted(auctionStartTime, extraData[:whitelistSize], resolversCount, taker)) {
+                if (auctionStartTime > block.timestamp || _ACCESS_TOKEN.balanceOf(taker) == 0) revert ResolverCanNotFillOrder();
                 if (feeEnabled) {
                     _chargeFee(taker, resolverFee);
                 }

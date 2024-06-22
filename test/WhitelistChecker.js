@@ -31,7 +31,6 @@ describe('WhitelistChecker', function () {
                 setupData,
                 minReturn: ether('0.1'),
                 isInnermostOrder: true,
-                whitelistData: '0x' + constants.ZERO_ADDRESS.substring(22),
             });
 
             await accessToken.burn(resolver, 1);
@@ -118,13 +117,45 @@ describe('WhitelistChecker', function () {
                 setupData,
                 minReturn: ether('0.1'),
                 isInnermostOrder: true,
-                whitelistData: '0x' + resolver.target.substring(22),
+                whitelistResolvers: ['0x' + resolver.target.substring(22)],
             });
 
             await accessToken.burn(resolver, 1);
             const txn = await resolver.settleOrders(fillOrderToData);
             await expect(txn).to.changeTokenBalances(dai, [alice, resolver], [ether('-100'), ether('100')]);
             await expect(txn).to.changeTokenBalances(weth, [alice, resolver], [ether('0.1'), ether('-0.1')]);
+        });
+
+        it('fill before auctionStartTime', async function () {
+            const dataFormFixture = await loadFixture(initContractsForSettlement);
+            const auction = await buildAuctionDetails();
+            const setupData = { ...dataFormFixture, auction };
+            const {
+                contracts: { dai, weth, accessToken, resolver, settlement },
+                accounts: { alice },
+            } = setupData;
+            setupData.auction.startTime = '0xffffffff';
+
+            weth.transfer(resolver, ether('0.1'));
+
+            const fillOrderToData = await buildCalldataForOrder({
+                orderData: {
+                    maker: alice.address,
+                    makerAsset: await dai.getAddress(),
+                    takerAsset: await weth.getAddress(),
+                    makingAmount: ether('100'),
+                    takingAmount: ether('0.1'),
+                    makerTraits: buildMakerTraits(),
+                },
+                orderSigner: alice,
+                setupData,
+                minReturn: ether('0.1'),
+                isInnermostOrder: true,
+                whitelistResolvers: ['0x' + resolver.target.substring(22)],
+            });
+
+            await accessToken.burn(resolver, 1);
+            await expect(resolver.settleOrders(fillOrderToData)).to.be.revertedWithCustomError(settlement, 'ResolverCanNotFillOrder');
         });
     });
 
@@ -159,6 +190,36 @@ describe('WhitelistChecker', function () {
             const txn = await resolver.settleOrders(fillOrderToData);
             await expect(txn).to.changeTokenBalances(dai, [alice, resolver], [ether('-100'), ether('100')]);
             await expect(txn).to.changeTokenBalances(weth, [alice, resolver], [ether('0.1'), ether('-0.1')]);
+        });
+
+        it('fill before auctionStartTime', async function () {
+            const dataFormFixture = await loadFixture(initContractsForSettlement);
+            const auction = await buildAuctionDetails();
+            const setupData = { ...dataFormFixture, auction };
+            const {
+                contracts: { dai, weth, resolver, settlement },
+                accounts: { alice },
+            } = setupData;
+            setupData.auction.startTime = '0xffffffff';
+
+            weth.transfer(resolver, ether('0.1'));
+
+            const fillOrderToData = await buildCalldataForOrder({
+                orderData: {
+                    maker: alice.address,
+                    makerAsset: await dai.getAddress(),
+                    takerAsset: await weth.getAddress(),
+                    makingAmount: ether('100'),
+                    takingAmount: ether('0.1'),
+                    makerTraits: buildMakerTraits(),
+                },
+                orderSigner: alice,
+                setupData,
+                minReturn: ether('0.1'),
+                isInnermostOrder: true,
+            });
+
+            await expect(resolver.settleOrders(fillOrderToData)).to.be.revertedWithCustomError(settlement, 'ResolverCanNotFillOrder');
         });
     });
 });
