@@ -75,9 +75,9 @@ contract KycNFT is Ownable, ERC721 {
 
     /**
      * @notice See {mint} method. This function using a valid owner's signature instead of only owner permission.
-     * @param signature The signature of the owner permitting the transfer.
+     * @param signature The signature of the owner permitting the mint.
      */
-    function mintWithSignature(address to, uint256 tokenId, bytes calldata signature) external onlyOwnerSignature(tokenId, signature) {
+    function mint(address to, uint256 tokenId, bytes calldata signature) external onlyOwnerSignature(tokenId, signature) {
         _safeMint(to, tokenId);
     }
 
