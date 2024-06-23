@@ -977,6 +977,7 @@ describe('Settlement', function () {
             } = setupData;
 
             const customExtension = await deployContract('CustomExtension');
+            const customPostInteractionData = '0x1234567890';
             const fillOrderToData1 = await buildCalldataForOrder({
                 orderData: {
                     maker: alice.address,
@@ -990,7 +991,7 @@ describe('Settlement', function () {
                 setupData,
                 minReturn: ether('100'),
                 isInnermostOrder: true,
-                customPostInteraction: await customExtension.getAddress(),
+                customPostInteraction: await customExtension.getAddress() + trim0x(customPostInteractionData),
             });
 
             const fillOrderToData0 = await buildCalldataForOrder({
@@ -1008,7 +1009,9 @@ describe('Settlement', function () {
                 additionalDataForSettlement: fillOrderToData1,
             });
 
-            await expect(resolver.settleOrders(fillOrderToData0)).to.emit(customExtension, 'CustomPostInteractionData');
+            await expect(resolver.settleOrders(fillOrderToData0))
+                .to.emit(customExtension, 'CustomPostInteractionData')
+                .withArgs(customPostInteractionData);
         });
     });
 });
