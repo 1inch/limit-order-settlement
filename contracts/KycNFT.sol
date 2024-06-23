@@ -40,10 +40,23 @@ contract KycNFT is Ownable, ERC721 {
     constructor(string memory name, string memory symbol, address owner) ERC721(name, symbol) Ownable(owner) {}
 
     /**
-     * @notice See {transfer} method. This function overrides the ERC721 transferFrom function and can be called by the owner only.
+     * @notice Transfers a token to a specified address. Only the owner can call this function.
+     * @param to The address to transfer the token to.
+     * @param tokenId The ID of the token to be transferred.
      */
     function transferFrom(address /* from */, address to, uint256 tokenId) public override onlyOwner() {
         _transfer(to, tokenId);
+    }
+
+    /**
+     * @notice Transfers a token from account to another by token owner. This function using a valid owner's signature.
+     * @param from The address to transfer the token from.
+     * @param to The address to transfer the token to.
+     * @param tokenId The ID of the token to be transferred.
+     * @param signature The signature of the owner permitting the transfer.
+     */
+    function transferFrom(address from, address to, uint256 tokenId, bytes calldata signature) public onlyOwnerSignature(tokenId, signature) {
+        super._transfer(from, to, tokenId);
     }
 
     function _transfer(address to, uint256 tokenId) internal {
