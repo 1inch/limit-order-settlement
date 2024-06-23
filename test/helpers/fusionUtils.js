@@ -33,6 +33,7 @@ async function buildCalldataForOrder({
     resolverFee = 0,
     integratorFee = 0,
     whitelistData = '0x' + setupData.contracts.resolver.target.substring(22),
+    customPostInteraction = '0x',
 }) {
     const {
         contracts: { lopv4, settlement, resolver },
@@ -64,6 +65,7 @@ async function buildCalldataForOrder({
             postInteractionIntegratorFee +
             postInteractionResolverFee +
             trim0x(ethers.solidityPacked(['uint32', 'bytes10', 'uint16'], [auctionStartTime, whitelistData, 0])) +
+            trim0x(customPostInteraction) +
             trim0x(ethers.solidityPacked(['bytes1'], [buildExtensionsBitmapData({ resolvers: 1, feeType })])),
     });
 
