@@ -4,13 +4,14 @@ pragma solidity 0.8.23;
 
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { ERC721 } from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import { ERC721Burnable } from "@openzeppelin/contracts/token/ERC721/extensions/ERC721Burnable.sol";
 import { ECDSA } from "@1inch/solidity-utils/contracts/libraries/ECDSA.sol";
 
 /**
  * @title KycNFT
  * @notice ERC721 token that allows only one NFT per address and includes transfer, mint and burn logic restricted to the contract owner.
  */
-contract KycNFT is Ownable, ERC721 {
+contract KycNFT is Ownable, ERC721Burnable {
     /// @notice Thrown when an address attempts to own more than one NFT.
     error OnlyOneNFTPerAddress();
     /// @notice Thrown when signature is incorrect.
@@ -82,19 +83,15 @@ contract KycNFT is Ownable, ERC721 {
     }
 
     /**
-     * @dev Burns a specified token. Only the owner can call this function.
+     * @dev Burns a specified token. The owner can burn any token.
      * @param tokenId The ID of the token to be burned.
      */
-    function burn(uint256 tokenId) external onlyOwner {
-        _burn(tokenId);
-    }
-
-    /**
-     * @notice See {burn} method. This function using a valid owner's signature instead of only owner permission.
-     * @param signature The signature of the owner permitting the transfer.
-     */
-    function burnWithSignature(uint256 tokenId, bytes calldata signature) external onlyOwnerSignature(tokenId, signature) {
-        _burn(tokenId);
+    function burn(uint256 tokenId) public override {
+        if (_msgSender() == owner()) {
+            _burn(tokenId);
+        } else {
+            super.burn(tokenId);
+        }
     }
 
     function _update(address to, uint256 tokenId, address auth) internal override returns (address) {

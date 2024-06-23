@@ -160,9 +160,15 @@ describe('KycNFT', function () {
     });
 
     describe('burn', function () {
-        it('should revert by non-owner', async function () {
+        it('should revert by non-owner when it burns someone else\'s token', async function () {
             const { bob, nft, tokenIds } = await loadFixture(initContracts);
-            await expect(nft.connect(bob).burn(tokenIds.bob)).to.be.revertedWithCustomError(nft, 'OwnableUnauthorizedAccount');
+            await expect(nft.connect(bob).burn(tokenIds.owner)).to.be.revertedWithCustomError(nft, 'ERC721InsufficientApproval');
+        });
+
+        it('should work by non-owner when it burns its token', async function () {
+            const { bob, nft, tokenIds } = await loadFixture(initContracts);
+            await nft.connect(bob).burn(tokenIds.bob);
+            await expect(nft.ownerOf(tokenIds.bob)).to.be.revertedWithCustomError(nft, 'ERC721NonexistentToken');
         });
 
         it('should work by owner', async function () {
@@ -171,40 +177,10 @@ describe('KycNFT', function () {
             await expect(nft.ownerOf(tokenIds.owner)).to.be.revertedWithCustomError(nft, 'ERC721NonexistentToken');
         });
 
-        it('should work by owner for any account', async function () {
+        it('should work by owner for any token', async function () {
             const { owner, bob, nft, tokenIds } = await loadFixture(initContracts);
             expect(await nft.ownerOf(tokenIds.bob)).to.equal(bob.address);
             await nft.connect(owner).burn(tokenIds.bob);
-            await expect(nft.ownerOf(tokenIds.bob)).to.be.revertedWithCustomError(nft, 'ERC721NonexistentToken');
-        });
-    });
-
-    describe('burn with signature', function () {
-        it('should revert with invalid signature', async function () {
-            const { owner, nft, tokenIds, chainId } = await loadFixture(initContracts);
-            const signature = await signTokenId(nft, tokenIds.bob, owner, chainId);
-            const invalidSignature = signature.substring(-2) + '00';
-            await expect(nft.connect(owner).burnWithSignature(tokenIds.bob, invalidSignature)).to.be.revertedWithCustomError(nft, 'BadSignature');
-        });
-
-        it('should revert with non-owner signature', async function () {
-            const { bob, nft, tokenIds, chainId } = await loadFixture(initContracts);
-            const signature = await signTokenId(nft, tokenIds.bob, bob, chainId);
-            await expect(nft.connect(bob).burnWithSignature(tokenIds.bob, signature)).to.be.revertedWithCustomError(nft, 'BadSignature');
-        });
-
-        it('should work with owner signature', async function () {
-            const { owner, bob, nft, tokenIds, chainId } = await loadFixture(initContracts);
-            const signature = await signTokenId(nft, tokenIds.bob, owner, chainId);
-            await nft.connect(bob).burnWithSignature(tokenIds.bob, signature);
-            await expect(nft.ownerOf(tokenIds.bob)).to.be.revertedWithCustomError(nft, 'ERC721NonexistentToken');
-        });
-
-        it('should work by owner for any account', async function () {
-            const { owner, bob, nft, tokenIds, chainId } = await loadFixture(initContracts);
-            const signature = await signTokenId(nft, tokenIds.bob, owner, chainId);
-            expect(await nft.ownerOf(tokenIds.bob)).to.equal(bob.address);
-            await nft.connect(owner).burnWithSignature(tokenIds.bob, signature);
             await expect(nft.ownerOf(tokenIds.bob)).to.be.revertedWithCustomError(nft, 'ERC721NonexistentToken');
         });
     });
