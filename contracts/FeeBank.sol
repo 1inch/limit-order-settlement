@@ -4,6 +4,7 @@ pragma solidity 0.8.23;
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@1inch/solidity-utils/contracts/libraries/SafeERC20.sol";
+import { UniERC20 } from "@1inch/solidity-utils/contracts/libraries/UniERC20.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { IFeeBankCharger } from "./interfaces/IFeeBankCharger.sol";
 import { IFeeBank } from "./interfaces/IFeeBank.sol";
@@ -16,6 +17,7 @@ import { IFeeBank } from "./interfaces/IFeeBank.sol";
  */
 contract FeeBank is IFeeBank, Ownable {
     using SafeERC20 for IERC20;
+    using UniERC20 for IERC20;
 
     error ZeroAddress();
 
@@ -118,5 +120,14 @@ contract FeeBank is IFeeBank, Ownable {
             _accountDeposits[msg.sender] -= amount;  // underflow is impossible due to checks in FeeBankCharger
         }
         _FEE_TOKEN.safeTransfer(account, amount);
+    }
+
+    /**
+     * @notice Retrieves funds accidently sent directly to the contract address
+     * @param token ERC20 token to retrieve
+     * @param amount amount to retrieve
+     */
+    function rescueFunds(IERC20 token, uint256 amount) external onlyOwner {
+        token.uniTransfer(payable(msg.sender), amount);
     }
 }
