@@ -1,6 +1,6 @@
 const { ethers } = require('hardhat');
 const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
-const { time, expect, ether, trim0x, timeIncreaseTo, getPermit, getPermit2, compressPermit, permit2Contract } = require('@1inch/solidity-utils');
+const { time, expect, ether, trim0x, timeIncreaseTo, getPermit, getPermit2, compressPermit, permit2Contract, deployContract } = require('@1inch/solidity-utils');
 const { buildMakerTraits } = require('@1inch/limit-order-protocol-contract/test/helpers/orderUtils');
 const { initContractsForSettlement } = require('./helpers/fixtures');
 const { buildAuctionDetails, buildCalldataForOrder } = require('./helpers/fusionUtils');
@@ -963,6 +963,55 @@ describe('Settlement', function () {
             await timeIncreaseTo(setupData.auction.startTime + 1);
 
             await resolver.settleOrders(fillOrderToData0);
+        });
+    });
+
+    describe('custom postInteraction', async function () {
+        it('should call custom extension', async function () {
+            const dataFormFixture = await loadFixture(initContractsForSettlement);
+            const auction = await buildAuctionDetails();
+            const setupData = { ...dataFormFixture, auction };
+            const {
+                contracts: { dai, weth, resolver },
+                accounts: { owner, alice },
+            } = setupData;
+
+            const customExtension = await deployContract('CustomExtension');
+            const customPostInteractionData = '0x1234567890';
+            const fillOrderToData1 = await buildCalldataForOrder({
+                orderData: {
+                    maker: alice.address,
+                    makerAsset: await weth.getAddress(),
+                    takerAsset: await dai.getAddress(),
+                    makingAmount: ether('0.11'),
+                    takingAmount: ether('100'),
+                    makerTraits: buildMakerTraits(),
+                },
+                orderSigner: alice,
+                setupData,
+                minReturn: ether('100'),
+                isInnermostOrder: true,
+                customPostInteraction: await customExtension.getAddress() + trim0x(customPostInteractionData),
+            });
+
+            const fillOrderToData0 = await buildCalldataForOrder({
+                orderData: {
+                    maker: owner.address,
+                    makerAsset: await dai.getAddress(),
+                    takerAsset: await weth.getAddress(),
+                    makingAmount: ether('100'),
+                    takingAmount: ether('0.1'),
+                    makerTraits: buildMakerTraits(),
+                },
+                orderSigner: owner,
+                setupData,
+                minReturn: ether('0.1'),
+                additionalDataForSettlement: fillOrderToData1,
+            });
+
+            await expect(resolver.settleOrders(fillOrderToData0))
+                .to.emit(customExtension, 'CustomPostInteractionData')
+                .withArgs(customPostInteractionData);
         });
     });
 });

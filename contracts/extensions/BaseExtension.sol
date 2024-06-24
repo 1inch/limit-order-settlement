@@ -118,7 +118,12 @@ contract BaseExtension is IPreInteraction, IPostInteraction, IAmountGetter {
         uint256 takingAmount,
         uint256 remainingMakingAmount,
         bytes calldata extraData
-    ) internal virtual {}
+    ) internal virtual {
+        // Allows to add custom postInteractions
+        if (extraData.length > 20) {
+            IPostInteraction(address(bytes20(extraData))).postInteraction(order, extension, orderHash, taker, makingAmount, takingAmount, remainingMakingAmount, extraData[20 : extraData.length - 1]);
+        }
+    }
 
     /**
      * @dev Parses auction rate bump data from the `auctionDetails` field.
