@@ -16,13 +16,13 @@ describe('PriorityFeeLimiter', function () {
     });
 
     async function prepare() {
-        const { contracts: { dai, weth }, accounts: { owner } } = await initContractsForSettlement();
-        const settlementExtension = await deployContract('Settlement', [owner, weth, weth, owner]);
+        const { contracts: { dai, weth, accessToken }, accounts: { owner } } = await initContractsForSettlement();
+        const settlementExtension = await deployContract('Settlement', [owner, weth, accessToken, weth, owner]);
         const currentTime = (await time.latest()) - time.duration.minutes(1);
 
         const postInteractionData = ethers.solidityPacked(
-            ['uint32', 'bytes10', 'uint16', 'bytes1'],
-            [currentTime, '0x' + owner.address.substring(22), 0, buildExtensionsBitmapData()],
+            ['uint32', 'bytes1'],
+            [currentTime, buildExtensionsBitmapData({ resolvers: 0 })],
         );
 
         const order = buildOrder({
