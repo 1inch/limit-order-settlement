@@ -19,6 +19,6 @@ contract CustomExtension is IPostInteraction {
         bytes calldata extraData
     ) external {
         // Do something
-        emit CustomPostInteractionData(extraData[:extraData.length - 1]);
+        emit CustomPostInteractionData(extraData);
     }
 }
