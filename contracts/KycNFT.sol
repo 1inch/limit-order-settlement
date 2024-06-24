@@ -42,11 +42,12 @@ contract KycNFT is Ownable, ERC721Burnable {
 
     /**
      * @notice Transfers a token to a specified address. Only the owner can call this function.
+     * @param from The address to transfer the token from.
      * @param to The address to transfer the token to.
      * @param tokenId The ID of the token to be transferred.
      */
-    function transferFrom(address /* from */, address to, uint256 tokenId) public override onlyOwner() {
-        _transfer(to, tokenId);
+    function transferFrom(address from, address to, uint256 tokenId) public override onlyOwner() {
+        _transfer(from, to, tokenId);
     }
 
     /**
@@ -57,12 +58,7 @@ contract KycNFT is Ownable, ERC721Burnable {
      * @param signature The signature of the owner permitting the transfer.
      */
     function transferFrom(address from, address to, uint256 tokenId, bytes calldata signature) public onlyOwnerSignature(to, tokenId, signature) {
-        super._transfer(from, to, tokenId);
-    }
-
-    function _transfer(address to, uint256 tokenId) internal {
-        if (_ownerOf(tokenId) == address(0)) revert ERC721NonexistentToken(tokenId);
-        _update(to, tokenId, address(0));
+        _transfer(from, to, tokenId);
     }
 
     /**

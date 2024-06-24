@@ -54,8 +54,8 @@ describe('KycNFT', function () {
         });
 
         it('should revert when send non-existen token', async function () {
-            const { owner, bob, nft, tokenIds } = await loadFixture(initContracts);
-            await expect(nft.connect(owner).transferFrom(owner, bob, tokenIds.nonexist)).to.be.revertedWithCustomError(nft, 'ERC721NonexistentToken');
+            const { owner, alice, nft, tokenIds } = await loadFixture(initContracts);
+            await expect(nft.connect(owner).transferFrom(owner, alice, tokenIds.nonexist)).to.be.revertedWithCustomError(nft, 'ERC721NonexistentToken');
         });
     });
 
@@ -176,6 +176,13 @@ describe('KycNFT', function () {
         it('should work by non-owner when it burns its token', async function () {
             const { bob, nft, tokenIds } = await loadFixture(initContracts);
             await nft.connect(bob).burn(tokenIds.bob);
+            await expect(nft.ownerOf(tokenIds.bob)).to.be.revertedWithCustomError(nft, 'ERC721NonexistentToken');
+        });
+
+        it('should work by non-owner when it burns approved token', async function () {
+            const { alice, bob, nft, tokenIds } = await loadFixture(initContracts);
+            await nft.connect(bob).approve(alice, tokenIds.bob);
+            await nft.connect(alice).burn(tokenIds.bob);
             await expect(nft.ownerOf(tokenIds.bob)).to.be.revertedWithCustomError(nft, 'ERC721NonexistentToken');
         });
 
