@@ -106,11 +106,11 @@ abstract contract ResolverValidationExtension is BaseExtension, FeeBankCharger {
                 extraData = extraData[4:];
             }
 
-            uint256 auctionStartTime = uint32(bytes4(extraData[0:4]));
+            uint256 allowedTime = uint32(bytes4(extraData[0:4]));
             extraData = extraData[4:];
             uint256 whitelistSize = resolversCount * 12;
-            if (resolversCount == 0 || !_isWhitelisted(auctionStartTime, extraData[:whitelistSize], resolversCount, taker)) {
-                if (auctionStartTime > block.timestamp || _ACCESS_TOKEN.balanceOf(taker) == 0) revert ResolverCanNotFillOrder();
+            if (resolversCount == 0 || !_isWhitelisted(allowedTime, extraData[:whitelistSize], resolversCount, taker)) {
+                if (allowedTime > block.timestamp || _ACCESS_TOKEN.balanceOf(taker) == 0) revert ResolverCanNotFillOrder();
                 if (feeEnabled) {
                     _chargeFee(taker, resolverFee);
                 }
