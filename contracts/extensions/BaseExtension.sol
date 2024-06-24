@@ -120,7 +120,9 @@ contract BaseExtension is IPreInteraction, IPostInteraction, IAmountGetter {
         bytes calldata extraData
     ) internal virtual {
         // Allows to add custom postInteractions
-        if (extraData.length >= 20) IPostInteraction(address(bytes20(extraData))).postInteraction(order, extension, orderHash, taker, makingAmount, takingAmount, remainingMakingAmount, extraData[20:]);
+        if (extraData.length > 20) {
+            IPostInteraction(address(bytes20(extraData))).postInteraction(order, extension, orderHash, taker, makingAmount, takingAmount, remainingMakingAmount, extraData[20 : extraData.length - 1]);
+        }
     }
 
     /**
