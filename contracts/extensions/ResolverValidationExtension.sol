@@ -32,9 +32,7 @@ abstract contract ResolverValidationExtension is BaseExtension, FeeBankCharger {
      * @param allowedTime The time after which interaction with the order is allowed.
      * @param whitelist Whitelist is tightly packed struct of the following format:
      * ```
-     * struct WhitelistDetails {
-     *     (bytes10,bytes2)[N] resolversAddressesAndTimeDeltas;
-     * }
+     * (bytes10,bytes2)[N] resolversAddressesAndTimeDeltas;
      * ```
      * Resolvers in the list are sorted in ascending order by the time when they are allowed to interact with the order.
      * Time deltas represent the time in seconds between the adjacent resolvers.
