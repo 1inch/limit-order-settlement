@@ -3,10 +3,10 @@ const { ethers } = require('hardhat');
 const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
 const { getChainId } = require('./helpers/fixtures');
 
-async function signTokenId(nft, tokenId, signer, chainId) {
+async function signTokenId(nft, to, tokenId, signer, chainId) {
     const packedData = ethers.solidityPacked(
-        ['address', 'uint256', 'uint256', 'uint256'],
-        [await nft.getAddress(), chainId, await nft.nonces(tokenId), tokenId],
+        ['address', 'uint256', 'address', 'uint256', 'uint256'],
+        [await nft.getAddress(), chainId, to, await nft.nonces(tokenId), tokenId],
     );
     const message = Buffer.from(trim0x(packedData), 'hex');
     return await signer.signMessage(message);
@@ -62,7 +62,7 @@ describe('KycNFT', function () {
     describe('transferFrom with signature', function () {
         it('should revert with signature by non-owner', async function () {
             const { alice, bob, nft, tokenIds, chainId } = await loadFixture(initContracts);
-            const signature = await signTokenId(nft, tokenIds.bob, bob, chainId);
+            const signature = await signTokenId(nft, alice.address, tokenIds.bob, bob, chainId);
             await expect(nft.connect(bob)['transferFrom(address,address,uint256,bytes)'](bob, alice, tokenIds.bob, signature))
                 .to.be.revertedWithCustomError(nft, 'BadSignature');
         });
@@ -70,7 +70,7 @@ describe('KycNFT', function () {
         it('should work with signature by owner', async function () {
             const { owner, bob, alice, nft, tokenIds, chainId } = await loadFixture(initContracts);
             const transferToken = tokenIds.bob;
-            const signature = await signTokenId(nft, transferToken, owner, chainId);
+            const signature = await signTokenId(nft, alice.address, transferToken, owner, chainId);
             await nft.connect(bob)['transferFrom(address,address,uint256,bytes)'](bob, alice, transferToken, signature);
             expect(await nft.ownerOf(tokenIds.bob)).to.equal(alice.address);
         });
@@ -78,21 +78,21 @@ describe('KycNFT', function () {
         it('should revert with signature by owner and transfer someone else\'s token', async function () {
             const { owner, bob, alice, nft, tokenIds, chainId } = await loadFixture(initContracts);
             const transferToken = tokenIds.owner;
-            const signature = await signTokenId(nft, transferToken, owner, chainId);
+            const signature = await signTokenId(nft, alice.address, transferToken, owner, chainId);
             await expect(nft.connect(bob)['transferFrom(address,address,uint256,bytes)'](bob, alice, transferToken, signature))
                 .to.be.revertedWithCustomError(nft, 'ERC721IncorrectOwner');
         });
 
         it('should revert when recipient account already has 1 nft', async function () {
             const { owner, bob, nft, tokenIds, chainId } = await loadFixture(initContracts);
-            const signature = await signTokenId(nft, tokenIds.bob, owner, chainId);
+            const signature = await signTokenId(nft, owner.address, tokenIds.bob, owner, chainId);
             await expect(nft.connect(owner)['transferFrom(address,address,uint256,bytes)'](bob, owner, tokenIds.bob, signature))
                 .to.be.revertedWithCustomError(nft, 'OnlyOneNFTPerAddress');
         });
 
         it('should revert when send non-existen token', async function () {
             const { owner, alice, nft, tokenIds, chainId } = await loadFixture(initContracts);
-            const signature = await signTokenId(nft, tokenIds.nonexist, owner, chainId);
+            const signature = await signTokenId(nft, alice.address, tokenIds.nonexist, owner, chainId);
             await expect(nft.connect(owner)['transferFrom(address,address,uint256,bytes)'](owner, alice, tokenIds.nonexist, signature))
                 .to.be.revertedWithCustomError(nft, 'ERC721NonexistentToken');
         });
@@ -124,36 +124,44 @@ describe('KycNFT', function () {
     describe('mint with signature', function () {
         it('should revert with invalid signature', async function () {
             const { owner, alice, nft, tokenIds, chainId } = await loadFixture(initContracts);
-            const signature = await signTokenId(nft, tokenIds.alice, owner, chainId);
+            const signature = await signTokenId(nft, alice.address, tokenIds.alice, owner, chainId);
             const invalidSignature = signature.substring(-2) + '00';
             await expect(nft.connect(owner)['mint(address,uint256,bytes)'](alice, tokenIds.alice, invalidSignature))
                 .to.be.revertedWithCustomError(nft, 'BadSignature');
         });
 
+        it('should revert with invalid signature when frontrun and change to-address', async function () {
+            const { owner, bob, alice, nft, tokenIds, chainId } = await loadFixture(initContracts);
+            const signature = await signTokenId(nft, alice.address, tokenIds.alice, owner, chainId);
+            const invalidSignature = signature.substring(-2) + '00';
+            await expect(nft.connect(owner)['mint(address,uint256,bytes)'](bob, tokenIds.alice, invalidSignature))
+                .to.be.revertedWithCustomError(nft, 'BadSignature');
+        });
+
         it('should revert with non-owner signature', async function () {
             const { alice, bob, nft, tokenIds, chainId } = await loadFixture(initContracts);
-            const signature = await signTokenId(nft, tokenIds.alice, bob, chainId);
+            const signature = await signTokenId(nft, alice.address, tokenIds.alice, bob, chainId);
             await expect(nft.connect(bob)['mint(address,uint256,bytes)'](alice, tokenIds.alice, signature))
                 .to.be.revertedWithCustomError(nft, 'BadSignature');
         });
 
         it('should work with owner signature', async function () {
             const { owner, alice, bob, nft, tokenIds, chainId } = await loadFixture(initContracts);
-            const signature = await signTokenId(nft, tokenIds.alice, owner, chainId);
+            const signature = await signTokenId(nft, alice.address, tokenIds.alice, owner, chainId);
             await nft.connect(bob)['mint(address,uint256,bytes)'](alice, tokenIds.alice, signature);
             expect(await nft.ownerOf(tokenIds.alice)).to.equal(alice.address);
         });
 
         it('should revert when account already has 1 nft', async function () {
             const { owner, bob, nft, tokenIds, chainId } = await loadFixture(initContracts);
-            const signature = await signTokenId(nft, tokenIds.another, owner, chainId);
+            const signature = await signTokenId(nft, bob.address, tokenIds.another, owner, chainId);
             await expect(nft.connect(owner)['mint(address,uint256,bytes)'](bob, tokenIds.another, signature))
                 .to.be.revertedWithCustomError(nft, 'OnlyOneNFTPerAddress');
         });
 
         it('should revert when tokenId already exist', async function () {
             const { owner, alice, nft, tokenIds, chainId } = await loadFixture(initContracts);
-            const signature = await signTokenId(nft, tokenIds.bob, owner, chainId);
+            const signature = await signTokenId(nft, alice.address, tokenIds.bob, owner, chainId);
             await expect(nft.connect(owner)['mint(address,uint256,bytes)'](alice, tokenIds.bob, signature))
                 .to.be.revertedWithCustomError(nft, 'ERC721InvalidSender');
         });

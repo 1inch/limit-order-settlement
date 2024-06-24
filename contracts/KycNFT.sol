@@ -25,9 +25,9 @@ contract KycNFT is Ownable, ERC721Burnable {
      * @param tokenId The ID of the token.
      * @param signature The signature to be verified.
      */
-    modifier onlyOwnerSignature(uint256 tokenId, bytes calldata signature) {
-        bytes memory message = abi.encodePacked(address(this), block.chainid, nonces[tokenId]++, tokenId);
-        bytes32 hash = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n116", message));
+    modifier onlyOwnerSignature(address to, uint256 tokenId, bytes calldata signature) {
+        bytes memory message = abi.encodePacked(address(this), block.chainid, to, nonces[tokenId]++, tokenId);
+        bytes32 hash = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n136", message));
         if (owner() != ECDSA.recover(hash, signature)) revert BadSignature();
         _;
     }
@@ -56,7 +56,7 @@ contract KycNFT is Ownable, ERC721Burnable {
      * @param tokenId The ID of the token to be transferred.
      * @param signature The signature of the owner permitting the transfer.
      */
-    function transferFrom(address from, address to, uint256 tokenId, bytes calldata signature) public onlyOwnerSignature(tokenId, signature) {
+    function transferFrom(address from, address to, uint256 tokenId, bytes calldata signature) public onlyOwnerSignature(to, tokenId, signature) {
         super._transfer(from, to, tokenId);
     }
 
@@ -78,7 +78,7 @@ contract KycNFT is Ownable, ERC721Burnable {
      * @notice See {mint} method. This function using a valid owner's signature instead of only owner permission.
      * @param signature The signature of the owner permitting the mint.
      */
-    function mint(address to, uint256 tokenId, bytes calldata signature) external onlyOwnerSignature(tokenId, signature) {
+    function mint(address to, uint256 tokenId, bytes calldata signature) external onlyOwnerSignature(to, tokenId, signature) {
         _safeMint(to, tokenId);
     }
 
