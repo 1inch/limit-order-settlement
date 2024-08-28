@@ -21,7 +21,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
             contractName: 'KycNFT',
             constructorArgs: ['Resolver Access Token', 'RES', '0x56E44874F624EbDE6efCc783eFD685f0FBDC6dcF'],
             create3Deployer: '0xD935a2bb926019E0ed6fb31fbD5b1Bbb7c05bf65',
-            salt: '0x6a836dae74a446aa8cb5d26951222246d1cad2d4a744b961f7986bf35f4d35d7',
+            salt: '0x66339c4a68cbacc2ed7a777541e493b2d1cad2d4a744b961f7986bf35f4d35d7',
             deployments,
             skipVerify: network.name === 'klaytn',
         });
