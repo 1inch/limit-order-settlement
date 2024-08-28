@@ -46,7 +46,7 @@ contract KycNFT is Ownable, ERC721Burnable {
      * @param to The address to transfer the token to.
      * @param tokenId The ID of the token to be transferred.
      */
-    function transferFrom(address from, address to, uint256 tokenId) public override onlyOwner() {
+    function transferFrom(address from, address to, uint256 tokenId) public override onlyOwner {
         _transfer(from, to, tokenId);
     }
 
