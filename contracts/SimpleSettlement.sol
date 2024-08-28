@@ -6,14 +6,14 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { IOrderMixin } from "@1inch/limit-order-protocol-contract/contracts/interfaces/IOrderMixin.sol";
 import { BaseExtension } from "./extensions/BaseExtension.sol";
-import { IntegratorFeeExtension } from "./extensions/IntegratorFeeExtension.sol";
-import { ResolverValidationExtension } from "./extensions/ResolverValidationExtension.sol";
+import { FeeExtension } from "./extensions/FeeExtension.sol";
+import { CustomInteractionExtension } from "./extensions/CustomInteractionExtension.sol";
 
 /**
  * @title Simple Settlement contract
  * @notice Contract to execute limit orders settlement, created by Fusion mode.
  */
-contract SimpleSettlement is ResolverValidationExtension, IntegratorFeeExtension {
+contract SimpleSettlement is CustomInteractionExtension, FeeExtension {
     /**
      * @notice Initializes the contract.
      * @param limitOrderProtocol The limit order protocol contract.
@@ -23,10 +23,7 @@ contract SimpleSettlement is ResolverValidationExtension, IntegratorFeeExtension
      * @param owner The owner of the contract.
      */
     constructor(address limitOrderProtocol, IERC20 feeToken, IERC20 accessToken, address weth, address owner)
-        BaseExtension(limitOrderProtocol)
-        ResolverValidationExtension(feeToken, accessToken, owner)
-        IntegratorFeeExtension(weth)
-        Ownable(owner)
+        FeeExtension(limitOrderProtocol, weth, owner)
     {}
 
     function _postInteraction(
@@ -38,7 +35,7 @@ contract SimpleSettlement is ResolverValidationExtension, IntegratorFeeExtension
         uint256 takingAmount,
         uint256 remainingMakingAmount,
         bytes calldata extraData
-    ) internal virtual override(ResolverValidationExtension, IntegratorFeeExtension) {
+    ) internal virtual override(CustomInteractionExtension, FeeExtension) {
         super._postInteraction(order, extension, orderHash, taker, makingAmount, takingAmount, remainingMakingAmount, extraData);
     }
 }

@@ -42,8 +42,8 @@ async function buildCalldataForOrder({
         auction: { startTime: auctionStartTime, details: auctionDetails },
     } = setupData;
 
-    let postInteractionResolverFee = '';
-    let postInteractionIntegratorFee = '';
+    // let postInteractionResolverFee = '';
+    // let postInteractionIntegratorFee = '';
     let feeType = 0;
     if (resolverFee > 0) {
         feeType += 1;
@@ -60,20 +60,44 @@ async function buildCalldataForOrder({
     }
 
     let whitelistData = '';
+    let feeTakerWhitelist = '';
     for (let i = 0; i < whitelistResolvers.length; i++) {
         whitelistData += trim0x(ethers.solidityPacked(['bytes10', 'uint16'], [whitelistResolvers[i], resolversAllowedTime[i] || 0]));
+        feeTakerWhitelist += trim0x(ethers.solidityPacked(['bytes10'], [whitelistResolvers[i]]));
     }
 
     const order = buildOrder(orderData, {
-        makingAmountData: await settlement.getAddress() + trim0x(auctionDetails),
-        takingAmountData: await settlement.getAddress() + trim0x(auctionDetails),
-        postInteraction: await settlement.getAddress() +
-            postInteractionIntegratorFee +
-            postInteractionResolverFee +
+        // makingAmountData: await settlement.getAddress() + trim0x(auctionDetails),
+        // takingAmountData: await settlement.getAddress() + trim0x(auctionDetails),
+        // postInteraction: await settlement.getAddress() +
+        //     postInteractionIntegratorFee +
+        //     postInteractionResolverFee +
+        //     trim0x(ethers.solidityPacked(['uint32'], [auctionStartTime])) +
+        //     whitelistData +
+        //     trim0x(customPostInteraction) +
+        //     trim0x(ethers.solidityPacked(['bytes1'], [buildExtensionsBitmapData({ resolvers: whitelistResolvers.length, feeType })])),
+        makingAmountData: await settlement.getAddress() +
+            trim0x(ethers.toBeHex(integratorFee, 2)) +
+            trim0x(ethers.toBeHex(resolverFee, 2)) +
             trim0x(ethers.solidityPacked(['uint32'], [auctionStartTime])) +
-            whitelistData +
-            trim0x(customPostInteraction) +
-            trim0x(ethers.solidityPacked(['bytes1'], [buildExtensionsBitmapData({ resolvers: whitelistResolvers.length, feeType })])),
+            trim0x(ethers.toBeHex(whitelistResolvers.length & 0x7F)) + // !!! fix 7F
+            feeTakerWhitelist +
+            trim0x(await setupData.amountsCalculator.getAddress()) + trim0x(auctionDetails),
+        takingAmountData: await settlement.getAddress() +
+            trim0x(ethers.toBeHex(integratorFee, 2)) +
+            trim0x(ethers.toBeHex(resolverFee, 2)) +
+            trim0x(ethers.solidityPacked(['uint32'], [auctionStartTime])) +
+            trim0x(ethers.toBeHex(whitelistResolvers.length & 0x7F)) + // !!! fix 7F
+            feeTakerWhitelist +
+            trim0x(await setupData.amountsCalculator.getAddress()) + trim0x(auctionDetails),
+        postInteraction: await settlement.getAddress() +
+            trim0x(ethers.toBeHex(integratorFee, 2)) +
+            trim0x(ethers.toBeHex(resolverFee, 2)) +
+            trim0x(ethers.solidityPacked(['uint32'], [auctionStartTime])) +
+            trim0x(ethers.toBeHex(whitelistResolvers.length & 0x7F)) + // !!! fix 7F
+            feeTakerWhitelist +
+            trim0x(setupData.accounts.bob.address), // fee recipient
+            // receiver of taking tokens (optional, if not set, maker is used)
     });
 
     const { r, yParityAndS: vs } = ethers.Signature.from(await signOrder(order, chainId, await lopv4.getAddress(), orderSigner));

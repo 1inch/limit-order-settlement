@@ -21,14 +21,14 @@
     "@1inch/token-plugins" "1.3.0"
     "@openzeppelin/contracts" "5.0.1"
 
-"@1inch/limit-order-protocol-contract@4.0.3":
-  version "4.0.3"
-  resolved "https://registry.yarnpkg.com/@1inch/limit-order-protocol-contract/-/limit-order-protocol-contract-4.0.3.tgz#0a6a82a90b2502f1665764e2ff7f8dcb735ffea5"
-  integrity sha512-h3ZpH0/WJF5nl3ikbwsPNuEt02mNRHXqJ9DT8yn2ImLxpuHSUglp5SOVZA8qf6PJwntgmbJ7+u08e7lVZAx1jQ==
+"@1inch/limit-order-protocol-contract@github:1inch/limit-order-protocol#32c3cbf8b10309c2bfe1deb22eb63d0bfbd2c350":
+  version "4.1.0"
+  resolved "https://codeload.github.com/1inch/limit-order-protocol/tar.gz/32c3cbf8b10309c2bfe1deb22eb63d0bfbd2c350"
   dependencies:
     "@1inch/solidity-utils" "4.2.1"
     "@chainlink/contracts" "0.8.0"
-    "@openzeppelin/contracts" "5.0.1"
+    "@gnosis.pm/safe-contracts" "1.3.0"
+    "@openzeppelin/contracts" "5.0.2"
 
 "@1inch/solidity-utils@3.5.5":
   version "3.5.5"
@@ -851,6 +851,11 @@
   version "2.1.1"
   resolved "https://registry.yarnpkg.com/@fastify/busboy/-/busboy-2.1.1.tgz#b9da6a878a371829a0502c9b6c1c143ef6663f4d"
   integrity sha512-vBZP4NlzfOlerQTnba4aqZoMhE/a9HY7HRqoOPaETQcSQuWEIyZMHGfVu6w9wGtGK5fED5qRs2DteVCjOH60sA==
+
+"@gnosis.pm/safe-contracts@1.3.0":
+  version "1.3.0"
+  resolved "https://registry.yarnpkg.com/@gnosis.pm/safe-contracts/-/safe-contracts-1.3.0.tgz#316741a7690d8751a1f701538cfc9ec80866eedc"
+  integrity sha512-1p+1HwGvxGUVzVkFjNzglwHrLNA67U/axP0Ct85FzzH8yhGJb4t9jDjPYocVMzLorDoWAfKicGy1akPY9jXRVw==
 
 "@humanwhocodes/config-array@^0.11.13":
   version "0.11.14"

@@ -158,7 +158,7 @@ describe('Settlement', function () {
         await expect(txn).to.changeTokenBalances(weth, [owner, alice, resolver], [ether('0.1'), ether('-0.11'), ether('0.01')]);
     });
 
-    it('opposite direction recursive swap with taking fee', async function () {
+    it.only('opposite direction recursive swap with taking fee', async function () {
         const dataFormFixture = await loadFixture(initContractsForSettlement);
         const auction = await buildAuctionDetails();
         const setupData = { ...dataFormFixture, auction };

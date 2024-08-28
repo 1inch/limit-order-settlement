@@ -36,14 +36,14 @@ async function initContractsForSettlement() {
 
     const settlement = await deployContract('SettlementMock', [lopv4, inch, accessToken, weth]);
 
-    const FeeBank = await ethers.getContractFactory('FeeBank');
-    const feeBank = FeeBank.attach(await settlement.FEE_BANK());
+    // const FeeBank = await ethers.getContractFactory('FeeBank');
+    // const feeBank = FeeBank.attach(await settlement.FEE_BANK());
 
     const ResolverMock = await ethers.getContractFactory('ResolverMock');
     const resolver = await ResolverMock.deploy(settlement, lopv4);
 
-    await inch.approve(feeBank, ether('100'));
-    await feeBank.depositFor(resolver, ether('100'));
+    // await inch.approve(feeBank, ether('100'));
+    // await feeBank.depositFor(resolver, ether('100'));
 
     await dai.approve(lopv4, ether('100'));
     await dai.connect(alice).approve(lopv4, ether('100'));
@@ -56,10 +56,15 @@ async function initContractsForSettlement() {
     await accessToken.mint(resolver, 1);
     await accessToken.mint(owner, 1);
 
+    const amountsCalculator = await deployContract('BaseExtension', [lopv4]);
+    // todo for fee
+    await dai.transfer(resolver, ether('1'));
+
     return {
-        contracts: { dai, weth, accessToken, lopv4, settlement, feeBank, resolver },
+        contracts: { dai, weth, accessToken, lopv4, settlement, /* feeBank,*/ resolver },
         accounts: { owner, alice, bob },
         others: { chainId, abiCoder },
+        amountsCalculator,
     };
 }
 
