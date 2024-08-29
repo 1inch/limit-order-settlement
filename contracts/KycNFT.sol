@@ -46,7 +46,7 @@ contract KycNFT is Ownable, ERC721Burnable {
      * @param to The address to transfer the token to.
      * @param tokenId The ID of the token to be transferred.
      */
-    function transferFrom(address from, address to, uint256 tokenId) public override onlyOwner() {
+    function transferFrom(address from, address to, uint256 tokenId) public override onlyOwner {
         _transfer(from, to, tokenId);
     }
 
@@ -67,7 +67,7 @@ contract KycNFT is Ownable, ERC721Burnable {
      * @param tokenId The ID of the token to be minted.
      */
     function mint(address to, uint256 tokenId) external onlyOwner {
-        _safeMint(to, tokenId);
+        _mint(to, tokenId);
     }
 
     /**
@@ -75,7 +75,7 @@ contract KycNFT is Ownable, ERC721Burnable {
      * @param signature The signature of the owner permitting the mint.
      */
     function mint(address to, uint256 tokenId, bytes calldata signature) external onlyOwnerSignature(to, tokenId, signature) {
-        _safeMint(to, tokenId);
+        _mint(to, tokenId);
     }
 
     /**
