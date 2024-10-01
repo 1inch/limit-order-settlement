@@ -82,19 +82,19 @@ async function buildCalldataForOrder({
             trim0x(ethers.solidityPacked(['uint32'], [auctionStartTime])) +
             trim0x(ethers.toBeHex(whitelistResolvers.length & 0x7F)) + // !!! fix 7F
             feeTakerWhitelist +
-            trim0x(await setupData.amountsCalculator.getAddress()) + trim0x(auctionDetails),
+            trim0x(auctionDetails),
         takingAmountData: await settlement.getAddress() +
             trim0x(ethers.toBeHex(integratorFee, 2)) +
             trim0x(ethers.toBeHex(resolverFee, 2)) +
             trim0x(ethers.solidityPacked(['uint32'], [auctionStartTime])) +
             trim0x(ethers.toBeHex(whitelistResolvers.length & 0x7F)) + // !!! fix 7F
             feeTakerWhitelist +
-            trim0x(await setupData.amountsCalculator.getAddress()) + trim0x(auctionDetails),
+            trim0x(auctionDetails),
         postInteraction: await settlement.getAddress() +
             trim0x(ethers.toBeHex(integratorFee, 2)) +
             trim0x(ethers.toBeHex(resolverFee, 2)) +
             trim0x(ethers.solidityPacked(['uint32'], [auctionStartTime])) +
-            trim0x(ethers.toBeHex(whitelistResolvers.length & 0x7F)) + // !!! fix 7F
+            trim0x(ethers.toBeHex(whitelistResolvers.length & 0x7F)) + // !!! fix 7F, and add flag for receiver of taking tokens
             feeTakerWhitelist +
             trim0x(setupData.accounts.bob.address), // fee recipient
             // receiver of taking tokens (optional, if not set, maker is used)
