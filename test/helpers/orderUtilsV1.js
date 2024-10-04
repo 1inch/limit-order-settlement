@@ -127,7 +127,7 @@ const buildOrder = async (
     };
 };
 
-const defaultExpiredAuctionTimestamp = async () => (await time.latest()) - 1800n;
+const defaultExpiredAuctionTimestamp = async () => BigInt(await time.latest()) - 1800n;
 
 const buildSalt = ({
     orderStartTime,
@@ -145,4 +145,5 @@ module.exports = {
     buildOrder,
     buildSalt,
     signOrder,
+    Order,
 };
