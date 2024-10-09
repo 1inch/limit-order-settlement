@@ -3,12 +3,12 @@
 pragma solidity 0.8.23;
 
 import { IOrderMixin } from "@1inch/limit-order-protocol-contract/contracts/interfaces/IOrderMixin.sol";
-import { BaseExtension } from "../extensions/BaseExtension.sol";
+import { FeeExtension } from "../extensions/FeeExtension.sol";
 
-contract GasBumpChecker is BaseExtension {
+contract GasBumpChecker is FeeExtension {
     error InvalidResult(uint256 actual, uint256 expected);
 
-    constructor() BaseExtension(address(this)) {}
+    constructor() FeeExtension(address(this), address(this), address(this)) {}
 
     function testGetTakingAmount(
         IOrderMixin.Order calldata order,
@@ -20,7 +20,7 @@ contract GasBumpChecker is BaseExtension {
         bytes calldata extraData,
         uint256 expectedResult
     ) external payable {
-        uint256 res = this.getTakingAmount(
+        uint256 res = this.getCustomTakingAmount(
             order,
             extension,
             orderHash,
