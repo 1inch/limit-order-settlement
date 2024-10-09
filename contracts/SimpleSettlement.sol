@@ -5,7 +5,7 @@ pragma solidity 0.8.23;
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { IOrderMixin } from "@1inch/limit-order-protocol-contract/contracts/interfaces/IOrderMixin.sol";
-import { BaseExtension } from "./extensions/BaseExtension.sol";
+import { FeeTaker } from "@1inch/limit-order-protocol-contract/contracts/extensions/FeeTaker.sol";
 import { FeeExtension } from "./extensions/FeeExtension.sol";
 import { CustomInteractionExtension } from "./extensions/CustomInteractionExtension.sol";
 
@@ -35,7 +35,7 @@ contract SimpleSettlement is CustomInteractionExtension, FeeExtension {
         uint256 takingAmount,
         uint256 remainingMakingAmount,
         bytes calldata extraData
-    ) internal virtual override(CustomInteractionExtension, FeeExtension) {
+    ) internal virtual override(CustomInteractionExtension, FeeTaker) {
         super._postInteraction(order, extension, orderHash, taker, makingAmount, takingAmount, remainingMakingAmount, extraData);
     }
 }

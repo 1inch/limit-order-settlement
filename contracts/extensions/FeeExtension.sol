@@ -16,7 +16,7 @@ abstract contract FeeExtension is FeeTaker {
 
     constructor(address limitOrderProtocol, address weth, address owner) FeeTaker(limitOrderProtocol, weth, owner) {}
 
-    function _getCustomMakingAmount(
+    function getCustomMakingAmount(
         IOrderMixin.Order calldata order,
         bytes calldata /* extension */,
         bytes32 /* orderHash */,
@@ -24,12 +24,12 @@ abstract contract FeeExtension is FeeTaker {
         uint256 takingAmount,
         uint256 /* remainingMakingAmount */,
         bytes calldata extraData
-    ) internal view override returns (uint256) {
+    ) external view override returns (uint256) {
         uint256 rateBump = _getRateBump(extraData);
         return Math.mulDiv(order.makingAmount, takingAmount * _BASE_POINTS, order.takingAmount * (_BASE_POINTS + rateBump));
     }
 
-    function _getCustomTakingAmount(
+    function getCustomTakingAmount(
         IOrderMixin.Order calldata order,
         bytes calldata /* extension */,
         bytes32 /* orderHash */,
@@ -37,7 +37,7 @@ abstract contract FeeExtension is FeeTaker {
         uint256 makingAmount,
         uint256 /* remainingMakingAmount */,
         bytes calldata extraData
-    ) internal view override returns (uint256) {
+    ) external view override returns (uint256) {
         uint256 rateBump = _getRateBump(extraData);
         return Math.mulDiv(order.takingAmount, makingAmount * (_BASE_POINTS + rateBump), order.makingAmount * _BASE_POINTS, Math.Rounding.Ceil);
     }
@@ -107,27 +107,6 @@ abstract contract FeeExtension is FeeTaker {
             }
             return (auctionFinishTime - block.timestamp) * currentRateBump / (auctionFinishTime - currentPointTime);
         }
-    }
-
-    /**
-     * @dev See {_parseFeeData}, except `1 byte - resolver whitelist size` includes a flag in the most significant bit indicating the receiver of taking tokens.
-     */
-    function _postInteraction(
-        IOrderMixin.Order calldata order,
-        bytes calldata extension,
-        bytes32 orderHash,
-        address taker,
-        uint256 makingAmount,
-        uint256 takingAmount,
-        uint256 remainingMakingAmount,
-        bytes calldata extraData
-    ) internal virtual override {
-        uint256 usefulExtraDataLength = 29;
-        if (uint8(extraData[8]) & 0x80 > 0) {
-            usefulExtraDataLength += 20; // receiver of taking tokens
-        }
-        usefulExtraDataLength += 12 * (uint8(extraData[8]) & 0x7F); // & 0x7F - remove receiver of taking tokens flag
-        super._postInteraction(order, extension, orderHash, taker, makingAmount, takingAmount, remainingMakingAmount, extraData);
     }
 
     /**

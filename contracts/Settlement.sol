@@ -6,7 +6,6 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IOrderMixin } from "@1inch/limit-order-protocol-contract/contracts/interfaces/IOrderMixin.sol";
 
 import { SimpleSettlement } from "./SimpleSettlement.sol";
-import "hardhat/console.sol";
 
 /**
  * @title Settlement contract
@@ -29,7 +28,6 @@ contract Settlement is SimpleSettlement {
         uint256 remainingMakingAmount,
         bytes calldata extraData
     ) internal virtual override {
-        console.log("Settlement._postInteraction");
         if (!_isPriorityFeeValid()) revert InvalidPriorityFee();
         super._postInteraction(order, extension, orderHash, taker, makingAmount, takingAmount, remainingMakingAmount, extraData);
     }
