@@ -34,14 +34,14 @@
   "dependencies": {
     "@1inch/delegating": "1.1.0",
     "@1inch/limit-order-protocol-contract": "github:1inch/limit-order-protocol#feature/patch-fee-taker",
-    "@1inch/solidity-utils": "4.2.1",
+    "@1inch/solidity-utils": "5.2.2",
     "@1inch/st1inch": "2.2.0",
     "@openzeppelin/contracts": "5.0.2"
   },
   "devDependencies": {
-    "@matterlabs/hardhat-zksync-deploy": "1.3.0",
-    "@matterlabs/hardhat-zksync-solc": "1.1.4",
-    "@matterlabs/hardhat-zksync-verify": "1.4.2",
+    "@matterlabs/hardhat-zksync-deploy": "1.5.0",
+    "@matterlabs/hardhat-zksync-solc": "1.2.3",
+    "@matterlabs/hardhat-zksync-verify": "1.6.0",
     "@nomicfoundation/hardhat-chai-matchers": "2.0.4",
     "@nomicfoundation/hardhat-network-helpers": "1.0.10",
     "@nomicfoundation/hardhat-verify": "2.0.3",
@@ -56,7 +56,7 @@
     "ethers": "6.11.0",
     "hardhat": "2.19.5",
     "hardhat-dependency-compiler": "1.1.3",
-    "hardhat-deploy": "0.11.45",
+    "hardhat-deploy": "0.12.4",
     "hardhat-gas-reporter": "1.0.10",
     "hardhat-tracer": "2.7.0",
     "prettier": "3.2.5",
@@ -65,6 +65,6 @@
     "solhint": "4.1.1",
     "solidity-coverage": "0.8.7",
     "solidity-docgen": "0.5.17",
-    "zksync-ethers": "6.3.0"
+    "zksync-ethers": "6.12.0"
   }
 }
