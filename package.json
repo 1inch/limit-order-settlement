@@ -18,7 +18,7 @@
     "clean": "rimraf artifacts cache coverage contracts/hardhat-dependency-compiler cache-zk artifacts-zk",
     "deploy": "hardhat deploy --network",
     "coverage": "hardhat coverage",
-    "docify": "npx solidity-utils-docify",
+    "docify": "yarn hardhat docgen",
     "format": "yarn format-js && yarn format-sol",
     "format-js": "prettier '**/*.js' --write",
     "format-sol": "prettier '**/*.sol' --write",
@@ -34,7 +34,7 @@
   "dependencies": {
     "@1inch/delegating": "1.1.0",
     "@1inch/limit-order-protocol-contract": "4.0.3",
-    "@1inch/solidity-utils": "5.2.2",
+    "@1inch/solidity-utils": "6.0.0",
     "@1inch/st1inch": "2.2.0",
     "@openzeppelin/contracts": "5.0.2"
   },
@@ -46,7 +46,7 @@
     "@nomicfoundation/hardhat-network-helpers": "1.0.10",
     "@nomicfoundation/hardhat-verify": "2.0.3",
     "@nomicfoundation/hardhat-ethers": "3.0.5",
-    "chai": "4.4.0",
+    "chai": "4.5.0",
     "dotenv": "16.4.3",
     "eslint": "8.56.0",
     "eslint-config-standard": "17.1.0",
@@ -64,7 +64,7 @@
     "solc": "0.8.23",
     "solhint": "4.1.1",
     "solidity-coverage": "0.8.7",
-    "solidity-docgen": "0.5.17",
+    "solidity-docgen": "0.6.0-beta.36",
     "zksync-ethers": "6.12.0"
   }
 }
