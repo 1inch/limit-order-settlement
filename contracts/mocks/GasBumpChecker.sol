@@ -2,13 +2,14 @@
 
 pragma solidity 0.8.23;
 
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IOrderMixin } from "@1inch/limit-order-protocol-contract/contracts/interfaces/IOrderMixin.sol";
-import { BaseExtension } from "../extensions/BaseExtension.sol";
+import { SimpleSettlement } from "../SimpleSettlement.sol";
 
-contract GasBumpChecker is BaseExtension {
+contract GasBumpChecker is SimpleSettlement {
     error InvalidResult(uint256 actual, uint256 expected);
 
-    constructor() BaseExtension(address(this)) {}
+    constructor(IERC20 accessToken, address weth, address owner) SimpleSettlement(address(this), accessToken, weth, owner) {}
 
     function testGetTakingAmount(
         IOrderMixin.Order calldata order,
