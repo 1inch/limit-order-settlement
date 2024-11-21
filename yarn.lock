@@ -21,9 +21,9 @@
     "@1inch/token-plugins" "1.3.0"
     "@openzeppelin/contracts" "5.0.1"
 
-"@1inch/limit-order-protocol-contract@https://github.com/1inch/limit-order-protocol.git#fec2379":
+"@1inch/limit-order-protocol-contract@https://github.com/1inch/limit-order-protocol.git#a27230":
   version "4.2.0"
-  resolved "https://github.com/1inch/limit-order-protocol.git#fec23799007523be80eabc2341a0c3159b479323"
+  resolved "https://github.com/1inch/limit-order-protocol.git#a27230667f09252a8e37c6c0b4f479919e26e607"
   dependencies:
     "@1inch/solidity-utils" "6.0.0"
     "@chainlink/contracts" "0.8.0"

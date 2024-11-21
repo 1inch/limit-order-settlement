@@ -20,7 +20,7 @@ contract GasBumpChecker is SimpleSettlement {
         uint256 remainingMakingAmount,
         bytes calldata extraData,
         uint256 expectedResult
-    ) external payable {
+    ) external {
         uint256 res = this.getTakingAmount(
             order,
             extension,

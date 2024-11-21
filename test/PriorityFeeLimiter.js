@@ -1,10 +1,9 @@
-const { expect, deployContract, time, ether, trim0x, constants } = require('@1inch/solidity-utils');
+const { expect, deployContract, ether, constants } = require('@1inch/solidity-utils');
 const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
-const { buildOrder, buildMakerTraits } = require('@1inch/limit-order-protocol-contract/test/helpers/orderUtils');
+const { buildOrder, buildMakerTraits, buildFeeTakerExtensions } = require('@1inch/limit-order-protocol-contract/test/helpers/orderUtils');
 const { initContractsForSettlement } = require('./helpers/fixtures');
 const hre = require('hardhat');
-const { buildExtensionsBitmapData } = require('./helpers/fusionUtils');
-const { ethers, network } = hre;
+const { network } = hre;
 
 describe('PriorityFeeLimiter', function () {
     before(async function () {
@@ -18,25 +17,25 @@ describe('PriorityFeeLimiter', function () {
     async function prepare() {
         const { contracts: { dai, weth, accessToken }, accounts: { owner } } = await initContractsForSettlement();
         const settlementExtension = await deployContract('Settlement', [owner, weth, accessToken, weth, owner]);
-        const currentTime = (await time.latest()) - time.duration.minutes(1);
 
-        const postInteractionData = ethers.solidityPacked(
-            ['uint32', 'bytes1'],
-            [currentTime, buildExtensionsBitmapData({ resolvers: 0 })],
-        );
-
-        const order = buildOrder({
-            maker: owner.address,
-            makerAsset: await dai.getAddress(),
-            takerAsset: await weth.getAddress(),
-            makingAmount: ether('10'),
-            takingAmount: ether('1'),
-            makerTraits: buildMakerTraits(),
-        }, {
-            postInteraction: await settlementExtension.getAddress() + trim0x(postInteractionData),
+        const extensions = buildFeeTakerExtensions({
+            feeTaker: await settlementExtension.getAddress(),
+            whitelistPostInteraction: '0x0000000000',
         });
 
-        return { order, owner, postInteractionData, settlementExtension };
+        const order = buildOrder(
+            {
+                maker: owner.address,
+                makerAsset: await dai.getAddress(),
+                takerAsset: await weth.getAddress(),
+                makingAmount: ether('10'),
+                takingAmount: ether('1'),
+                makerTraits: buildMakerTraits(),
+            },
+            extensions,
+        );
+
+        return { order, owner, postInteractionData: '0x' + extensions.postInteraction.substring(42), settlementExtension };
     }
 
     function sendPostInteractionTxn(settlementExtension, order, owner, postInteractionData, maxPriorityFeePerGas) {

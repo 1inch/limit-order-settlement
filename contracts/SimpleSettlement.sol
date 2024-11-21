@@ -40,11 +40,11 @@ contract SimpleSettlement is FeeTaker {
         uint256 remainingMakingAmount,
         bytes calldata extraData
     ) internal view override returns (uint256) {
-        uint256 rateBump = _getRateBump(extraData);
+        (uint256 rateBump, bytes calldata tail) = _getRateBump(extraData);
         return Math.mulDiv(
-            super._getMakingAmount(order, extension, orderHash, taker, takingAmount, remainingMakingAmount, extraData),
-            takingAmount * _BASE_POINTS,
-            order.takingAmount * (_BASE_POINTS + rateBump)
+            super._getMakingAmount(order, extension, orderHash, taker, takingAmount, remainingMakingAmount, tail),
+            _BASE_POINTS,
+            _BASE_POINTS + rateBump
         );
     }
 
@@ -60,11 +60,11 @@ contract SimpleSettlement is FeeTaker {
         uint256 remainingMakingAmount,
         bytes calldata extraData
     ) internal view override returns (uint256) {
-        uint256 rateBump = _getRateBump(extraData);
+        (uint256 rateBump, bytes calldata tail) = _getRateBump(extraData);
         return Math.mulDiv(
-            super._getTakingAmount(order, extension, orderHash, taker, makingAmount, remainingMakingAmount, extraData),
-            makingAmount * (_BASE_POINTS + rateBump),
-            order.makingAmount * _BASE_POINTS,
+            super._getTakingAmount(order, extension, orderHash, taker, makingAmount, remainingMakingAmount, tail),
+            _BASE_POINTS + rateBump,
+            _BASE_POINTS,
             Math.Rounding.Ceil
         );
     }
@@ -86,7 +86,7 @@ contract SimpleSettlement is FeeTaker {
      * ```
      * @return rateBump The rate bump.
      */
-    function _getRateBump(bytes calldata auctionDetails) private view returns (uint256) {
+    function _getRateBump(bytes calldata auctionDetails) private view returns (uint256, bytes calldata) {
         unchecked {
             uint256 gasBumpEstimate = uint24(bytes3(auctionDetails[0:3]));
             uint256 gasPriceEstimate = uint32(bytes4(auctionDetails[3:7]));
@@ -94,8 +94,8 @@ contract SimpleSettlement is FeeTaker {
             uint256 auctionStartTime = uint32(bytes4(auctionDetails[7:11]));
             uint256 auctionFinishTime = auctionStartTime + uint24(bytes3(auctionDetails[11:14]));
             uint256 initialRateBump = uint24(bytes3(auctionDetails[14:17]));
-            uint256 auctionBump = _getAuctionBump(auctionStartTime, auctionFinishTime, initialRateBump, auctionDetails[17:]);
-            return auctionBump > gasBump ? auctionBump - gasBump : 0;
+            (uint256 auctionBump, bytes calldata tail) = _getAuctionBump(auctionStartTime, auctionFinishTime, initialRateBump, auctionDetails[17:]);
+            return (auctionBump > gasBump ? auctionBump - gasBump : 0, tail);
         }
     }
 
@@ -111,28 +111,33 @@ contract SimpleSettlement is FeeTaker {
      * @param pointsAndTimeDeltas The points and time deltas structure.
      * @return The rate bump at the current time.
      */
-    function _getAuctionBump(uint256 auctionStartTime, uint256 auctionFinishTime, uint256 initialRateBump, bytes calldata pointsAndTimeDeltas) private view returns (uint256) {
+    function _getAuctionBump(
+        uint256 auctionStartTime, uint256 auctionFinishTime, uint256 initialRateBump, bytes calldata pointsAndTimeDeltas
+    ) private view returns (uint256, bytes calldata) {
         unchecked {
-            if (block.timestamp <= auctionStartTime) {
-                return initialRateBump;
-            } else if (block.timestamp >= auctionFinishTime) {
-                return 0;
-            }
-
             uint256 currentPointTime = auctionStartTime;
             uint256 currentRateBump = initialRateBump;
+            uint256 pointsCount = uint8(pointsAndTimeDeltas[0]);
+            pointsAndTimeDeltas = pointsAndTimeDeltas[1:];
+            bytes calldata tail = pointsAndTimeDeltas[5 * pointsCount:];
 
-            while (pointsAndTimeDeltas.length > 0) {
+            if (block.timestamp <= auctionStartTime) {
+                return (initialRateBump, tail);
+            } else if (block.timestamp >= auctionFinishTime) {
+                return (0, tail);
+            }
+
+            for (uint256 i = 0; i < pointsCount; i++) {
                 uint256 nextRateBump = uint24(bytes3(pointsAndTimeDeltas[:3]));
                 uint256 nextPointTime = currentPointTime + uint16(bytes2(pointsAndTimeDeltas[3:5]));
                 if (block.timestamp <= nextPointTime) {
-                    return ((block.timestamp - currentPointTime) * nextRateBump + (nextPointTime - block.timestamp) * currentRateBump) / (nextPointTime - currentPointTime);
+                    return (((block.timestamp - currentPointTime) * nextRateBump + (nextPointTime - block.timestamp) * currentRateBump) / (nextPointTime - currentPointTime), tail);
                 }
                 currentRateBump = nextRateBump;
                 currentPointTime = nextPointTime;
                 pointsAndTimeDeltas = pointsAndTimeDeltas[5:];
             }
-            return (auctionFinishTime - block.timestamp) * currentRateBump / (auctionFinishTime - currentPointTime);
+            return ((auctionFinishTime - block.timestamp) * currentRateBump / (auctionFinishTime - currentPointTime), tail);
         }
     }
 
@@ -161,6 +166,9 @@ contract SimpleSettlement is FeeTaker {
                 }
                 allowedTime += uint16(bytes2(whitelist[10:])); // add next time delta
                 whitelist = whitelist[12:];
+            }
+            if (block.timestamp < allowedTime) {
+                revert AllowedTimeViolation();
             }
         }
     }
