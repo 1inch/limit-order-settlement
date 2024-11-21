@@ -503,24 +503,7 @@ describe('Settlement', function () {
                 contracts: { dai, weth, resolver },
                 accounts: { owner, alice },
                 others: { abiCoder },
-                auction: { startTime, delay, duration, initialRateBump },
             } = setupData;
-
-            let actualTakingAmount = targetTakingAmount;
-            if (actualTakingAmount === 0n) {
-                actualTakingAmount = ether('0.1');
-                const ts = await time.latest();
-                // TODO: avoid this shit (as well as any other computations in tests)
-                if (ts < startTime + delay + duration) {
-                    // actualTakingAmount = actualTakingAmount * (
-                    //    _BASE_POINTS + initialRateBump * (startTime + delay + duration - currentTimestamp) / duration
-                    // ) / _BASE_POINTS
-                    const minDuration = startTime + delay + duration - ts > duration ? duration : startTime + delay + duration - ts - 3;
-                    actualTakingAmount =
-                        (actualTakingAmount * (10000000n + BigInt(initialRateBump) * BigInt(minDuration) / BigInt(duration))) /
-                        10000000n;
-                }
-            }
 
             const resolverCalldata = abiCoder.encode(
                 ['address[]', 'bytes[]'],
@@ -530,7 +513,7 @@ describe('Settlement', function () {
                         weth.interface.encodeFunctionData('transferFrom', [
                             owner.address,
                             await resolver.getAddress(),
-                            actualTakingAmount,
+                            targetTakingAmount,
                         ]),
                     ],
                 ],
@@ -551,10 +534,10 @@ describe('Settlement', function () {
                 additionalDataForSettlement: resolverCalldata,
                 isInnermostOrder: true,
                 isMakingAmount: false,
-                fillingAmount: actualTakingAmount,
+                fillingAmount: targetTakingAmount,
             });
 
-            await weth.approve(resolver, actualTakingAmount);
+            await weth.approve(resolver, targetTakingAmount);
             return fillOrderToData;
         };
 
@@ -567,7 +550,10 @@ describe('Settlement', function () {
                 accounts: { owner, alice },
             } = setupData;
 
-            const fillOrderToData = await prepareSingleOrder({ setupData });
+            const fillOrderToData = await prepareSingleOrder({
+                setupData,
+                targetTakingAmount: ether('0.11'),
+            });
 
             const txn = await resolver.settleOrders(fillOrderToData);
             await expect(txn).to.changeTokenBalances(dai, [resolver, alice], [ether('100'), ether('-100')]);
@@ -667,7 +653,10 @@ describe('Settlement', function () {
                 accounts: { owner, alice },
             } = setupData;
 
-            const fillOrderToData = await prepareSingleOrder({ setupData });
+            const fillOrderToData = await prepareSingleOrder({
+                setupData,
+                targetTakingAmount: ether('0.12'),
+            });
 
             const txn = await resolver.settleOrders(fillOrderToData);
             await expect(txn).to.changeTokenBalances(dai, [resolver, alice], [ether('100'), ether('-100')]);
