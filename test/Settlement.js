@@ -674,19 +674,19 @@ describe('Settlement', function () {
             await expect(txn).to.changeTokenBalances(weth, [owner, alice], [ether('-0.12'), ether('0.12')]);
         });
 
-        it.skip('set auctionDuration', async function () {
+        it('set auctionDuration', async function () {
             const dataFormFixture = await loadFixture(initContractsForSettlement);
 
-            const auction = await buildAuctionDetails({ startTime: (await time.latest()), duration: 900, initialRateBump: 1000000n });
+            const auction = await buildAuctionDetails({ startTime: (await time.latest()) - 448, duration: 900, initialRateBump: 1000000n });
             const setupData = { ...dataFormFixture, auction };
             const {
                 contracts: { dai, weth, resolver },
                 accounts: { owner, alice },
             } = setupData;
 
-            await time.increaseTo(await time.latest() + 1);
             const fillOrderToData = await prepareSingleOrder({
                 setupData,
+                targetTakingAmount: ether('0.105'),
             });
 
             const txn = await resolver.settleOrders(fillOrderToData);
