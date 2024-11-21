@@ -541,9 +541,10 @@ describe('Settlement', function () {
             return fillOrderToData;
         };
 
-        it('matching order before orderTime has maximal rate bump', async function () {
+        it('matching order at first second has maximal rate bump', async function () {
             const dataFormFixture = await loadFixture(initContractsForSettlement);
-            const auction = await buildAuctionDetails({ delay: 60, initialRateBump: 1000000n });
+            const now = await time.latest() + 10;
+            const auction = await buildAuctionDetails({ startTime: now, delay: 60, initialRateBump: 1000000n });
             const setupData = { ...dataFormFixture, auction };
             const {
                 contracts: { dai, weth, resolver },
@@ -555,6 +556,7 @@ describe('Settlement', function () {
                 targetTakingAmount: ether('0.11'),
             });
 
+            await time.setNextBlockTimestamp(now);
             const txn = await resolver.settleOrders(fillOrderToData);
             await expect(txn).to.changeTokenBalances(dai, [resolver, alice], [ether('100'), ether('-100')]);
             await expect(txn).to.changeTokenBalances(weth, [owner, alice], [ether('-0.11'), ether('0.11')]);
@@ -575,8 +577,7 @@ describe('Settlement', function () {
                     setupData,
                 });
 
-                await timeIncreaseTo(setupData.auction.startTime + 239);
-
+                await time.setNextBlockTimestamp(setupData.auction.startTime + 240);
                 const txn = await resolver.settleOrders(fillOrderToData);
                 await expect(txn).to.changeTokenBalances(dai, [resolver, alice], [ether('100'), ether('-100')]);
                 await expect(txn).to.changeTokenBalances(weth, [owner, alice], [ether('-0.109'), ether('0.109')]);
@@ -596,8 +597,7 @@ describe('Settlement', function () {
                     setupData,
                 });
 
-                await timeIncreaseTo(setupData.auction.startTime + 240 / 2 - 1);
-
+                await time.setNextBlockTimestamp(setupData.auction.startTime + 240 / 2);
                 const txn = await resolver.settleOrders(fillOrderToData);
                 await expect(txn).to.changeTokenBalances(dai, [resolver, alice], [ether('100'), ether('-100')]);
                 await expect(txn).to.changeTokenBalances(weth, [owner, alice], [ether('-0.1095'), ether('0.1095')]);
@@ -616,8 +616,8 @@ describe('Settlement', function () {
                     targetTakingAmount: ether('0.106'),
                     setupData,
                 });
-                await timeIncreaseTo(setupData.auction.startTime + 759);
 
+                await time.setNextBlockTimestamp(setupData.auction.startTime + 760);
                 const txn = await resolver.settleOrders(fillOrderToData);
                 await expect(txn).to.changeTokenBalances(dai, [resolver, alice], [ether('100'), ether('-100')]);
                 await expect(txn).to.changeTokenBalances(weth, [owner, alice], [ether('-0.106'), ether('0.106')]);
@@ -636,8 +636,8 @@ describe('Settlement', function () {
                     targetTakingAmount: ether('0.103'),
                     setupData,
                 });
-                await timeIncreaseTo(setupData.auction.startTime + 859);
 
+                await time.setNextBlockTimestamp(setupData.auction.startTime + 860);
                 const txn = await resolver.settleOrders(fillOrderToData);
                 await expect(txn).to.changeTokenBalances(dai, [resolver, alice], [ether('100'), ether('-100')]);
                 await expect(txn).to.changeTokenBalances(weth, [owner, alice], [ether('-0.103'), ether('0.103')]);
@@ -646,7 +646,8 @@ describe('Settlement', function () {
 
         it('set initial rate', async function () {
             const dataFormFixture = await loadFixture(initContractsForSettlement);
-            const auction = await buildAuctionDetails({ delay: 60, initialRateBump: 2000000n });
+            const now = await time.latest() + 10;
+            const auction = await buildAuctionDetails({ startTime: now, delay: 60, initialRateBump: 2000000n });
             const setupData = { ...dataFormFixture, auction };
             const {
                 contracts: { dai, weth, resolver },
@@ -658,6 +659,7 @@ describe('Settlement', function () {
                 targetTakingAmount: ether('0.12'),
             });
 
+            await time.setNextBlockTimestamp(now);
             const txn = await resolver.settleOrders(fillOrderToData);
             await expect(txn).to.changeTokenBalances(dai, [resolver, alice], [ether('100'), ether('-100')]);
             await expect(txn).to.changeTokenBalances(weth, [owner, alice], [ether('-0.12'), ether('0.12')]);
@@ -665,8 +667,8 @@ describe('Settlement', function () {
 
         it('set auctionDuration', async function () {
             const dataFormFixture = await loadFixture(initContractsForSettlement);
-
-            const auction = await buildAuctionDetails({ startTime: (await time.latest()) - 448, duration: 900, initialRateBump: 1000000n });
+            const now = await time.latest() + 10;
+            const auction = await buildAuctionDetails({ startTime: now - 450, duration: 900, initialRateBump: 1000000n });
             const setupData = { ...dataFormFixture, auction };
             const {
                 contracts: { dai, weth, resolver },
@@ -678,6 +680,7 @@ describe('Settlement', function () {
                 targetTakingAmount: ether('0.105'),
             });
 
+            await time.setNextBlockTimestamp(now);
             const txn = await resolver.settleOrders(fillOrderToData);
             await expect(txn).to.changeTokenBalances(dai, [resolver, alice], [ether('100'), ether('-100')]);
             await expect(txn).to.changeTokenBalances(weth, [owner, alice], [ether('-0.105'), ether('0.105')]);
