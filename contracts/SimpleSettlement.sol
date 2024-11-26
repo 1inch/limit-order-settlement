@@ -142,12 +142,17 @@ contract SimpleSettlement is FeeTaker {
     }
 
     /**
-     * @notice See {IPostInteraction-postInteraction}.
-     * @dev Takes the fee in taking tokens and transfers the rest to the maker.
-     * `whitelistData` consists of:
+     * @dev Validates whether the taker is whitelisted.
+     * @param whitelistData Whitelist data is a tightly packed struct of the following format:
+     * ```
      * 4 bytes - allowed time
-     * 1 byte - whitelist size
+     * 1 byte - size of the whitelist
      * (bytes12)[N] — taker whitelist
+     * ```
+     * Only 10 lowest bytes of the address are used for comparison.
+     * @param taker The taker address to check.
+     * @return isWhitelisted Whether the taker is whitelisted.
+     * @return tail Remaining calldata.
      */
     function _isWhitelistedPostInteractionImpl(bytes calldata whitelistData, address taker) internal view override returns (bool isWhitelisted, bytes calldata tail) {
         unchecked {
