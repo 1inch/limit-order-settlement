@@ -12,7 +12,7 @@ describe('WhitelistChecker', function () {
             const auction = await buildAuctionDetails();
             const setupData = { ...dataFormFixture, auction };
             const {
-                contracts: { dai, weth, accessToken, resolver },
+                contracts: { dai, weth, accessToken, resolver, settlement },
                 accounts: { alice },
             } = setupData;
 
@@ -34,9 +34,7 @@ describe('WhitelistChecker', function () {
             });
 
             await accessToken.burn(resolver, 1);
-            await expect(resolver.settleOrders(fillOrderToData)).to.be.revertedWithCustomError(
-                dataFormFixture.contracts.settlement, 'ResolverCanNotFillOrder',
-            );
+            await expect(resolver.settleOrders(fillOrderToData)).to.be.revertedWithCustomError(settlement, 'OnlyWhitelistOrAccessToken');
         });
 
         it('only resolver can use takerInteraction method', async function () {
@@ -155,7 +153,7 @@ describe('WhitelistChecker', function () {
             });
 
             await accessToken.burn(resolver, 1);
-            await expect(resolver.settleOrders(fillOrderToData)).to.be.revertedWithCustomError(settlement, 'ResolverCanNotFillOrder');
+            await expect(resolver.settleOrders(fillOrderToData)).to.be.revertedWithCustomError(settlement, 'AllowedTimeViolation');
         });
     });
 
@@ -219,7 +217,7 @@ describe('WhitelistChecker', function () {
                 isInnermostOrder: true,
             });
 
-            await expect(resolver.settleOrders(fillOrderToData)).to.be.revertedWithCustomError(settlement, 'ResolverCanNotFillOrder');
+            await expect(resolver.settleOrders(fillOrderToData)).to.be.revertedWithCustomError(settlement, 'AllowedTimeViolation');
         });
     });
 });
