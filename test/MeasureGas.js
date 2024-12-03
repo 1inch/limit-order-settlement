@@ -23,7 +23,6 @@ describe('MeasureGas', function () {
         const { dai, weth, accessToken, lopv3, lopv4 } = await deploySwapTokens();
 
         await dai.transfer(alice, ether('100'));
-        // await inch.mint(owner, ether('100'));
         await weth.deposit({ value: ether('1') });
         await weth.connect(alice).deposit({ value: ether('1') });
 
