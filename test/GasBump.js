@@ -49,7 +49,7 @@ describe('GasBump', function () {
 
     async function testGetTakingAmount(checker, order, extensions, basefee, result) {
         await network.provider.send('hardhat_setNextBlockBaseFeePerGas', ['0x' + basefee.toString(16)]);
-        await checker.testGetTakingAmount(
+        await checker.testGetTakingAmount.send(
             order, '0x', constants.ZERO_BYTES32, constants.ZERO_ADDRESS, ether('10'), ether('10'), '0x' + extensions.takingAmountData.substring(42), result, { gasPrice: basefee },
         );
     }
