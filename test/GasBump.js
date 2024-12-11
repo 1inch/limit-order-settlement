@@ -1,10 +1,10 @@
-const { deployContract, time, ether, constants } = require('@1inch/solidity-utils');
+const { time, ether, constants } = require('@1inch/solidity-utils');
 const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
-const { buildOrder, buildMakerTraits } = require('@1inch/limit-order-protocol-contract/test/helpers/orderUtils');
+const { buildOrder, buildMakerTraits, buildFeeTakerExtensions } = require('@1inch/limit-order-protocol-contract/test/helpers/orderUtils');
 const { initContractsForSettlement } = require('./helpers/fixtures');
 const { buildAuctionDetails } = require('./helpers/fusionUtils');
 const hre = require('hardhat');
-const { network } = hre;
+const { network, ethers } = hre;
 
 describe('GasBump', function () {
     before(async function () {
@@ -16,8 +16,9 @@ describe('GasBump', function () {
     });
 
     async function prepare() {
-        const { contracts: { dai, weth }, accounts: { owner } } = await initContractsForSettlement();
-        const checker = await deployContract('GasBumpChecker');
+        const { contracts: { dai, weth, accessToken }, accounts: { owner } } = await initContractsForSettlement();
+        const GasBumpChecker = await ethers.getContractFactory('GasBumpChecker');
+        const checker = await GasBumpChecker.deploy(accessToken, weth, owner);
         const currentTime = (await time.latest()) - time.duration.minutes(1) + 1;
         const { details: auctionDetails } = await buildAuctionDetails({
             gasBumpEstimate: 10000, // 0.1% of taking amount
@@ -27,42 +28,49 @@ describe('GasBump', function () {
             points: [[500000, 60]],
         });
 
-        const order = buildOrder({
-            maker: owner.address,
-            makerAsset: await dai.getAddress(),
-            takerAsset: await weth.getAddress(),
-            makingAmount: ether('10'),
-            takingAmount: ether('1'),
-            makerTraits: buildMakerTraits(),
+        const extensions = buildFeeTakerExtensions({
+            feeTaker: await checker.getAddress(),
+            getterExtraPrefix: auctionDetails,
         });
 
-        return { order, owner, auctionDetails, checker };
+        const order = buildOrder(
+            {
+                maker: owner.address,
+                makerAsset: await dai.getAddress(),
+                takerAsset: await weth.getAddress(),
+                makingAmount: ether('10'),
+                takingAmount: ether('1'),
+                makerTraits: buildMakerTraits(),
+            },
+        );
+
+        return { order, owner, extensions, checker };
     }
 
-    async function testGetTakingAmount(checker, order, owner, auctionDetails, basefee, result) {
+    async function testGetTakingAmount(checker, order, extensions, basefee, result) {
         await network.provider.send('hardhat_setNextBlockBaseFeePerGas', ['0x' + basefee.toString(16)]);
-        await checker.testGetTakingAmount(
-            order, '0x', constants.ZERO_BYTES32, owner.address, ether('10'), ether('10'), auctionDetails, result, { gasPrice: basefee },
+        await checker.testGetTakingAmount.send(
+            order, '0x', constants.ZERO_BYTES32, constants.ZERO_ADDRESS, ether('10'), ether('10'), '0x' + extensions.takingAmountData.substring(42), result, { gasPrice: basefee },
         );
     }
 
     it('0 gwei = no gas fee', async function () {
-        const { order, owner, auctionDetails, checker } = await loadFixture(prepare);
-        await testGetTakingAmount(checker, order, owner, auctionDetails, 0, ether('1.05'));
+        const { order, extensions, checker } = await loadFixture(prepare);
+        await testGetTakingAmount(checker, order, extensions, 0, ether('1.05'));
     });
 
     it('0.1 gwei = 0.01% gas fee', async function () {
-        const { order, owner, auctionDetails, checker } = await loadFixture(prepare);
-        await testGetTakingAmount(checker, order, owner, auctionDetails, 1e8, ether('1.0499'));
+        const { order, extensions, checker } = await loadFixture(prepare);
+        await testGetTakingAmount(checker, order, extensions, 1e8, ether('1.0499'));
     });
 
     it('15 gwei = 1.5% gas fee', async function () {
-        const { order, owner, auctionDetails, checker } = await loadFixture(prepare);
-        await testGetTakingAmount(checker, order, owner, auctionDetails, 15e9, ether('1.035'));
+        const { order, extensions, checker } = await loadFixture(prepare);
+        await testGetTakingAmount(checker, order, extensions, 15e9, ether('1.035'));
     });
 
     it('100 gwei = 10% gas fee, should be capped with takingAmount', async function () {
-        const { order, owner, auctionDetails, checker } = await loadFixture(prepare);
-        await testGetTakingAmount(checker, order, owner, auctionDetails, 100e9, ether('1'));
+        const { order, extensions, checker } = await loadFixture(prepare);
+        await testGetTakingAmount(checker, order, extensions, 100e9, ether('1'));
     });
 });
