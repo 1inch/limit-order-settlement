@@ -164,7 +164,7 @@ describe('Settlement', function () {
         const setupData = { ...dataFormFixture, auction };
         const {
             contracts: { dai, weth, resolver },
-            accounts: { owner, alice, bob },
+            accounts: { owner, alice, bob, charlie },
         } = setupData;
 
         const fillOrderToData1 = await buildCalldataForOrder({
@@ -180,7 +180,8 @@ describe('Settlement', function () {
             setupData,
             threshold: ether('101'),
             isInnermostOrder: true,
-            integrator: bob.address,
+            integratorFeeRecipient: bob.address,
+            protocolFeeRecipient: charlie.address,
             integratorFee: 100,
         });
 
@@ -197,13 +198,14 @@ describe('Settlement', function () {
             setupData,
             threshold: ether('0.11'),
             additionalDataForSettlement: fillOrderToData1,
-            integrator: bob.address,
+            integratorFeeRecipient: bob.address,
+            protocolFeeRecipient: charlie.address,
             integratorFee: 100,
         });
 
         const txn = await resolver.settleOrders(fillOrderToData0);
-        await expect(txn).to.changeTokenBalances(dai, [owner, alice, bob], [ether('-100.1'), ether('100'), ether('0.1')]);
-        await expect(txn).to.changeTokenBalances(weth, [owner, alice, bob, resolver], [ether('0.1'), ether('-0.11'), ether('0.0001'), ether('0.0099')]);
+        await expect(txn).to.changeTokenBalances(dai, [owner, alice, bob, charlie], [ether('-100.1'), ether('100'), ether('0.05'), ether('0.05')]);
+        await expect(txn).to.changeTokenBalances(weth, [owner, alice, bob, charlie, resolver], [ether('0.1'), ether('-0.11'), ether('0.00005'), ether('0.00005'), ether('0.0099')]);
     });
 
     it('unidirectional recursive swap', async function () {
@@ -276,7 +278,7 @@ describe('Settlement', function () {
         const setupData = { ...dataFormFixture, auction };
         const {
             contracts: { dai, weth, resolver },
-            accounts: { owner, alice, bob },
+            accounts: { owner, alice, bob, charlie },
         } = setupData;
 
         const INTEGRATOR_FEE = 115n;
@@ -294,8 +296,9 @@ describe('Settlement', function () {
             threshold: ether('101'),
             isInnermostOrder: true,
             resolverFee: BACK_ORDER_FEE,
-            integrator: bob.address,
             integratorFee: INTEGRATOR_FEE,
+            integratorFeeRecipient: bob.address,
+            protocolFeeRecipient: charlie.address,
         });
 
         const fillOrderToData0 = await buildCalldataForOrder({
@@ -312,13 +315,14 @@ describe('Settlement', function () {
             threshold: ether('0.11'),
             additionalDataForSettlement: fillOrderToData1,
             resolverFee: ORDER_FEE,
-            integrator: bob.address,
+            integratorFeeRecipient: bob.address,
+            protocolFeeRecipient: charlie.address,
         });
 
         const tx = await resolver.settleOrders(fillOrderToData0);
 
-        await expect(tx).to.changeTokenBalances(dai, [owner, alice, bob], [ether('-100.24'), ether('100'), ether('0.24')]);
-        await expect(tx).to.changeTokenBalances(weth, [owner, alice, bob, resolver], [ether('0.1'), ether('-0.11'), ether('0.0001'), ether('0.0099')]);
+        await expect(tx).to.changeTokenBalances(dai, [owner, alice, bob, charlie], [ether('-100.24'), ether('100'), ether('0.115') / 2n, ether('0.125') + ether('0.115') / 2n]);
+        await expect(tx).to.changeTokenBalances(weth, [owner, alice, bob, charlie, resolver], [ether('0.1'), ether('-0.11'), 0, ether('0.0001'), ether('0.0099')]);
     });
 
     it('opposite direction recursive swap with resolverFee and integratorFee and custom receiver', async function () {
@@ -327,10 +331,10 @@ describe('Settlement', function () {
         const setupData = { ...dataFormFixture, auction };
         const {
             contracts: { dai, weth, resolver },
-            accounts: { owner, alice, bob },
+            accounts: { owner, alice, bob, charlie },
         } = setupData;
 
-        const [,,, aliceReciever, ownerReciever] = await ethers.getSigners();
+        const [,,,, aliceReciever, ownerReciever] = await ethers.getSigners();
 
         const INTEGRATOR_FEE = 115n;
         const fillOrderToData1 = await buildCalldataForOrder({
@@ -347,9 +351,10 @@ describe('Settlement', function () {
             setupData,
             threshold: ether('101'),
             isInnermostOrder: true,
-            resolverFee: BACK_ORDER_FEE,
-            integrator: bob.address,
             integratorFee: INTEGRATOR_FEE,
+            resolverFee: BACK_ORDER_FEE,
+            integratorFeeRecipient: bob.address,
+            protocolFeeRecipient: charlie.address,
         });
 
         const fillOrderToData0 = await buildCalldataForOrder({
@@ -367,13 +372,14 @@ describe('Settlement', function () {
             threshold: ether('0.11'),
             additionalDataForSettlement: fillOrderToData1,
             resolverFee: ORDER_FEE,
-            integrator: bob.address,
+            integratorFeeRecipient: bob.address,
+            protocolFeeRecipient: charlie.address,
         });
 
         const tx = await resolver.settleOrders(fillOrderToData0);
 
-        await expect(tx).to.changeTokenBalances(dai, [owner, aliceReciever, bob], [ether('-100.24'), ether('100'), ether('0.24')]);
-        await expect(tx).to.changeTokenBalances(weth, [alice, ownerReciever, bob, resolver], [ether('-0.11'), ether('0.1'), ether('0.0001'), ether('0.0099')]);
+        await expect(tx).to.changeTokenBalances(dai, [owner, aliceReciever, bob, charlie], [ether('-100.24'), ether('100'), ether('0.115') / 2n, ether('0.125') + ether('0.115') / 2n]);
+        await expect(tx).to.changeTokenBalances(weth, [alice, ownerReciever, bob, charlie, resolver], [ether('-0.11'), ether('0.1'), 0, ether('0.0001'), ether('0.0099')]);
     });
 
     it('opposite direction recursive swap with resolverFee and integratorFee and custom receiver and weth unwrapping', async function () {
@@ -382,10 +388,10 @@ describe('Settlement', function () {
         const setupData = { ...dataFormFixture, auction };
         const {
             contracts: { dai, weth, resolver },
-            accounts: { owner, alice, bob },
+            accounts: { owner, alice, bob, charlie },
         } = setupData;
 
-        const [,,, aliceReciever, ownerReciever] = await ethers.getSigners();
+        const [,,,, aliceReciever, ownerReciever] = await ethers.getSigners();
 
         const INTEGRATOR_FEE = 115n;
         const fillOrderToData1 = await buildCalldataForOrder({
@@ -403,7 +409,8 @@ describe('Settlement', function () {
             threshold: ether('101'),
             isInnermostOrder: true,
             resolverFee: BACK_ORDER_FEE,
-            integrator: bob.address,
+            integratorFeeRecipient: bob.address,
+            protocolFeeRecipient: charlie.address,
         });
 
         const fillOrderToData0 = await buildCalldataForOrder({
@@ -420,16 +427,17 @@ describe('Settlement', function () {
             setupData,
             threshold: ether('0.11'),
             additionalDataForSettlement: fillOrderToData1,
-            resolverFee: ORDER_FEE,
-            integrator: bob.address,
             integratorFee: INTEGRATOR_FEE,
+            resolverFee: ORDER_FEE,
+            integratorFeeRecipient: bob.address,
+            protocolFeeRecipient: charlie.address,
         });
 
         const tx = await resolver.settleOrders(fillOrderToData0);
 
-        await expect(tx).to.changeTokenBalances(dai, [owner, aliceReciever, bob], [ether('-100.125'), ether('100'), ether('0.125')]);
-        await expect(tx).to.changeTokenBalances(weth, [alice, ownerReciever, bob, resolver], [ether('-0.11'), 0, 0, ether('0.009785')]);
-        await expect(tx).to.changeEtherBalances([alice, ownerReciever, bob], [0, ether('0.1'), ether('0.000215')]);
+        await expect(tx).to.changeTokenBalances(dai, [owner, aliceReciever, bob, charlie], [ether('-100.125'), ether('100'), 0, ether('0.125')]);
+        await expect(tx).to.changeTokenBalances(weth, [alice, ownerReciever, bob, charlie, resolver], [ether('-0.11'), 0, 0, 0, ether('0.009785')]);
+        await expect(tx).to.changeEtherBalances([alice, ownerReciever, bob, charlie], [0, ether('0.1'), ether('0.000115') / 2n, ether('0.0001') + ether('0.000115') / 2n]);
     });
 
     it('triple recursive swap', async function () {
@@ -693,7 +701,7 @@ describe('Settlement', function () {
         const setupData = { ...dataFormFixture, auction };
         const {
             contracts: { dai, weth, resolver },
-            accounts: { owner, alice, bob },
+            accounts: { owner, alice, bob, charlie },
             others: { abiCoder },
         } = setupData;
 
@@ -730,14 +738,24 @@ describe('Settlement', function () {
             isInnermostOrder: true,
             fillingAmount: ether('10') * partialModifier / points,
             resolverFee: ORDER_FEE,
-            integrator: bob.address,
+            integratorFeeRecipient: bob.address,
+            protocolFeeRecipient: charlie.address,
         });
 
         await weth.approve(resolver, ether('0.01'));
 
         const txn = await resolver.settleOrders(fillOrderToData0);
         await expect(txn).to.changeTokenBalances(dai, [resolver, alice], [ether('10') * partialModifier / points, ether('-10') * partialModifier / points]);
-        await expect(txn).to.changeTokenBalances(weth, [owner, alice], [ether('-0.01') * partialModifier / points * (ORDER_FEE + FEE_BASE) / FEE_BASE, ether('0.01') * partialModifier / points]);
+        await expect(txn).to.changeTokenBalances(
+            weth,
+            [owner, alice, bob, charlie],
+            [
+                ether('-0.01') * partialModifier / points * (ORDER_FEE + FEE_BASE) / FEE_BASE,
+                ether('0.01') * partialModifier / points,
+                0,
+                ether('0.01') * partialModifier / points * ORDER_FEE / FEE_BASE,
+            ],
+        );
     });
 
     it('should not pay resolver fee when whitelisted address and it has accessToken', async function () {
@@ -814,7 +832,7 @@ describe('Settlement', function () {
         const setupData = { ...dataFormFixture, auction };
         const {
             contracts: { dai, weth, resolver },
-            accounts: { alice, bob },
+            accounts: { alice, bob, charlie },
         } = setupData;
 
         weth.transfer(resolver, ether('0.1001'));
@@ -833,12 +851,13 @@ describe('Settlement', function () {
             threshold: ether('0.11'),
             isInnermostOrder: true,
             resolverFee: ORDER_FEE,
-            integrator: bob.address,
+            integratorFeeRecipient: bob.address,
+            protocolFeeRecipient: charlie.address,
         });
 
         const txn = await resolver.settleOrders(fillOrderToData);
         await expect(txn).to.changeTokenBalances(dai, [alice, resolver], [ether('-100'), ether('100')]);
-        await expect(txn).to.changeTokenBalances(weth, [alice, resolver, bob], [ether('0.1'), ether('-0.1001'), ether('0.0001')]);
+        await expect(txn).to.changeTokenBalances(weth, [alice, resolver, bob, charlie], [ether('0.1'), ether('-0.1001'), 0, ether('0.0001')]);
     });
 
     it('should revert when non-whitelisted address and it has not accessToken', async function () {

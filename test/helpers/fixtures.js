@@ -24,7 +24,7 @@ async function deploySwapTokens() {
 async function initContractsForSettlement() {
     const abiCoder = ethers.AbiCoder.defaultAbiCoder();
     const chainId = await getChainId();
-    const [owner, alice, bob] = await ethers.getSigners();
+    const [owner, alice, bob, charlie] = await ethers.getSigners();
 
     const { dai, weth, accessToken, lopv4 } = await deploySwapTokens();
 
@@ -50,7 +50,7 @@ async function initContractsForSettlement() {
 
     return {
         contracts: { dai, weth, accessToken, lopv4, settlement, resolver },
-        accounts: { owner, alice, bob },
+        accounts: { owner, alice, bob, charlie },
         others: { chainId, abiCoder },
     };
 }
