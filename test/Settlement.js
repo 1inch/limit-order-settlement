@@ -746,7 +746,16 @@ describe('Settlement', function () {
 
         const txn = await resolver.settleOrders(fillOrderToData0);
         await expect(txn).to.changeTokenBalances(dai, [resolver, alice], [ether('10') * partialModifier / points, ether('-10') * partialModifier / points]);
-        await expect(txn).to.changeTokenBalances(weth, [owner, alice, bob, charlie], [ether('-0.01') * partialModifier / points * (ORDER_FEE + FEE_BASE) / FEE_BASE, ether('0.01') * partialModifier / points, 0, ether('0.01') * partialModifier / points * ORDER_FEE / FEE_BASE]);
+        await expect(txn).to.changeTokenBalances(
+            weth,
+            [owner, alice, bob, charlie],
+            [
+                ether('-0.01') * partialModifier / points * (ORDER_FEE + FEE_BASE) / FEE_BASE,
+                ether('0.01') * partialModifier / points,
+                0,
+                ether('0.01') * partialModifier / points * ORDER_FEE / FEE_BASE,
+            ],
+        );
     });
 
     it('should not pay resolver fee when whitelisted address and it has accessToken', async function () {
