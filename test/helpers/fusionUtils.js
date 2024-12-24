@@ -13,7 +13,8 @@ async function buildCalldataForOrder({
     isInnermostOrder = false,
     isMakingAmount = true,
     fillingAmount = isMakingAmount ? orderData.makingAmount : orderData.takingAmount,
-    integrator = orderSigner.address,
+    integratorFeeRecipient = orderSigner.address,
+    protocolFeeRecipient = orderSigner.address,
     resolverFee = 0,
     integratorFee = 0,
     whitelistResolvers = [], // bytes10[]
@@ -44,7 +45,8 @@ async function buildCalldataForOrder({
         buildFeeTakerExtensions({
             feeTaker: await settlement.getAddress(),
             getterExtraPrefix: auctionDetails,
-            feeRecipient: integrator,
+            integratorFeeRecipient,
+            protocolFeeRecipient,
             makerReceiver: (makerReceiver && makerReceiver !== constants.ZERO_ADDRESS) ? makerReceiver : undefined,
             integratorFee,
             resolverFee,
