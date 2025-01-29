@@ -1,21 +1,6 @@
+const { deployAndGetContractWithCreate3 } = require('@1inch/solidity-utils');
 const hre = require('hardhat');
 const { getChainId, ethers } = hre;
-
-const FEE_TOKEN = {
-    1: '0x111111111117dC0aa78b770fA6A738034120C302', // Mainnet
-    56: '0x111111111117dC0aa78b770fA6A738034120C302', // BSC
-    137: '0x9c2C5fd7b07E95EE044DDeba0E97a665F142394f', // Matic
-    42161: '0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1', // Arbitrum (DAI)
-    10: '0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1', // Optimistic (DAI)
-    43114: '0xd586E7F844cEa2F87f50152665BCbc2C279D8d70', // Avalanche (DAI)
-    100: '0xe91D153E0b41518A2Ce8Dd3D7944Fa863463a97d', // xDAI (wXDAI)
-    250: '0x8D11eC38a3EB5E956B052f67Da8Bdc9bef8Abf3E', // FTM (DAI)
-    1313161554: '0xe3520349F477A5F6EB06107066048508498A291b', // Aurora (DAI)
-    8217: '0x5c74070FDeA071359b86082bd9f9b3dEaafbe32b', // Klaytn (KDAI)
-    8453: '0x50c5725949A6F0c72E6C4a641F24049A917DB0Cb', // Base (DAI)
-    59144: '0x4AF15ec2A0BD43Db75dd04E62FAA3B8EF36b00d5', // Linea (DAI)
-    31337: '0x111111111117dC0aa78b770fA6A738034120C302', // Hardhat
-};
 
 const WETH = {
     1: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2', // Mainnet
@@ -44,36 +29,16 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     console.log('network id ', chainId);
 
     const { deployer } = await getNamedAccounts();
+    const create3Deployer = (await deployments.get('Create3Deployer')).address;
+    const accessToken = (await deployments.get('KycNFT')).address;
 
-    const create3Deployer = await ethers.getContractAt('ICreate3Deployer', (await deployments.get('Create3Deployer')).address);
-
-    const CONTRACT_NAME = chainId === '1' ? 'Settlement' : 'SimpleSettlement';
-
-    const SettlementFactory = await ethers.getContractFactory(CONTRACT_NAME);
-
-    const deployData = (await SettlementFactory.getDeployTransaction(ROUTER_V6_ADDR, FEE_TOKEN[chainId], WETH[chainId], deployer)).data;
-
-    const txn = create3Deployer.deploy(SETTLEMENT_SALT, deployData, { gasLimit: 6000000 });
-    await (await txn).wait();
-
-    const settlement = await ethers.getContractAt('Settlement', await create3Deployer.addressOf(SETTLEMENT_SALT));
-
-    const feeBankAddress = await settlement.FEE_BANK();
-
-    console.log(CONTRACT_NAME, 'deployed to:', await settlement.getAddress());
-    console.log('FeeBank deployed to:', feeBankAddress);
-
-    if (chainId !== '31337') {
-        await hre.run('verify:verify', {
-            address: feeBankAddress,
-            constructorArguments: [await settlement.getAddress(), FEE_TOKEN[chainId], deployer],
-        });
-
-        await hre.run('verify:verify', {
-            address: await settlement.getAddress(),
-            constructorArguments: [ROUTER_V6_ADDR, FEE_TOKEN[chainId], WETH[chainId], deployer],
-        });
-    }
+    await deployAndGetContractWithCreate3({
+        contractName: chainId === '1' ? 'Settlement' : 'SimpleSettlement',
+        constructorArgs: [ROUTER_V6_ADDR, accessToken, WETH[chainId], deployer],
+        create3Deployer,
+        salt: SETTLEMENT_SALT,
+        deployments,
+    });
 };
 
 module.exports.skip = async () => true;
