@@ -10,6 +10,7 @@ import { IPostInteraction } from "@1inch/limit-order-protocol-contract/contracts
 import { MakerTraits, MakerTraitsLib } from "@1inch/limit-order-protocol-contract/contracts/libraries/MakerTraitsLib.sol";
 import { SafeERC20 } from "@1inch/solidity-utils/contracts/libraries/SafeERC20.sol";
 import { Address, AddressLib } from "@1inch/solidity-utils/contracts/libraries/AddressLib.sol";
+import "hardhat/console.sol";
 
 /**
  * @title Simple Settlement contract
@@ -242,7 +243,7 @@ contract SimpleSettlement is FeeTaker {
                 uint256 estimatedTakingAmount = uint256(bytes32(tail));
                 uint256 actualTakingAmount = takingAmount - integratorFeeAmount - protocolFeeAmount;
                 if (actualTakingAmount > estimatedTakingAmount) {
-                    uint256 protocolSurplusFee = uint16(bytes2(tail[32:]));
+                    uint256 protocolSurplusFee = uint256(uint8(bytes1(tail[32:])));
                     if (protocolSurplusFee > _BASE_1E2) revert InvalidProtocolSurplusFee();
                     protocolFeeAmount += Math.mulDiv(actualTakingAmount - estimatedTakingAmount, protocolSurplusFee, _BASE_1E2);
                 }

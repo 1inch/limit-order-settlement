@@ -417,5 +417,64 @@ describe('MeasureGas', function () {
             await expect(tx).to.changeTokenBalances(dai, [resolver, alice], [ether('100'), ether('-100')]);
             await expect(tx).to.changeTokenBalances(weth, [owner, alice], [ether('-0.1'), ether('0.1')]);
         });
+
+        it('extension 1 fill for 1 order with surplus', async function () {
+            const {
+                contracts: { dai, weth, lopv4, settlement },
+                accounts: { alice, bob, owner },
+                others: { chainId },
+            } = await loadFixture(initContractsForSettlement);
+            const now = await time.latest();
+            const makingAmount = ether('100');
+            const takingAmount = ether('0.1');
+            const auction = await buildAuctionDetails({ startTime: now, delay: 60, initialRateBump: 1000000n });
+            const surplus = ether('0.01'); // maximum auction bump rate
+
+            const orderData = {
+                maker: alice.address,
+                receiver: await settlement.getAddress(),
+                makerAsset: await dai.getAddress(),
+                takerAsset: await weth.getAddress(),
+                makingAmount,
+                takingAmount: takingAmount,
+                makerTraits: buildMakerTraits(),
+            };
+
+            const order = buildOrder(
+                orderData,
+                buildSettlementExtensions({
+                    feeTaker: await settlement.getAddress(),
+                    protocolFeeRecipient: bob.address,
+                    estimatedTakingAmount: takingAmount,
+                    getterExtraPrefix: auction.details,
+                    whitelistPostInteraction: '0x0000000000',
+                    protocolSurplusFee: 50,
+                }),
+            );
+
+            const { r, yParityAndS: vs } = ethers.Signature.from(await signOrder(order, chainId, await lopv4.getAddress(), alice));
+
+            const takerTraits = buildTakerTraits({
+                makingAmount: true,
+                threshold: takingAmount + surplus,
+                extension: order.extension,
+            });
+
+            await weth.approve(lopv4, takingAmount + surplus);
+
+            const tx = await lopv4.fillOrderArgs(
+                order,
+                r,
+                vs,
+                makingAmount,
+                takerTraits.traits,
+                takerTraits.args,
+            );
+
+            console.log(`1 fill for 1 order (surplus) gasUsed: ${(await tx.wait()).gasUsed}`);
+
+            await expect(tx).to.changeTokenBalances(dai, [owner, alice], [makingAmount, -makingAmount]);
+            await expect(tx).to.changeTokenBalances(weth, [owner, alice], [-takingAmount - surplus, takingAmount + surplus / 2n]);
+        });
     });
 });
