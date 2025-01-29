@@ -1,6 +1,6 @@
 const { time, trim0x, constants } = require('@1inch/solidity-utils');
 const { ethers } = require('hardhat');
-const { buildOrder, buildTakerTraits, signOrder, buildFeeTakerExtensions } = require('@1inch/limit-order-protocol-contract/test/helpers/orderUtils');
+const { buildOrder, buildTakerTraits, signOrder } = require('@1inch/limit-order-protocol-contract/test/helpers/orderUtils');
 
 const expBase = 999999952502977513n; // 0.05^(1/(2 years)) means 95% value loss over 2 years}
 
@@ -17,6 +17,8 @@ async function buildCalldataForOrder({
     protocolFeeRecipient = orderSigner.address,
     resolverFee = 0,
     integratorFee = 0,
+    estimatedTakingAmount = orderData.takingAmount,
+    protocolSurplusFee = 0,
     whitelistResolvers = [], // bytes10[]
     resolversAllowedTime = [], // uint16[]
     customPostInteraction = '0x',
@@ -42,8 +44,9 @@ async function buildCalldataForOrder({
 
     const order = buildOrder(
         orderData,
-        buildFeeTakerExtensions({
+        buildSettlementExtensions({
             feeTaker: await settlement.getAddress(),
+            estimatedTakingAmount,
             getterExtraPrefix: auctionDetails,
             integratorFeeRecipient,
             protocolFeeRecipient,
@@ -53,6 +56,7 @@ async function buildCalldataForOrder({
             whitelistDiscount: 0,
             whitelist,
             whitelistPostInteraction,
+            protocolSurplusFee,
             customPostInteraction,
         }),
     );
@@ -97,8 +101,49 @@ async function buildAuctionDetails({
     return { gasBumpEstimate, gasPriceEstimate, startTime, duration, delay, initialRateBump, details };
 }
 
+function buildSettlementExtensions({
+    feeTaker,
+    estimatedTakingAmount,
+    getterExtraPrefix = '0x',
+    integratorFeeRecipient = constants.ZERO_ADDRESS,
+    protocolFeeRecipient = constants.ZERO_ADDRESS,
+    makerReceiver = undefined,
+    integratorFee = 0,
+    integratorShare = 50,
+    resolverFee = 0,
+    whitelistDiscount = 50,
+    whitelist = '0x00',
+    whitelistPostInteraction = whitelist,
+    protocolSurplusFee = 0,
+    customMakingGetter = '0x',
+    customTakingGetter = '0x',
+    customPostInteraction = '0x',
+}) {
+    return {
+        makingAmountData: ethers.solidityPacked(
+            ['address', 'bytes', 'uint16', 'uint8', 'uint16', 'uint8', 'bytes', 'bytes'],
+            [feeTaker, getterExtraPrefix, integratorFee, integratorShare, resolverFee, whitelistDiscount, whitelist, customMakingGetter],
+        ),
+        takingAmountData: ethers.solidityPacked(
+            ['address', 'bytes', 'uint16', 'uint8', 'uint16', 'uint8', 'bytes', 'bytes'],
+            [feeTaker, getterExtraPrefix, integratorFee, integratorShare, resolverFee, whitelistDiscount, whitelist, customTakingGetter],
+        ),
+        postInteraction: ethers.solidityPacked(
+            ['address', 'bytes1', 'address', 'address'].concat(
+                makerReceiver ? ['address'] : [],
+                ['uint16', 'uint8', 'uint16', 'uint8', 'bytes', 'uint256', 'uint8', 'bytes'],
+            ),
+            [feeTaker, makerReceiver ? '0x01' : '0x00', integratorFeeRecipient, protocolFeeRecipient].concat(
+                makerReceiver ? [makerReceiver] : [],
+                [integratorFee, integratorShare, resolverFee, whitelistDiscount, whitelistPostInteraction, estimatedTakingAmount, protocolSurplusFee, customPostInteraction],
+            ),
+        ),
+    };
+}
+
 module.exports = {
     expBase,
     buildAuctionDetails,
     buildCalldataForOrder,
+    buildSettlementExtensions,
 };

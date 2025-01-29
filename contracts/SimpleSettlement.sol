@@ -24,6 +24,7 @@ contract SimpleSettlement is FeeTaker {
     uint256 private constant _GAS_PRICE_BASE = 1_000_000; // 1000 means 1 Gwei
 
     error AllowedTimeViolation();
+    error InvalidProtocolSurplusFee();
 
     /**
      * @notice Initializes the contract.
@@ -195,9 +196,12 @@ contract SimpleSettlement is FeeTaker {
      * 20 bytes - protocol fee recipient
      * 20 bytes — receiver of taking tokens (optional, if not set, maker is used)
      * 2 bytes — integrator fee percentage (in 1e5)
-     * 1 bytes - integrator rev share percentage (in 1e2)
+     * 1 byte - integrator rev share percentage (in 1e2)
      * 2 bytes — resolver fee percentage (in 1e5)
+     * 1 byte - whitelist discount numerator (in 1e2)
      * bytes — whitelist structure determined by `_isWhitelistedPostInteractionImpl` implementation
+     * 32 bytes - estimatedTakingAmount
+     * 1 byte - protocol fee percentage from surplus
      * bytes — custom data to call extra postInteraction (optional)
      */
     function _postInteraction(
@@ -232,6 +236,17 @@ contract SimpleSettlement is FeeTaker {
                 uint256 integratorFeeTotal = Math.mulDiv(takingAmount, integratorFee, denominator);
                 integratorFeeAmount = Math.mulDiv(integratorFeeTotal, integratorShare, _BASE_1E2);
                 protocolFeeAmount = Math.mulDiv(takingAmount, resolverFee, denominator) + integratorFeeTotal - integratorFeeAmount;
+            }
+
+            {
+                uint256 estimatedTakingAmount = uint256(bytes32(tail));
+                uint256 actualTakingAmount = takingAmount - integratorFeeAmount - protocolFeeAmount;
+                if (actualTakingAmount > estimatedTakingAmount) {
+                    uint256 protocolSurplusFee = uint16(bytes2(tail[32:]));
+                    if (protocolSurplusFee > _BASE_1E2) revert InvalidProtocolSurplusFee();
+                    protocolFeeAmount += Math.mulDiv(actualTakingAmount - estimatedTakingAmount, protocolSurplusFee, _BASE_1E2);
+                }
+                tail = tail[33:];
             }
 
             if (order.receiver.get() == address(this)) {

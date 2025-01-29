@@ -1,7 +1,8 @@
 const { expect, deployContract, ether, constants } = require('@1inch/solidity-utils');
 const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
-const { buildOrder, buildMakerTraits, buildFeeTakerExtensions } = require('@1inch/limit-order-protocol-contract/test/helpers/orderUtils');
+const { buildOrder, buildMakerTraits } = require('@1inch/limit-order-protocol-contract/test/helpers/orderUtils');
 const { initContractsForSettlement } = require('./helpers/fixtures');
+const { buildSettlementExtensions } = require('./helpers/fusionUtils');
 const hre = require('hardhat');
 const { network } = hre;
 
@@ -17,9 +18,12 @@ describe('PriorityFeeLimiter', function () {
     async function prepare() {
         const { contracts: { dai, weth, accessToken }, accounts: { owner } } = await initContractsForSettlement();
         const settlementExtension = await deployContract('Settlement', [owner, weth, accessToken, weth, owner]);
+        const makingAmount = ether('10');
+        const takingAmount = ether('1');
 
-        const extensions = buildFeeTakerExtensions({
+        const extensions = buildSettlementExtensions({
             feeTaker: await settlementExtension.getAddress(),
+            estimatedTakingAmount: takingAmount,
             whitelistPostInteraction: '0x0000000000',
         });
 
@@ -28,8 +32,8 @@ describe('PriorityFeeLimiter', function () {
                 maker: owner.address,
                 makerAsset: await dai.getAddress(),
                 takerAsset: await weth.getAddress(),
-                makingAmount: ether('10'),
-                takingAmount: ether('1'),
+                makingAmount,
+                takingAmount,
                 makerTraits: buildMakerTraits(),
             },
             extensions,
