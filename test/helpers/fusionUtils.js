@@ -1,6 +1,6 @@
 const { time, trim0x, constants } = require('@1inch/solidity-utils');
 const { ethers } = require('hardhat');
-const { buildOrder, buildTakerTraits, signOrder } = require('@1inch/limit-order-protocol-contract/test/helpers/orderUtils');
+const { buildOrder, buildTakerTraits, signOrder, buildFeeTakerExtensions } = require('@1inch/limit-order-protocol-contract/test/helpers/orderUtils');
 
 const expBase = 999999952502977513n; // 0.05^(1/(2 years)) means 95% value loss over 2 years}
 
@@ -119,25 +119,32 @@ function buildSettlementExtensions({
     customTakingGetter = '0x',
     customPostInteraction = '0x',
 }) {
+    const feeTakerExtensionsObj = buildFeeTakerExtensions({
+        feeTaker,
+        getterExtraPrefix,
+        integratorFeeRecipient,
+        protocolFeeRecipient,
+        makerReceiver,
+        integratorFee,
+        integratorShare,
+        resolverFee,
+        whitelistDiscount,
+        whitelist,
+        whitelistPostInteraction,
+        customMakingGetter,
+        customTakingGetter,
+        customPostInteraction: '0x',
+    });
+
+    const postInteraction = ethers.solidityPacked(
+        ["bytes", "uint256", "uint8", "bytes"],
+        [feeTakerExtensionsObj.postInteraction, estimatedTakingAmount, protocolSurplusFee, customPostInteraction],
+    );
+
     return {
-        makingAmountData: ethers.solidityPacked(
-            ['address', 'bytes', 'uint16', 'uint8', 'uint16', 'uint8', 'bytes', 'bytes'],
-            [feeTaker, getterExtraPrefix, integratorFee, integratorShare, resolverFee, whitelistDiscount, whitelist, customMakingGetter],
-        ),
-        takingAmountData: ethers.solidityPacked(
-            ['address', 'bytes', 'uint16', 'uint8', 'uint16', 'uint8', 'bytes', 'bytes'],
-            [feeTaker, getterExtraPrefix, integratorFee, integratorShare, resolverFee, whitelistDiscount, whitelist, customTakingGetter],
-        ),
-        postInteraction: ethers.solidityPacked(
-            ['address', 'bytes1', 'address', 'address'].concat(
-                makerReceiver ? ['address'] : [],
-                ['uint16', 'uint8', 'uint16', 'uint8', 'bytes', 'uint256', 'uint8', 'bytes'],
-            ),
-            [feeTaker, makerReceiver ? '0x01' : '0x00', integratorFeeRecipient, protocolFeeRecipient].concat(
-                makerReceiver ? [makerReceiver] : [],
-                [integratorFee, integratorShare, resolverFee, whitelistDiscount, whitelistPostInteraction, estimatedTakingAmount, protocolSurplusFee, customPostInteraction],
-            ),
-        ),
+        makingAmountData: feeTakerExtensionsObj.makingAmountData,
+        takingAmountData: feeTakerExtensionsObj.takingAmountData,
+        postInteraction,
     };
 }
 
