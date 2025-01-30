@@ -436,7 +436,7 @@ describe('MeasureGas', function () {
                 makerAsset: await dai.getAddress(),
                 takerAsset: await weth.getAddress(),
                 makingAmount,
-                takingAmount: takingAmount,
+                takingAmount,
                 makerTraits: buildMakerTraits(),
             };
 

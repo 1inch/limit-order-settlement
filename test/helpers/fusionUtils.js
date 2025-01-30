@@ -137,7 +137,7 @@ function buildSettlementExtensions({
     });
 
     const postInteraction = ethers.solidityPacked(
-        ["bytes", "uint256", "uint8", "bytes"],
+        ['bytes', 'uint256', 'uint8', 'bytes'],
         [feeTakerExtensionsObj.postInteraction, estimatedTakingAmount, protocolSurplusFee, customPostInteraction],
     );
 
