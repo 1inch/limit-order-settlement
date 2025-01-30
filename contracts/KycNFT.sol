@@ -26,7 +26,7 @@ contract KycNFT is Ownable, ERC721Burnable {
      * @param signature The signature to be verified.
      */
     modifier onlyOwnerSignature(address to, uint256 tokenId, bytes calldata signature) {
-        bytes memory message = abi.encodePacked(address(this), block.chainid, to, nonces[tokenId]++, tokenId);
+        bytes memory message = abi.encodePacked(address(this), block.chainid, to, nonces[tokenId], tokenId);
         bytes32 hash = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n136", message));
         if (owner() != ECDSA.recover(hash, signature)) revert BadSignature();
         _;
@@ -92,6 +92,7 @@ contract KycNFT is Ownable, ERC721Burnable {
 
     function _update(address to, uint256 tokenId, address auth) internal override returns (address) {
         if (to != address(0) && balanceOf(to) > 0) revert OnlyOneNFTPerAddress();
+        nonces[tokenId]++;
         return super._update(to, tokenId, auth);
     }
 }
