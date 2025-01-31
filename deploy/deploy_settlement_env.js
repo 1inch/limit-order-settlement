@@ -2,9 +2,9 @@ const hre = require('hardhat');
 const { getChainId, ethers } = hre;
 const { deployAndGetContract } = require('@1inch/solidity-utils');
 
-const INCH_ADDR = '0x111111111117dC0aa78b770fA6A738034120C302';
+const WETH = '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2';
 const ST1INCH_ADDR = '0x9A0C8Ff858d273f57072D714bca7411D717501D7';
-const ROUTER_V5_ADDR = '0x1111111254EEB25477B68fb85Ed929f73A960582';
+const ROUTER_V6_ADDR = '0x111111125421ca6dc452d289314280a0f8842a65';
 
 module.exports = async ({ getNamedAccounts, deployments }) => {
     const chainId = await getChainId();
@@ -15,23 +15,14 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     const { deployer } = await getNamedAccounts();
 
     const st1inch = (await ethers.getContractFactory('St1inch')).attach(ST1INCH_ADDR);
+    const accessToken = (await deployments.get('KycNFT')).address;
 
-    const settlement = await deployAndGetContract({
-        contractName: 'SettlementExtension',
-        constructorArgs: [ROUTER_V5_ADDR, INCH_ADDR],
+    await deployAndGetContract({
+        contractName: 'Settlement',
+        constructorArgs: [ROUTER_V6_ADDR, accessToken, WETH, deployer],
         deployments,
         deployer,
-        deploymentName: 'Settlement',
     });
-
-    const feeBankAddress = await settlement.feeBank();
-    console.log('FeeBank deployed to:', feeBankAddress);
-    if (chainId !== '31337') {
-        await hre.run('verify:verify', {
-            address: feeBankAddress,
-            constructorArguments: [await settlement.getAddress(), INCH_ADDR, deployer],
-        });
-    }
 
     const delegation = await deployAndGetContract({
         contractName: 'PowerPod',
