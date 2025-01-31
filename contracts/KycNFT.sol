@@ -17,9 +17,11 @@ contract KycNFT is Ownable, ERC721Burnable, EIP712 {
     error OnlyOneNFTPerAddress();
     /// @notice Thrown when signature is incorrect.
     error BadSignature();
+    /// @notice Thrown when signature is expired.
+    error SignatureExpired();
 
-    bytes32 public constant MINT_TYPEHASH = keccak256("Mint(address to,uint256 nonce,uint256 tokenId)");
-    bytes32 public constant TRANSFER_FROM_TYPEHASH = keccak256("TransferFrom(address to,uint256 nonce,uint256 tokenId)");
+    bytes32 public constant MINT_TYPEHASH = keccak256("Mint(address to,uint256 nonce,uint256 tokenId,uint256 deadline)");
+    bytes32 public constant TRANSFER_FROM_TYPEHASH = keccak256("TransferFrom(address to,uint256 nonce,uint256 tokenId,uint256 deadline)");
 
     /// @notice Nonce for each token ID.
     mapping(uint256 => uint256) public nonces;
@@ -29,8 +31,9 @@ contract KycNFT is Ownable, ERC721Burnable, EIP712 {
      * @param tokenId The ID of the token.
      * @param signature The signature to be verified.
      */
-    modifier onlyOwnerSignature(address to, uint256 tokenId, bytes calldata signature, bytes32 typeHash) {
-        bytes32 structHash = keccak256(abi.encode(typeHash, to, nonces[tokenId]++, tokenId));
+    modifier onlyOwnerSignature(address to, uint256 tokenId, uint256 deadline, bytes calldata signature, bytes32 typeHash) {
+        if (block.timestamp > deadline) revert SignatureExpired();
+        bytes32 structHash = keccak256(abi.encode(typeHash, to, nonces[tokenId], tokenId, deadline));
         bytes32 hash = _hashTypedDataV4(structHash);
         if (owner() != ECDSA.recover(hash, signature)) revert BadSignature();
         _;
@@ -60,9 +63,10 @@ contract KycNFT is Ownable, ERC721Burnable, EIP712 {
      * @param from The address to transfer the token from.
      * @param to The address to transfer the token to.
      * @param tokenId The ID of the token to be transferred.
+     * @param deadline The deadline for the signature.
      * @param signature The signature of the owner permitting the transfer.
      */
-    function transferFrom(address from, address to, uint256 tokenId, bytes calldata signature) public onlyOwnerSignature(to, tokenId, signature, TRANSFER_FROM_TYPEHASH) {
+    function transferFrom(address from, address to, uint256 tokenId, uint256 deadline, bytes calldata signature) public onlyOwnerSignature(to, tokenId, deadline, signature, TRANSFER_FROM_TYPEHASH) {
         _transfer(from, to, tokenId);
     }
 
@@ -77,9 +81,10 @@ contract KycNFT is Ownable, ERC721Burnable, EIP712 {
 
     /**
      * @notice See {mint} method. This function using a valid owner's signature instead of only owner permission.
+     * @param deadline The deadline for the signature.
      * @param signature The signature of the owner permitting the mint.
      */
-    function mint(address to, uint256 tokenId, bytes calldata signature) external onlyOwnerSignature(to, tokenId, signature, MINT_TYPEHASH) {
+    function mint(address to, uint256 tokenId, uint256 deadline, bytes calldata signature) external onlyOwnerSignature(to, tokenId, deadline, signature, MINT_TYPEHASH) {
         _mint(to, tokenId);
     }
 
@@ -97,6 +102,7 @@ contract KycNFT is Ownable, ERC721Burnable, EIP712 {
 
     function _update(address to, uint256 tokenId, address auth) internal override returns (address) {
         if (to != address(0) && balanceOf(to) > 0) revert OnlyOneNFTPerAddress();
+        nonces[tokenId]++;
         return super._update(to, tokenId, auth);
     }
 }
