@@ -18,8 +18,8 @@ contract KycNFT is Ownable, ERC721Burnable, EIP712 {
     /// @notice Thrown when signature is incorrect.
     error BadSignature();
 
-    bytes32 public constant MINT_TYPEHASH = keccak256("Mint(address nft,uint256 chainId,address to,uint256 nonce,uint256 tokenId)");
-    bytes32 public constant TRANSFER_FROM_TYPEHASH = keccak256("TransferFrom(address nft,uint256 chainId,address to,uint256 nonce,uint256 tokenId)");
+    bytes32 public constant MINT_TYPEHASH = keccak256("Mint(address to,uint256 nonce,uint256 tokenId)");
+    bytes32 public constant TRANSFER_FROM_TYPEHASH = keccak256("TransferFrom(address to,uint256 nonce,uint256 tokenId)");
 
     /// @notice Nonce for each token ID.
     mapping(uint256 => uint256) public nonces;
@@ -30,7 +30,7 @@ contract KycNFT is Ownable, ERC721Burnable, EIP712 {
      * @param signature The signature to be verified.
      */
     modifier onlyOwnerSignature(address to, uint256 tokenId, bytes calldata signature, bytes32 typeHash) {
-        bytes32 structHash = keccak256(abi.encode(typeHash, address(this), block.chainid, to, nonces[tokenId]++, tokenId));
+        bytes32 structHash = keccak256(abi.encode(typeHash, to, nonces[tokenId]++, tokenId));
         bytes32 hash = _hashTypedDataV4(structHash);
         if (owner() != ECDSA.recover(hash, signature)) revert BadSignature();
         _;

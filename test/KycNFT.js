@@ -5,8 +5,6 @@ const { getChainId } = require('./helpers/fixtures');
 
 const MINT = {
     Mint: [
-        { name: 'nft', type: 'address' },
-        { name: 'chainId', type: 'uint256' },
         { name: 'to', type: 'address' },
         { name: 'nonce', type: 'uint256' },
         { name: 'tokenId', type: 'uint256' },
@@ -24,8 +22,6 @@ async function signTokenId(types, eip712, nft, to, tokenId, signer, chainId) {
         verifyingContract: await nft.getAddress(),
     };
     const values = {
-        nft: await nft.getAddress(),
-        chainId,
         to,
         nonce: await nft.nonces(tokenId),
         tokenId,
