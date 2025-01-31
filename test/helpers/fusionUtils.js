@@ -37,7 +37,7 @@ async function buildCalldataForOrder({
     }
 
     let makerReceiver;
-    if (resolverFee > 0 || integratorFee > 0) {
+    if (resolverFee > 0 || integratorFee > 0 || protocolSurplusFee > 0) {
         makerReceiver = orderData.receiver;
         orderData.receiver = await settlement.getAddress();
     }

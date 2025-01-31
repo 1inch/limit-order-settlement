@@ -504,8 +504,11 @@ describe('Settlement', function () {
 
     describe('dutch auction params', function () {
         const prepareSingleOrder = async ({
-            targetTakingAmount = 0n,
             setupData,
+            targetTakingAmount = 0n,
+            estimatedTakingAmount = ether('0.1'),
+            protocolSurplusFee = 0n,
+            protocolFeeRecipient = setupData.accounts.alice.address,
         }) => {
             const {
                 contracts: { dai, weth, resolver },
@@ -543,6 +546,9 @@ describe('Settlement', function () {
                 isInnermostOrder: true,
                 isMakingAmount: false,
                 fillingAmount: targetTakingAmount,
+                estimatedTakingAmount,
+                protocolSurplusFee,
+                protocolFeeRecipient,
             });
 
             await weth.approve(resolver, targetTakingAmount);
@@ -692,6 +698,100 @@ describe('Settlement', function () {
             const txn = await resolver.settleOrders(fillOrderToData);
             await expect(txn).to.changeTokenBalances(dai, [resolver, alice], [ether('100'), ether('-100')]);
             await expect(txn).to.changeTokenBalances(weth, [owner, alice], [ether('-0.105'), ether('0.105')]);
+        });
+
+        describe('checking surplus', async function () {
+            it('should get surplus', async function () {
+                const dataFormFixture = await loadFixture(initContractsForSettlement);
+                const now = await time.latest() + 10;
+                const auction = await buildAuctionDetails({ startTime: now, delay: 60, initialRateBump: 1000000n });
+                const setupData = { ...dataFormFixture, auction };
+                const {
+                    contracts: { dai, weth, resolver },
+                    accounts: { owner, alice, bob },
+                } = setupData;
+
+                const fillOrderToData = await prepareSingleOrder({
+                    setupData,
+                    targetTakingAmount: ether('0.11'),
+                    estimatedTakingAmount: ether('0.1'),
+                    protocolSurplusFee: 50,
+                    protocolFeeRecipient: bob.address,
+                });
+
+                await time.setNextBlockTimestamp(now);
+                const txn = await resolver.settleOrders(fillOrderToData);
+                await expect(txn).to.changeTokenBalances(dai, [resolver, alice], [ether('100'), ether('-100')]);
+                await expect(txn).to.changeTokenBalances(weth, [owner, alice, bob], [ether('-0.11'), ether('0.105'), ether('0.005')]);
+            });
+
+            it('should get surplus = 0, if estimatedTakingAmount < actualAmount', async function () {
+                const dataFormFixture = await loadFixture(initContractsForSettlement);
+                const now = await time.latest() + 10;
+                const auction = await buildAuctionDetails({ startTime: now, delay: 60, initialRateBump: 1000000n });
+                const setupData = { ...dataFormFixture, auction };
+                const {
+                    contracts: { dai, weth, resolver },
+                    accounts: { owner, alice, bob },
+                } = setupData;
+
+                const fillOrderToData = await prepareSingleOrder({
+                    setupData,
+                    targetTakingAmount: ether('0.11'),
+                    estimatedTakingAmount: ether('0.11'),
+                    protocolSurplusFee: 50,
+                    protocolFeeRecipient: bob.address,
+                });
+
+                await time.setNextBlockTimestamp(now);
+                const txn = await resolver.settleOrders(fillOrderToData);
+                await expect(txn).to.changeTokenBalances(dai, [resolver, alice], [ether('100'), ether('-100')]);
+                await expect(txn).to.changeTokenBalances(weth, [owner, alice, bob], [ether('-0.11'), ether('0.11'), ether('0')]);
+            });
+
+            it('should failed if protocolSurplusFee > 100', async function () {
+                const dataFormFixture = await loadFixture(initContractsForSettlement);
+                const now = await time.latest() + 10;
+                const auction = await buildAuctionDetails({ startTime: now, delay: 60, initialRateBump: 1000000n });
+                const setupData = { ...dataFormFixture, auction };
+                const {
+                    contracts: { resolver, settlement },
+                    accounts: { bob },
+                } = setupData;
+
+                const fillOrderToData = await prepareSingleOrder({
+                    setupData,
+                    targetTakingAmount: ether('0.11'),
+                    estimatedTakingAmount: ether('0.1'),
+                    protocolSurplusFee: 101,
+                    protocolFeeRecipient: bob.address,
+                });
+
+                await time.setNextBlockTimestamp(now);
+                await expect(resolver.settleOrders(fillOrderToData)).to.be.revertedWithCustomError(settlement, 'InvalidProtocolSurplusFee');
+            });
+
+            it('should failed if estimatedTakingAmount < order.takingAmount', async function () {
+                const dataFormFixture = await loadFixture(initContractsForSettlement);
+                const now = await time.latest() + 10;
+                const auction = await buildAuctionDetails({ startTime: now, delay: 60, initialRateBump: 1000000n });
+                const setupData = { ...dataFormFixture, auction };
+                const {
+                    contracts: { resolver, settlement },
+                    accounts: { bob },
+                } = setupData;
+
+                const fillOrderToData = await prepareSingleOrder({
+                    setupData,
+                    targetTakingAmount: ether('0.11'),
+                    estimatedTakingAmount: ether('0.1') - 1n,
+                    protocolSurplusFee: 50,
+                    protocolFeeRecipient: bob.address,
+                });
+
+                await time.setNextBlockTimestamp(now);
+                await expect(resolver.settleOrders(fillOrderToData)).to.be.revertedWithCustomError(settlement, 'InvalidEstimatedTakingAmount');
+            });
         });
     });
 
