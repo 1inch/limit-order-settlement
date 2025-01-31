@@ -23,7 +23,7 @@
 
 "@1inch/limit-order-protocol-contract@github:1inch/limit-order-protocol#feature/prepare_for_reusing_feeTaker":
   version "4.2.3"
-  resolved "https://codeload.github.com/1inch/limit-order-protocol/tar.gz/4963d5687082d318120c4fe4c6f4624b8ed11cfa"
+  resolved "https://codeload.github.com/1inch/limit-order-protocol/tar.gz/6849df4cb2ae41085fed0583f45e842bc585ec6c"
   dependencies:
     "@1inch/solidity-utils" "6.3.0"
     "@chainlink/contracts" "0.8.0"
@@ -3949,9 +3949,9 @@ fast-uri@^3.0.1:
   integrity sha512-Atfo14OibSv5wAp4VWNsFYE1AchQRTv9cBGWET4pZWHzYshFSS9NQI6I57rdKn9croWVMbYFbLhJ+yJvmZIIHw==
 
 fastq@^1.6.0:
-  version "1.18.0"
-  resolved "https://registry.yarnpkg.com/fastq/-/fastq-1.18.0.tgz#d631d7e25faffea81887fe5ea8c9010e1b36fee0"
-  integrity sha512-QKHXPW0hD8g4UET03SdOdunzSouc9N4AuHdsX8XNcTsuz+yYFILVNIX4l9yHABMhiEI9Db0JTTIpu0wB+Y1QQw==
+  version "1.19.0"
+  resolved "https://registry.yarnpkg.com/fastq/-/fastq-1.19.0.tgz#a82c6b7c2bb4e44766d865f07997785fecfdcb89"
+  integrity sha512-7SFSRCNjBQIZH/xZR3iy5iQYR8aGBE0h3VG6/cwlbrpdciNYBMotQav8c1XI3HjHH+NikUpP53nPdlZSdWmFzA==
   dependencies:
     reusify "^1.0.4"
 

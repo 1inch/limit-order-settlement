@@ -17,6 +17,7 @@ contract SimpleSettlement is FeeTaker {
 
     error AllowedTimeViolation();
     error InvalidProtocolSurplusFee();
+    error InvalidEstimatedTakingAmount();
 
     /**
      * @notice Initializes the contract.
@@ -181,6 +182,7 @@ contract SimpleSettlement is FeeTaker {
 
     /**
      * @dev Calculates fee amounts depending on whether the taker is in the whitelist and whether they have an _ACCESS_TOKEN.
+     * @param order The user's order.
      * @param taker The taker address.
      * @param takingAmount The amount of the asset being taken.
      * @param extraData The extra data has the following format:
@@ -192,10 +194,14 @@ contract SimpleSettlement is FeeTaker {
      * 1 byte - protocol surplus fee (in 1e2)
      * ```
      */
-    function _getFeeAmounts(address taker, uint256 takingAmount, bytes calldata extraData) internal override virtual returns (uint256 integratorFeeAmount, uint256 protocolFeeAmount, bytes calldata tail) {
-        (integratorFeeAmount, protocolFeeAmount, tail) = super._getFeeAmounts(taker, takingAmount, extraData);
+    function _getFeeAmounts(IOrderMixin.Order calldata order, address taker, uint256 takingAmount, uint256 makingAmount, bytes calldata extraData) internal override virtual returns (uint256 integratorFeeAmount, uint256 protocolFeeAmount, bytes calldata tail) {
+        (integratorFeeAmount, protocolFeeAmount, tail) = super._getFeeAmounts(order, taker, takingAmount, makingAmount, extraData);
 
         uint256 estimatedTakingAmount = uint256(bytes32(tail));
+        if (Math.mulDiv(estimatedTakingAmount, order.makingAmount, makingAmount) < order.takingAmount) {
+            revert InvalidEstimatedTakingAmount();
+        }
+
         uint256 actualTakingAmount = takingAmount - integratorFeeAmount - protocolFeeAmount;
         if (actualTakingAmount > estimatedTakingAmount) {
             uint256 protocolSurplusFee = uint256(uint8(bytes1(tail[32:])));
