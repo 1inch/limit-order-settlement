@@ -33,7 +33,7 @@
   },
   "dependencies": {
     "@1inch/delegating": "1.1.0",
-    "@1inch/limit-order-protocol-contract": "4.2.2",
+    "@1inch/limit-order-protocol-contract": "github:1inch/limit-order-protocol#feature/prepare_for_reusing_feeTaker",
     "@1inch/solidity-utils": "6.2.0",
     "@1inch/st1inch": "2.2.0",
     "@openzeppelin/contracts": "5.1.0"

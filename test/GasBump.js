@@ -1,8 +1,8 @@
 const { time, ether, constants } = require('@1inch/solidity-utils');
 const { loadFixture } = require('@nomicfoundation/hardhat-network-helpers');
-const { buildOrder, buildMakerTraits, buildFeeTakerExtensions } = require('@1inch/limit-order-protocol-contract/test/helpers/orderUtils');
+const { buildOrder, buildMakerTraits } = require('@1inch/limit-order-protocol-contract/test/helpers/orderUtils');
 const { initContractsForSettlement } = require('./helpers/fixtures');
-const { buildAuctionDetails } = require('./helpers/fusionUtils');
+const { buildAuctionDetails, buildSettlementExtensions } = require('./helpers/fusionUtils');
 const hre = require('hardhat');
 const { network, ethers } = hre;
 
@@ -17,6 +17,8 @@ describe('GasBump', function () {
 
     async function prepare() {
         const { contracts: { dai, weth, accessToken }, accounts: { owner } } = await initContractsForSettlement();
+        const makingAmount = ether('10');
+        const takingAmount = ether('1');
         const GasBumpChecker = await ethers.getContractFactory('GasBumpChecker');
         const checker = await GasBumpChecker.deploy(accessToken, weth, owner);
         const currentTime = (await time.latest()) - time.duration.minutes(1) + 1;
@@ -28,8 +30,9 @@ describe('GasBump', function () {
             points: [[500000, 60]],
         });
 
-        const extensions = buildFeeTakerExtensions({
+        const extensions = buildSettlementExtensions({
             feeTaker: await checker.getAddress(),
+            estimatedTakingAmount: takingAmount,
             getterExtraPrefix: auctionDetails,
         });
 
@@ -38,8 +41,8 @@ describe('GasBump', function () {
                 maker: owner.address,
                 makerAsset: await dai.getAddress(),
                 takerAsset: await weth.getAddress(),
-                makingAmount: ether('10'),
-                takingAmount: ether('1'),
+                makingAmount,
+                takingAmount,
                 makerTraits: buildMakerTraits(),
             },
         );

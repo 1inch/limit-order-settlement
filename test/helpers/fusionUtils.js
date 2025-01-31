@@ -17,6 +17,8 @@ async function buildCalldataForOrder({
     protocolFeeRecipient = orderSigner.address,
     resolverFee = 0,
     integratorFee = 0,
+    estimatedTakingAmount = orderData.takingAmount,
+    protocolSurplusFee = 0,
     whitelistResolvers = [], // bytes10[]
     resolversAllowedTime = [], // uint16[]
     customPostInteraction = '0x',
@@ -35,15 +37,16 @@ async function buildCalldataForOrder({
     }
 
     let makerReceiver;
-    if (resolverFee > 0 || integratorFee > 0) {
+    if (resolverFee > 0 || integratorFee > 0 || protocolSurplusFee > 0) {
         makerReceiver = orderData.receiver;
         orderData.receiver = await settlement.getAddress();
     }
 
     const order = buildOrder(
         orderData,
-        buildFeeTakerExtensions({
+        buildSettlementExtensions({
             feeTaker: await settlement.getAddress(),
+            estimatedTakingAmount,
             getterExtraPrefix: auctionDetails,
             integratorFeeRecipient,
             protocolFeeRecipient,
@@ -53,6 +56,7 @@ async function buildCalldataForOrder({
             whitelistDiscount: 0,
             whitelist,
             whitelistPostInteraction,
+            protocolSurplusFee,
             customPostInteraction,
         }),
     );
@@ -97,8 +101,56 @@ async function buildAuctionDetails({
     return { gasBumpEstimate, gasPriceEstimate, startTime, duration, delay, initialRateBump, details };
 }
 
+function buildSettlementExtensions({
+    feeTaker,
+    estimatedTakingAmount,
+    getterExtraPrefix = '0x',
+    integratorFeeRecipient = constants.ZERO_ADDRESS,
+    protocolFeeRecipient = constants.ZERO_ADDRESS,
+    makerReceiver = undefined,
+    integratorFee = 0,
+    integratorShare = 50,
+    resolverFee = 0,
+    whitelistDiscount = 50,
+    whitelist = '0x00',
+    whitelistPostInteraction = whitelist,
+    protocolSurplusFee = 0,
+    customMakingGetter = '0x',
+    customTakingGetter = '0x',
+    customPostInteraction = '0x',
+}) {
+    const feeTakerExtensionsObj = buildFeeTakerExtensions({
+        feeTaker,
+        getterExtraPrefix,
+        integratorFeeRecipient,
+        protocolFeeRecipient,
+        makerReceiver,
+        integratorFee,
+        integratorShare,
+        resolverFee,
+        whitelistDiscount,
+        whitelist,
+        whitelistPostInteraction,
+        customMakingGetter,
+        customTakingGetter,
+        customPostInteraction: '0x',
+    });
+
+    const postInteraction = ethers.solidityPacked(
+        ['bytes', 'uint256', 'uint8', 'bytes'],
+        [feeTakerExtensionsObj.postInteraction, estimatedTakingAmount, protocolSurplusFee, customPostInteraction],
+    );
+
+    return {
+        makingAmountData: feeTakerExtensionsObj.makingAmountData,
+        takingAmountData: feeTakerExtensionsObj.takingAmountData,
+        postInteraction,
+    };
+}
+
 module.exports = {
     expBase,
     buildAuctionDetails,
     buildCalldataForOrder,
+    buildSettlementExtensions,
 };

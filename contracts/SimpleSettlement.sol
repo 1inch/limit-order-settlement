@@ -16,6 +16,8 @@ contract SimpleSettlement is FeeTaker {
     uint256 private constant _GAS_PRICE_BASE = 1_000_000; // 1000 means 1 Gwei
 
     error AllowedTimeViolation();
+    error InvalidProtocolSurplusFee();
+    error InvalidEstimatedTakingAmount();
 
     /**
      * @notice Initializes the contract.
@@ -176,5 +178,36 @@ contract SimpleSettlement is FeeTaker {
                 revert AllowedTimeViolation();
             }
         }
+    }
+
+    /**
+     * @dev Calculates fee amounts depending on whether the taker is in the whitelist and whether they have an _ACCESS_TOKEN.
+     * @param order The user's order.
+     * @param taker The taker address.
+     * @param takingAmount The amount of the asset being taken.
+     * @param extraData The extra data has the following format:
+     * ```
+     * 2 bytes — integrator fee percentage (in 1e5)
+     * 1 bytes - integrator rev share percentage (in 1e2)
+     * 2 bytes — resolver fee percentage (in 1e5)
+     * 32 bytes - estimated taking amount
+     * 1 byte - protocol surplus fee (in 1e2)
+     * ```
+     */
+    function _getFeeAmounts(IOrderMixin.Order calldata order, address taker, uint256 takingAmount, uint256 makingAmount, bytes calldata extraData) internal override virtual returns (uint256 integratorFeeAmount, uint256 protocolFeeAmount, bytes calldata tail) {
+        (integratorFeeAmount, protocolFeeAmount, tail) = super._getFeeAmounts(order, taker, takingAmount, makingAmount, extraData);
+
+        uint256 estimatedTakingAmount = uint256(bytes32(tail));
+        if (Math.mulDiv(estimatedTakingAmount, order.makingAmount, makingAmount) < order.takingAmount) {
+            revert InvalidEstimatedTakingAmount();
+        }
+
+        uint256 actualTakingAmount = takingAmount - integratorFeeAmount - protocolFeeAmount;
+        if (actualTakingAmount > estimatedTakingAmount) {
+            uint256 protocolSurplusFee = uint256(uint8(bytes1(tail[32:])));
+            if (protocolSurplusFee > _BASE_1E2) revert InvalidProtocolSurplusFee();
+            protocolFeeAmount += Math.mulDiv(actualTakingAmount - estimatedTakingAmount, protocolSurplusFee, _BASE_1E2);
+        }
+        tail = tail[33:];
     }
 }
