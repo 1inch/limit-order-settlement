@@ -5,19 +5,23 @@ pragma solidity 0.8.23;
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { ERC721 } from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import { ERC721Burnable } from "@openzeppelin/contracts/token/ERC721/extensions/ERC721Burnable.sol";
+import { EIP712 } from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import { ECDSA } from "@1inch/solidity-utils/contracts/libraries/ECDSA.sol";
 
 /**
  * @title KycNFT
  * @notice ERC721 token that allows only one NFT per address and includes transfer, mint and burn logic restricted to the contract owner.
  */
-contract KycNFT is Ownable, ERC721Burnable {
+contract KycNFT is Ownable, ERC721Burnable, EIP712 {
     /// @notice Thrown when an address attempts to own more than one NFT.
     error OnlyOneNFTPerAddress();
     /// @notice Thrown when signature is incorrect.
     error BadSignature();
     /// @notice Thrown when signature is expired.
     error SignatureExpired();
+
+    bytes32 public constant MINT_TYPEHASH = keccak256("Mint(address to,uint256 nonce,uint256 tokenId,uint256 deadline)");
+    bytes32 public constant TRANSFER_FROM_TYPEHASH = keccak256("TransferFrom(address to,uint256 nonce,uint256 tokenId,uint256 deadline)");
 
     /// @notice Nonce for each token ID.
     mapping(uint256 => uint256) public nonces;
@@ -27,10 +31,10 @@ contract KycNFT is Ownable, ERC721Burnable {
      * @param tokenId The ID of the token.
      * @param signature The signature to be verified.
      */
-    modifier onlyOwnerSignature(address to, uint256 tokenId, uint256 deadline, bytes calldata signature) {
+    modifier onlyOwnerSignature(address to, uint256 tokenId, uint256 deadline, bytes calldata signature, bytes32 typeHash) {
         if (block.timestamp > deadline) revert SignatureExpired();
-        bytes memory message = abi.encodePacked(address(this), block.chainid, to, nonces[tokenId], tokenId, deadline);
-        bytes32 hash = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n168", message));
+        bytes32 structHash = keccak256(abi.encode(typeHash, to, nonces[tokenId], tokenId, deadline));
+        bytes32 hash = _hashTypedDataV4(structHash);
         if (owner() != ECDSA.recover(hash, signature)) revert BadSignature();
         _;
     }
@@ -41,7 +45,8 @@ contract KycNFT is Ownable, ERC721Burnable {
      * @param symbol The symbol of the token.
      * @param owner The address of the owner of the contract.
      */
-    constructor(string memory name, string memory symbol, address owner) ERC721(name, symbol) Ownable(owner) {}
+    constructor(string memory name, string memory symbol, string memory version, address owner)
+        ERC721(name, symbol) Ownable(owner) EIP712(name, version) {}
 
     /**
      * @notice Transfers a token to a specified address. Only the owner can call this function.
@@ -61,7 +66,7 @@ contract KycNFT is Ownable, ERC721Burnable {
      * @param deadline The deadline for the signature.
      * @param signature The signature of the owner permitting the transfer.
      */
-    function transferFrom(address from, address to, uint256 tokenId, uint256 deadline, bytes calldata signature) public onlyOwnerSignature(to, tokenId, deadline, signature) {
+    function transferFrom(address from, address to, uint256 tokenId, uint256 deadline, bytes calldata signature) public onlyOwnerSignature(to, tokenId, deadline, signature, TRANSFER_FROM_TYPEHASH) {
         _transfer(from, to, tokenId);
     }
 
@@ -79,7 +84,7 @@ contract KycNFT is Ownable, ERC721Burnable {
      * @param deadline The deadline for the signature.
      * @param signature The signature of the owner permitting the mint.
      */
-    function mint(address to, uint256 tokenId, uint256 deadline, bytes calldata signature) external onlyOwnerSignature(to, tokenId, deadline, signature) {
+    function mint(address to, uint256 tokenId, uint256 deadline, bytes calldata signature) external onlyOwnerSignature(to, tokenId, deadline, signature, MINT_TYPEHASH) {
         _mint(to, tokenId);
     }
 
