@@ -69,10 +69,10 @@
     mocha-chai-jest-snapshot "1.1.6"
     node-fetch "2.7.0"
 
-"@1inch/solidity-utils@6.2.0":
-  version "6.2.0"
-  resolved "https://registry.yarnpkg.com/@1inch/solidity-utils/-/solidity-utils-6.2.0.tgz#ac73560516662a671917eec9356dbcd15956d2af"
-  integrity sha512-5EhIRHmbcw5v5FKWOnxlj4EUeP5W4c+Fu5qr8zfi/0LMYXfoEqT1k65RWTME8xdZlkNMVpcKXhP7ayqVv3pO1A==
+"@1inch/solidity-utils@6.3.0":
+  version "6.3.0"
+  resolved "https://registry.yarnpkg.com/@1inch/solidity-utils/-/solidity-utils-6.3.0.tgz#85fbaf85b6d1ba75502e88e7fdc61151fa6b94e7"
+  integrity sha512-pgyj4Tsq49RenOIVajlZmGeN9eAr8287c5jX8RrlRxXPGrtb6p+Qxy8KQDJBob/M2bJ9cqI1MFkbaUyJBhLDeg==
   dependencies:
     "@metamask/eth-sig-util" "8.0.0"
     "@nomicfoundation/hardhat-ethers" "3.0.8"

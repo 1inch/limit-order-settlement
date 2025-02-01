@@ -1,6 +1,14 @@
-const hre = require('hardhat');
-const { getChainId, network } = hre;
+const { getChainId, network } = require('hardhat');
 const { deployAndGetContractWithCreate3, deployAndGetContract } = require('@1inch/solidity-utils');
+
+const constructorArgs = [
+    'Resolver Access Token', // name
+    'RES', // symbol
+    '1', // version
+    '0x56E44874F624EbDE6efCc783eFD685f0FBDC6dcF', // owner
+];
+const create3Deployer = '0xD935a2bb926019E0ed6fb31fbD5b1Bbb7c05bf65';
+const salt = '0x1844f417f919508065c4637df2584f67d1cad2d4a744b961f7986bf35f4d35d7';
 
 module.exports = async ({ getNamedAccounts, deployments }) => {
     console.log('running deploy script: kyc-nft');
@@ -11,7 +19,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         const { deployer } = await getNamedAccounts();
         await deployAndGetContract({
             contractName: 'KycNFT',
-            constructorArgs: ['Resolver Access Token', 'RES', '0x56E44874F624EbDE6efCc783eFD685f0FBDC6dcF'],
+            constructorArgs,
             deployments,
             deployer,
         });
@@ -19,9 +27,9 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         // Deploy with create3
         await deployAndGetContractWithCreate3({
             contractName: 'KycNFT',
-            constructorArgs: ['Resolver Access Token', 'RES', '0x56E44874F624EbDE6efCc783eFD685f0FBDC6dcF'],
-            create3Deployer: '0xD935a2bb926019E0ed6fb31fbD5b1Bbb7c05bf65',
-            salt: '0x66339c4a68cbacc2ed7a777541e493b2d1cad2d4a744b961f7986bf35f4d35d7',
+            constructorArgs,
+            create3Deployer,
+            salt,
             deployments,
             skipVerify: network.name === 'klaytn',
         });
