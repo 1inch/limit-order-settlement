@@ -22,10 +22,10 @@ contract CrosschainWhitelistRegistry is Ownable {
 
     mapping(address promoter => mapping(uint256 chainId => address promotee)) public promotions;
 
-    WhitelistRegistry public whitelistRegistry;
+    WhitelistRegistry public immutable WHITELIST_REGISTRY;
 
     constructor(WhitelistRegistry _whitelistRegistry) Ownable(msg.sender) {
-        whitelistRegistry = _whitelistRegistry;
+        WHITELIST_REGISTRY = _whitelistRegistry;
     }
 
     /**
@@ -54,7 +54,7 @@ contract CrosschainWhitelistRegistry is Ownable {
      * @return promotees A list of worker addresses.
      */
     function getPromotees(uint256 chainId) external view returns (address[] memory promotees) {
-        promotees = whitelistRegistry.getWhitelist();
+        promotees = WHITELIST_REGISTRY.getWhitelist();
         unchecked {
             uint256 len = promotees.length;
             for (uint256 i = 0; i < len; ++i) {
