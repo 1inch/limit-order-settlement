@@ -20,7 +20,7 @@ const WETH = {
 
 const ROUTER_V6_ADDR = '0x111111125421ca6dc452d289314280a0f8842a65';
 
-const SETTLEMENT_SALT = ethers.keccak256(ethers.toUtf8Bytes('1inch Settlement V2'));
+const SETTLEMENT_SALT = ethers.keccak256(ethers.toUtf8Bytes('1inch Settlement V3'));
 
 module.exports = async ({ getNamedAccounts, deployments }) => {
     const chainId = await getChainId();
@@ -29,7 +29,9 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     console.log('network id ', chainId);
 
     const { deployer } = await getNamedAccounts();
-    const create3Deployer = (await deployments.get('Create3Deployer')).address;
+    const create3Deployer = deployer === '0x56E44874F624EbDE6efCc783eFD685f0FBDC6dcF'
+        ? '0xD935a2bb926019E0ed6fb31fbD5b1Bbb7c05bf65'
+        : (await deployments.get('Create3Deployer')).address;
     const accessToken = (await deployments.get('KycNFT')).address;
 
     await deployAndGetContractWithCreate3({
